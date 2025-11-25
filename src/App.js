@@ -23,7 +23,6 @@ import Refund from "./pages/Refund";
 
 function App() {
   return (
-    <LanguageProvider>
       <TrialProvider>
         <BrowserRouter>
 
@@ -64,7 +63,6 @@ function App() {
 
         </BrowserRouter>
       </TrialProvider>
-    </LanguageProvider>
   );
 }
 
