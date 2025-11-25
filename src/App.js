@@ -1,9 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 
-// JEZICI
-import { LanguageProvider } from "./i18n/LanguageContext";
-
 // TRIAL SISTEM
 import { TrialProvider } from "./i18n/TrialContext";
 
