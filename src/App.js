@@ -20,6 +20,9 @@ import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Chat from "./pages/Chat";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import Refund from "./pages/Refund";
 
 function App() {
   return (
@@ -35,6 +38,9 @@ function App() {
             <Route path="/activities" element={<Activities />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/tours" element={<Tours />} />
+            <Route path="/terms" element={<Terms />} />
+<Route path="/privacy" element={<Privacy />} />
+<Route path="/refund" element={<Refund />} />
 
             {/* CHAT – mora :tourId da bi radilo */}
             <Route path="/chat/:tourId" element={<Chat />} />
