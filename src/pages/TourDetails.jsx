@@ -28,7 +28,7 @@ export default function TourDetails() {
           background: "linear-gradient(160deg, #14532d, #166534)",
         }}
       >
-        Učitavanje detalja ture...
+        Loading tour details...
       </div>
     );
   }
@@ -42,7 +42,7 @@ export default function TourDetails() {
         background: "linear-gradient(160deg, #0f172a, #14532d)",
       }}
     >
-      {/* HERO SEKCIJA */}
+      {/* HERO SECTION */}
       <div
         style={{
           height: "60vh",
@@ -63,7 +63,7 @@ export default function TourDetails() {
         <p style={{ opacity: 0.8 }}>{tour.date}</p>
       </div>
 
-      {/* DETALJI */}
+      {/* DETAILS */}
       <div
         style={{
           maxWidth: "900px",
@@ -72,9 +72,9 @@ export default function TourDetails() {
           lineHeight: 1.6,
         }}
       >
-        <h2 style={{ fontSize: "2rem", marginBottom: "20px" }}>Opis Ture</h2>
+        <h2 style={{ fontSize: "2rem", marginBottom: "20px" }}>Tour Description</h2>
         <p style={{ opacity: 0.9, fontSize: "1.1rem", marginBottom: "30px" }}>
-          {tour.description || "Ova tura nema dodatni opis."}
+          {tour.description || "This tour has no additional description."}
         </p>
 
         <div
@@ -86,34 +86,36 @@ export default function TourDetails() {
           }}
         >
           <div>
-            <strong>📍 Lokacija:</strong>
+            <strong>📍 Location:</strong>
             <p>{tour.location}</p>
           </div>
           <div>
-            <strong>📅 Datum:</strong>
+            <strong>📅 Date:</strong>
             <p>{tour.date}</p>
           </div>
+
           <div>
-            <strong>🕒 Vreme:</strong>
+            <strong>🕒 Time:</strong>
             <p>
               {tour.startTime} - {tour.endTime}
             </p>
           </div>
+
           <div>
-            <strong>💰 Cena:</strong>
+            <strong>💰 Price:</strong>
             <p>{tour.price} €</p>
           </div>
+
           <div>
-            <strong>👥 Kapacitet:</strong>
-            <p>{tour.capacity} osoba</p>
+            <strong>👥 Capacity:</strong>
+            <p>{tour.capacity} people</p>
           </div>
         </div>
 
         <button
           onClick={() => navigate(-1)}
           style={{
-            background:
-              "linear-gradient(135deg, #22c55e, #15803d)",
+            background: "linear-gradient(135deg, #22c55e, #15803d)",
             border: "none",
             color: "white",
             fontSize: "1rem",
@@ -125,7 +127,7 @@ export default function TourDetails() {
           onMouseOver={(e) => (e.target.style.transform = "scale(1.05)")}
           onMouseOut={(e) => (e.target.style.transform = "scale(1.0)")}
         >
-          ⬅ Nazad na Ture
+          ⬅ Back to Tours
         </button>
       </div>
     </div>

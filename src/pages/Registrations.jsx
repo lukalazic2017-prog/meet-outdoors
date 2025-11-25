@@ -4,22 +4,22 @@ import { Link } from "react-router-dom";
 function Registrations() {
   const [registrations, setRegistrations] = useState([]);
 
-  // Učitavanje prijava iz localStorage
+  // Load registrations from localStorage
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("registrations")) || [];
-    setRegistrations(saved.reverse()); // najnovije prijave gore
+    setRegistrations(saved.reverse()); // newest first
   }, []);
 
-  // Brisanje pojedinačne prijave
+  // Delete single registration
   const deleteRegistration = (index) => {
     const updated = registrations.filter((_, i) => i !== index);
     setRegistrations(updated);
     localStorage.setItem("registrations", JSON.stringify(updated));
   };
 
-  // Brisanje svih prijava
+  // Delete all registrations
   const clearAll = () => {
-    if (window.confirm("Da li sigurno želiš da obrišeš sve prijave?")) {
+    if (window.confirm("Are you sure you want to delete all registrations?")) {
       localStorage.removeItem("registrations");
       setRegistrations([]);
     }
@@ -35,18 +35,20 @@ function Registrations() {
         paddingBottom: "40px",
       }}
     >
-      {/* Naslov */}
+      {/* Header */}
       <div style={{ textAlign: "center", padding: "40px 20px" }}>
-        <h1 style={{ fontSize: "2.2rem", fontWeight: "bold" }}>📋 Prijave na ture</h1>
+        <h1 style={{ fontSize: "2.2rem", fontWeight: "bold" }}>
+          📋 Tour registrations
+        </h1>
         <p style={{ opacity: 0.8 }}>
-          Ovde možeš videti sve prijavljene učesnike i njihove podatke.
+          Here you can see all participants and their details.
         </p>
       </div>
 
-      {/* Ako nema prijava */}
+      {/* No registrations */}
       {registrations.length === 0 ? (
         <p style={{ textAlign: "center", opacity: 0.8 }}>
-          Trenutno nema prijavljenih učesnika.
+          There are no registered participants yet.
         </p>
       ) : (
         <div
@@ -72,7 +74,7 @@ function Registrations() {
               }}
             >
               <h3 style={{ margin: 0, color: "#bbf7d0" }}>
-                🌲 {r.tourTitle || "Nepoznata tura"}
+                🌲 {r.tourTitle || "Unknown tour"}
               </h3>
               <p>👤 {r.name}</p>
               <p>📧 {r.email}</p>
@@ -92,7 +94,7 @@ function Registrations() {
                   fontWeight: "bold",
                 }}
               >
-                🗑 Obriši
+                🗑 Delete
               </button>
             </div>
           ))}
@@ -110,12 +112,12 @@ function Registrations() {
               marginTop: "20px",
             }}
           >
-            🧹 Obriši sve prijave
+            🧹 Delete all registrations
           </button>
         </div>
       )}
 
-      {/* Nazad */}
+      {/* Back */}
       <div style={{ textAlign: "center", marginTop: "40px" }}>
         <Link
           to="/"
@@ -128,7 +130,7 @@ function Registrations() {
             textDecoration: "none",
           }}
         >
-          ⬅ Nazad na početnu
+          ⬅ Back to home
         </Link>
       </div>
     </div>

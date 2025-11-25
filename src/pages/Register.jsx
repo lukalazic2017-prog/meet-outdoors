@@ -1,31 +1,37 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useLanguage } from "../i18n/LanguageContext";
 
 export default function Register() {
-  const { t } = useLanguage();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
-  const [fullName, setFullName] = useState("");
 
   const navigate = useNavigate();
 
   async function handleRegister(e) {
     e.preventDefault();
+    setError("");
+    setInfo("");
     setLoading(true);
 
     if (password !== repeat) {
-      setError("Lozinke se ne poklapaju.");
+      setError("Passwords do not match.");
       setLoading(false);
       return;
     }
 
-    // 1️⃣ REGISTER USER IN SUPABASE AUTH
+    if (!fullName.trim()) {
+      setError("Please enter your full name.");
+      setLoading(false);
+      return;
+    }
+
+    // 1️⃣ Register user in Supabase Auth
     const { data: regData, error: regError } = await supabase.auth.signUp({
       email,
       password,
@@ -35,14 +41,14 @@ export default function Register() {
     });
 
     if (regError) {
-      alert("Greška pri registraciji: " + regError.message);
+      setError("Registration failed: " + regError.message);
       setLoading(false);
       return;
     }
 
     const userId = regData.user.id;
 
-    // 2️⃣ INSERT INTO PROFILES
+    // 2️⃣ Insert profile row
     await supabase.from("profiles").insert({
       user_id: userId,
       full_name: fullName,
@@ -50,25 +56,28 @@ export default function Register() {
       age: null,
       bio: "",
       is_premium: false,
-
-      // Default trial columns — filled in step 3
+      // trial columns, will be set in step 3
       trial_start: null,
       trial_end: null,
       trial_expired: false,
     });
 
-    // 3️⃣ TRIAL SISTEM – Aktivacija 7 dana
+    // 3️⃣ Trial system – activate 7 days
     const now = new Date();
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 7);
 
-    await supabase.from("profiles").update({
-      trial_start: now.toISOString(),
-      trial_end: trialEnd.toISOString(),
-    }).eq("user_id", userId);
+    await supabase
+      .from("profiles")
+      .update({
+        trial_start: now.toISOString(),
+        trial_end: trialEnd.toISOString(),
+      })
+      .eq("user_id", userId);
 
-    // 4️⃣ GOTOVO
-    alert("Uspešna registracija! Proveri email i aktiviraj nalog.");
+    // 4️⃣ Done
+    setInfo("Registration successful! Please check your email to verify your account.");
+    alert("Registration successful! Check your email and activate your account.");
     setLoading(false);
     navigate("/login");
   }
@@ -105,7 +114,7 @@ export default function Register() {
             marginBottom: "4px",
           }}
         >
-          {t("auth_register_title")}
+          Create an account
         </h1>
 
         <p
@@ -116,14 +125,16 @@ export default function Register() {
             marginBottom: "18px",
           }}
         >
-          Registruj nalog i potvrdi mejl da bi koristio MeetOutdoors.
+          Sign up and confirm your email to start using MeetOutdoors.
         </p>
 
-        <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          
+        <form
+          onSubmit={handleRegister}
+          style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+        >
           {/* FULL NAME */}
           <label style={{ fontSize: "13px" }}>
-            Ime i prezime
+            Full name
             <input
               type="text"
               value={fullName}
@@ -142,8 +153,9 @@ export default function Register() {
             />
           </label>
 
+          {/* EMAIL */}
           <label style={{ fontSize: "13px" }}>
-            {t("auth_email")}
+            Email
             <input
               type="email"
               value={email}
@@ -158,11 +170,13 @@ export default function Register() {
                 color: "#e5e7eb",
                 fontSize: "14px",
               }}
+              required
             />
           </label>
 
+          {/* PASSWORD */}
           <label style={{ fontSize: "13px" }}>
-            {t("auth_password")}
+            Password
             <input
               type="password"
               value={password}
@@ -177,11 +191,13 @@ export default function Register() {
                 color: "#e5e7eb",
                 fontSize: "14px",
               }}
+              required
             />
           </label>
 
+          {/* REPEAT PASSWORD */}
           <label style={{ fontSize: "13px" }}>
-            {t("auth_repeat_password")}
+            Repeat password
             <input
               type="password"
               value={repeat}
@@ -196,21 +212,37 @@ export default function Register() {
                 color: "#e5e7eb",
                 fontSize: "14px",
               }}
+              required
             />
           </label>
 
+          {/* ERROR */}
           {error && (
-            <div style={{ marginTop: "6px", fontSize: "13px", color: "#f97373" }}>
+            <div
+              style={{
+                marginTop: "6px",
+                fontSize: "13px",
+                color: "#f97373",
+              }}
+            >
               {error}
             </div>
           )}
 
+          {/* INFO */}
           {info && (
-            <div style={{ marginTop: "6px", fontSize: "13px", color: "#4ade80" }}>
+            <div
+              style={{
+                marginTop: "6px",
+                fontSize: "13px",
+                color: "#4ade80",
+              }}
+            >
               {info}
             </div>
           )}
 
+          {/* SUBMIT */}
           <button
             type="submit"
             disabled={loading}
@@ -228,7 +260,7 @@ export default function Register() {
               opacity: loading ? 0.6 : 1,
             }}
           >
-            {loading ? "Sačekaj..." : t("auth_register_btn")}
+            {loading ? "Please wait..." : "Sign up"}
           </button>
         </form>
 
@@ -239,9 +271,9 @@ export default function Register() {
             textAlign: "center",
           }}
         >
-          {t("auth_yes_account")}{" "}
+          Already have an account?{" "}
           <Link to="/login" style={{ color: "#4ade80" }}>
-            {t("auth_login_btn")}
+            Log in
           </Link>
         </div>
       </div>

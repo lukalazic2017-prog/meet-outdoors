@@ -43,7 +43,7 @@ function Contact() {
             marginBottom: "20px",
           }}
         >
-          Kontakt
+          Contact Us
         </h1>
 
         <p
@@ -53,8 +53,8 @@ function Contact() {
             marginBottom: "40px",
           }}
         >
-          Imaš ideju, pitanje ili želiš da organizuješ zajedničku avanturu?  
-          Piši nam — uvek odgovaramo!
+          Have an idea, a question, or want to plan an adventure together?  
+          Send us a message — we always reply!
         </p>
 
         <div style={{ textAlign: "left" }}>
@@ -91,7 +91,7 @@ function Contact() {
             }}
           >
             <FaMapMarkerAlt style={{ fontSize: "1.5rem", color: "#22c55e" }} />
-            <p style={{ fontSize: "1.1rem" }}>Prokuplje, Srbija</p>
+            <p style={{ fontSize: "1.1rem" }}>Prokuplje, Serbia</p>
           </div>
         </div>
 
@@ -121,7 +121,7 @@ function Contact() {
                   "linear-gradient(90deg, #22c55e, #4ade80, #16a34a)")
               }
             >
-              Pošalji poruku ✉️
+              Send Message ✉️
             </button>
           </a>
         </div>

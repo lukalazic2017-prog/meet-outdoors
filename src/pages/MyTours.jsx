@@ -59,14 +59,14 @@ export default function MyTours() {
             WebkitTextFillColor: "transparent",
           }}
         >
-          Moje avanture
+          My Adventures
         </h1>
         <p style={{ opacity: 0.9, fontSize: "1.1rem" }}>
-          Pregled svih tura na koje si se prijavio.
+          View all tours you have joined.
         </p>
       </section>
 
-      {/* SADRŽAJ */}
+      {/* CONTENT */}
       <section
         style={{
           maxWidth: 1200,
@@ -86,10 +86,10 @@ export default function MyTours() {
             }}
           >
             <h2 style={{ fontSize: "2rem", marginBottom: "10px" }}>
-              Još nisi krenuo ni na jednu avanturu 🏔️
+              You haven’t joined any adventures yet 🏔️
             </h2>
             <p style={{ opacity: 0.85, marginBottom: "25px" }}>
-              Svaka velika priča počinje prvim korakom.
+              Every great story begins with a single step.
             </p>
             <Link
               to="/tours"
@@ -103,7 +103,7 @@ export default function MyTours() {
                 boxShadow: "0 8px 25px rgba(0,0,0,0.4)",
               }}
             >
-              🔎 Istraži ture
+              🔎 Explore Tours
             </Link>
           </div>
         ) : (
@@ -128,7 +128,7 @@ export default function MyTours() {
                 <div
                   style={{
                     height: "180px",
-                    backgroundImage: `url(${t.image || FALLBACK_IMG})`,
+                    backgroundImage: url(`${t.image || FALLBACK_IMG}`),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     position: "relative",
@@ -155,7 +155,7 @@ export default function MyTours() {
                       border: "1px solid rgba(255,255,255,0.2)",
                     }}
                   >
-                    {t.activity || "aktivnost"}
+                    {t.activity || "activity"}
                   </span>
                 </div>
                 <div style={{ padding: "18px" }}>
@@ -203,7 +203,7 @@ export default function MyTours() {
                         "linear-gradient(135deg, #dc2626, #b91c1c)")
                     }
                   >
-                    ❌ Odjavi se sa ture
+                    ❌ Leave Tour
                   </button>
                 </div>
               </div>

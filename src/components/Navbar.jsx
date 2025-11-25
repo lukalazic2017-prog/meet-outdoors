@@ -1,23 +1,14 @@
-import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient";
-import { useLanguage } from "../i18n/LanguageContext";
-import { useTrial } from "../i18n/TrialContext";
-
-
 export default function Navbar() {
-  const { language, setLanguage, t } = useLanguage();
   const [user, setUser] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-const { isPremium, trialExpired, daysLeft } = useTrial();
-const [isOpen, setIsOpen] = useState(false);
-
+  const { isPremium, trialExpired, daysLeft } = useTrial();
+  const [isOpen, setIsOpen] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Učitaj session + profil
+  // Load session + profile
   useEffect(() => {
     let ignore = false;
 
@@ -34,7 +25,7 @@ const [isOpen, setIsOpen] = useState(false);
       const currentUser = data.session.user;
       if (!ignore) setUser(currentUser);
 
-      // Učitavanje profila (avatar)
+      // Load avatar
       const { data: profile } = await supabase
         .from("profiles")
         .select("avatar_url, full_name")
@@ -48,7 +39,6 @@ const [isOpen, setIsOpen] = useState(false);
 
     loadSession();
 
-    // Realtime promene login/logout
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setUser(null);
@@ -56,7 +46,7 @@ const [isOpen, setIsOpen] = useState(false);
         return;
       }
       setUser(session.user);
-      // ponovo učitaj avatar
+
       supabase
         .from("profiles")
         .select("avatar_url, full_name")
@@ -109,7 +99,7 @@ const [isOpen, setIsOpen] = useState(false);
           color: "#fff",
         }}
       >
-        {/* LEVA STRANA – LOGO */}
+        {/* LEFT SIDE - LOGO */}
         <div
           style={{
             display: "flex",
@@ -146,7 +136,7 @@ const [isOpen, setIsOpen] = useState(false);
           </div>
         </div>
 
-        {/* DESNA STRANA – DESKTOP */}
+        {/* RIGHT SIDE - DESKTOP */}
         <div
           className="navbar-right"
           style={{
@@ -155,7 +145,7 @@ const [isOpen, setIsOpen] = useState(false);
             gap: "16px",
           }}
         >
-          {/* Linkovi – Desktop */}
+          {/* Desktop Links */}
           <div
             className="navbar-links"
             style={{
@@ -165,41 +155,21 @@ const [isOpen, setIsOpen] = useState(false);
             }}
           >
             <Link style={isActive("/")} to="/">
-              {t("nav_home")}
+              Home
             </Link>
             <Link style={isActive("/activities")} to="/activities">
-              {t("nav_activities")}
+              Activities
             </Link>
             <Link style={isActive("/tours")} to="/tours">
-              {t("nav_tours")}
+              Tours
             </Link>
             {user && <Link to="/create-tour">Create Tour</Link>}
             <Link style={isActive("/contact")} to="/contact">
-              {t("nav_contact")}
+              Contact
             </Link>
           </div>
 
-          {/* JEZICI */}
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            style={{
-              background: "transparent",
-              color: "#27c200ff",
-              borderRadius: "999px",
-              border: "1px solid rgba(255,255,255,0.45)",
-              padding: "4px 10px",
-              fontSize: "12px",
-              outline: "none",
-              cursor: "pointer",
-            }}
-          >
-            <option value="en">🇺🇸 EN</option>
-            <option value="de">🇩🇪 DE</option>
-            <option value="sr">🇷🇸 SR</option>
-          </select>
-
-          {/* USER DEO */}
+          {/* USER SECTION */}
           {user ? (
             <div
               style={{
@@ -217,10 +187,10 @@ const [isOpen, setIsOpen] = useState(false);
                   color: "#fff",
                 }}
               >
-                {t("nav_my_profile")}
+                My Profile
               </Link>
 
-              {/* PROFILNA + ZELENA TAČKA */}
+              {/* Avatar */}
               <div
                 style={{
                   position: "relative",
@@ -272,7 +242,7 @@ const [isOpen, setIsOpen] = useState(false);
                   cursor: "pointer",
                 }}
               >
-                {t("nav_logout")}
+                Logout
               </button>
             </div>
           ) : (
@@ -291,7 +261,7 @@ const [isOpen, setIsOpen] = useState(false);
                   color: "#e5e7eb",
                 }}
               >
-                {t("nav_login")}
+                Login
               </Link>
               <Link
                 to="/register"
@@ -306,149 +276,107 @@ const [isOpen, setIsOpen] = useState(false);
                   fontWeight: 600,
                 }}
               >
-                {t("nav_register")}
+                Register
               </Link>
-              {!isPremium && !trialExpired && (
-  <span style={{ color: "yellow", marginLeft: "10px" }}>
-    ⭐ Trial: {daysLeft} dana preostalo
-  </span>
-)}
 
-{trialExpired && (
-  <span style={{ color: "red", marginLeft: "10px" }}>
-    ⛔ Trial istekao
-  </span>
-)}
+              {/* Trial info */}
+              {!isPremium && !trialExpired && (
+                <span style={{ color: "yellow", marginLeft: "10px" }}>
+                  ⭐ Trial: {daysLeft} days left
+                </span>
+              )}
+
+              {trialExpired && (
+                <span style={{ color: "red", marginLeft: "10px" }}>
+                  ⛔ Trial expired
+                </span>
+              )}
             </div>
           )}
 
-          {/* MOBILE MENI DUGME */}
+          {/* Mobile menu button */}
           <button
-  className="menu-btn"
-  onClick={() => setIsOpen(!isOpen)}
->
-  ☰
-</button>
-          
+            className="menu-btn"
+            onClick={() => setIsOpen(!isOpen)}
+            style={{
+              color: "white",
+              fontSize: "22px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            ☰
+          </button>
         </div>
       </div>
 
-     {/* MOBILE DROPDOWN */}
-{isOpen && (
-  <div
-    style={{
-      position: "absolute",
-      top: "70px",
-      right: "10px",
-      width: "220px",
-      background: "rgba(3, 57, 0, 0.95)",
-      borderRadius: "14px",
-      padding: "15px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      backdropFilter: "blur(12px)",
-      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.6)",
-      zIndex: 9999,
-      animation: "fadeIn 0.2s ease-in-out"
-    }}
-  >
-    <Link
-      to="/"
-      style={{
-        color: "white",
-        background: "rgba(255, 255, 255, 0.08)",
-        padding: "12px",
-        borderRadius: "10px",
-        textAlign: "center",
-        textDecoration: "none",
-        fontSize: "16px"
-      }}
-    >
-      Home
-    </Link>
+      {/* MOBILE MENU */}
+      {isOpen && (
+        <div
+          style={{
+            position: "absolute",
+            top: "70px",
+            right: "10px",
+            width: "220px",
+            background: "rgba(3, 57, 0, 0.95)",
+            borderRadius: "14px",
+            padding: "15px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.6)",
+            zIndex: 9999,
+            animation: "fadeIn 0.2s ease-in-out",
+          }}
+        >
+          <Link to="/" style={mobileItemStyle}>
+            Home
+          </Link>
+          <Link to="/activities" style={mobileItemStyle}>
+            Activities
+          </Link>
+          <Link to="/contact" style={mobileItemStyle}>
+            Contact
+          </Link>
+          <Link to="/tours" style={mobileItemStyle}>
+            Tours
+          </Link>
 
-    <Link
-      to="/activities"
-      style={{
-        color: "white",
-        background: "rgba(255, 255, 255, 0.08)",
-        padding: "12px",
-        borderRadius: "10px",
-        textAlign: "center",
-        textDecoration: "none",
-        fontSize: "16px"
-      }}
-    >
-      Activities
-    </Link>
+          {user && (
+            <Link to="/create-tour" style={mobileCreateStyle}>
+              Create Tour
+            </Link>
+          )}
 
-    <Link
-      to="/contact"
-      style={{
-        color: "white",
-        background: "rgba(255, 255, 255, 0.08)",
-        padding: "12px",
-        borderRadius: "10px",
-        textAlign: "center",
-        textDecoration: "none",
-        fontSize: "16px"
-      }}
-    >
-      Contact
-    </Link>
+          {user && (
+            <Link to="/my-profile" style={mobileItemStyle}>
+              My Profile
+            </Link>
+          )}
+        </div>
+      )}
+    </nav>
+  );
+}
 
-    <Link
-      to="/tours"
-      style={{
-        color: "white",
-        background: "rgba(255, 255, 255, 0.08)",
-        padding: "12px",
-        borderRadius: "10px",
-        textAlign: "center",
-        textDecoration: "none",
-        fontSize: "16px"
-      }}
-    >
-      Tours
-    </Link>
+const mobileItemStyle = {
+  color: "white",
+  background: "rgba(255, 255, 255, 0.08)",
+  padding: "12px",
+  borderRadius: "10px",
+  textAlign: "center",
+  textDecoration: "none",
+  fontSize: "16px",
+};
 
-    {/* SAMO AKO JE ULOGOVAN */}
-    {user && (
-      <Link
-        to="/create-tour"
-        style={{
-          color: "white",
-          background: "rgba(76, 175, 80, 0.8)",
-          padding: "12px",
-          borderRadius: "10px",
-          textAlign: "center",
-          textDecoration: "none",
-          fontSize: "16px"
-        }}
-      >
-        Create Tour
-      </Link>
-    )}
-
-    {user && (
-      <Link
-        to="/my-profile"
-        style={{
-          color: "white",
-          background: "rgba(255, 255, 255, 0.08)",
-          padding: "12px",
-          borderRadius: "10px",
-          textAlign: "center",
-          textDecoration: "none",
-          fontSize: "16px"
-        }}
-      >
-        My Profile
-      </Link>
-    )}
-</div>
-)}
-
-  </nav>
-)}
+const mobileCreateStyle = {
+  color: "white",
+  background: "rgba(76, 175, 80, 0.8)",
+  padding: "12px",
+  borderRadius: "10px",
+  textAlign: "center",
+  textDecoration: "none",
+  fontSize: "16px",
+};

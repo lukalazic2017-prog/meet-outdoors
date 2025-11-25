@@ -6,7 +6,6 @@ const HERO_IMAGE =
 const FALLBACK_IMG =
   "https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200&auto=format&fit=crop";
 
-// čitanje query parametara
 function useQuery() {
   const { search } = useLocation();
   return useMemo(() => new URLSearchParams(search), [search]);
@@ -16,7 +15,7 @@ export default function Tours() {
   const query = useQuery();
   const activeTag = query.get("activity") || "";
   const [tours, setTours] = useState([]);
-  const [expandedTour, setExpandedTour] = useState(null); // za otvaranje detalja
+  const [expandedTour, setExpandedTour] = useState(null);
 
   useEffect(() => {
     const raw = JSON.parse(localStorage.getItem("tours")) || [];
@@ -50,9 +49,9 @@ export default function Tours() {
         }}
       >
         <div style={{ textAlign: "center", maxWidth: 900 }}>
-          <h1 style={{ fontSize: "3rem", margin: 0 }}>🌍 Istraži naše avanture</h1>
+          <h1 style={{ fontSize: "3rem", margin: 0 }}>🌍 Explore Our Adventures</h1>
           <p style={{ opacity: 0.9, marginTop: 12, fontSize: "1.15rem" }}>
-            Pronađi turu po meri — planinarenje, rafting, kvadovi, zip-line i više.
+            Find the perfect tour — hiking, rafting, quad rides, zip-line and more.
           </p>
         </div>
       </section>
@@ -75,10 +74,10 @@ export default function Tours() {
           fontFamily: "Poppins, sans-serif",
         }}
       >
-        {/* Pretraga */}
+        {/* SEARCH */}
         <input
           type="text"
-          placeholder="🔍 Pretraži po nazivu..."
+          placeholder="🔍 Search by name..."
           onChange={(e) => {
             const value = e.target.value.toLowerCase();
             const allTours = JSON.parse(localStorage.getItem("tours")) || [];
@@ -97,13 +96,13 @@ export default function Tours() {
           }}
         />
 
-        {/* Aktivnost */}
+        {/* ACTIVITY */}
         <select
           onChange={(e) => {
             const value = e.target.value;
             const allTours = JSON.parse(localStorage.getItem("tours")) || [];
             const filtered =
-              value === "Sve"
+              value === "All"
                 ? allTours
                 : allTours.filter(
                     (t) =>
@@ -121,16 +120,16 @@ export default function Tours() {
             cursor: "pointer",
           }}
         >
-          <option value="Sve">Sve aktivnosti</option>
-          <option value="Planinarenje">Planinarenje</option>
+          <option value="All">All activities</option>
+          <option value="Planinarenje">Hiking</option>
           <option value="Rafting">Rafting</option>
-          <option value="Vožnja kvadom">Vožnja kvadom</option>
-          <option value="Skijanje">Skijanje</option>
-          <option value="Ronjenje">Ronjenje</option>
-          <option value="Kampovanje">Kampovanje</option>
+          <option value="Vožnja kvadom">Quad driving</option>
+          <option value="Skijanje">Skiing</option>
+          <option value="Ronjenje">Diving</option>
+          <option value="Kampovanje">Camping</option>
         </select>
 
-        {/* Datum */}
+        {/* DATE */}
         <input
           type="date"
           onChange={(e) => {
@@ -151,20 +150,20 @@ export default function Tours() {
           }}
         />
 
-        {/* Sortiranje */}
+        {/* SORT */}
         <select
           onChange={(e) => {
             const value = e.target.value;
             const allTours = JSON.parse(localStorage.getItem("tours")) || [];
             let sorted = [...allTours];
 
-            if (value === "CenaRastuce") {
+            if (value === "PriceAsc") {
               sorted.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-            } else if (value === "CenaOpadajuce") {
+            } else if (value === "PriceDesc") {
               sorted.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
-            } else if (value === "DatumNajblizi") {
+            } else if (value === "DateSoonest") {
               sorted.sort((a, b) => new Date(a.date) - new Date(b.date));
-            } else if (value === "DatumNajdalji") {
+            } else if (value === "DateLatest") {
               sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
             }
 
@@ -179,14 +178,14 @@ export default function Tours() {
             cursor: "pointer",
           }}
         >
-          <option value="">Sortiraj po...</option>
-          <option value="CenaRastuce">Cena (najniža → najviša)</option>
-          <option value="CenaOpadajuce">Cena (najviša → najniža)</option>
-          <option value="DatumNajblizi">Datum (najskoriji)</option>
-          <option value="DatumNajdalji">Datum (najdalji)</option>
+          <option value="">Sort by...</option>
+          <option value="PriceAsc">Price (low → high)</option>
+          <option value="PriceDesc">Price (high → low)</option>
+          <option value="DateSoonest">Date (soonest)</option>
+          <option value="DateLatest">Date (latest)</option>
         </select>
 
-        {/* Reset */}
+        {/* RESET */}
         <button
           onClick={() => {
             const allTours = JSON.parse(localStorage.getItem("tours")) || [];
@@ -205,11 +204,11 @@ export default function Tours() {
             boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
           }}
         >
-          🔄 Resetuj filtere
+          🔄 Reset filters
         </button>
       </div>
 
-      {/* KARTICE */}
+      {/* CARDS */}
       <section
         style={{
           background: "linear-gradient(160deg, #14532d, #166534)",
@@ -220,7 +219,7 @@ export default function Tours() {
       >
         {tours.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <h2 style={{ fontSize: "2rem" }}>Nema dostupnih tura</h2>
+            <h2 style={{ fontSize: "2rem" }}>No tours available</h2>
             <Link
               to="/create-tour"
               style={{
@@ -235,7 +234,7 @@ export default function Tours() {
                 boxShadow: "0 10px 22px rgba(0,0,0,0.25)",
               }}
             >
-              + Kreiraj novu turu
+              + Create new tour
             </Link>
           </div>
         ) : (
@@ -259,13 +258,12 @@ export default function Tours() {
                   boxShadow: "0 20px 40px rgba(0,0,0,0.35)",
                   backdropFilter: "blur(6px)",
                 }}
-                
               >
-                {/* SLIKA */}
+                {/* IMG */}
                 <div
                   style={{
                     height: 180,
-                    backgroundImage: `url(${t.image || FALLBACK_IMG})`,
+                    backgroundImage: url(`${t.image || FALLBACK_IMG}`),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     position: "relative",
@@ -298,7 +296,7 @@ export default function Tours() {
                   </span>
                 </div>
 
-                {/* SADRŽAJ */}
+                {/* CONTENT */}
                 <div style={{ padding: 16 }}>
                   <h3 style={{ margin: "0 0 6px", fontSize: "1.25rem" }}>{t.name}</h3>
                   <p style={{ margin: "4px 0", opacity: 0.9 }}>📍 {t.location}</p>
@@ -306,6 +304,7 @@ export default function Tours() {
                     📅 {t.date} &nbsp; ⏱ {t.startTime} - {t.endTime}
                   </p>
                   <p style={{ margin: "4px 0", opacity: 0.9 }}>💰 {t.price} €</p>
+
                   <button
                     onClick={() => toggleExpand(i)}
                     style={{
@@ -321,10 +320,9 @@ export default function Tours() {
                       boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
                     }}
                   >
-                    {expandedTour === i ? "Sakrij detalje" : "Prikaži detalje"}
+                    {expandedTour === i ? "Hide details" : "Show details"}
                   </button>
 
-                  {/* DETALJI */}
                   {expandedTour === i && (
                     <div
                       style={{
@@ -336,9 +334,11 @@ export default function Tours() {
                       }}
                     >
                       <p style={{ marginBottom: "10px", opacity: 0.9 }}>
-                        {t.description || "Ova tura nema dodatni opis."}
+                        {t.description || "This tour has no additional description."}
                       </p>
-                      <p style={{ fontWeight: 600 }}>👥 Kapacitet: {t.capacity}</p>
+
+                      <p style={{ fontWeight: 600 }}>👥 Capacity: {t.capacity}</p>
+
                       <div
                         style={{
                           borderRadius: "10px",
@@ -348,7 +348,7 @@ export default function Tours() {
                         }}
                       >
                         <iframe
-                          title="Mapa ture"
+                          title="Tour map"
                           src={`https://www.google.com/maps?q=${encodeURIComponent(
                             t.location
                           )}&output=embed`}
@@ -358,28 +358,27 @@ export default function Tours() {
                           allowFullScreen=""
                           loading="lazy"
                         ></iframe>
-                        {/* CHAT DUGME */}
-<Link
-  to={`/chat/${t.id}`}
-  style={{
-    display: "inline-block",
-    marginTop: "15px",
-    padding: "10px 16px",
-    borderRadius: "10px",
-    background: "linear-gradient(135deg,#22c55e,#4ade80)",
-    color: "#022c22",
-    fontWeight: 700,
-    textDecoration: "none",
-    textAlign: "center",
-    width: "100%",
-    boxShadow: "0 6px 15px rgba(0,0,0,0.25)",
-  }}
->
-  💬 Chat sa organizatorom
-</Link>
+
+                        <Link
+                          to={`/chat/${t.id}`}
+                          style={{
+                            display: "inline-block",
+                            marginTop: "15px",
+                            padding: "10px 16px",
+                            borderRadius: "10px",
+                            background: "linear-gradient(135deg,#22c55e,#4ade80)",
+                            color: "#022c22",
+                            fontWeight: 700,
+                            textDecoration: "none",
+                            textAlign: "center",
+                            width: "100%",
+                            boxShadow: "0 6px 15px rgba(0,0,0,0.25)",
+                          }}
+                        >
+                          💬 Chat with organizer
+                        </Link>
                       </div>
 
-                      {/* Kontakt */}
                       <a
                         href="mailto:info@meetoutdoors.com"
                         style={{
@@ -390,10 +389,9 @@ export default function Tours() {
                           fontWeight: 700,
                         }}
                       >
-                        📩 Kontaktiraj organizatora
+                        📩 Contact organizer
                       </a>
 
-                      {/* Prijava / Odjava */}
                       <button
                         onClick={() => {
                           const allTours = JSON.parse(localStorage.getItem("tours")) || [];
@@ -427,7 +425,7 @@ export default function Tours() {
                           (e.target.style.background = t.signedUp ? "#dc2626" : "#22c55e")
                         }
                       >
-                        {t.signedUp ? "Odjavi se sa ture" : "Prijavi se na turu"}
+                        {t.signedUp ? "Cancel registration" : "Join tour"}
                       </button>
                     </div>
                   )}

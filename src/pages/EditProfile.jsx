@@ -25,7 +25,7 @@ export default function EditProfile() {
     const user = sessionData.session.user;
 
     const { data: profile } = await supabase
-      .from("profiles")      // ← OVO JE KLJUČNO!
+      .from("profiles")
       .select("*")
       .eq("user_id", user.id)
       .single();
@@ -57,7 +57,7 @@ export default function EditProfile() {
       .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      alert("Greška pri uploadu slike!");
+      alert("Error uploading image!");
       return;
     }
 
@@ -69,26 +69,24 @@ export default function EditProfile() {
   }
 
   async function saveProfile() {
-  if (!avatarUrl) {
-    alert("Profilna slika je obavezna. Molim te dodaj sliku lica.");
-    return;
-  }
+    if (!avatarUrl) {
+      alert("Profile picture is required. Please upload a clear face photo.");
+      return;
+    }
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData.session.user;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session.user;
 
-  const profileData = {
-    user_id: user.id,
-    full_name: fullName,
-    age: age,
-    bio: bio,
-    avatar_url: avatarUrl,
-  };
-
-
+    const profileData = {
+      user_id: user.id,
+      full_name: fullName,
+      age: age,
+      bio: bio,
+      avatar_url: avatarUrl,
+    };
 
     const { data: existing } = await supabase
-      .from("profiles")          // ← opet KLJUČNO
+      .from("profiles")
       .select("*")
       .eq("user_id", user.id)
       .single();
@@ -109,9 +107,9 @@ export default function EditProfile() {
     }
 
     if (error) {
-      alert("Greška pri čuvanju profila.");
+      alert("Error saving profile.");
     } else {
-      alert("Profil uspešno sačuvan!");
+      alert("Profile saved successfully!");
       navigate("/my-profile");
     }
   }
@@ -119,16 +117,16 @@ export default function EditProfile() {
   return (
     <div className="edit-profile-container">
       <div className="edit-profile-card">
-        <h2>Uredi Profil</h2>
+        <h2>Edit Profile</h2>
 
         <div className="avatar-section">
           {preview ? (
             <img src={preview} alt="avatar" className="avatar-preview" />
           ) : (
-            <div className="avatar-placeholder">Nema slike</div>
+            <div className="avatar-placeholder">No image</div>
           )}
 
-          <label className="label">Profilna slika:</label>
+          <label className="label">Profile picture:</label>
           <input
             type="file"
             accept="image/*"
@@ -137,7 +135,7 @@ export default function EditProfile() {
           />
         </div>
 
-        <label className="label">Ime i prezime:</label>
+        <label className="label">Full name:</label>
         <input
           className="input-profile"
           type="text"
@@ -145,7 +143,7 @@ export default function EditProfile() {
           onChange={(e) => setFullName(e.target.value)}
         />
 
-        <label className="label">Godine:</label>
+        <label className="label">Age:</label>
         <input
           className="input-profile"
           type="number"
@@ -153,7 +151,7 @@ export default function EditProfile() {
           onChange={(e) => setAge(e.target.value)}
         />
 
-        <label className="label">Opis:</label>
+        <label className="label">About you:</label>
         <textarea
           className="input-profile"
           value={bio}
@@ -161,7 +159,7 @@ export default function EditProfile() {
         ></textarea>
 
         <button className="save-btn" onClick={saveProfile}>
-          💾 Sačuvaj
+          💾 Save
         </button>
       </div>
     </div>

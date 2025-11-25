@@ -76,7 +76,7 @@ export default function MyProfile() {
   if (!profile) {
     return (
       <div style={{ textAlign: "center", padding: "80px", color: "white" }}>
-        <h2>❌ Profil nije pronađen</h2>
+        <h2>❌ Profile not found</h2>
         <button
           onClick={() => navigate("/edit-profile")}
           style={{
@@ -90,7 +90,7 @@ export default function MyProfile() {
             marginTop: "20px",
           }}
         >
-          ➕ Kreiraj profil
+          ➕ Create Profile
         </button>
       </div>
     );
@@ -139,7 +139,9 @@ export default function MyProfile() {
         </h2>
         <p style={{ opacity: 0.8, marginBottom: "15px" }}>@ID: {profile.id}</p>
 
-        <p style={{ fontSize: "15px", opacity: 0.9 }}>{profile.bio || "—"}</p>
+        <p style={{ fontSize: "15px", opacity: 0.9 }}>
+          {profile.bio || "—"}
+        </p>
 
         <button
           onClick={() => navigate("/edit-profile")}
@@ -155,7 +157,7 @@ export default function MyProfile() {
             color: "white",
           }}
         >
-          ✏️ Uredi profil
+          ✏️ Edit Profile
         </button>
 
         <button
@@ -172,7 +174,7 @@ export default function MyProfile() {
             color: "white",
           }}
         >
-          🚪 Odjavi se
+          🚪 Log Out
         </button>
       </div>
 
@@ -189,23 +191,23 @@ export default function MyProfile() {
       >
         <div>
           <h3>{myTours.length}</h3>
-          <p style={{ opacity: 0.7 }}>Kreirane ture</p>
+          <p style={{ opacity: 0.7 }}>Created Tours</p>
         </div>
         <div>
           <h3>{joinedTours.length}</h3>
-          <p style={{ opacity: 0.7 }}>Prijavljen</p>
+          <p style={{ opacity: 0.7 }}>Joined</p>
         </div>
         <div>
           <h3>{reviews.length}</h3>
-          <p style={{ opacity: 0.7 }}>Recenzije</p>
+          <p style={{ opacity: 0.7 }}>Reviews</p>
         </div>
       </div>
 
       {/* ---- MY TOURS ---- */}
-      <h2 style={{ marginTop: "40px" }}>📌 Moje Ture</h2>
+      <h2 style={{ marginTop: "40px" }}>📌 My Tours</h2>
 
       {myTours.length === 0 ? (
-        <p style={{ opacity: 0.7 }}>Nema kreiranih tura.</p>
+        <p style={{ opacity: 0.7 }}>You haven't created any tours.</p>
       ) : (
         <div
           style={{
@@ -242,10 +244,10 @@ export default function MyProfile() {
       )}
 
       {/* ---- JOINED TOURS ---- */}
-      <h2 style={{ marginTop: "40px" }}>🧭 Ture na koje si prijavljen</h2>
+      <h2 style={{ marginTop: "40px" }}>🧭 Joined Tours</h2>
 
       {joinedTours.length === 0 ? (
-        <p style={{ opacity: 0.7 }}>Nisi prijavljen ni na jednu turu.</p>
+        <p style={{ opacity: 0.7 }}>You haven't joined any tours.</p>
       ) : (
         <div
           style={{
@@ -282,10 +284,10 @@ export default function MyProfile() {
       )}
 
       {/* ---- REVIEWS ---- */}
-      <h2 style={{ marginTop: "40px" }}>⭐ Recenzije o tebi</h2>
+      <h2 style={{ marginTop: "40px" }}>⭐ Reviews About You</h2>
 
       {reviews.length === 0 ? (
-        <p style={{ opacity: 0.7 }}>Nema recenzija.</p>
+        <p style={{ opacity: 0.7 }}>No reviews yet.</p>
       ) : (
         reviews.map((r) => (
           <div
@@ -297,7 +299,7 @@ export default function MyProfile() {
               marginTop: "10px",
             }}
           >
-            <strong>Ocena: ⭐ {r.rating}</strong>
+            <strong>Rating: ⭐ {r.rating}</strong>
             <p style={{ marginTop: "8px" }}>{r.text}</p>
           </div>
         ))

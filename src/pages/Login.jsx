@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useLanguage } from "../i18n/LanguageContext";
 
 export default function Login() {
-  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -17,13 +15,13 @@ export default function Login() {
     setError("");
 
     if (!email || !password) {
-      setError("Unesi email i lozinku.");
+      setError("Please enter your email and password.");
       return;
     }
 
     setLoading(true);
 
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+    const { error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -31,7 +29,7 @@ export default function Login() {
     setLoading(false);
 
     if (loginError) {
-      setError("Pogrešan email ili lozinka.");
+      setError("Incorrect email or password.");
       return;
     }
 
@@ -70,7 +68,7 @@ export default function Login() {
             marginBottom: "4px",
           }}
         >
-          {t("auth_login_title") || "Prijava"}
+          Login
         </h1>
 
         <p
@@ -81,7 +79,7 @@ export default function Login() {
             marginBottom: "18px",
           }}
         >
-          Dobrodošao nazad! Prijavi se da nastaviš.
+          Welcome back! Sign in to continue.
         </p>
 
         <form
@@ -90,7 +88,7 @@ export default function Login() {
         >
           {/* EMAIL */}
           <label style={{ fontSize: "13px" }}>
-            {t("auth_email") || "Email"}
+            Email
             <input
               type="email"
               value={email}
@@ -110,7 +108,7 @@ export default function Login() {
 
           {/* PASSWORD */}
           <label style={{ fontSize: "13px" }}>
-            {t("auth_password") || "Lozinka"}
+            Password
             <input
               type="password"
               value={password}
@@ -159,7 +157,7 @@ export default function Login() {
               opacity: loading ? 0.6 : 1,
             }}
           >
-            {loading ? "Prijavljivanje..." : t("auth_login_btn") || "Prijavi se"}
+            {loading ? "Signing in..." : "Login"}
           </button>
         </form>
 
@@ -172,7 +170,7 @@ export default function Login() {
           }}
         >
           <Link to="/reset-password" style={{ color: "#4ade80" }}>
-            Zaboravljena lozinka?
+            Forgot your password?
           </Link>
         </div>
 
@@ -184,9 +182,9 @@ export default function Login() {
             textAlign: "center",
           }}
         >
-          Nemaš nalog?{" "}
+          Don’t have an account?{" "}
           <Link to="/register" style={{ color: "#4ade80" }}>
-            Registruj se
+            Sign up
           </Link>
         </div>
       </div>

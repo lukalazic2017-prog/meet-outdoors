@@ -20,13 +20,13 @@ export default function CreateTour() {
   const [imagePreview, setImagePreview] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
 
-  // promena vrednosti
+  // handle input change
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
   };
 
-  // upload slike sa računara
+  // upload image from device
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -39,14 +39,14 @@ export default function CreateTour() {
     }
   };
 
-  // slanje forme
+  // submit
   const handleSubmit = (e) => {
     e.preventDefault();
     const stored = JSON.parse(localStorage.getItem("tours")) || [];
     const updated = [...stored, form];
     localStorage.setItem("tours", JSON.stringify(updated));
 
-    // popup animacija
+    // popup animation
     setShowPopup(true);
     setTimeout(() => {
       setShowPopup(false);
@@ -71,7 +71,7 @@ export default function CreateTour() {
         overflow: "hidden",
       }}
     >
-      {/* SVETLOSNI EFEKAT */}
+      {/* LIGHT EFFECTS */}
       <div
         style={{
           position: "absolute",
@@ -127,35 +127,35 @@ export default function CreateTour() {
             WebkitTextFillColor: "transparent",
           }}
         >
-          ➕ Kreiraj novu turu
+          ➕ Create a New Tour
         </h1>
 
-        {/* NAZIV */}
-        <label>Naziv ture</label>
+        {/* NAME */}
+        <label>Tour Name</label>
         <input
           type="text"
           name="name"
-          placeholder="Unesi naziv ture..."
+          placeholder="Enter tour name..."
           required
           value={form.name}
           onChange={handleChange}
           style={inputStyle}
         />
 
-        {/* LOKACIJA */}
-        <label>Lokacija</label>
+        {/* LOCATION */}
+        <label>Location</label>
         <input
           type="text"
           name="location"
-          placeholder="Unesi lokaciju..."
+          placeholder="Enter location..."
           required
           value={form.location}
           onChange={handleChange}
           style={inputStyle}
         />
 
-        {/* AKTIVNOST */}
-        <label>Aktivnost</label>
+        {/* ACTIVITY */}
+        <label>Activity</label>
         <select
           name="activity"
           required
@@ -163,23 +163,23 @@ export default function CreateTour() {
           onChange={handleChange}
           style={inputStyle}
         >
-          <option value="">Izaberi aktivnost</option>
-          <option value="Planinarenje">Planinarenje</option>
+          <option value="">Select activity</option>
+          <option value="Hiking">Hiking</option>
           <option value="Rafting">Rafting</option>
-          <option value="Vožnja kvadom">Vožnja kvadom</option>
-          <option value="Skijanje">Skijanje</option>
-          <option value="Ronjenje">Ronjenje</option>
-          <option value="Zip line">Zip line</option>
-          <option value="Padobranstvo">Padobranstvo</option>
-          <option value="Paraglajding">Paraglajding</option>
-          <option value="Kampovanje">Kampovanje</option>
-          <option value="Jahanje">Jahanje</option>
+          <option value="Quad Ride">Quad Ride</option>
+          <option value="Skiing">Skiing</option>
+          <option value="Diving">Diving</option>
+          <option value="Zip Line">Zip Line</option>
+          <option value="Skydiving">Skydiving</option>
+          <option value="Paragliding">Paragliding</option>
+          <option value="Camping">Camping</option>
+          <option value="Horse Riding">Horse Riding</option>
         </select>
 
-        {/* DATUM I VREME */}
+        {/* DATE & TIME */}
         <div style={{ display: "flex", gap: "10px" }}>
           <div style={{ flex: 1 }}>
-            <label>Datum</label>
+            <label>Date</label>
             <input
               type="date"
               name="date"
@@ -190,7 +190,7 @@ export default function CreateTour() {
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label>Početak</label>
+            <label>Start Time</label>
             <input
               type="time"
               name="startTime"
@@ -201,7 +201,7 @@ export default function CreateTour() {
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label>Kraj</label>
+            <label>End Time</label>
             <input
               type="time"
               name="endTime"
@@ -213,10 +213,10 @@ export default function CreateTour() {
           </div>
         </div>
 
-        {/* CENA I KAPACITET */}
+        {/* PRICE & CAPACITY */}
         <div style={{ display: "flex", gap: "10px" }}>
           <div style={{ flex: 1 }}>
-            <label>Cena (€)</label>
+            <label>Price (€)</label>
             <input
               type="number"
               name="price"
@@ -227,7 +227,7 @@ export default function CreateTour() {
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label>Kapacitet</label>
+            <label>Capacity</label>
             <input
               type="number"
               name="capacity"
@@ -239,22 +239,22 @@ export default function CreateTour() {
           </div>
         </div>
 
-        {/* OPIS */}
-        <label>Opis</label>
+        {/* DESCRIPTION */}
+        <label>Description</label>
         <textarea
           name="description"
-          placeholder="Unesi opis ture..."
+          placeholder="Enter tour description..."
           value={form.description}
           onChange={handleChange}
           style={{ ...inputStyle, height: "100px", resize: "none" }}
         />
 
-        {/* SLIKA URL */}
-        <label>Slika (URL link)</label>
+        {/* IMAGE URL */}
+        <label>Image (URL)</label>
         <input
           type="url"
           name="image"
-          placeholder="Nalepi link slike..."
+          placeholder="Paste image link..."
           value={form.image}
           onChange={(e) => {
             handleChange(e);
@@ -264,7 +264,7 @@ export default function CreateTour() {
         />
 
         {/* UPLOAD */}
-        <label>ili učitaj sa računara</label>
+        <label>or upload from your device</label>
         <input
           type="file"
           accept="image/*"
@@ -292,7 +292,7 @@ export default function CreateTour() {
           </div>
         )}
 
-        {/* SUBMIT */}
+        {/* BUTTON */}
         <button
           type="submit"
           style={{
@@ -317,7 +317,7 @@ export default function CreateTour() {
               "linear-gradient(135deg, #22c55e, #15803d)")
           }
         >
-          ✅ Sačuvaj turu
+          ✅ Save Tour
         </button>
       </form>
 
@@ -342,7 +342,7 @@ export default function CreateTour() {
             animation: "fadeInOut 2s ease",
           }}
         >
-          ✅ Tura uspešno dodata!
+          ✅ Tour successfully added!
         </div>
       )}
     </div>

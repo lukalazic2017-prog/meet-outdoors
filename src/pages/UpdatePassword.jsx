@@ -1,5 +1,5 @@
 import { useState } from "react";
-import {supabase} from "../supabaseClient";
+import { supabase } from "../supabaseClient";
 
 export default function UpdatePassword() {
   const [password, setPassword] = useState("");
@@ -19,7 +19,7 @@ export default function UpdatePassword() {
       return;
     }
 
-    setMessage("✅ Lozinka je uspešno promenjena! Možete se prijaviti.");
+    setMessage("✅ Password successfully updated! You can now log in.");
     setLoading(false);
   }
 
@@ -48,7 +48,7 @@ export default function UpdatePassword() {
         }}
       >
         <h2 style={{ marginBottom: "25px", fontSize: "28px", fontWeight: "600" }}>
-          🔒 Nova lozinka
+          🔒 New Password
         </h2>
 
         {message && (
@@ -68,7 +68,7 @@ export default function UpdatePassword() {
         <form onSubmit={handleUpdate}>
           <input
             type="password"
-            placeholder="Unesite novu lozinku"
+            placeholder="Enter new password"
             value={password}
             required
             onChange={(e) => setPassword(e.target.value)}
@@ -100,7 +100,7 @@ export default function UpdatePassword() {
               transition: "0.3s",
             }}
           >
-            {loading ? "Učitavanje..." : "Sačuvaj novu lozinku"}
+            {loading ? "Loading..." : "Save New Password"}
           </button>
         </form>
       </div>

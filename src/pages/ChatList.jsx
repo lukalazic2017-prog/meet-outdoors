@@ -13,7 +13,7 @@ export default function ChatList() {
     });
   }, []);
 
-  // Učitaj sve ture gde sam ja kreator ili prijavljen
+  // Load all tours where I am the creator or participant
   useEffect(() => {
     const raw = JSON.parse(localStorage.getItem("tours")) || [];
     if (!user) return;
@@ -25,7 +25,7 @@ export default function ChatList() {
     setTours(myTours);
   }, [user]);
 
-  // UČITAJ BROJ NEPROČITANIH PORUKA PO TURI
+  // Load unread message count for each tour
   useEffect(() => {
     async function loadUnread() {
       if (!user) return;
@@ -33,7 +33,7 @@ export default function ChatList() {
       let map = {};
 
       for (let t of tours) {
-        // poslednji put kada je korisnik pročitao chat
+        // Last read timestamp
         const { data: lastRead } = await supabase
           .from("message_reads")
           .select("last_read_at")
@@ -43,7 +43,7 @@ export default function ChatList() {
 
         const lastSeen = lastRead?.last_read_at || "1970-01-01";
 
-        // broj poruka nakon lastSeen
+        // Count new messages
         const { count } = await supabase
           .from("tour_messages")
           .select("*", { count: "exact", head: true })
@@ -70,12 +70,12 @@ export default function ChatList() {
       }}
     >
       <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
-        💬 Moji Čatovi
+        💬 My Chats
       </h2>
 
       {tours.length === 0 ? (
         <p style={{ textAlign: "center", opacity: 0.7 }}>
-          Nema tura na kojima si aktivan.
+          You are not part of any tour chats yet.
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
@@ -102,7 +102,7 @@ export default function ChatList() {
                 </p>
               </div>
 
-              {/* NOTIFIKACIJA */}
+              {/* NOTIFICATION BADGE */}
               {unread[t.id] > 0 && (
                 <span
                   style={{

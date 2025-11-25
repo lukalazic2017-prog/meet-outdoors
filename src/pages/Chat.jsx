@@ -23,7 +23,7 @@ export default function Chat() {
     });
   }, []);
 
-  // LOAD MESSAGES + REALTIME
+  // LOAD MESSAGES + REALTIME LISTENER
   useEffect(() => {
     async function loadMessages() {
       const { data } = await supabase
@@ -37,7 +37,6 @@ export default function Chat() {
 
     loadMessages();
 
-    // REALTIME
     const channel = supabase
       .channel("msg_" + tourId)
       .on(
@@ -64,16 +63,13 @@ export default function Chat() {
     });
   }, [user, tourId]);
 
-  // ---------------------------------------------------
-  // 🚀 SEND MESSAGE (ISPRAVNO NAPISANO)
-  // ---------------------------------------------------
+  // SEND MESSAGE
   async function sendMessage() {
     if (!user) return;
     if (!text && !imageFile) return;
 
     let imageUrl = null;
 
-    // Upload slike ako postoji
     if (imageFile) {
       const fileName = `${user.id}-${Date.now()}.${
         imageFile.name.split(".").pop()
@@ -105,8 +101,6 @@ export default function Chat() {
     setImageFile(null);
   }
 
-  // ---------------------------------------------------
-
   return (
     <div
       style={{
@@ -119,7 +113,7 @@ export default function Chat() {
       }}
     >
       <h2 style={{ textAlign: "center", marginBottom: "10px" }}>
-        💬 Grupni Chat (Tura #{tourId})
+        💬 Group Chat (Tour #{tourId})
       </h2>
 
       {/* CHAT LIST */}
@@ -176,8 +170,8 @@ export default function Chat() {
                 <div
                   style={{
                     background: isMe
-                      ? "rgba(59,130,246,0.25)" // Plava za tebe
-                      : "rgba(34,197,94,0.25)", // Zelena za druge
+                      ? "rgba(59,130,246,0.25)" // blue for you
+                      : "rgba(34,197,94,0.25)", // green for others
                     padding: "10px 14px",
                     borderRadius: "12px",
                     maxWidth: "250px",
@@ -207,7 +201,7 @@ export default function Chat() {
         <div ref={messagesEndRef}></div>
       </div>
 
-      {/* INPUT AREA */}
+      {/* INPUT */}
       <div
         style={{
           display: "flex",
@@ -229,7 +223,7 @@ export default function Chat() {
         />
 
         <input
-          placeholder="Napiši poruku..."
+          placeholder="Write a message..."
           value={text}
           onChange={(e) => setText(e.target.value)}
           style={{

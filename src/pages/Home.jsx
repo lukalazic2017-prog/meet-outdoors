@@ -18,7 +18,7 @@ function Home() {
         overflow: "hidden",
       }}
     >
-      {/* Tamni sloj */}
+      {/* Dark overlay */}
       <div
         style={{
           position: "absolute",
@@ -32,7 +32,7 @@ function Home() {
         }}
       />
 
-      {/* Glavni sadržaj */}
+      {/* Main content */}
       <div
         style={{
           zIndex: 2,
@@ -51,7 +51,7 @@ function Home() {
             marginBottom: "20px",
           }}
         >
-          🌄 Dobrodošli u{" "}
+          🌄 Welcome to{" "}
           <span
             style={{
               background:
@@ -72,13 +72,13 @@ function Home() {
             lineHeight: "1.8",
           }}
         >
-          Avanture. Sloboda. Priroda.  
+          Adventures. Freedom. Nature.
           <br />
-          Otkrij svet planinarenja, raftinga, kampovanja i više —
-          kroz iskustva koja inspirišu.
+          Discover hiking, rafting, camping and more —
+          through experiences that inspire.
         </p>
 
-        {/* Dugmad */}
+        {/* Buttons */}
         <div
           style={{
             display: "flex",
@@ -92,8 +92,7 @@ function Home() {
               style={{
                 padding: "14px 32px",
                 borderRadius: "50px",
-                background:
-                  "rgba(255,255,255,0.15)",
+                background: "rgba(255,255,255,0.15)",
                 border: "1.5px solid rgba(255,255,255,0.4)",
                 color: "#fff",
                 fontSize: "1.05rem",
@@ -114,7 +113,7 @@ function Home() {
                 e.target.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)";
               }}
             >
-              🌿 Pogledaj Aktivnosti
+              🌿 View Activities
             </button>
           </Link>
 
@@ -123,8 +122,7 @@ function Home() {
               style={{
                 padding: "14px 32px",
                 borderRadius: "50px",
-                background:
-                  "linear-gradient(90deg, #22c55e, #4ade80)",
+                background: "linear-gradient(90deg, #22c55e, #4ade80)",
                 color: "#0b2816",
                 fontSize: "1.05rem",
                 fontWeight: "700",
@@ -145,13 +143,13 @@ function Home() {
                 e.target.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)";
               }}
             >
-              🏕️ Pregledaj Ture
+              🏕️ Browse Tours
             </button>
           </Link>
         </div>
       </div>
 
-      {/* Blagi “mist” efekat u dnu */}
+      {/* Mist bottom effect */}
       <div
         style={{
           position: "absolute",

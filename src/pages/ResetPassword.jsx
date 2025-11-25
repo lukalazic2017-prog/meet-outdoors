@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
-import { useLanguage } from "../i18n/LanguageContext";
 import { useNavigate } from "react-router-dom";
 
 export default function ResetPassword() {
-  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -17,20 +15,23 @@ export default function ResetPassword() {
     setError("");
 
     if (!email) {
-      setError("Unesi email.");
+      setError("Please enter your email.");
       return;
     }
 
     setLoading(true);
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password,`
-    });
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: `${window.location.origin}`/update-password,
+      }
+    );
 
     setLoading(false);
 
     if (resetError) {
-      setError("Ne postoji nalog sa tim emailom.");
+      setError("No account found with that email address.");
       return;
     }
 
@@ -69,7 +70,7 @@ export default function ResetPassword() {
             marginBottom: "4px",
           }}
         >
-          Reset lozinke
+          Reset password
         </h1>
 
         <p
@@ -80,7 +81,7 @@ export default function ResetPassword() {
             marginBottom: "18px",
           }}
         >
-          Unesi email i poslaćemo ti link za reset lozinke.
+          Enter your email and we will send you a password reset link.
         </p>
 
         {sent ? (
@@ -93,8 +94,8 @@ export default function ResetPassword() {
               padding: "20px 0",
             }}
           >
-            ✔ Email uspešno poslat!  
-            Proveri inbox i klikni na link.
+            ✔ Email sent successfully!  
+            Please check your inbox.
           </div>
         ) : (
           <form
@@ -102,7 +103,7 @@ export default function ResetPassword() {
             style={{ display: "flex", flexDirection: "column", gap: "12px" }}
           >
             <label style={{ fontSize: "13px" }}>
-              Email adresa:
+              Email address:
               <input
                 type="email"
                 value={email}
@@ -149,7 +150,7 @@ export default function ResetPassword() {
                 opacity: loading ? 0.6 : 1,
               }}
             >
-              {loading ? "Slanje..." : "Pošalji link"}
+              {loading ? "Sending..." : "Send reset link"}
             </button>
           </form>
         )}
@@ -165,7 +166,7 @@ export default function ResetPassword() {
             onClick={() => navigate("/login")}
             style={{ color: "#4ade80", cursor: "pointer" }}
           >
-            ↩ Nazad na prijavu
+            ↩ Back to login
           </span>
         </div>
       </div>
