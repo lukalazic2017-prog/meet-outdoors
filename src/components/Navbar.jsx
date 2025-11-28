@@ -9,19 +9,16 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const { trialExpired, daysLeft } = useTrial();
-
   const location = useLocation();
   const navigate = useNavigate();
 
   // LOAD SESSION
   useEffect(() => {
-    let ignore = false;
-
     async function load() {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
 
-      if (!ignore) setUser(data.session.user);
+      setUser(data.session.user);
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -29,9 +26,7 @@ export default function Navbar() {
         .eq("user_id", data.session.user.id)
         .single();
 
-      if (!ignore && profile) {
-        setAvatarUrl(profile.avatar_url);
-      }
+      if (profile) setAvatarUrl(profile.avatar_url);
     }
 
     load();
@@ -40,43 +35,30 @@ export default function Navbar() {
       if (!session) {
         setUser(null);
         setAvatarUrl(null);
-        return;
+      } else {
+        setUser(session.user);
       }
-
-      setUser(session.user);
-
-      supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("user_id", session.user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) setAvatarUrl(data.avatar_url);
-        });
     });
 
-    return () => {
-      ignore = true;
-      sub.subscription.unsubscribe();
-    };
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   async function logout() {
     await supabase.auth.signOut();
-    setUser(null);
     navigate("/");
   }
 
   const isActive = (path) =>
-    location.pathname === path ? { color: "#4ade80" } : {};
+    location.pathname === path
+      ? { color: "#4ade80", fontWeight: 700 }
+      : { color: "white" };
 
   return (
     <nav
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
+        inset: 0,
+        height: 66,
         zIndex: 50,
         backdropFilter: "blur(12px)",
         background:
@@ -88,6 +70,7 @@ export default function Navbar() {
         style={{
           maxWidth: 1200,
           margin: "0 auto",
+          height: "100%",
           padding: "10px 16px",
           display: "flex",
           alignItems: "center",
@@ -111,7 +94,7 @@ export default function Navbar() {
             style={{
               width: 34,
               height: 34,
-              filter: "drop-shadow(0 0 10px rgba(34,197,94,0.8))",
+              filter: "drop-shadow(0 0 10px rgba(34,197,94,0.6))",
             }}
           />
           <div style={{ lineHeight: 1.2 }}>
@@ -122,71 +105,93 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* RIGHT SIDE */}
+        {/* RIGHT SECTION */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          {/* HIDDEN ON MOBILE */}
-          <div style={{ display: "none", gap: 14 }}>
-            <Link to="/" style={isActive("/")}>Home</Link>
-            <Link to="/activities" style={isActive("/activities")}>Activities</Link>
-            <Link to="/tours" style={isActive("/tours")}>Tours</Link>
-            {user && <Link to="/create-tour">Create Tour</Link>}
-            <Link to="/contact" style={isActive("/contact")}>Contact</Link>
+          {/* DESKTOP LINKS */}
+          <div
+            style={{
+              display: window.innerWidth > 768 ? "flex" : "none",
+              gap: 20,
+              fontSize: 15,
+            }}
+          >
+            <Link to="/" style={{ textDecoration: "none", ...isActive("/") }}>
+              Home
+            </Link>
+
+            <Link
+              to="/activities"
+              style={{ textDecoration: "none", ...isActive("/activities") }}
+            >
+              Activities
+            </Link>
+
+            <Link
+              to="/tours"
+              style={{ textDecoration: "none", ...isActive("/tours") }}
+            >
+              Tours
+            </Link>
+
+            <Link
+              to="/contact"
+              style={{ textDecoration: "none", ...isActive("/contact") }}
+            >
+              Contact
+            </Link>
+
+            {user && (
+              <Link
+                to="/create-tour"
+                style={{
+                  background: "#4ade80",
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  color: "#022c22",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                + Create Tour
+              </Link>
+            )}
           </div>
 
-          {/* USER */}
+          {/* USER SECTION */}
           {user ? (
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Link
                 to="/my-profile"
-                style={{ color: "white", opacity: 0.9, textDecoration: "none" }}
+                style={{ color: "white", textDecoration: "none" }}
               >
-                My Profile
+                Profile
               </Link>
 
-              <div
+              <img
+                src={
+                  avatarUrl ||
+                  `https://ui-avatars.com/api/?name=${user.email}&background=22c55e&color=fff`
+                }
+                alt="pfp"
                 onClick={() => navigate("/my-profile")}
                 style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 999,
-                  overflow: "hidden",
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  objectFit: "cover",
                   border: "2px solid #4ade80",
                   cursor: "pointer",
-                  position: "relative",
                 }}
-              >
-                <img
-                  src={
-                    avatarUrl ||
-                    `https://ui-avatars.com/api/?name=${user.email}&background=047857&color=fff&size=128`
-                  }
-                  alt="pfp"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-
-                <span
-                  style={{
-                    position: "absolute",
-                    bottom: -1,
-                    right: -1,
-                    width: 10,
-                    height: 10,
-                    borderRadius: 999,
-                    background: "#22c55e",
-                    border: "2px solid #022c22",
-                  }}
-                />
-              </div>
+              />
 
               <button
                 onClick={logout}
                 style={{
-                  padding: "6px 14px",
-                  fontSize: 12,
+                  padding: "6px 12px",
                   borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.4)",
+                  border: "1px solid rgba(255,255,255,0.5)",
                   background: "transparent",
-                  color: "#e5e7eb",
+                  color: "white",
                   cursor: "pointer",
                 }}
               >
@@ -194,18 +199,14 @@ export default function Navbar() {
               </button>
 
               {!trialExpired && (
-                <span style={{ color: "yellow" }}>⭐ {daysLeft} days left</span>
-              )}
-              {trialExpired && (
-                <span style={{ color: "red" }}>⛔ Trial expired</span>
+                <span style={{ color: "yellow", fontSize: 13 }}>
+                  ⭐ {daysLeft} days left
+                </span>
               )}
             </div>
           ) : (
             <>
-              <Link
-                to="/login"
-                style={{ color: "white", textDecoration: "none" }}
-              >
+              <Link to="/login" style={{ color: "white", textDecoration: "none" }}>
                 Login
               </Link>
 
@@ -216,7 +217,7 @@ export default function Navbar() {
                   padding: "7px 16px",
                   borderRadius: 999,
                   color: "#022c22",
-                  fontWeight: 600,
+                  fontWeight: 700,
                   textDecoration: "none",
                 }}
               >
@@ -229,11 +230,13 @@ export default function Navbar() {
           <button
             onClick={() => setIsOpen(!isOpen)}
             style={{
+              display: window.innerWidth <= 768 ? "block" : "none",
               color: "white",
-              fontSize: 22,
+              fontSize: 26,
               background: "none",
               border: "none",
               cursor: "pointer",
+              marginLeft: 6,
             }}
           >
             ☰
@@ -242,29 +245,29 @@ export default function Navbar() {
       </div>
 
       {/* MOBILE MENU */}
-      {isOpen && (
+      {isOpen && window.innerWidth <= 768 && (
         <div
           style={{
             position: "absolute",
-            top: 70,
-            right: 10,
+            top: 66,
+            right: 16,
             width: 220,
             background: "rgba(3,57,0,0.95)",
-            borderRadius: 14,
-            padding: 15,
+            borderRadius: 16,
+            padding: 16,
             display: "flex",
             flexDirection: "column",
-            gap: 12,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
-            zIndex: 9999,
+            gap: 14,
+            boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
           }}
         >
           <Link to="/" style={mobileItem}>Home</Link>
           <Link to="/activities" style={mobileItem}>Activities</Link>
           <Link to="/tours" style={mobileItem}>Tours</Link>
           <Link to="/contact" style={mobileItem}>Contact</Link>
+
           {user && <Link to="/create-tour" style={mobileCreate}>Create Tour</Link>}
-          {user && <Link to="/my-profile" style={mobileItem}>My Profile</Link>}
+          {user && <Link to="/my-profile" style={mobileItem}>Profile</Link>}
         </div>
       )}
     </nav>
@@ -273,7 +276,7 @@ export default function Navbar() {
 
 const mobileItem = {
   color: "white",
-  background: "rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.12)",
   padding: 12,
   borderRadius: 10,
   textAlign: "center",
@@ -282,11 +285,12 @@ const mobileItem = {
 };
 
 const mobileCreate = {
-  color: "white",
-  background: "rgba(76,175,80,0.8)",
+  color: "#022c22",
+  background: "#4ade80",
   padding: 12,
   borderRadius: 10,
   textAlign: "center",
   textDecoration: "none",
   fontSize: 16,
+  fontWeight: 700,
 };

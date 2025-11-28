@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1600&auto=format&fit=crop";
@@ -14,14 +15,30 @@ function useQuery() {
 export default function Tours() {
   const query = useQuery();
   const activeTag = query.get("activity") || "";
+
   const [tours, setTours] = useState([]);
   const [expandedTour, setExpandedTour] = useState(null);
+  const [user, setUser] = useState(null); // ➜ USER state
 
+  // LOAD USER
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session?.user) {
+        setUser(data.session.user);
+      } else {
+        setUser(null);
+      }
+    });
+  }, []);
+
+  // LOAD TOURS
   useEffect(() => {
     const raw = JSON.parse(localStorage.getItem("tours")) || [];
     const data = Array.isArray(raw) ? raw : [];
     const filtered = activeTag
-      ? data.filter((t) => (t.activity || "").toLowerCase() === activeTag.toLowerCase())
+      ? data.filter(
+          (t) => (t.activity || "").toLowerCase() === activeTag.toLowerCase()
+        )
       : data;
     setTours(filtered);
   }, [activeTag]);
@@ -121,12 +138,12 @@ export default function Tours() {
           }}
         >
           <option value="All">All activities</option>
-          <option value="Planinarenje">Hiking</option>
+          <option value="Hiking">Hiking</option>
           <option value="Rafting">Rafting</option>
-          <option value="Vožnja kvadom">Quad driving</option>
-          <option value="Skijanje">Skiing</option>
-          <option value="Ronjenje">Diving</option>
-          <option value="Kampovanje">Camping</option>
+          <option value="Quad driving">Quad driving</option>
+          <option value="Skiing">Skiing</option>
+          <option value="Diving">Diving</option>
+          <option value="Camping">Camping</option>
         </select>
 
         {/* DATE */}
@@ -220,22 +237,26 @@ export default function Tours() {
         {tours.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <h2 style={{ fontSize: "2rem" }}>No tours available</h2>
-            <Link
-              to="/create-tour"
-              style={{
-                display: "inline-block",
-                marginTop: 16,
-                padding: "12px 18px",
-                borderRadius: 10,
-                background: "white",
-                color: "#14532d",
-                fontWeight: 800,
-                textDecoration: "none",
-                boxShadow: "0 10px 22px rgba(0,0,0,0.25)",
-              }}
-            >
-              + Create new tour
-            </Link>
+
+            {/* SHOW ONLY IF USER IS LOGGED IN */}
+            {user && (
+              <Link
+                to="/create-tour"
+                style={{
+                  display: "inline-block",
+                  marginTop: 16,
+                  padding: "12px 18px",
+                  borderRadius: 10,
+                  background: "white",
+                  color: "#14532d",
+                  fontWeight: 800,
+                  textDecoration: "none",
+                  boxShadow: "0 10px 22px rgba(0,0,0,0.25)",
+                }}
+              >
+                + Create new tour
+              </Link>
+            )}
           </div>
         ) : (
           <div
@@ -263,7 +284,7 @@ export default function Tours() {
                 <div
                   style={{
                     height: 180,
-                    backgroundImage: `url(${t.image || FALLBACK_IMG})`,
+                    backgroundImage: url(`${t.image || FALLBACK_IMG}`),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     position: "relative",
@@ -277,6 +298,7 @@ export default function Tours() {
                         "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.35))",
                     }}
                   />
+
                   <span
                     style={{
                       position: "absolute",
@@ -309,7 +331,7 @@ export default function Tours() {
                     onClick={() => toggleExpand(i)}
                     style={{
                       border: "none",
-                      marginTop: "10px",
+                      marginTop: 10,
                       fontWeight: 700,
                       padding: "10px 14px",
                       borderRadius: 10,
@@ -326,14 +348,14 @@ export default function Tours() {
                   {expandedTour === i && (
                     <div
                       style={{
-                        marginTop: "20px",
+                        marginTop: 20,
                         background: "rgba(255,255,255,0.1)",
-                        padding: "15px",
-                        borderRadius: "10px",
+                        padding: 15,
+                        borderRadius: 10,
                         boxShadow: "inset 0 0 15px rgba(0,0,0,0.3)",
                       }}
                     >
-                      <p style={{ marginBottom: "10px", opacity: 0.9 }}>
+                      <p style={{ marginBottom: 10, opacity: 0.9 }}>
                         {t.description || "This tour has no additional description."}
                       </p>
 
@@ -341,9 +363,9 @@ export default function Tours() {
 
                       <div
                         style={{
-                          borderRadius: "10px",
+                          borderRadius: 10,
                           overflow: "hidden",
-                          marginTop: "15px",
+                          marginTop: 15,
                           boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
                         }}
                       >
@@ -363,10 +385,11 @@ export default function Tours() {
                           to={`/chat/${t.id}`}
                           style={{
                             display: "inline-block",
-                            marginTop: "15px",
+                            marginTop: 15,
                             padding: "10px 16px",
-                            borderRadius: "10px",
-                            background: "linear-gradient(135deg,#22c55e,#4ade80)",
+                            borderRadius: 10,
+                            background:
+                              "linear-gradient(135deg,#22c55e,#4ade80)",
                             color: "#022c22",
                             fontWeight: 700,
                             textDecoration: "none",
@@ -383,7 +406,7 @@ export default function Tours() {
                         href="mailto:info@meetoutdoors.com"
                         style={{
                           display: "inline-block",
-                          marginTop: "15px",
+                          marginTop: 15,
                           color: "#22c55e",
                           textDecoration: "none",
                           fontWeight: 700,
@@ -394,7 +417,8 @@ export default function Tours() {
 
                       <button
                         onClick={() => {
-                          const allTours = JSON.parse(localStorage.getItem("tours")) || [];
+                          const allTours =
+                            JSON.parse(localStorage.getItem("tours")) || [];
                           const updated = allTours.map((tourItem, idx) =>
                             idx === i
                               ? { ...tourItem, signedUp: !tourItem.signedUp }
@@ -405,27 +429,21 @@ export default function Tours() {
                         }}
                         style={{
                           display: "block",
-                          marginTop: "15px",
+                          marginTop: 15,
                           width: "100%",
                           padding: "12px 20px",
                           background: t.signedUp ? "#dc2626" : "#22c55e",
                           color: "white",
                           border: "none",
-                          borderRadius: "10px",
+                          borderRadius: 10,
                           fontWeight: "bold",
                           fontSize: "1rem",
                           cursor: "pointer",
                           transition: "0.3s ease",
                           boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
                         }}
-                        onMouseEnter={(e) =>
-                          (e.target.style.background = t.signedUp ? "#b91c1c" : "#16a34a")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.target.style.background = t.signedUp ? "#dc2626" : "#22c55e")
-                        }
                       >
-                        {t.signedUp ? "Cancel registration" : "Join tour"}
+                        {t.signedUp ? "Cancel" : "Join tour"}
                       </button>
                     </div>
                   )}
