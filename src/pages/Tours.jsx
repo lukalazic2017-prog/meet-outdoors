@@ -284,7 +284,7 @@ export default function Tours() {
                 <div
                   style={{
                     height: 180,
-                    backgroundImage: url(`${t.image || FALLBACK_IMG}`),
+                    backgroundImage: `url(${t.image || FALLBACK_IMG})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     position: "relative",
