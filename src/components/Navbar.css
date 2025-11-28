@@ -1,84 +1,68 @@
-.navbar-container {
-  width: 100%;
-  background: rgba(22, 22, 22, 0.75);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-.navbar-content {
-  max-width: 1300px;
-  margin: 0 auto;
-  padding: 15px 25px;
+.nav {
+  height: 70px;
+  padding: 0 30px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  background: #06290f;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+}
+
+.nav-left {
+  display: flex;
   align-items: center;
 }
 
-.navbar-left {
+.nav-logo {
   display: flex;
   align-items: center;
+  color: #22c55e;
+  font-weight: 800;
+  font-size: 1.2rem;
+  text-decoration: none;
   gap: 10px;
 }
 
-.navbar-logo {
-  font-size: 33px;
-  color: #2ecc71;
-  filter: drop-shadow(0 0 5px rgba(46,204,113,0.6));
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 0 6px rgba(34,197,94,0.5));
 }
 
-.navbar-brand {
-  color: #ffffff;
-  font-size: 23px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-decoration: none;
-}
-
-.navbar-links {
+.nav-links {
   display: flex;
-  gap: 30px;
+  list-style: none;
+  gap: 26px;
 }
 
-.navbar-links a {
-  color: #dcdcdc;
-  text-decoration: none;
-  font-size: 16px;
-  transition: 0.25s;
-}
-
-.navbar-links a:hover {
-  color: #2ecc71;
-  text-shadow: 0 0 6px rgba(46,204,113,0.5);
-}
-
-.navbar-auth .auth-btn {
-  padding: 8px 16px;
-  border: 1px solid #2ecc71;
-  border-radius: 6px;
-  color: #2ecc71;
-  text-decoration: none;
-  transition: 0.25s;
-}
-
-.navbar-auth .auth-btn:hover {
-  background: #2ecc71;
-  color: black;
-}
-
-.logout-btn {
-  padding: 8px 16px;
-  background: #e74c3c;
+.nav-links a {
   color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  text-decoration: none;
   font-weight: 500;
   transition: 0.25s;
 }
 
-.logout-btn:hover {
-  background: #c0392b;
+.nav-links a:hover {
+  color: #22c55e;
+}
+
+.nav-right {
+  display: flex;
+  gap: 14px;
+}
+
+.login-btn {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.register-btn {
+  background: #22c55e;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: #06290f;
+  font-weight: 800;
+  text-decoration: none;
 }

@@ -67,7 +67,7 @@ function Contact() {
             }}
           >
             <FaEnvelope style={{ fontSize: "1.5rem", color: "#22c55e" }} />
-            <p style={{ fontSize: "1.1rem" }}>info@meetoutdoors.com</p>
+            <p style={{ fontSize: "1.1rem" }}>infomeetoutdoors@gmail.com</p>
           </div>
 
           <div

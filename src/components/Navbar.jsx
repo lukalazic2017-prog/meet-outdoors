@@ -8,33 +8,25 @@ export default function Navbar() {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  const { isPremium, trialExpired, daysLeft } = useTrial();
+  const { trialExpired, daysLeft } = useTrial();
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Load Session + Profile
+  // LOAD SESSION
   useEffect(() => {
     let ignore = false;
 
-    async function loadSession() {
-      const { data, error } = await supabase.auth.getSession();
+    async function load() {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
 
-      if (error || !data.session) {
-        if (!ignore) {
-          setUser(null);
-          setAvatarUrl(null);
-        }
-        return;
-      }
-
-      const currentUser = data.session.user;
-      if (!ignore) setUser(currentUser);
+      if (!ignore) setUser(data.session.user);
 
       const { data: profile } = await supabase
         .from("profiles")
         .select("avatar_url")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", data.session.user.id)
         .single();
 
       if (!ignore && profile) {
@@ -42,24 +34,25 @@ export default function Navbar() {
       }
     }
 
-    loadSession();
+    load();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_ev, session) => {
       if (!session) {
         setUser(null);
         setAvatarUrl(null);
-      } else {
-        setUser(session.user);
-
-        supabase
-          .from("profiles")
-          .select("avatar_url")
-          .eq("user_id", session.user.id)
-          .single()
-          .then(({ data }) => {
-            if (data) setAvatarUrl(data.avatar_url);
-          });
+        return;
       }
+
+      setUser(session.user);
+
+      supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("user_id", session.user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setAvatarUrl(data.avatar_url);
+        });
     });
 
     return () => {
@@ -68,10 +61,9 @@ export default function Navbar() {
     };
   }, []);
 
-  async function handleLogout() {
+  async function logout() {
     await supabase.auth.signOut();
     setUser(null);
-    setAvatarUrl(null);
     navigate("/");
   }
 
@@ -87,19 +79,19 @@ export default function Navbar() {
         right: 0,
         zIndex: 50,
         backdropFilter: "blur(12px)",
-        background: "linear-gradient(90deg, rgba(4,24,18,0.95), rgba(4,35,28,0.95))",
+        background:
+          "linear-gradient(90deg, rgba(4,24,18,0.95), rgba(4,35,28,0.95))",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
     >
       <div
         style={{
-          maxWidth: "1200px",
+          maxWidth: 1200,
           margin: "0 auto",
           padding: "10px 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "16px",
           color: "white",
         }}
       >
@@ -109,35 +101,30 @@ export default function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
+            gap: 10,
             cursor: "pointer",
           }}
         >
-          <div
+          <img
+            src="/logo.svg"
+            alt="logo"
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: "999px",
-              background: "radial-gradient(circle at 30% 30%, #4ade80, #16a34a)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              fontWeight: 700,
-              fontSize: 18,
-              boxShadow: "0 0 16px rgba(34,197,94,0.6)",
+              width: 34,
+              height: 34,
+              filter: "drop-shadow(0 0 10px rgba(34,197,94,0.8))",
             }}
-          >
-            M
-          </div>
+          />
           <div style={{ lineHeight: 1.2 }}>
-            <span style={{ fontWeight: 700 }}>MEETOUTDOORS</span>
-            <div style={{ fontSize: 11, opacity: 0.7 }}>connect • explore • enjoy</div>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>MEETOUTDOORS</span>
+            <div style={{ fontSize: 11, opacity: 0.7 }}>
+              connect • explore • enjoy
+            </div>
           </div>
         </div>
 
         {/* RIGHT SIDE */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          {/* Desktop links */}
+          {/* HIDDEN ON MOBILE */}
           <div style={{ display: "none", gap: 14 }}>
             <Link to="/" style={isActive("/")}>Home</Link>
             <Link to="/activities" style={isActive("/activities")}>Activities</Link>
@@ -149,7 +136,10 @@ export default function Navbar() {
           {/* USER */}
           {user ? (
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Link to="/my-profile" style={{ color: "white", opacity: 0.9, textDecoration: "none" }}>
+              <Link
+                to="/my-profile"
+                style={{ color: "white", opacity: 0.9, textDecoration: "none" }}
+              >
                 My Profile
               </Link>
 
@@ -158,7 +148,7 @@ export default function Navbar() {
                 style={{
                   width: 38,
                   height: 38,
-                  borderRadius: "999px",
+                  borderRadius: 999,
                   overflow: "hidden",
                   border: "2px solid #4ade80",
                   cursor: "pointer",
@@ -170,7 +160,7 @@ export default function Navbar() {
                     avatarUrl ||
                     `https://ui-avatars.com/api/?name=${user.email}&background=047857&color=fff&size=128`
                   }
-                  alt=""
+                  alt="pfp"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
 
@@ -179,9 +169,9 @@ export default function Navbar() {
                     position: "absolute",
                     bottom: -1,
                     right: -1,
-                    width: 11,
-                    height: 11,
-                    borderRadius: "999px",
+                    width: 10,
+                    height: 10,
+                    borderRadius: 999,
                     background: "#22c55e",
                     border: "2px solid #022c22",
                   }}
@@ -189,11 +179,11 @@ export default function Navbar() {
               </div>
 
               <button
-                onClick={handleLogout}
+                onClick={logout}
                 style={{
                   padding: "6px 14px",
                   fontSize: 12,
-                  borderRadius: "999px",
+                  borderRadius: 999,
                   border: "1px solid rgba(255,255,255,0.4)",
                   background: "transparent",
                   color: "#e5e7eb",
@@ -202,10 +192,20 @@ export default function Navbar() {
               >
                 Logout
               </button>
+
+              {!trialExpired && (
+                <span style={{ color: "yellow" }}>⭐ {daysLeft} days left</span>
+              )}
+              {trialExpired && (
+                <span style={{ color: "red" }}>⛔ Trial expired</span>
+              )}
             </div>
           ) : (
             <>
-              <Link to="/login" style={{ color: "white", textDecoration: "none" }}>
+              <Link
+                to="/login"
+                style={{ color: "white", textDecoration: "none" }}
+              >
                 Login
               </Link>
 
@@ -214,7 +214,7 @@ export default function Navbar() {
                 style={{
                   background: "linear-gradient(135deg, #22c55e, #4ade80)",
                   padding: "7px 16px",
-                  borderRadius: "999px",
+                  borderRadius: 999,
                   color: "#022c22",
                   fontWeight: 600,
                   textDecoration: "none",
@@ -222,12 +222,6 @@ export default function Navbar() {
               >
                 Register
               </Link>
-
-              {!isPremium && !trialExpired && (
-                <span style={{ color: "yellow" }}>⭐ Trial: {daysLeft} days left</span>
-              )}
-
-              {trialExpired && <span style={{ color: "red" }}>⛔ Trial expired</span>}
             </>
           )}
 
@@ -269,7 +263,6 @@ export default function Navbar() {
           <Link to="/activities" style={mobileItem}>Activities</Link>
           <Link to="/tours" style={mobileItem}>Tours</Link>
           <Link to="/contact" style={mobileItem}>Contact</Link>
-
           {user && <Link to="/create-tour" style={mobileCreate}>Create Tour</Link>}
           {user && <Link to="/my-profile" style={mobileItem}>My Profile</Link>}
         </div>
