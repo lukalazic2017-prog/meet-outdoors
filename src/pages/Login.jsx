@@ -12,7 +12,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -21,8 +21,12 @@ export default function Login() {
 
     if (error) {
       alert(error.message);
-    } else {
-      navigate("/my-profile");
+      return;
+    }
+
+    // ako postoji user → navigiraj
+    if (data?.user) {
+      navigate("/");
     }
   }
 
@@ -76,8 +80,7 @@ export default function Login() {
               padding: "10px",
               borderRadius: "10px",
               border: "none",
-              background:
-                "linear-gradient(135deg, #00ff9c, #00c46a)",
+              background: "linear-gradient(135deg, #00ff9c, #00c46a)",
               color: "#022012",
               fontWeight: 700,
               cursor: "pointer",
