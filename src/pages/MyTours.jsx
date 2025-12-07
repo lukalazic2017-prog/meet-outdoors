@@ -1,216 +1,436 @@
+// src/pages/MyTours.jsx
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1600&auto=format&fit=crop";
-const FALLBACK_IMG =
-  "https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200&auto=format&fit=crop";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabaseClient";
 
 export default function MyTours() {
-  const [tours, setTours] = useState([]);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [createdTours, setCreatedTours] = useState([]);
+  const [joinedTours, setJoinedTours] = useState([]);
+  const [interestedTours, setInterestedTours] = useState([]);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const allTours = JSON.parse(localStorage.getItem("tours")) || [];
-    const signed = allTours.filter((t) => t.signedUp);
-    setTours(signed);
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCancel = (id) => {
-    const allTours = JSON.parse(localStorage.getItem("tours")) || [];
-    const updated = allTours.map((t) =>
-      t.id === id ? { ...t, signedUp: false } : t
-    );
-    localStorage.setItem("tours", JSON.stringify(updated));
-    setTours(updated.filter((t) => t.signedUp));
+  async function loadData() {
+    setLoading(true);
+
+    const { data: auth } = await supabase.auth.getUser();
+    const currentUser = auth?.user || null;
+
+    if (!currentUser) {
+      navigate("/login");
+      return;
+    }
+
+    setUser(currentUser);
+
+    const userId = currentUser.id;
+
+    // 1) Tours created by user
+    const { data: created } = await supabase
+      .from("tours")
+      .select("*")
+      .eq("creator_id", userId)
+      .order("created_at", { ascending: false });
+
+    setCreatedTours(created || []);
+
+    // 2) Tours user joined
+    const { data: regs } = await supabase
+      .from("tour_registrations")
+      .select("tour_id")
+      .eq("user_id", userId);
+
+    if (regs && regs.length > 0) {
+      const joinedIds = regs.map((r) => r.tour_id);
+      const { data: joined } = await supabase
+        .from("tours")
+        .select("*")
+        .in("id", joinedIds)
+        .order("date_start", { ascending: true });
+
+      setJoinedTours(joined || []);
+    } else {
+      setJoinedTours([]);
+    }
+
+    // 3) Tours user is interested in
+    const { data: interestedRows } = await supabase
+      .from("tour_interested")
+      .select("tour_id")
+      .eq("user_id", userId);
+
+    if (interestedRows && interestedRows.length > 0) {
+      const intIds = interestedRows.map((r) => r.tour_id);
+      const { data: interested } = await supabase
+        .from("tours")
+        .select("*")
+        .in("id", intIds)
+        .order("date_start", { ascending: true });
+
+      setInterestedTours(interested || []);
+    } else {
+      setInterestedTours([]);
+    }
+
+    setLoading(false);
+  }
+
+  const getCover = (tour) => {
+    if (tour.cover_url) return tour.cover_url;
+    if (tour.image_urls && tour.image_urls.length > 0) return tour.image_urls[0];
+    return "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg";
   };
 
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(160deg, #0f172a, #14532d, #166534)",
-        color: "white",
-        fontFamily: "Poppins, sans-serif",
-      }}
-    >
-      {/* HERO */}
-      <section
-        style={{
-          position: "relative",
-          height: "40vh",
-          backgroundImage: `linear-gradient(180deg, rgba(10,40,20,0.75), rgba(10,40,20,0.85)), url(${HERO_IMAGE})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-          boxShadow: "inset 0 -40px 80px rgba(0,0,0,0.4)",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "3rem",
-            marginBottom: "10px",
-            fontWeight: 700,
-            background: "linear-gradient(90deg, #4ade80, #22c55e, #16a34a)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          My Adventures
-        </h1>
-        <p style={{ opacity: 0.9, fontSize: "1.1rem" }}>
-          View all tours you have joined.
-        </p>
-      </section>
+  // ------------- STYLES -------------
+  const page = {
+    minHeight: "100vh",
+    padding: "30px 16px 60px",
+    background:
+      "radial-gradient(circle at top, #021d14 0%, #02080a 45%, #000000 100%)",
+    color: "#e9fff6",
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    boxSizing: "border-box",
+  };
 
-      {/* CONTENT */}
-      <section
-        style={{
-          maxWidth: 1200,
-          margin: "0 auto",
-          padding: "50px 20px",
-        }}
-      >
-        {tours.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: "60px",
-              padding: "40px",
-              background: "rgba(255,255,255,0.08)",
-              borderRadius: "20px",
-              boxShadow: "0 15px 40px rgba(0,0,0,0.4)",
-            }}
-          >
-            <h2 style={{ fontSize: "2rem", marginBottom: "10px" }}>
-              You haven’t joined any adventures yet 🏔️
-            </h2>
-            <p style={{ opacity: 0.85, marginBottom: "25px" }}>
-              Every great story begins with a single step.
-            </p>
-            <Link
-              to="/tours"
-              style={{
-                background: "linear-gradient(135deg, #22c55e, #15803d)",
-                padding: "12px 25px",
-                borderRadius: "10px",
-                textDecoration: "none",
-                color: "white",
-                fontWeight: "bold",
-                boxShadow: "0 8px 25px rgba(0,0,0,0.4)",
-              }}
+  const container = {
+    maxWidth: 1150,
+    margin: "0 auto",
+  };
+
+  const header = {
+    marginBottom: 26,
+  };
+
+  const title = {
+    fontSize: 32,
+    fontWeight: 800,
+    background:
+      "linear-gradient(120deg, #ffffff, #aaffee, #00ffb4, #00d1ff,#ffffff)",
+    WebkitBackgroundClip: "text",
+    color: "transparent",
+    textShadow: "0 0 30px rgba(0,255,180,0.55)",
+    marginBottom: 6,
+  };
+
+  const subtitle = {
+    fontSize: 14,
+    opacity: 0.8,
+    maxWidth: 520,
+  };
+
+  const tagRow = {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  };
+
+  const tag = {
+    fontSize: 11,
+    padding: "4px 10px",
+    borderRadius: 999,
+    border: "1px solid rgba(0,255,180,0.45)",
+    background: "rgba(0,0,0,0.35)",
+    textTransform: "uppercase",
+    letterSpacing: "0.09em",
+    color: "rgba(210,255,235,0.9)",
+  };
+
+  const section = {
+    marginBottom: 30,
+  };
+
+  const sectionHeader = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: 12,
+  };
+
+  const sectionTitle = {
+    fontSize: 18,
+    fontWeight: 700,
+  };
+
+  const sectionHint = {
+    fontSize: 12,
+    opacity: 0.7,
+  };
+
+  const grid = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+    gap: 18,
+  };
+
+  const card = {
+    borderRadius: 20,
+    overflow: "hidden",
+    background: "linear-gradient(145deg, #020a08, #00291f)",
+    border: "1px solid rgba(0,255,180,0.25)",
+    boxShadow:
+      "0 18px 45px rgba(0,0,0,0.85), 0 0 35px rgba(0,255,180,0.18)",
+    cursor: "pointer",
+    transition: "transform 0.22s ease, box-shadow 0.22s ease",
+  };
+
+  const imgWrap = {
+    position: "relative",
+    height: 170,
+    overflow: "hidden",
+  };
+
+  const img = {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    transform: "scale(1.03)",
+    transition: "transform 0.32s ease",
+  };
+
+  const gradient = {
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.05))",
+  };
+
+  const badgeRow = {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    right: 10,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    zIndex: 2,
+  };
+
+  const typeBadge = {
+    padding: "6px 11px",
+    borderRadius: 999,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    background: "rgba(0,0,0,0.7)",
+    border: "1px solid rgba(255,255,255,0.22)",
+    color: "#e6fff9",
+  };
+
+  const priceChip = {
+    padding: "7px 13px",
+    borderRadius: 999,
+    fontSize: 13,
+    fontWeight: 700,
+    background:
+      "linear-gradient(120deg, #00ffb4, #00d1ff, #ffffff)",
+    color: "#002015",
+    boxShadow: "0 0 18px rgba(0,255,180,0.7)",
+  };
+
+  const cardBody = {
+    padding: "14px 15px 15px",
+  };
+
+  const cardTitle = {
+    fontSize: 17,
+    fontWeight: 700,
+    marginBottom: 4,
+    color: "#ffffff",
+    textShadow: "0 0 12px rgba(0,255,180,0.5)",
+  };
+
+  const location = {
+    fontSize: 13,
+    opacity: 0.85,
+    marginBottom: 4,
+  };
+
+  const metaRow = {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 12,
+    opacity: 0.9,
+    marginBottom: 8,
+  };
+
+  const bottomRow = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  };
+
+  const miniText = {
+    fontSize: 11,
+    opacity: 0.75,
+  };
+
+  const pillSmall = {
+    padding: "5px 11px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.25)",
+    fontSize: 11,
+    background: "rgba(0,0,0,0.65)",
+  };
+
+  const emptyState = {
+    padding: 16,
+    borderRadius: 16,
+    border: "1px dashed rgba(255,255,255,0.25)",
+    background: "rgba(0,0,0,0.45)",
+    fontSize: 13,
+    opacity: 0.85,
+  };
+
+  const loadingStyle = {
+    textAlign: "center",
+    marginTop: 40,
+    opacity: 0.8,
+  };
+
+  const handleCardEnter = (e) => {
+    e.currentTarget.style.transform = "translateY(-6px)";
+    e.currentTarget.style.boxShadow =
+      "0 24px 60px rgba(0,0,0,0.9), 0 0 40px rgba(0,255,180,0.25)";
+    const imgEl = e.currentTarget.querySelector("img");
+    if (imgEl) imgEl.style.transform = "scale(1.1)";
+  };
+
+  const handleCardLeave = (e) => {
+    e.currentTarget.style.transform = "translateY(0)";
+    e.currentTarget.style.boxShadow =
+      "0 18px 45px rgba(0,0,0,0.85), 0 0 35px rgba(0,255,180,0.18)";
+    const imgEl = e.currentTarget.querySelector("img");
+    if (imgEl) imgEl.style.transform = "scale(1.03)";
+  };
+
+  const formatDate = (d) => {
+    if (!d) return "No date";
+    try {
+      return new Date(d).toLocaleDateString();
+    } catch {
+      return d;
+    }
+  };
+
+  const renderSection = (titleText, hint, toursArr, typeLabel) => (
+    <div style={section}>
+      <div style={sectionHeader}>
+        <div style={sectionTitle}>{titleText}</div>
+        <div style={sectionHint}>{hint}</div>
+      </div>
+
+      {toursArr.length === 0 ? (
+        <div style={emptyState}>{`No ${typeLabel.toLowerCase()} yet.`}</div>
+      ) : (
+        <div style={grid}>
+          {toursArr.map((tour) => (
+            <div
+              key={tour.id}
+              style={card}
+              onMouseEnter={handleCardEnter}
+              onMouseLeave={handleCardLeave}
+              onClick={() => navigate(`/tour/${tour.id}`)}
             >
-              🔎 Explore Tours
-            </Link>
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-              gap: "25px",
-            }}
-          >
-            {tours.map((t, i) => (
-              <div
-                key={i}
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  borderRadius: "20px",
-                  overflow: "hidden",
-                  boxShadow: "0 20px 45px rgba(0,0,0,0.5)",
-                  backdropFilter: "blur(8px)",
-                }}
-              >
-                <div
-                  style={{
-                    height: "180px",
-                    backgroundImage: url(`${t.image || FALLBACK_IMG}`),
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    position: "relative",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background:
-                        "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.35))",
-                    }}
-                  ></div>
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "10px",
-                      left: "10px",
-                      background: "rgba(0,0,0,0.45)",
-                      padding: "6px 12px",
-                      borderRadius: "999px",
-                      fontSize: "12px",
-                      textTransform: "capitalize",
-                      border: "1px solid rgba(255,255,255,0.2)",
-                    }}
-                  >
-                    {t.activity || "activity"}
-                  </span>
-                </div>
-                <div style={{ padding: "18px" }}>
-                  <h3 style={{ margin: "0 0 10px", fontSize: "1.3rem" }}>
-                    {t.name}
-                  </h3>
-                  <p style={{ margin: "3px 0", opacity: 0.9 }}>📍 {t.location}</p>
-                  <p style={{ margin: "3px 0", opacity: 0.9 }}>
-                    📅 {t.date} | ⏱ {t.startTime} - {t.endTime}
-                  </p>
-                  <p style={{ margin: "3px 0 15px", opacity: 0.9 }}>
-                    💰 {t.price} €
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "0.95rem",
-                      opacity: 0.85,
-                      marginBottom: "15px",
-                    }}
-                  >
-                    {t.description.length > 90
-                      ? t.description.substring(0, 90) + "..."
-                      : t.description}
-                  </p>
-                  <button
-                    onClick={() => handleCancel(t.id)}
-                    style={{
-                      background: "linear-gradient(135deg, #dc2626, #b91c1c)",
-                      border: "none",
-                      color: "white",
-                      fontWeight: "bold",
-                      padding: "10px 20px",
-                      borderRadius: "10px",
-                      width: "100%",
-                      cursor: "pointer",
-                      transition: "0.3s ease",
-                      boxShadow: "0 6px 18px rgba(0,0,0,0.4)",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.target.style.background =
-                        "linear-gradient(135deg, #b91c1c, #991b1b)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.target.style.background =
-                        "linear-gradient(135deg, #dc2626, #b91c1c)")
-                    }
-                  >
-                    ❌ Leave Tour
-                  </button>
+              <div style={imgWrap}>
+                <img src={getCover(tour)} alt={tour.title} style={img} />
+                <div style={gradient} />
+                <div style={badgeRow}>
+                  <div style={typeBadge}>{typeLabel}</div>
+                  <div style={priceChip}>
+                    {tour.price ? `€ ${tour.price}` : "Free"}
+                  </div>
                 </div>
               </div>
-            ))}
+
+              <div style={cardBody}>
+                <div style={cardTitle}>{tour.title}</div>
+                <div style={location}>
+                  📍 {tour.location_name || "Unknown" }
+                  {tour.country ? `, ${tour.country}` : ""}
+                </div>
+
+                <div style={metaRow}>
+                  <span>🧭 {tour.activity || "Activity"}</span>
+                  <span>
+                    🕒 {formatDate(tour.date_start)} →{" "}
+                    {formatDate(tour.date_end)}
+                  </span>
+                </div>
+
+                <div style={bottomRow}>
+                  <span style={miniText}>
+                    👥 {tour.participants || 0}/{tour.max_people || "?"} people
+                  </span>
+                  <span style={pillSmall}>
+                    View details
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div style={page}>
+        <div style={container}>
+          <p style={loadingStyle}>Loading your tours...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={page}>
+      <div style={container}>
+        {/* HEADER */}
+        <div style={header}>
+          <div style={tagRow}>
+            <span style={tag}>My tours dashboard</span>
+            {user && <span style={tag}>Signed in as {user.email}</span>}
           </div>
+          <h1 style={title}>All your adventures in one place.</h1>
+          <p style={subtitle}>
+            See the tours you created, the groups you joined and the trips
+            you&apos;re interested in.
+          </p>
+        </div>
+
+        {/* SECTIONS */}
+        {renderSection(
+          "Tours you created",
+          "You are the host of these adventures.",
+          createdTours,
+          "Created"
         )}
-      </section>
+
+        {renderSection(
+          "Tours you joined",
+          "You are a participant in these tours.",
+          joinedTours,
+          "Joined"
+        )}
+
+        {renderSection(
+          "Tours you are interested in",
+          "You marked these tours as interesting.",
+          interestedTours,
+          "Interested"
+        )}
+      </div>
     </div>
   );
 }

@@ -1,168 +1,661 @@
+// src/pages/Landing.jsx
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-function Home() {
+export default function Landing() {
+  const navigate = useNavigate();
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundImage:
-          "url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        overflow: "hidden",
-      }}
-    >
-      {/* Dark overlay */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.8) 100%)",
-          zIndex: 0,
-        }}
-      />
+    <>
+      {/* KEYFRAMES ZA ANIMACIJE */}
+      <style>
+        {`
+        @keyframes floatOrb {
+          0% { transform: translate3d(0,0,0) scale(1); opacity: 0.45; }
+          50% { transform: translate3d(14px,-18px,0) scale(1.08); opacity: 0.9; }
+          100% { transform: translate3d(0,0,0) scale(1); opacity: 0.45; }
+        }
+        @keyframes glowPulse {
+          0% { box-shadow: 0 0 20px rgba(0,255,176,0.5); }
+          50% { box-shadow: 0 0 50px rgba(0,255,176,0.9); }
+          100% { box-shadow: 0 0 20px rgba(0,255,176,0.5); }
+        }
+        @keyframes fadeUp {
+          0% { opacity: 0; transform: translate3d(0,14px,0); }
+          100% { opacity: 1; transform: translate3d(0,0,0); }
+        }
+      `}
+      </style>
 
-      {/* Main content */}
       <div
         style={{
-          zIndex: 2,
-          maxWidth: "800px",
-          padding: "40px 20px",
-          animation: "fadeIn 1.5s ease-in-out",
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at top, #02140E 0%, #010308 60%, #000 100%)",
+          color: "#ffffff",
+          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         }}
       >
-        <h1
+        {/* ===== HERO ===== */}
+        <section
           style={{
-            fontSize: "3.5rem",
-            fontWeight: "800",
-            color: "#ffffff",
-            textShadow: "0 4px 25px rgba(0,0,0,0.6)",
-            letterSpacing: "1px",
-            marginBottom: "20px",
+            position: "relative",
+            minHeight: "92vh",
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "80px 16px 60px",
           }}
         >
-          🌄 Welcome to{" "}
-          <span
+          {/* BACKGROUND FOTO */}
+          <div
             style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage:
+                "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              filter: "brightness(0.3) saturate(1.1)",
+            }}
+          />
+
+          {/* OVERLAY GRADIENTI */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
               background:
-                "linear-gradient(90deg, #4ade80, #22c55e, #86efac)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+                "radial-gradient(circle at top left, rgba(0,255,160,0.22), transparent 55%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(circle at bottom, rgba(0,180,255,0.26), rgba(0,0,0,0.9))",
+            }}
+          />
+
+          {/* LEBDEĆE SFERE */}
+          <div
+            style={{
+              position: "absolute",
+              width: 260,
+              height: 260,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 30% 20%, rgba(0,255,200,0.9), transparent 55%)",
+              top: -40,
+              right: -40,
+              mixBlendMode: "screen",
+              opacity: 0.65,
+              animation: "floatOrb 18s ease-in-out infinite",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              width: 220,
+              height: 220,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 40% 0%, rgba(0,255,120,0.7), transparent 60%)",
+              bottom: -80,
+              left: -40,
+              mixBlendMode: "screen",
+              opacity: 0.55,
+              animation: "floatOrb 20s ease-in-out infinite reverse",
+            }}
+          />
+
+          {/* HERO CONTENT */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: 5,
+              maxWidth: 1040,
+              textAlign: "center",
+              animation: "fadeUp 0.7s ease-out forwards",
             }}
           >
-            Meet Outdoors
-          </span>
-        </h1>
-
-        <p
-          style={{
-            fontSize: "1.3rem",
-            color: "rgba(255,255,255,0.9)",
-            marginBottom: "45px",
-            lineHeight: "1.8",
-          }}
-        >
-          Adventures. Freedom. Nature.
-          <br />
-          Discover hiking, rafting, camping and more —
-          through experiences that inspire.
-        </p>
-
-        {/* Buttons */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: "25px",
-            flexWrap: "wrap",
-          }}
-        >
-          <Link to="/activities">
-            <button
+            {/* Badge */}
+            <div
               style={{
-                padding: "14px 32px",
-                borderRadius: "50px",
-                background: "rgba(255,255,255,0.15)",
-                border: "1.5px solid rgba(255,255,255,0.4)",
-                color: "#fff",
-                fontSize: "1.05rem",
-                fontWeight: "600",
-                letterSpacing: "0.5px",
-                backdropFilter: "blur(10px)",
-                boxShadow: "0 8px 25px rgba(0,0,0,0.3)",
-                transition: "all 0.35s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = "rgba(74,222,128,0.4)";
-                e.target.style.transform = "scale(1.08)";
-                e.target.style.boxShadow = "0 0 25px #4ade80";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "rgba(255,255,255,0.15)";
-                e.target.style.transform = "scale(1)";
-                e.target.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)";
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "4px 12px",
+                borderRadius: 999,
+                border: "1px solid rgba(0,255,160,0.7)",
+                background:
+                  "linear-gradient(120deg, rgba(0,0,0,0.8), rgba(0,255,160,0.16))",
+                fontSize: 11,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                marginBottom: 18,
               }}
             >
-              🌿 View Activities
-            </button>
-          </Link>
+              <span>NEW</span>
+              <span style={{ opacity: 0.8 }}>Real people. Real adventures.</span>
+            </div>
 
-          <Link to="/tours">
-            <button
+            {/* Main title */}
+            <h1
               style={{
-                padding: "14px 32px",
-                borderRadius: "50px",
-                background: "linear-gradient(90deg, #22c55e, #4ade80)",
-                color: "#0b2816",
-                fontSize: "1.05rem",
-                fontWeight: "700",
-                letterSpacing: "0.5px",
-                boxShadow: "0 8px 25px rgba(0,0,0,0.3)",
-                transition: "all 0.35s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background =
-                  "linear-gradient(90deg, #4ade80, #86efac)";
-                e.target.style.transform = "scale(1.08)";
-                e.target.style.boxShadow = "0 0 25px #4ade80";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background =
-                  "linear-gradient(90deg, #22c55e, #4ade80)";
-                e.target.style.transform = "scale(1)";
-                e.target.style.boxShadow = "0 8px 25px rgba(0,0,0,0.3)";
+                fontSize: "clamp(42px, 6vw, 66px)",
+                fontWeight: 900,
+                lineHeight: 1.05,
+                marginBottom: 14,
+                textShadow:
+                  "0 0 40px rgba(0,255,176,0.9), 0 0 80px rgba(0,255,176,0.55)",
               }}
             >
-              🏕️ Browse Tours
-            </button>
-          </Link>
-        </div>
+              The social app
+              <span style={{ display: "block", color: "#00FFB0" }}>
+                that lives outside.
+              </span>
+            </h1>
+
+            <p
+              style={{
+                fontSize: 18,
+                maxWidth: 640,
+                margin: "0 auto 28px",
+                color: "rgba(232,252,245,0.86)",
+              }}
+            >
+              Meet Outdoors connects you with people who want **the same sunrises,
+              the same ridges, the same rivers**. Build your crew. Host your own
+              tours. Or just jump in.
+            </p>
+
+            {/* CTA buttons */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                flexWrap: "wrap",
+                gap: 12,
+                marginBottom: 22,
+              }}
+            >
+              <button
+                onClick={() => navigate("/tours")}
+                style={ctaPrimary}
+              >
+                🌍 Explore live tours
+              </button>
+
+              <button
+                onClick={() => navigate("/create-tour")}
+                style={ctaGhost}
+              >
+                ➕ Host your first tour
+              </button>
+            </div>
+
+            {/* Stats strip */}
+            <div
+              style={{
+                margin: "0 auto",
+                maxWidth: 640,
+                borderRadius: 16,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(0,0,0,0.6)",
+                backdropFilter: "blur(16px)",
+                padding: "10px 16px",
+                display: "flex",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 10,
+                fontSize: 13,
+              }}
+            >
+              <HeroStat label="Explorers waiting" value="1,284" />
+              <HeroStat label="Upcoming tours" value="73" />
+              <HeroStat label="Countries" value="17" />
+            </div>
+          </div>
+        </section>
+
+        {/* ===== FEATURE RAIL (kao Netflix) ===== */}
+        <section
+          style={{
+            padding: "40px 0 10px",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 16px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                gap: 16,
+                marginBottom: 12,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: "rgba(210,255,230,0.85)",
+                  }}
+                >
+                  LIVE OUTDOOR ENERGY
+                </div>
+                <h2
+                  style={{
+                    fontSize: 24,
+                    marginTop: 4,
+                    marginBottom: 0,
+                  }}
+                >
+                  Featured adventures this week
+                </h2>
+              </div>
+              <button
+                onClick={() => navigate("/tours")}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.35)",
+                  background: "transparent",
+                  color: "#fff",
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                View all tours →
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                overflowX: "auto",
+                gap: 14,
+                paddingBottom: 4,
+              }}
+            >
+              {featuredTours.map((tour) => (
+                <div
+                  key={tour.id}
+                  style={railCard}
+                  onClick={() => navigate("/tours")}
+                >
+                  <div
+                    style={{
+                      position: "relative",
+                      height: 140,
+                      borderRadius: 16,
+                      overflow: "hidden",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <img
+                      src={tour.image}
+                      alt={tour.title}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        transform: "scale(1.04)",
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background:
+                          "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.85))",
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 10,
+                        bottom: 10,
+                        fontSize: 11,
+                        padding: "4px 8px",
+                        borderRadius: 999,
+                        background:
+                          "radial-gradient(circle at top, rgba(0,255,176,0.9), rgba(1,19,12,0.8))",
+                        color: "#02130c",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {tour.tag}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      marginBottom: 2,
+                    }}
+                  >
+                    {tour.title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "rgba(255,255,255,0.7)",
+                    }}
+                  >
+                    {tour.location}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== DUAL PANEL: HOST / JOIN ===== */}
+        <section
+          style={{
+            padding: "60px 16px",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 1180,
+              margin: "0 auto",
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1.1fr)",
+              gap: 18,
+            }}
+          >
+            {/* HOST */}
+            <div style={dualCardLeft}>
+              <h3 style={dualTitle}>Host experiences</h3>
+              <p style={dualText}>
+                Turn your local knowledge into unforgettable trips. Set the date,
+                price, capacity — we help you fill every spot.
+              </p>
+
+              <ul style={dualList}>
+                <li>🎒 Create cinematic tour pages in minutes</li>
+                <li>💶 Bring your own pricing later with Stripe</li>
+                <li>⭐ Build your guide reputation with ratings</li>
+              </ul>
+
+              <button
+                style={dualBtnPrimary}
+                onClick={() => navigate("/create-tour")}
+              >
+                Start hosting
+              </button>
+            </div>
+
+            {/* JOIN */}
+            <div style={dualCardRight}>
+              <h3 style={dualTitle}>Join adventures</h3>
+              <p style={dualText}>
+                Swipe through real outdoor plans. Mountain sunrises, river
+                raids, pilgrimages – all waiting for your yes.
+              </p>
+
+              <ul style={dualList}>
+                <li>🌍 Filter by activity, difficulty, and vibe</li>
+                <li>👥 Meet people who want the same terrain</li>
+                <li>🔔 Smart reminders so you never miss a tour</li>
+              </ul>
+
+              <button
+                style={dualBtnGhost}
+                onClick={() => navigate("/tours")}
+              >
+                Browse tours
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== QUOTE / VISION ===== */}
+        <section
+          style={{
+            padding: "0 16px 70px",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 880,
+              margin: "0 auto",
+              borderRadius: 26,
+              padding: 26,
+              border: "1px solid rgba(0,255,160,0.4)",
+              background:
+                "radial-gradient(circle at top, rgba(0,255,160,0.18), rgba(0,0,0,0.95))",
+              boxShadow:
+                "0 26px 80px rgba(0,0,0,0.9), 0 0 40px rgba(0,255,170,0.6)",
+              animation: "glowPulse 4s ease-in-out infinite",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "rgba(220,255,240,0.9)",
+                marginBottom: 10,
+              }}
+            >
+              WHAT MEET OUTDOORS IS REALLY ABOUT
+            </div>
+
+            <p
+              style={{
+                fontSize: 19,
+                lineHeight: 1.7,
+                marginBottom: 14,
+              }}
+            >
+              “Screens are fine. But your best memories won&apos;t be 1080p – they' ll be cold air at 1.800 meters, soaked shoes by the riverr, and the people you meet because you tapped{" "}
+              <span style={{ color: "#00ffb0" }}>Join tour</span> in this application."
+            </p>
+
+            <div
+              style={{
+                fontSize: 14,
+                color: "rgba(230,255,245,0.85)",
+              }}
+            >
+              Meet Outdoors · for those who'd rather live their story than watch it through a screen.
+            </div>
+          </div>
+        </section>
+
+        {/* ===== FOOTER ===== */}
+        <footer
+          style={{
+            padding: "26px 16px 40px",
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+            fontSize: 13,
+            color: "rgba(255,255,255,0.7)",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 1180,
+              margin: "0 auto",
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>© {new Date().getFullYear()} Meet Outdoors</div>
+            <div style={{ opacity: 0.75 }}>
+              Made for explorers · Not for couch potatoes 🥾
+            </div>
+          </div>
+        </footer>
       </div>
+    </>
+  );
+}
 
-      {/* Mist bottom effect */}
+/* ===== helper komponenta za stat ===== */
+
+function HeroStat({ label, value }) {
+  return (
+    <div style={{ minWidth: 110 }}>
       <div
         style={{
-          position: "absolute",
-          bottom: 0,
-          width: "100%",
-          height: "120px",
-          background:
-            "linear-gradient(0deg, rgba(0,0,0,0.8), transparent)",
-          zIndex: 1,
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.16em",
+          color: "rgba(210,255,230,0.8)",
         }}
-      />
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800 }}>{value}</div>
     </div>
   );
 }
 
-export default Home;
+/* ===== STILOVI KOJE KORISTIMO GORE ===== */
+
+const ctaPrimary = {
+  padding: "11px 22px",
+  borderRadius: 999,
+  border: "none",
+  background:
+    "linear-gradient(135deg,#00ffb0 0%,#00e0ff 45%,#ffffff 100%)",
+  color: "#02140D",
+  fontSize: 16,
+  fontWeight: 800,
+  cursor: "pointer",
+  boxShadow: "0 18px 50px rgba(0,255,188,0.65)",
+};
+
+const ctaGhost = {
+  padding: "11px 20px",
+  borderRadius: 999,
+  border: "1px solid rgba(255,255,255,0.5)",
+  background: "rgba(0,0,0,0.45)",
+  color: "#ffffff",
+  fontSize: 15,
+  fontWeight: 600,
+  cursor: "pointer",
+  backdropFilter: "blur(10px)",
+};
+
+const featuredTours = [
+  {
+    id: 1,
+    title: "Sunrise ridge above the clouds",
+    location: "Kopaonik · Serbia",
+    tag: "Hiking",
+    image:
+      "https://images.unsplash.com/photo-1477414348463-c0eb7f1359b6?q=80",
+  },
+  {
+    id: 2,
+    title: "Night hike & campfire stories",
+    location: "Durmitor · Montenegro",
+    tag: "Camping",
+    image:
+      "https://images.unsplash.com/photo-1500534314211-0a24cd03f2c0?q=80",
+  },
+  {
+    id: 3,
+    title: "Rafting through emerald canyon",
+    location: "Tara river",
+    tag: "Rafting",
+    image:
+      "https://images.unsplash.com/photo-1526929790812-8505e06f3c2e?q=80",
+  },
+  {
+    id: 4,
+    title: "Pilgrimage to hidden monastery",
+    location: "Balkans",
+    tag: "Pilgrimage",
+    image:
+      "https://images.unsplash.com/photo-1526498460520-4c246339dccb?q=80",
+  },
+];
+
+const railCard = {
+  minWidth: 210,
+  maxWidth: 240,
+  background: "rgba(0,0,0,0.6)",
+  borderRadius: 18,
+  padding: 10,
+  border: "1px solid rgba(255,255,255,0.06)",
+  cursor: "pointer",
+  flexShrink: 0,
+};
+
+const dualCardLeft = {
+  borderRadius: 22,
+  padding: 22,
+  background:
+    "radial-gradient(circle at top left, rgba(0,255,176,0.18), rgba(0,0,0,0.9))",
+  border: "1px solid rgba(0,255,176,0.45)",
+  boxShadow: "0 24px 70px rgba(0,0,0,0.9)",
+};
+
+const dualCardRight = {
+  borderRadius: 22,
+  padding: 22,
+  background:
+    "radial-gradient(circle at top right, rgba(0,184,255,0.2), rgba(0,0,0,0.9))",
+  border: "1px solid rgba(0,184,255,0.4)",
+  boxShadow: "0 24px 70px rgba(0,0,0,0.9)",
+};
+
+const dualTitle = {
+  fontSize: 22,
+  fontWeight: 800,
+  marginBottom: 8,
+};
+
+const dualText = {
+  fontSize: 14,
+  color: "rgba(230,255,245,0.85)",
+  marginBottom: 12,
+};
+
+const dualList = {
+  listStyle: "none",
+  paddingLeft: 0,
+  margin: 0,
+  fontSize: 13,
+  color: "rgba(230,255,245,0.88)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+};
+
+const dualBtnPrimary = {
+  marginTop: 14,
+  padding: "9px 18px",
+  borderRadius: 999,
+  border: "none",
+  background:
+    "linear-gradient(135deg,#00ffb0,#00e0a0)",
+  color: "#02130c",
+  fontSize: 14,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const dualBtnGhost = {
+  marginTop: 14,
+  padding: "9px 18px",
+  borderRadius: 999,
+  border: "1px solid rgba(255,255,255,0.5)",
+  background: "transparent",
+  color: "#ffffff",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+};

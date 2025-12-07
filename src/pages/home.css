@@ -1,0 +1,287 @@
+/* ================================
+   GLOBAL OUTDOOR THEME
+================================ */
+:root {
+  --green-main: #00c97b;
+  --green-dark: #0b3d2e;
+  --glass-bg: rgba(255, 255, 255, 0.10);
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #04140c;
+  font-family: "Inter", sans-serif;
+  color: white;
+}
+
+/* ================================
+   HERO SECTION
+================================ */
+.home-hero {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* VIDEO BACKGROUND */
+.home-hero video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(55%) saturate(120%);
+}
+
+/* OVERLAY */
+.home-hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.3),
+    rgba(0, 0, 0, 0.75)
+  );
+}
+
+/* TEXT CONTENT */
+.home-hero-content {
+  position: relative;
+  z-index: 5;
+  text-align: center;
+  top: 35%;
+  transform: translateY(-50%);
+  padding: 0 20px;
+}
+
+.home-hero-title {
+  font-size: 55px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+}
+
+.home-hero-subtitle {
+  font-size: 20px;
+  opacity: 0.85;
+  margin-bottom: 35px;
+}
+
+/* CALL TO ACTION BUTTONS */
+.home-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.btn-primary {
+  padding: 14px 34px;
+  font-size: 18px;
+  border-radius: 14px;
+  border: 2px solid var(--green-main);
+  background: var(--green-main);
+  color: #012415;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.25s ease;
+  box-shadow: var(--shadow-soft);
+}
+
+.btn-primary:hover {
+  transform: translateY(-4px);
+  background: #00e38c;
+}
+
+.btn-outline {
+  padding: 14px 34px;
+  font-size: 18px;
+  border-radius: 14px;
+  border: 2px solid white;
+  background: transparent;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-4px);
+}
+
+/* ================================
+   FEATURES SECTION
+================================ */
+.features {
+  margin-top: -120px;
+  padding: 40px 20px 80px;
+  position: relative;
+  z-index: 5;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+}
+
+.feature-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(14px);
+  padding: 25px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  transition: 0.25s ease;
+  text-align: center;
+}
+
+.feature-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--green-main);
+}
+
+.feature-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+  color: var(--green-main);
+}
+
+/* ================================
+   RESPONSIVE FIXES
+================================ */
+@media (max-width: 768px) {
+  .home-hero-title {
+    font-size: 38px;
+  }
+  .home-hero-subtitle {
+    font-size: 18px;
+  }
+  .home-buttons {
+    flex-direction: column;
+    gap: 14px;
+  }
+}.home-wrapper {
+  background: linear-gradient(to bottom, #00140c, #000000);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* CINEMATIC IMAGE BACKGROUND */
+.home-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=2100&q=80");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.28; /* cinematic fade */
+  z-index: 0;
+  filter: brightness(0.7) contrast(1.1);
+}
+
+/* GRAIN EFFECT */
+.home-grain {
+  pointer-events: none;
+  z-index: 1;
+  position: absolute;
+  inset: 0;
+  background-image: url("https://upload.wikimedia.org/wikipedia/commons/4/4c/Noise_texture.png");
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+}
+.brand-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 52px;        /* MNOGO lepše od onog ogromnog gore */
+  text-transform: uppercase;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 10px;
+  margin-top: -10px;
+  letter-spacing: 3px;
+
+  /* Cinematic subtle depth */
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+
+  animation: fadeDown 0.9s ease-out forwards;
+}
+
+/* WRAPPER */
+.brand-wrapper {
+  text-align: center;
+  margin-bottom: 35px;
+  margin-top: 10px;
+}
+
+/* PREMIUM TITLE */
+.brand-title-v2 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 48px;
+  letter-spacing: 4px;
+  color: #ffffff;
+  margin: 0 auto;
+
+  text-transform: uppercase;
+
+  /* Cinematic depth */
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+
+  animation: brandFade 1s ease-out forwards;
+}
+
+/* OUTDOORS gradient highlight */
+.brand-title-v2 span {
+  background: linear-gradient(90deg, #7cffc1, #1fb86a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* LUKSUZNA LINIJICA ISPOD NASLOVA */
+.brand-underline {
+  width: 160px;
+  height: 3px;
+  margin: 10px auto 0 auto;
+  border-radius: 4px;
+
+  background: linear-gradient(90deg, #1fb86a, #7cffc1);
+
+  box-shadow: 0 0 14px rgba(31, 184, 106, 0.7);
+  animation: lineGrow 1s ease-out forwards;
+}
+
+/* ANIMATIONS */
+@keyframes brandFade {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes lineGrow {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 160px;
+    opacity: 1;
+  }
+}

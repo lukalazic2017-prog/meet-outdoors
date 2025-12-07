@@ -1,0 +1,217 @@
+/* ANIMIRANA AURORA POZADINA */
+.aurora-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.aurora-layer {
+  position: absolute;
+  width: 120%;
+  height: 120%;
+  top: -10%;
+  left: -10%;
+  background: radial-gradient(
+    ellipse at bottom,
+    rgba(0, 255, 180, 0.15),
+    rgba(0, 40, 20, 0.05),
+    transparent 70%
+  );
+  filter: blur(80px);
+  animation: auroraMove 14s ease-in-out infinite alternate;
+  opacity: 0.7;
+}
+
+.aurora-layer:nth-child(2) {
+  background: radial-gradient(
+    ellipse at top,
+    rgba(0, 200, 255, 0.18),
+    rgba(0, 50, 80, 0.1),
+    transparent 70%
+  );
+  animation-duration: 18s;
+}
+
+.aurora-layer:nth-child(3) {
+  background: radial-gradient(
+    ellipse at left,
+    rgba(255, 0, 160, 0.15),
+    rgba(80, 0, 40, 0.05),
+    transparent 70%
+  );
+  animation-duration: 22s;
+}
+
+@keyframes auroraMove {
+  0% {
+    transform: translateX(-4%) translateY(-2%) scale(1.1);
+  }
+  50% {
+    transform: translateX(4%) translateY(3%) scale(1.15);
+  }
+  100% {
+    transform: translateX(-3%) translateY(2%) scale(1.1);
+  }
+}
+
+
+.activities-page {
+  padding: 10px;
+  color: #cef5dc;
+}
+
+.activities-title {
+  font-size: 42px;
+  font-weight: 800;
+  text-align: center;
+  color: #e8fff5;               /* soft white-green */
+  letter-spacing: 1px;
+  
+  /* SUBTLE GLOW (much softer) */
+  text-shadow:
+    0 0 4px rgba(0, 255, 180, 0.2),
+    0 0 12px rgba(0, 255, 180, 0.12);
+
+  margin-bottom: 28px;
+  opacity: 0.95;
+}
+
+.activities-search {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  margin-bottom: 25px;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-size: 16px;
+}
+
+.activities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.activity-card {
+  position: relative;
+  height: 220px;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  transform: perspective(800px) rotateX(0deg) rotateY(0deg);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+}
+
+.activity-card:hover {
+  transform: perspective(800px) rotateX(4deg) rotateY(-6deg) scale(1.03);
+  box-shadow: 0 10px 30px rgba(0,255,180,0.4);
+}
+
+.activity-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.activity-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0.0));
+}
+
+.activity-content {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+}
+
+.activity-content h2 {
+  font-size: 22px;
+  margin: 0;
+  font-weight: 800;
+  text-shadow: 0 0 8px black;
+}
+
+.activity-content p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+/* Shine effect */
+.activity-card::after {
+  content: "";
+  position: absolute;
+  top: -150%;
+  left: -50%;
+  width: 200%;
+  height: 300%;
+  background: linear-gradient(115deg, transparent 45%, rgba(255,255,255,0.25) 50%, transparent 55%);
+  transform: rotate(25deg);
+  transition: 0.5s;
+  opacity: 0;
+}
+
+.activity-card:hover::after {
+  opacity: 1;
+  top: -250%;
+  left: -150%;
+}
+.activities-hero {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  background-image: url("https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1200");
+  background-size: cover;
+  background-position: center;
+  border-radius: 0 0 18px 18px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 25px;
+  margin-bottom: 25px;
+}
+
+.activities-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.activities-title {
+  position: relative;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: white;
+  text-align: center;
+  text-shadow: 0 4px 14px rgba(0,0,0,0.6);
+}
+.activities-hero {
+  position: relative;
+}
+
+.activities-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.45),
+    rgba(0, 0, 0, 0.35),
+    rgba(0, 0, 0, 0.15)
+  );
+  z-index: 1;
+}
+
+.activities-title,
+.activities-subtitle {
+  position: relative;
+  z-index: 2;
+}

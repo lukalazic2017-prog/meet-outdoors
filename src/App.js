@@ -1,68 +1,99 @@
+import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Footer from "./components/Footer";
 
-// TRIAL SISTEM
-import { TrialProvider } from "./i18n/TrialContext";
 
 // STRANICE
 import Home from "./pages/Home";
 import Activities from "./pages/Activities";
 import Contact from "./pages/Contact";
-import Tours from "./pages/Tours";
 import CreateTour from "./pages/CreateTour";
-import MyProfile from "./pages/MyProfile";
+import Tours from "./pages/Tours";
+import Profile from "./pages/Profile";
+import FollowersList from "./pages/FollowersList";
+import EditTour from "./pages/EditTour";
+import Chat from "./pages/Chat";
+import TourDetails from "./pages/TourDetails";
+import MyTours from "./pages/MyTours";
 import EditProfile from "./pages/EditProfile";
+import Settings from "./pages/Settings";
+import SafetyTips from "./pages/SafetyTips";
+import HostGuidelines from "./pages/HostGuidelines";
+import About from "./pages/About";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+
+
+
+// AUTH STRANICE
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import ResetPassword from "./pages/ResetPassword";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Chat from "./pages/Chat";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
+
+import Privacy from "./pages/PrivacyPolicy";
 import Refund from "./pages/Refund";
 
 function App() {
   return (
-      <TrialProvider>
-        <BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Navbar />
 
-          <Navbar />
+        <Routes>
+          {/* JAVNE STRANICE */}
+          <Route path="/" element={<Home />} />
+          <Route path="/activities" element={<Activities />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/refund" element={<Refund />} />
+          <Route path="/profile/:id" element={<Profile />} />
+          <Route path="/followers" element={<FollowersList />} />
+          <Route path="/edit-tour/:id" element={<EditTour />} />  
+          <Route path="/chat/:tourId" element={<Chat />} />
+          <Route path="/tour/:id" element={<TourDetails/>} />
+          <Route path="my-tours" element={<MyTours/>} />
+          <Route path="edit-profile" element={<EditProfile/>} />
+          <Route path="settings" element={<Settings/>} />
+          <Route path="/safety-tips" element={<SafetyTips />} />
+          <Route path="/host-guidelines" element={<HostGuidelines />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          
 
-          <Routes>
-            {/* GLAVNE STRANICE */}
-            <Route path="/" element={<Home />} />
-            <Route path="/activities" element={<Activities />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/tours" element={<Tours />} />
-            <Route path="/terms" element={<Terms />} />
-<Route path="/privacy" element={<Privacy />} />
-<Route path="/refund" element={<Refund />} />
+          {/* AUTH */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
 
-            {/* CHAT – mora :tourId da bi radilo */}
-            <Route path="/chat/:tourId" element={<Chat />} />
+          {/* STRANICE ZA ULOGOVANE */}
+          <Route
+            path="/create-tour"
+            element={
+              <ProtectedRoute>
+                <CreateTour />
+              </ProtectedRoute>
+            }
+          />
 
-            {/* SAMO ULOGOVANI – Create Tour */}
-            <Route
-              path="/create-tour"
-              element={
-                <ProtectedRoute>
-                  <CreateTour />
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            
+          />
 
-            {/* PROFIL */}
-            <Route path="/my-profile" element={<MyProfile />} />
-            <Route path="/edit-profile" element={<EditProfile />} />
-
-            {/* AUTH */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-          </Routes>
-
-        </BrowserRouter>
-      </TrialProvider>
+          <Route
+            path="/tours"
+            element={
+              <ProtectedRoute>
+                <Tours />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+        <Footer />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

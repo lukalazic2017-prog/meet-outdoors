@@ -1,14 +1,13 @@
-// src/pages/CreateTour.jsx
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+// src/pages/EditTour.jsx
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
-/* Leaflet imports */
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-/* Fix default marker icons */
+/* Fix Leaflet default icons (isti fazon kao u CreateTour) */
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -17,9 +16,11 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-/* Custom component for selecting location */
-function LocationMarker({ onSelect }) {
-  const [position, setPosition] = useState(null);
+/* Marker koji zna početnu poziciju */
+function EditLocationMarker({ latitude, longitude, onSelect }) {
+  const [position, setPosition] = useState(
+    latitude && longitude ? { lat: latitude, lng: longitude } : null
+  );
 
   useMapEvents({
     click(e) {
@@ -28,10 +29,17 @@ function LocationMarker({ onSelect }) {
     },
   });
 
+  useEffect(() => {
+    if (latitude && longitude) {
+      setPosition({ lat: latitude, lng: longitude });
+    }
+  }, [latitude, longitude]);
+
   return position ? <Marker position={position} /> : null;
 }
 
-export default function CreateTour() {
+export default function EditTour() {
+  const { id } = useParams();
   const navigate = useNavigate();
 
   // --- BASIC INFO ---
@@ -61,19 +69,11 @@ export default function CreateTour() {
   const [galleryPreviews, setGalleryPreviews] = useState([]);
 
   // --- STATE ---
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-
-  // ------------ LOAD AUTH USER ------------
-  useEffect(() => {
-    async function loadUser() {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user || null);
-    }
-    loadUser();
-  }, []);
+  const [tour, setTour] = useState(null);
 
   // ------------ ACTIVITIES & COUNTRIES ------------
   const activitiesList = [
@@ -124,6 +124,49 @@ export default function CreateTour() {
     "Other",
   ];
 
+  // ------------ LOAD TOUR DATA ------------
+  useEffect(() => {
+    async function loadTour() {
+      setLoading(true);
+      setErrorMsg("");
+
+      const { data, error } = await supabase
+        .from("tours")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        console.error(error);
+        setErrorMsg("Could not load tour. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      setTour(data);
+
+      // popuni state
+      setTitle(data.title || "");
+      setActivity(data.activity || "");
+      setCountry(data.country || "");
+      setLocationName(data.location_name || "");
+      setDescription(data.description || "");
+      setDateStart(data.date_start || "");
+      setDateEnd(data.date_end || "");
+      setPrice(data.price ?? "");
+      setMaxPeople(data.max_people ?? "");
+      setIsLegalEntity(!!data.is_legal_entity);
+      setLatitude(data.latitude || null);
+      setLongitude(data.longitude || null);
+      setCoverPreview(data.cover_url || null);
+      setGalleryPreviews(Array.isArray(data.image_urls) ? data.image_urls : []);
+
+      setLoading(false);
+    }
+
+    loadTour();
+  }, [id]);
+
   // ------------ FILE HANDLERS ------------
   function handleCoverChange(e) {
     const file = e.target.files[0];
@@ -164,11 +207,10 @@ export default function CreateTour() {
       return "Max people must be greater than 0.";
     if (!description.trim()) return "Description is required.";
     if (!latitude || !longitude) return "Please pick a location on the map.";
-    if (!coverFile) return "Cover image is required.";
     return null;
   }
 
-  // ------------ SUBMIT ------------
+  // ------------ SUBMIT (UPDATE) ------------
   async function handleSubmit(e) {
     e.preventDefault();
     setErrorMsg("");
@@ -180,17 +222,20 @@ export default function CreateTour() {
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
 
     try {
-      // 1) Upload cover image
-      let coverUrl = null;
+      // 1) COVER IMAGE – ako je izabran novi fajl, upload; inače ostaje stari
+      let coverUrl = tour?.cover_url || null;
       if (coverFile) {
         const ext = coverFile.name.split(".").pop();
-        const fileName = `cover-${Date.now()}.${ext}`;
+        const fileName = `cover-${id}-${Date.now()}.${ext}`;
+
         const { data: coverData, error: coverError } = await supabase.storage
           .from("tour-images")
-          .upload(fileName, coverFile);
+          .upload(fileName, coverFile, {
+            upsert: false,
+          });
 
         if (coverError) throw coverError;
 
@@ -201,65 +246,76 @@ export default function CreateTour() {
         coverUrl = publicUrlData.publicUrl;
       }
 
-      // 2) Upload gallery
-      const galleryUrls = [];
-      for (const file of galleryFiles) {
-        const ext = file.name.split(".").pop();
-        const fileName = `gallery-${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}.${ext}`;
+      // 2) GALLERY IMAGES – ako ima novih fajlova, uploadujemo i ZAMENIMO stari niz
+      let galleryUrls =
+        Array.isArray(tour?.image_urls) && !galleryFiles.length
+          ? tour.image_urls
+          : [];
 
-        const { data: gData, error: gError } = await supabase.storage
-          .from("tour-images")
-          .upload(fileName, file);
+      if (galleryFiles.length > 0) {
+        const tempUrls = [];
+        for (const file of galleryFiles) {
+          const ext = file.name.split(".").pop();
+          const fileName = `gallery-${id}-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}.${ext}`;
 
-        if (gError) throw gError;
+          const { data: gData, error: gError } = await supabase.storage
+            .from("tour-images")
+            .upload(fileName, file);
 
-        const { data: publicUrlData } = supabase.storage
-          .from("tour-images")
-          .getPublicUrl(gData.path);
+          if (gError) throw gError;
 
-        galleryUrls.push(publicUrlData.publicUrl);
+          const { data: publicUrlData } = supabase.storage
+            .from("tour-images")
+            .getPublicUrl(gData.path);
+
+          tempUrls.push(publicUrlData.publicUrl);
+        }
+
+        galleryUrls = tempUrls;
       }
 
-      // 3) Insert into DB
-      const { error: insertError } = await supabase.from("tours").insert([
-        {
-          title,
-          activity,
-          country,
-          location_name: locationName,
-          description,
-          date_start: dateStart,
-          date_end: dateEnd,
-          price: Number(price),
-          max_people: Number(maxPeople),
-          is_legal_entity: isLegalEntity,
-          latitude,
-          longitude,
-          cover_url: coverUrl,
-          image_urls: galleryUrls,
-          user_id: user?.id,
-        creator_id: user?.id,
-        },
-      ]);
+      // 3) UPDATE u bazi
+      const { error: updateError } = await supabase
+  .from("tours")
+  .update({
+    title: title || null,
+    activity: activity || null,
+    country: country || null,
+    location_name: locationName || null,
+    description: description || null,
+    date_start: dateStart || null,
+    date_end: dateEnd || null,
+    price: price ? Number(price) : null,
+    max_people: maxPeople ? Number(maxPeople) : null,
+    is_legal_entity: isLegalEntity,
+    latitude: latitude ?? null,
+    longitude: longitude ?? null,
+    cover_url: coverUrl || null,
+    image_urls: galleryUrls || [],
+  })
+  .eq("id", id);
 
-      if (insertError) throw insertError;
+      if (updateError) throw updateError;
 
-      setSuccessMsg("Tour created successfully! 🌿");
+      setSuccessMsg("Tour updated successfully! 🌿");
+      // Ako hoćeš automatski nazad na detalje:
+      // navigate(/tours/${id});
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message || "Error creating tour. Please try again.");
+      setErrorMsg(err.message || "Error updating tour. Please try again.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
-  // ------------ STYLES (YOUR ORIGINAL) ------------
+  // ------------ STYLES (isti kao CreateTour) ------------
   const pageWrapperStyle = {
     minHeight: "100vh",
     padding: "30px 16px 60px",
-    background: "radial-gradient(circle at top, #062a1d 0%, #030b08 55%, #020605 100%)",
+    background:
+      "radial-gradient(circle at top, #062a1d 0%, #030b08 55%, #020605 100%)",
     color: "#ffffff",
     boxSizing: "border-box",
   };
@@ -332,7 +388,11 @@ export default function CreateTour() {
     boxSizing: "border-box",
   };
 
-  const textareaStyle = { ...inputBaseStyle, minHeight: 90, resize: "vertical" };
+  const textareaStyle = {
+    ...inputBaseStyle,
+    minHeight: 90,
+    resize: "vertical",
+  };
 
   const selectStyle = {
     ...inputBaseStyle,
@@ -423,19 +483,27 @@ export default function CreateTour() {
     ? { ...layoutStyle, gridTemplateColumns: "1fr" }
     : layoutStyle;
 
-  // --------------------------------------------------------
-  // ------------------------- UI ---------------------------
-  // --------------------------------------------------------
+  // ------------ RENDER ------------
+  if (loading && !tour) {
+    return (
+      <div style={pageWrapperStyle}>
+        <div style={containerStyle}>
+          <p>Loading tour...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={pageWrapperStyle}>
       <div style={containerStyle}>
         {/* HEADER */}
         <div style={headerStyle}>
-          <div style={badgeStyle}>🗺️ Create a new tour</div>
-          <h1 style={titleStyle}>Share your next outdoor experience.</h1>
+          <div style={badgeStyle}>✏️ Edit tour</div>
+          <h1 style={titleStyle}>Update your outdoor experience.</h1>
           <p style={subtitleStyle}>
-            Describe your tour, upload photos, choose the exact location on the
-            map, and let people join your adventure.
+            Change dates, description, images or location – keep your tour
+            fresh and clear for everyone who joins.
           </p>
         </div>
 
@@ -615,7 +683,7 @@ export default function CreateTour() {
 
               {/* COVER IMAGE */}
               <div style={{ marginBottom: 14 }}>
-                <div style={labelStyle}>Cover image (1) *</div>
+                <div style={labelStyle}>Cover image (1)</div>
 
                 <label
                   style={{
@@ -628,9 +696,11 @@ export default function CreateTour() {
                       "radial-gradient(circle at top left, rgba(0,255,160,0.2), rgba(0,0,0,0.9))",
                   }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 3 }}>📷 Click to upload</div>
+                  <div style={{ fontWeight: 600, marginBottom: 3 }}>
+                    📷 Click to upload new cover (optional)
+                  </div>
                   <div style={{ fontSize: 11, opacity: 0.7 }}>
-                    JPG / PNG • max 5 MB
+                    If you don&apos;t upload anything, current cover will stay.
                   </div>
 
                   <input
@@ -679,10 +749,11 @@ export default function CreateTour() {
                   onDragLeave={preventDefault}
                 >
                   <div style={{ fontWeight: 600, marginBottom: 3 }}>
-                    🖼️ Click or drag & drop
+                    🖼️ Click or drag &amp; drop (optional)
                   </div>
                   <div style={{ fontSize: 11, opacity: 0.7 }}>
-                    Add up to 6 photos
+                    If you don&apos;t upload anything, current gallery will stay.
+                    If you upload new images, gallery will be replaced.
                   </div>
 
                   <input
@@ -715,7 +786,11 @@ export default function CreateTour() {
                         <img
                           src={src}
                           alt="gallery"
-                          style={{ width: "100%", height: 70, objectFit: "cover" }}
+                          style={{
+                            width: "100%",
+                            height: 70,
+                            objectFit: "cover",
+                          }}
                         />
                       </div>
                     ))}
@@ -729,8 +804,8 @@ export default function CreateTour() {
             {successMsg && <div style={successStyle}>{successMsg}</div>}
 
             {/* SUBMIT */}
-            <button type="submit" disabled={loading} style={submitBtnStyle}>
-              {loading ? "Creating..." : "Create Tour"}
+            <button type="submit" disabled={saving} style={submitBtnStyle}>
+              {saving ? "Saving changes..." : "Save changes"}
             </button>
           </form>
 
@@ -738,14 +813,19 @@ export default function CreateTour() {
           <div style={cardStyle}>
             <div style={{ marginBottom: 16 }}>
               <div style={sectionTitleStyle}>Map location</div>
-              <p style={hintTextStyle}>Click on the map to place a marker.</p>
+              <p style={hintTextStyle}>
+                Click on the map to adjust the exact meeting point or trail
+                start.
+              </p>
             </div>
 
             {/* MAP HERE */}
             <div style={mapContainerOuterStyle}>
               <MapContainer
-                center={[44.0, 21.0]} // Serbia center
-                zoom={7}
+                center={
+                  latitude && longitude ? [latitude, longitude] : [44.0, 21.0]
+                }
+                zoom={latitude && longitude ? 9 : 7}
                 scrollWheelZoom={true}
                 style={{ width: "100%", height: 220 }}
               >
@@ -754,7 +834,9 @@ export default function CreateTour() {
                   attribution="&copy; OpenStreetMap contributors"
                 />
 
-                <LocationMarker
+                <EditLocationMarker
+                  latitude={latitude}
+                  longitude={longitude}
                   onSelect={(lat, lng) => {
                     setLatitude(lat);
                     setLongitude(lng);
@@ -791,7 +873,8 @@ export default function CreateTour() {
               </div>
 
               <div style={{ marginTop: 14, fontSize: 11, opacity: 0.7 }}>
-                Tip: write honestly about difficulty, gear, and weather.
+                Tip: keep details up to date so people know exactly what to
+                expect.
               </div>
             </div>
           </div>

@@ -51,3 +51,32 @@ button:hover {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.notif-btn {
+  background: none;
+  border: none;
+  color: white;
+  position: relative;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: red;
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 100px;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}

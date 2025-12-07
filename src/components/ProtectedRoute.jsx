@@ -1,17 +1,30 @@
+import React from "react";
 import { Navigate } from "react-router-dom";
-import { useTrial } from "../i18n/TrialContext";
-import { supabase } from "../supabaseClient";
+import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({ children }) {
-  const { trialExpired, isPremium, loading } = useTrial();
+  const { user, authLoading } = useAuth();
 
-  if (loading) return null;
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#04140c",
+          color: "white",
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
 
-  // ako je premium → sve dopušteno
-  if (isPremium) return children;
-
-  // ako je trial istekao → blokiraj
-  if (trialExpired) return <Navigate to="/upgrade" />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   return children;
 }

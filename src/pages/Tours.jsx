@@ -1,458 +1,407 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1600&auto=format&fit=crop";
-const FALLBACK_IMG =
-  "https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200&auto=format&fit=crop";
-
-function useQuery() {
-  const { search } = useLocation();
-  return useMemo(() => new URLSearchParams(search), [search]);
-}
+import { useNavigate } from "react-router-dom";
 
 export default function Tours() {
-  const query = useQuery();
-  const activeTag = query.get("activity") || "";
-
   const [tours, setTours] = useState([]);
-  const [expandedTour, setExpandedTour] = useState(null);
-  const [user, setUser] = useState(null); // ➜ USER state
+  const [loading, setLoading] = useState(true);
 
-  // LOAD USER
+  const [activityFilter, setActivityFilter] = useState("All Activities");
+  const [countryFilter, setCountryFilter] = useState("All Countries");
+  const [customActivity, setCustomActivity] = useState("");
+  const [customCountry, setCustomCountry] = useState("");
+
+  // CUSTOM DROPDOWNS
+  const [showActivityList, setShowActivityList] = useState(false);
+  const [showCountryList, setShowCountryList] = useState(false);
+
+  const navigate = useNavigate();
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data?.session?.user) {
-        setUser(data.session.user);
-      } else {
-        setUser(null);
-      }
-    });
+    async function loadTours() {
+      let { data, error } = await supabase
+        .from("tours")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error && data) setTours(data);
+      setLoading(false);
+    }
+
+    loadTours();
   }, []);
 
-  // LOAD TOURS
-  useEffect(() => {
-    const raw = JSON.parse(localStorage.getItem("tours")) || [];
-    const data = Array.isArray(raw) ? raw : [];
-    const filtered = activeTag
-      ? data.filter(
-          (t) => (t.activity || "").toLowerCase() === activeTag.toLowerCase()
-        )
-      : data;
-    setTours(filtered);
-  }, [activeTag]);
+  const activities = [
+    "All Activities",
+    "Hiking",
+    "Cycling",
+    "Bicycling",
+    "Running / Marathon",
+    "Pilgrimage",
+    "Camping",
+    "Rafting",
+    "Kayaking",
+    "Quad Riding",
+    "Horse Riding",
+    "Climbing",
+    "Canyoning",
+    "Paragliding",
+    "Parasailing",
+    "Skiing & Snowboarding",
+    "Water Skiing",
+    "Surfing",
+    "Diving",
+    "Snorkeling",
+    "Boat Rides",
+    "Road Trip",
+    "Other",
+  ];
 
-  const toggleExpand = (id) => {
-    setExpandedTour(expandedTour === id ? null : id);
+  const countries = [
+    "All Countries",
+    "Serbia",
+    "Bosnia & Herzegovina",
+    "Croatia",
+    "Montenegro",
+    "North Macedonia",
+    "Albania",
+    "Greece",
+    "Bulgaria",
+    "Romania",
+    "Slovenia",
+    "Hungary",
+    "Austria",
+    "Germany",
+    "Switzerland",
+    "Italy",
+    "Spain",
+    "France",
+    "Portugal",
+    "Turkey",
+    "Georgia",
+    "Cyprus",
+    "USA",
+    "Canada",
+    "Australia",
+    "Other",
+  ];
+
+  const chooseActivity = (v) => {
+    setActivityFilter(v);
+    setShowActivityList(false);
+  };
+
+  const chooseCountry = (v) => {
+    setCountryFilter(v);
+    setShowCountryList(false);
+  };
+
+  const filteredTours = tours.filter((tour) => {
+    const matchActivity =
+      activityFilter === "All Activities"
+        ? true
+        : activityFilter === "Other"
+        ? customActivity
+          ? tour.activity?.toLowerCase() === customActivity.toLowerCase()
+          : true
+        : tour.activity === activityFilter;
+
+    const matchCountry =
+      countryFilter === "All Countries"
+        ? true
+        : countryFilter === "Other"
+        ? customCountry
+          ? tour.country?.toLowerCase() === customCountry.toLowerCase()
+          : true
+        : tour.country === countryFilter;
+
+    return matchActivity && matchCountry;
+  });
+
+  const getCover = (tour) => {
+    if (tour.cover_url) return tour.cover_url;
+    if (tour.image_url) return tour.image_url;
+    return "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg";
+  };
+
+  // -------------------------------------------
+  //  🔥 PREMIUM GLOBAL STYLES
+  // -------------------------------------------
+  const styles = {
+    page: {
+      minHeight: "100vh",
+      padding: "30px 16px 40px",
+      background:
+        "radial-gradient(circle at top, #00b894 0%, #00171f 40%, #000000 90%)",
+      display: "flex",
+      justifyContent: "center",
+      color: "#e6fff9",
+      fontFamily: "system-ui",
+    },
+    container: {
+      width: "100%",
+      maxWidth: 1200,
+    },
+    header: {
+      textAlign: "center",
+      marginBottom: 30,
+    },
+    title: {
+      fontSize: 40,
+      fontWeight: 800,
+      background: "linear-gradient(120deg, #fff, #aaffee, #00ffb4, #00d1ff)",
+      WebkitBackgroundClip: "text",
+      color: "transparent",
+      textShadow: "0 0 30px rgba(0,255,180,0.7)",
+    },
+    subtitle: {
+      opacity: 0.8,
+      fontSize: 16,
+      marginTop: 8,
+    },
+
+    // 🔥 FILTER BAR
+    filterBar: {
+      display: "flex",
+      gap: 16,
+      flexWrap: "wrap",
+      marginBottom: 35,
+      padding: 16,
+      borderRadius: 20,
+      background: "rgba(0,0,0,0.45)",
+      border: "1px solid rgba(0,255,180,0.3)",
+      backdropFilter: "blur(14px)",
+      position: "relative",
+      zIndex: 1000, // FIX: FILTER BAR ABOVE GRID
+    },
+    filterGroup: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      position: "relative", // REQUIRED FOR ABSOLUTE DROPDOWN
+    },
+    filterLabel: {
+      fontSize: 12,
+      opacity: 0.8,
+      marginBottom: 5,
+    },
+
+    // 🔥 CUSTOM DROPDOWN BOX
+    dropdownBox: {
+      padding: "12px 16px",
+      borderRadius: 12,
+      background: "rgba(0,255,180,0.15)",
+      border: "1px solid rgba(0,255,180,0.5)",
+      cursor: "pointer",
+      backdropFilter: "blur(10px)",
+      boxShadow: "0 0 15px rgba(0,255,180,0.4)",
+      color: "#e6fff9",
+      userSelect: "none",
+    },
+
+    // 🔥 DROPDOWN LIST (FIXED zIndex)
+    dropdownList: {
+      position: "absolute",
+      top: 70,
+      width: "100%",
+      maxHeight: 220,
+      overflowY: "auto",
+      background: "rgba(0, 0, 0, 0.85)",
+      border: "1px solid rgba(0,255,180,0.4)",
+      backdropFilter: "blur(10px)",
+      borderRadius: 14,
+      boxShadow: "0 0 20px rgba(0,255,180,0.45)",
+      zIndex: 9999, // FIX: ALWAYS ON TOP
+    },
+    dropdownItem: {
+      padding: "12px 16px",
+      cursor: "pointer",
+      transition: "0.2s",
+      color: "#e6fff9",
+    },
+
+    // 🔥 GRID
+    grid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+      gap: 22,
+      position: "relative",
+      zIndex: 1, // BELOW DROPDOWN
+    },
+
+    // 🔥 CARD
+    card: {
+      borderRadius: 24,
+      overflow: "hidden",
+      background: "linear-gradient(145deg, #000, #002920)",
+      border: "1px solid rgba(0,255,180,0.35)",
+      cursor: "pointer",
+      boxShadow: "0 20px 50px rgba(0,0,0,0.75)",
+      transition: "0.3s",
+    },
+    imgWrapper: {
+      height: 210,
+      overflow: "hidden",
+      position: "relative",
+    },
+    img: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+      transition: "0.3s",
+    },
+    overlay: {
+      position: "absolute",
+      inset: 0,
+      background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)",
+    },
+    cardBody: {
+      padding: 16,
+    },
+    cardTitle: {
+      fontSize: 18,
+      fontWeight: 700,
+      textShadow: "0 0 10px rgba(0,255,180,0.5)",
+      marginBottom: 5,
+    },
+    location: { opacity: 0.85, marginBottom: 4 },
+    meta: { opacity: 0.8, fontSize: 12, marginBottom: 10 },
+    button: {
+      padding: "8px 14px",
+      border: "none",
+      borderRadius: 999,
+      background: "linear-gradient(120deg, #00ffb4, #00d1ff)",
+      color: "#003321",
+      fontWeight: 700,
+      cursor: "pointer",
+    },
   };
 
   return (
-    <div>
-      {/* HERO */}
-      <section
-        style={{
-          position: "relative",
-          minHeight: "35vh",
-          display: "grid",
-          placeItems: "center",
-          padding: "60px 20px 40px",
-          backgroundImage: `linear-gradient(180deg, rgba(10,40,20,0.75), rgba(10,40,20,0.85)), url(${HERO_IMAGE})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          color: "white",
-          fontFamily: "Poppins, sans-serif",
-          boxShadow: "inset 0 -30px 60px rgba(0,0,0,0.35)",
-        }}
-      >
-        <div style={{ textAlign: "center", maxWidth: 900 }}>
-          <h1 style={{ fontSize: "3rem", margin: 0 }}>🌍 Explore Our Adventures</h1>
-          <p style={{ opacity: 0.9, marginTop: 12, fontSize: "1.15rem" }}>
-            Find the perfect tour — hiking, rafting, quad rides, zip-line and more.
+    <div style={styles.page}>
+      <div style={styles.container}>
+        {/* HEADER */}
+        <div style={styles.header}>
+          <h1 style={styles.title}>MeetOutdoors Tours</h1>
+          <p style={styles.subtitle}>
+            Discover adventures created by real outdoor lovers.
           </p>
         </div>
-      </section>
 
-      {/* FILTER + SORT */}
-      <div
-        style={{
-          background: "rgba(255,255,255,0.08)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          borderRadius: "15px",
-          padding: "20px",
-          maxWidth: "1000px",
-          margin: "40px auto",
-          boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
-          backdropFilter: "blur(10px)",
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          gap: "15px",
-          fontFamily: "Poppins, sans-serif",
-        }}
-      >
-        {/* SEARCH */}
-        <input
-          type="text"
-          placeholder="🔍 Search by name..."
-          onChange={(e) => {
-            const value = e.target.value.toLowerCase();
-            const allTours = JSON.parse(localStorage.getItem("tours")) || [];
-            const filtered = allTours.filter((t) =>
-              t.name.toLowerCase().includes(value)
-            );
-            setTours(filtered);
-          }}
-          style={{
-            padding: "12px 15px",
-            borderRadius: "10px",
-            border: "none",
-            outline: "none",
-            fontSize: "1rem",
-            flex: "1 1 250px",
-          }}
-        />
+        {/* FILTER BAR */}
+        <div style={styles.filterBar}>
+          {/* ACTIVITY DROPDOWN */}
+          <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Activity</span>
 
-        {/* ACTIVITY */}
-        <select
-          onChange={(e) => {
-            const value = e.target.value;
-            const allTours = JSON.parse(localStorage.getItem("tours")) || [];
-            const filtered =
-              value === "All"
-                ? allTours
-                : allTours.filter(
-                    (t) =>
-                      t.activity &&
-                      t.activity.toLowerCase() === value.toLowerCase()
-                  );
-            setTours(filtered);
-          }}
-          style={{
-            padding: "12px 15px",
-            borderRadius: "10px",
-            border: "none",
-            fontSize: "1rem",
-            flex: "1 1 180px",
-            cursor: "pointer",
-          }}
-        >
-          <option value="All">All activities</option>
-          <option value="Hiking">Hiking</option>
-          <option value="Rafting">Rafting</option>
-          <option value="Quad driving">Quad driving</option>
-          <option value="Skiing">Skiing</option>
-          <option value="Diving">Diving</option>
-          <option value="Camping">Camping</option>
-        </select>
+            <div
+              style={styles.dropdownBox}
+              onClick={() => setShowActivityList(!showActivityList)}
+            >
+              {activityFilter}
+            </div>
 
-        {/* DATE */}
-        <input
-          type="date"
-          onChange={(e) => {
-            const selectedDate = e.target.value;
-            const allTours = JSON.parse(localStorage.getItem("tours")) || [];
-            const filtered = selectedDate
-              ? allTours.filter((t) => t.date === selectedDate)
-              : allTours;
-            setTours(filtered);
-          }}
-          style={{
-            padding: "12px 15px",
-            borderRadius: "10px",
-            border: "none",
-            fontSize: "1rem",
-            flex: "1 1 180px",
-            cursor: "pointer",
-          }}
-        />
-
-        {/* SORT */}
-        <select
-          onChange={(e) => {
-            const value = e.target.value;
-            const allTours = JSON.parse(localStorage.getItem("tours")) || [];
-            let sorted = [...allTours];
-
-            if (value === "PriceAsc") {
-              sorted.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-            } else if (value === "PriceDesc") {
-              sorted.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
-            } else if (value === "DateSoonest") {
-              sorted.sort((a, b) => new Date(a.date) - new Date(b.date));
-            } else if (value === "DateLatest") {
-              sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
-            }
-
-            setTours(sorted);
-          }}
-          style={{
-            padding: "12px 15px",
-            borderRadius: "10px",
-            border: "none",
-            fontSize: "1rem",
-            flex: "1 1 200px",
-            cursor: "pointer",
-          }}
-        >
-          <option value="">Sort by...</option>
-          <option value="PriceAsc">Price (low → high)</option>
-          <option value="PriceDesc">Price (high → low)</option>
-          <option value="DateSoonest">Date (soonest)</option>
-          <option value="DateLatest">Date (latest)</option>
-        </select>
-
-        {/* RESET */}
-        <button
-          onClick={() => {
-            const allTours = JSON.parse(localStorage.getItem("tours")) || [];
-            setTours(allTours);
-          }}
-          style={{
-            background: "linear-gradient(90deg, #22c55e, #4ade80, #16a34a)",
-            color: "#06290f",
-            fontWeight: "bold",
-            border: "none",
-            borderRadius: "10px",
-            padding: "12px 20px",
-            fontSize: "1rem",
-            cursor: "pointer",
-            transition: "0.3s ease",
-            boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
-          }}
-        >
-          🔄 Reset filters
-        </button>
-      </div>
-
-      {/* CARDS */}
-      <section
-        style={{
-          background: "linear-gradient(160deg, #14532d, #166534)",
-          padding: "36px 16px 64px",
-          color: "white",
-          fontFamily: "Poppins, sans-serif",
-        }}
-      >
-        {tours.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <h2 style={{ fontSize: "2rem" }}>No tours available</h2>
-
-            {/* SHOW ONLY IF USER IS LOGGED IN */}
-            {user && (
-              <Link
-                to="/create-tour"
-                style={{
-                  display: "inline-block",
-                  marginTop: 16,
-                  padding: "12px 18px",
-                  borderRadius: 10,
-                  background: "white",
-                  color: "#14532d",
-                  fontWeight: 800,
-                  textDecoration: "none",
-                  boxShadow: "0 10px 22px rgba(0,0,0,0.25)",
-                }}
-              >
-                + Create new tour
-              </Link>
+            {showActivityList && (
+              <div style={styles.dropdownList}>
+                {activities.map((a) => (
+                  <div
+                    key={a}
+                    style={{
+                      ...styles.dropdownItem,
+                      color: a === activityFilter ? "#00ffb4" : "#e6fff9",
+                    }}
+                    onClick={() => chooseActivity(a)}
+                    onMouseEnter={(e) =>
+                      (e.target.style.background = "rgba(0,255,180,0.15)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.target.style.background = "transparent")
+                    }
+                  >
+                    {a}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        ) : (
-          <div
-            style={{
-              maxWidth: 1200,
-              margin: "0 auto",
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: 22,
-            }}
-          >
-            {tours.map((t, i) => (
+
+          {/* COUNTRY DROPDOWN */}
+          <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Country</span>
+
+            <div
+              style={styles.dropdownBox}
+              onClick={() => setShowCountryList(!showCountryList)}
+            >
+              {countryFilter}
+            </div>
+
+            {showCountryList && (
+              <div style={styles.dropdownList}>
+                {countries.map((c) => (
+                  <div
+                    key={c}
+                    style={{
+                      ...styles.dropdownItem,
+                      color: c === countryFilter ? "#00ffb4" : "#e6fff9",
+                    }}
+                    onClick={() => chooseCountry(c)}
+                    onMouseEnter={(e) =>
+                      (e.target.style.background = "rgba(0,255,180,0.15)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.target.style.background = "transparent")
+                    }
+                  >
+                    {c}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* GRID */}
+        <div style={styles.grid}>
+          {!loading &&
+            filteredTours.map((tour) => (
               <div
-                key={i}
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.35)",
-                  backdropFilter: "blur(6px)",
+                key={tour.id}
+                style={styles.card}
+                onClick={() => navigate(`/tour/${tour.id}`)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-6px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0px)";
                 }}
               >
-                {/* IMG */}
-                <div
-                  style={{
-                    height: 180,
-                    backgroundImage: `url(${t.image || FALLBACK_IMG})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    position: "relative",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background:
-                        "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.35))",
-                    }}
-                  />
-
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: 12,
-                      left: 12,
-                      background: "rgba(0,0,0,0.45)",
-                      border: "1px solid rgba(255,255,255,0.22)",
-                      color: "white",
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      fontSize: 12,
-                      textTransform: "capitalize",
-                      backdropFilter: "blur(4px)",
-                    }}
-                  >
-                    {t.activity || "outdoor"}
-                  </span>
+                <div style={styles.imgWrapper}>
+                  <img src={getCover(tour)} style={styles.img} />
+                  <div style={styles.overlay} />
                 </div>
 
-                {/* CONTENT */}
-                <div style={{ padding: 16 }}>
-                  <h3 style={{ margin: "0 0 6px", fontSize: "1.25rem" }}>{t.name}</h3>
-                  <p style={{ margin: "4px 0", opacity: 0.9 }}>📍 {t.location}</p>
-                  <p style={{ margin: "4px 0", opacity: 0.9 }}>
-                    📅 {t.date} &nbsp; ⏱ {t.startTime} - {t.endTime}
-                  </p>
-                  <p style={{ margin: "4px 0", opacity: 0.9 }}>💰 {t.price} €</p>
+                <div style={styles.cardBody}>
+                  <div style={styles.cardTitle}>{tour.title}</div>
+                  <div style={styles.location}>
+                    📍 {tour.location_name}, {tour.country}
+                  </div>
+                  <div style={styles.meta}>🧭 {tour.activity}</div>
 
                   <button
-                    onClick={() => toggleExpand(i)}
-                    style={{
-                      border: "none",
-                      marginTop: 10,
-                      fontWeight: 700,
-                      padding: "10px 14px",
-                      borderRadius: 10,
-                      cursor: "pointer",
-                      background: "#22c55e",
-                      color: "white",
-                      width: "100%",
-                      boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
+                    style={styles.button}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/tour/${tour.id}`);
                     }}
                   >
-                    {expandedTour === i ? "Hide details" : "Show details"}
+                    View Tour
                   </button>
-
-                  {expandedTour === i && (
-                    <div
-                      style={{
-                        marginTop: 20,
-                        background: "rgba(255,255,255,0.1)",
-                        padding: 15,
-                        borderRadius: 10,
-                        boxShadow: "inset 0 0 15px rgba(0,0,0,0.3)",
-                      }}
-                    >
-                      <p style={{ marginBottom: 10, opacity: 0.9 }}>
-                        {t.description || "This tour has no additional description."}
-                      </p>
-
-                      <p style={{ fontWeight: 600 }}>👥 Capacity: {t.capacity}</p>
-
-                      <div
-                        style={{
-                          borderRadius: 10,
-                          overflow: "hidden",
-                          marginTop: 15,
-                          boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
-                        }}
-                      >
-                        <iframe
-                          title="Tour map"
-                          src={`https://www.google.com/maps?q=${encodeURIComponent(
-                            t.location
-                          )}&output=embed`}
-                          width="100%"
-                          height="250"
-                          style={{ border: 0 }}
-                          allowFullScreen=""
-                          loading="lazy"
-                        ></iframe>
-
-                        <Link
-                          to={`/chat/${t.id}`}
-                          style={{
-                            display: "inline-block",
-                            marginTop: 15,
-                            padding: "10px 16px",
-                            borderRadius: 10,
-                            background:
-                              "linear-gradient(135deg,#22c55e,#4ade80)",
-                            color: "#022c22",
-                            fontWeight: 700,
-                            textDecoration: "none",
-                            textAlign: "center",
-                            width: "100%",
-                            boxShadow: "0 6px 15px rgba(0,0,0,0.25)",
-                          }}
-                        >
-                          💬 Chat with organizer
-                        </Link>
-                      </div>
-
-                      <a
-                        href="mailto:info@meetoutdoors.com"
-                        style={{
-                          display: "inline-block",
-                          marginTop: 15,
-                          color: "#22c55e",
-                          textDecoration: "none",
-                          fontWeight: 700,
-                        }}
-                      >
-                        📩 Contact organizer
-                      </a>
-
-                      <button
-                        onClick={() => {
-                          const allTours =
-                            JSON.parse(localStorage.getItem("tours")) || [];
-                          const updated = allTours.map((tourItem, idx) =>
-                            idx === i
-                              ? { ...tourItem, signedUp: !tourItem.signedUp }
-                              : tourItem
-                          );
-                          localStorage.setItem("tours", JSON.stringify(updated));
-                          setTours(updated);
-                        }}
-                        style={{
-                          display: "block",
-                          marginTop: 15,
-                          width: "100%",
-                          padding: "12px 20px",
-                          background: t.signedUp ? "#dc2626" : "#22c55e",
-                          color: "white",
-                          border: "none",
-                          borderRadius: 10,
-                          fontWeight: "bold",
-                          fontSize: "1rem",
-                          cursor: "pointer",
-                          transition: "0.3s ease",
-                          boxShadow: "0 6px 15px rgba(0,0,0,0.3)",
-                        }}
-                      >
-                        {t.signedUp ? "Cancel" : "Join tour"}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
-          </div>
-        )}
-      </section>
+        </div>
+      </div>
     </div>
   );
 }
