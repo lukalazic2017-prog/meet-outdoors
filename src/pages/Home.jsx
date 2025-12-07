@@ -553,9 +553,9 @@ const featuredTours = [
     id: 1,
     title: "Sunrise ridge above the clouds",
     location: "Kopaonik · Serbia",
-    tag: "Hiking",
+    tag: "Skiing",
     image:
-      "https://images.unsplash.com/photo-1477414348463-c0eb7f1359b6?q=80",
+      "https://images.unsplash.com/photo-1512906763596-8d55cb944055?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8a29wYW9uaWt8ZW58MHx8MHx8fDA%3D",
   },
   {
     id: 2,
@@ -563,7 +563,7 @@ const featuredTours = [
     location: "Durmitor · Montenegro",
     tag: "Camping",
     image:
-      "https://images.unsplash.com/photo-1500534314211-0a24cd03f2c0?q=80",
+      "https://images.unsplash.com/photo-1568185184505-3b5418749ba7?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTV8fG5pZ2glMjBjYW1waW5nfGVufDB8fDB8fHww",
   },
   {
     id: 3,
@@ -571,7 +571,7 @@ const featuredTours = [
     location: "Tara river",
     tag: "Rafting",
     image:
-      "https://images.unsplash.com/photo-1526929790812-8505e06f3c2e?q=80",
+      "https://images.unsplash.com/photo-1635414730014-817f1a89b01a?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dGFyYSUyMHJpdmVyfGVufDB8fDB8fHww",
   },
   {
     id: 4,
@@ -579,7 +579,7 @@ const featuredTours = [
     location: "Balkans",
     tag: "Pilgrimage",
     image:
-      "https://images.unsplash.com/photo-1526498460520-4c246339dccb?q=80",
+      "https://plus.unsplash.com/premium_photo-1661963534539-4f606dbc5149?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   },
 ];
 
