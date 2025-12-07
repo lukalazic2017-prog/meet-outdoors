@@ -634,6 +634,14 @@ export default function Navbar() {
             >
               Activities
             </Link>
+            
+             <Link
+              to="/tours"
+              onClick={() => setMobileMenuOpen(false)}
+              style={mobileLink}
+            >
+              Tours
+            </Link>
 
             <Link
               to="/create-tour"
