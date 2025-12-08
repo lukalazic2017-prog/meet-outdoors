@@ -1,4 +1,4 @@
-// src/components/Navbar.jsx
+ // src/components/Navbar.jsx
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
@@ -13,6 +13,7 @@ export default function Navbar() {
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState(null);
 
   const [activitiesOpen, setActivitiesOpen] = useState(false);
@@ -25,7 +26,11 @@ export default function Navbar() {
       const currentUser = auth?.user || null;
       setUser(currentUser);
 
-      if (!currentUser) return;
+      if (!currentUser) {
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
+      }
 
       // avatar
       const { data: profile } = await supabase
@@ -45,7 +50,9 @@ export default function Navbar() {
         .eq("user_id", currentUser.id)
         .order("created_at", { ascending: false });
 
-      setNotifications(notes || []);
+      const safeNotes = notes || [];
+      setNotifications(safeNotes);
+      setUnreadCount(safeNotes.filter((n) => !n.read).length);
     }
 
     loadEverything();
@@ -76,6 +83,9 @@ export default function Navbar() {
           },
           (payload) => {
             setNotifications((prev) => [payload.new, ...prev]);
+            if (!payload.new.read) {
+              setUnreadCount((prev) => prev + 1);
+            }
           }
         )
         .subscribe();
@@ -99,6 +109,8 @@ export default function Navbar() {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setNotifications([]);
+    setUnreadCount(0);
     navigate("/login");
     setMobileMenuOpen(false);
     setUserMenuOpen(false);
@@ -145,6 +157,35 @@ export default function Navbar() {
   const goToActivity = (name) => {
     setActivitiesOpen(false);
     navigate(`/tours?activity=${encodeURIComponent(name)}`);
+  };
+
+  // 🔔 Mark all notifications as read when opening dropdown
+  const markAllAsRead = async () => {
+    if (!user || unreadCount === 0) return;
+
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read: true }))
+    );
+    setUnreadCount(0);
+  };
+
+  // 🗑 Clear all notifications
+  const clearNotifications = async () => {
+    if (!user || notifications.length === 0) return;
+
+    await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", user.id);
+
+    setNotifications([]);
+    setUnreadCount(0);
   };
 
   // ----------------- RENDER -----------------
@@ -314,19 +355,27 @@ export default function Navbar() {
               <Link to="/tours" style={linkStyle("/tours")}>
                 Tours
               </Link>
+
+              <Link to="/timeline" style={linkStyle("/timeline")}>
+                Timeline
+              </Link>
             </div>
           )}
-
           {/* RIGHT SECTION */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* NOTIFICATION BELL */}
             {user && (
               <div style={{ position: "relative" }}>
                 <button
                   onClick={() => {
-                    setNotificationsOpen((p) => !p);
+                    const newState = !notificationsOpen;
+                    setNotificationsOpen(newState);
                     setUserMenuOpen(false);
                     setActivitiesOpen(false);
+
+                    if (newState) {
+                      markAllAsRead(); // 🔥 kad otvori — sve pročitano
+                    }
                   }}
                   style={{
                     width: 36,
@@ -344,7 +393,7 @@ export default function Navbar() {
                 >
                   🔔
 
-                  {notifications.length > 0 && (
+                  {unreadCount > 0 && (
                     <span
                       style={{
                         position: "absolute",
@@ -362,7 +411,7 @@ export default function Navbar() {
                         boxShadow: "0 0 6px rgba(255,0,0,0.8)",
                       }}
                     >
-                      {notifications.length}
+                      {unreadCount}
                     </span>
                   )}
                 </button>
@@ -374,11 +423,11 @@ export default function Navbar() {
                       position: "absolute",
                       right: 0,
                       top: 42,
-                      width: 260,
+                      width: 280,
                       padding: 12,
                       background: "rgba(3,22,15,0.98)",
                       borderRadius: 16,
-                      maxHeight: 320,
+                      maxHeight: 360,
                       overflowY: "auto",
                       boxShadow:
                         "0 16px 38px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05)",
@@ -386,13 +435,31 @@ export default function Navbar() {
                   >
                     <div
                       style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
                         color: "white",
-                        fontWeight: 600,
-                        fontSize: 13,
                         marginBottom: 6,
                       }}
                     >
-                      Notifications
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>
+                        Notifications
+                      </div>
+
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={clearNotifications}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            fontSize: 11,
+                            color: "#ff8080",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Clear all
+                        </button>
+                      )}
                     </div>
 
                     {notifications.length === 0 && (
@@ -414,6 +481,13 @@ export default function Navbar() {
                         }}
                       >
                         {n.message}
+                        {n.read && (
+                          <span style={{ fontSize: 11, opacity: 0.5 }}>
+                            {" "}
+                            — (Read)
+                          </span>
+                        )}
+
                         <div
                           style={{
                             opacity: 0.6,
@@ -619,43 +693,27 @@ export default function Navbar() {
               marginTop: 40,
             }}
           >
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              style={mobileLink}
-            >
+            <Link to="/" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
               Home
             </Link>
 
-            <Link
-              to="/activities"
-              onClick={() => setMobileMenuOpen(false)}
-              style={mobileLink}
-            >
+            <Link to="/timeline" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
+              Timeline
+            </Link>
+
+            <Link to="/activities" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
               Activities
             </Link>
-            
-             <Link
-              to="/tours"
-              onClick={() => setMobileMenuOpen(false)}
-              style={mobileLink}
-            >
+
+            <Link to="/tours" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
               Tours
             </Link>
 
-            <Link
-              to="/create-tour"
-              onClick={() => setMobileMenuOpen(false)}
-              style={mobileLink}
-            >
+            <Link to="/create-tour" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
               Create Tour
             </Link>
 
-            <Link
-              to="/contact"
-              onClick={() => setMobileMenuOpen(false)}
-              style={mobileLink}
-            >
+            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
               Contact
             </Link>
 

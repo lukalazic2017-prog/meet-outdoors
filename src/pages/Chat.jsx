@@ -5,11 +5,12 @@ import { supabase } from "../supabaseClient";
 
 export default function Chat() {
   const { tourId } = useParams();
+
   const [messages, setMessages] = useState([]);
-  const [profileMap, setProfileMap] = useState({});
-  const [text, setText] = useState("");
+  const [profiles, setProfiles] = useState({});
   const [tour, setTour] = useState(null);
   const [user, setUser] = useState(null);
+  const [text, setText] = useState("");
 
   const bottomRef = useRef(null);
 
@@ -17,6 +18,7 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // MAIN LOAD
   useEffect(() => {
     loadUser();
     loadTour();
@@ -24,20 +26,24 @@ export default function Chat() {
     subscribeToMessages();
   }, []);
 
+  // LOAD CURRENT USER
   async function loadUser() {
     const { data } = await supabase.auth.getUser();
     setUser(data.user);
   }
 
+  // LOAD TOUR DATA
   async function loadTour() {
     const { data } = await supabase
       .from("tours")
       .select("*")
       .eq("id", tourId)
       .single();
+
     setTour(data);
   }
 
+  // LOAD MESSAGES + PROFILES
   async function loadMessages() {
     const { data } = await supabase
       .from("tour_messages")
@@ -49,134 +55,152 @@ export default function Chat() {
 
     setMessages(data);
 
-    const userIds = [...new Set(data.map((msg) => msg.user_id))];
-    if (userIds.length > 0) {
-      const { data: profiles } = await supabase
+    const ids = [...new Set(data.map((m) => m.user_id))];
+
+    if (ids.length > 0) {
+      const { data: profs } = await supabase
         .from("profiles")
-        .select("*")
-        .in("id", userIds);
+        .select("id, full_name, display_name, avatar_url")
+        .in("id", ids);
 
       let map = {};
-      profiles?.forEach((p) => (map[p.id] = p));
-      setProfileMap(map);
+      profs?.forEach((p) => (map[p.id] = p));
+      setProfiles(map);
     }
 
     setTimeout(scrollToBottom, 200);
   }
 
-  function subscribeToMessages() {
-    supabase
-      .channel(`tour_chat_${tourId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "tour_messages" },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new]);
-          scrollToBottom();
-        }
-      )
-      .subscribe();
-  }
+  // REALTIME SUBSCRIBE (FIXED)
+function subscribeToMessages() {
+  console.log("SUBSCRIBING TO REALTIME CHAT", tourId);
 
-  // ⛔ SEND MESSAGE + NOTIFICATIONS
+  supabase
+    .channel(`tour_chat_${tourId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "tour_messages",
+        filter: `tour_id=eq.${tourId}`,
+      },
+      (payload) => {
+        console.log("REALTIME MESSAGE:", payload.new);
+        setMessages((prev) => [...prev, payload.new]);
+        scrollToBottom();
+      }
+    )
+    .subscribe((status) => {
+      console.log("SUBSCRIPTION STATUS:", status);
+    });
+}
+ 
+    
+
+  // SEND MESSAGE
   async function sendMessage() {
     if (!text.trim() || !user) return;
 
-    // 1) Upis poruke
     await supabase.from("tour_messages").insert([
       {
         tour_id: tourId,
         user_id: user.id,
-        message: text,
+        message: text.trim(),
       },
     ]);
 
-    // 2) 🔔 NOTIFIKACIJE OSTALIMA (ne šalje meni)
-    const { data: participants } = await supabase
-      .from("tour_registrations")
-      .select("user_id")
-      .eq("tour_id", tourId);
-
-    if (participants) {
-      for (let p of participants) {
-        if (p.user_id !== user.id) {
-          await supabase.from("notifications").insert({
-            user_id: p.user_id,
-            title: "New message in tour chat",
-            body: text,
-            link: `/chat/${tourId}`,
-            read: false,
-          });
-        }
-      }
-    }
-
     setText("");
+    setTimeout(scrollToBottom, 50);
   }
 
   if (!tour || !user)
-    return <div style={{ color: "white", padding: 20 }}>Loading chat...</div>;
+    return <div style={{ padding: 20, color: "white" }}>Loading chat…</div>;
 
   return (
     <div
       style={{
-        padding: "20px",
-        color: "white",
-        height: "80vh",
+        height: "82vh",
+        padding: 20,
         display: "flex",
         flexDirection: "column",
+        color: "white",
+        background: "linear-gradient(to bottom, #02110a, #000000)",
       }}
     >
-      <h2 style={{ textAlign: "center", marginBottom: "10px" }}>
-        Chat: {tour.title}
+      {/* HEADER */}
+      <h2
+        style={{
+          textAlign: "center",
+          paddingBottom: 10,
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          marginBottom: 15,
+          fontSize: 22,
+        }}
+      >
+        💬 Chat – {tour.title}
       </h2>
 
+      {/* MESSAGE LIST */}
       <div
         style={{
           flex: 1,
           overflowY: "auto",
-          background: "rgba(255,255,255,0.04)",
           padding: 10,
-          borderRadius: 12,
         }}
       >
         {messages.map((msg) => {
-          const p = profileMap[msg.user_id];
-          const isCreator = msg.user_id === tour.creator_id;
+          const p = profiles[msg.user_id];
+          const mine = msg.user_id === user.id;
+          const creator = msg.user_id === tour.creator_id;
 
           return (
             <div
               key={msg.id}
               style={{
-                marginBottom: "15px",
                 display: "flex",
+                flexDirection: mine ? "row-reverse" : "row",
                 alignItems: "flex-start",
                 gap: 10,
+                marginBottom: 15,
               }}
             >
+              {/* AVATAR */}
               <img
-                src={p?.avatar_url}
-                alt="pfp"
+                src={p?.avatar_url || "https://i.pravatar.cc/150?img=1"}
                 style={{
-                  width: 45,
-                  height: 45,
+                  width: 42,
+                  height: 42,
                   borderRadius: "50%",
                   objectFit: "cover",
-                  border: isCreator ? "3px solid gold" : "2px solid #444",
+                  border: creator ? "3px solid gold" : "2px solid #0a3",
                 }}
               />
 
-              <div>
-                <div style={{ fontWeight: "600" }}>
-                  {p?.first_name} {p?.last_name}{" "}
-                  {isCreator && (
-                    <span style={{ color: "gold" }}>(Organizator)</span>
+              {/* MESSAGE BUBBLE */}
+              <div
+                style={{
+                  maxWidth: "70%",
+                  background: mine
+                    ? "rgba(0,180,120,0.35)"
+                    : "rgba(255,255,255,0.06)",
+                  padding: "10px 14px",
+                  borderRadius: 14,
+                  border: creator ? "1px solid gold" : "1px solid transparent",
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 3 }}>
+                  {p?.display_name || p?.full_name || "User"}{" "}
+                  {creator && (
+                    <span style={{ color: "gold", fontSize: 12 }}>
+                      · Organizer
+                    </span>
                   )}
                 </div>
 
-                <div style={{ opacity: 0.8 }}>{msg.message}</div>
+                <div>{msg.message}</div>
 
-                <div style={{ fontSize: 12, opacity: 0.5 }}>
+                <div style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>
                   {new Date(msg.created_at).toLocaleString()}
                 </div>
               </div>
@@ -184,38 +208,34 @@ export default function Chat() {
           );
         })}
 
-        <div ref={bottomRef}></div>
+        <div ref={bottomRef} />
       </div>
 
-      {/* INPUT */}
-      <div
-        style={{
-          marginTop: 10,
-          display: "flex",
-          gap: 10,
-        }}
-      >
+      {/* INPUT BAR */}
+      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Write a message..."
           style={{
             flex: 1,
-            padding: 12,
-            borderRadius: 10,
-            border: "none",
+            padding: 14,
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(255,255,255,0.05)",
+            color: "white",
           }}
         />
 
         <button
           onClick={sendMessage}
           style={{
-            padding: "12px 20px",
-            background: "#00c97b",
+            padding: "14px 22px",
+            background: "linear-gradient(135deg,#00ffb0,#00c8ff)",
             border: "none",
-            borderRadius: 10,
+            borderRadius: 12,
+            fontWeight: 800,
             cursor: "pointer",
-            fontWeight: "700",
           }}
         >
           Send

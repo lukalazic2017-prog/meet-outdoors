@@ -23,8 +23,11 @@ import Settings from "./pages/Settings";
 import SafetyTips from "./pages/SafetyTips";
 import HostGuidelines from "./pages/HostGuidelines";
 import About from "./pages/About";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import Timeline from "./pages/Timeline";
+import AddPost from "./pages/AddPost";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Notifications from "./pages/Notifications";
 
 
 
@@ -32,7 +35,7 @@ import TermsOfService from "./pages/TermsOfService";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-import Privacy from "./pages/PrivacyPolicy";
+
 import Refund from "./pages/Refund";
 
 function App() {
@@ -46,7 +49,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/activities" element={<Activities />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/privacy" element={<Privacy />} />
           <Route path="/refund" element={<Refund />} />
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/followers" element={<FollowersList />} />
@@ -59,8 +61,11 @@ function App() {
           <Route path="/safety-tips" element={<SafetyTips />} />
           <Route path="/host-guidelines" element={<HostGuidelines />} />
           <Route path="/about" element={<About />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/timeline" element={<Timeline />} />
+          <Route path="/add-post" element={<AddPost />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           
 
           {/* AUTH */}

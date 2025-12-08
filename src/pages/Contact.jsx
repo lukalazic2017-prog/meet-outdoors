@@ -1,203 +1,252 @@
-import React, { useState } from "react";
+// src/pages/Contact.jsx
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Contact() {
-  const [userEmail, setUserEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [success, setSuccess] = useState("");
-
-  function handleSubmit(e) {
-    e.preventDefault();
-
-    if (!userEmail.trim() || !message.trim()) {
-      setSuccess("Please fill in all fields.");
-      return;
-    }
-
-    setSuccess("Your message has been sent! We will get back to you. 🌿");
-    setUserEmail("");
-    setMessage("");
-  }
-
-  // MAIN PAGE BACKGROUND (kao Tours.jsx)
-  const pageStyle = {
-    background: "radial-gradient(circle at top, #052f22 0%, #010c08 60%, #000000 100%)",
-    minHeight: "100vh",
-    width: "100%",
-    paddingBottom: "60px",
-  };
-
-  const heroStyle = {
-    width: "100%",
-    padding: "80px 20px 60px",
-    textAlign: "center",
-    color: "white",
-  };
-
-  const titleStyle = {
-    fontSize: 42,
-    fontWeight: 800,
-    letterSpacing: "0.03em",
-    marginBottom: 10,
-  };
-
-  const subtitleStyle = {
-    fontSize: 16,
-    opacity: 0.7,
-    maxWidth: 600,
-    margin: "0 auto",
-  };
-
-  const containerStyle = {
-    maxWidth: 1000,
-    margin: "40px auto",
-    padding: "0 20px",
-  };
-
-  const cardStyle = {
-    background: "rgba(0,0,0,0.45)",
-    padding: 24,
-    borderRadius: 20,
-    border: "1px solid rgba(255,255,255,0.08)",
-    backdropFilter: "blur(16px)",
-    boxShadow: "0 10px 35px rgba(0,0,0,0.6)",
-    color: "white",
-    marginBottom: 30,
-  };
-
-  const emailBoxStyle = {
-    fontSize: 22,
-    fontWeight: 700,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    padding: "18px 0",
-    borderRadius: 12,
-    background: "rgba(0,255,160,0.08)",
-    border: "1px solid rgba(0,255,160,0.3)",
-    color: "#9fffe1",
-  };
-
-  const iconStyle = { fontSize: 28 };
-
-  const formLabel = {
-    marginBottom: 6,
-    fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
-  };
-
-  const inputStyle = {
-    width: "100%",
-    padding: "12px 14px",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(0,0,0,0.55)",
-    color: "white",
-    marginBottom: 16,
-    fontSize: 15,
-  };
-
-  const messageStyle = {
-    ...inputStyle,
-    minHeight: 120,
-    resize: "vertical",
-  };
-
-  const submitBtnStyle = {
-    width: "100%",
-    padding: "14px 18px",
-    borderRadius: 999,
-    border: "none",
-    background:
-      "linear-gradient(135deg, #00ffb0 0%, #00cf7c 40%, #02a45d 100%)",
-    color: "#02140b",
-    fontSize: 16,
-    fontWeight: 800,
-    cursor: "pointer",
-    letterSpacing: "0.05em",
-    marginTop: 4,
-    boxShadow: "0 12px 35px rgba(0,255,165,0.25)",
-  };
-
-  const successStyle = {
-    marginTop: 12,
-    textAlign: "center",
-    color: "#a8ffda",
-    fontSize: 14,
-  };
-
-  const mapPreview = {
-    marginTop: 30,
-    height: 260,
-    width: "100%",
-    borderRadius: 20,
-    overflow: "hidden",
-    background:
-      "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=60') center/cover",
-    border: "1px solid rgba(255,255,255,0.08)",
-    boxShadow: "0 15px 40px rgba(0,0,0,0.6)",
-  };
+  const navigate = useNavigate();
 
   return (
-    <div style={pageStyle}>
-      {/* HERO */}
-      <div style={heroStyle}>
-        <h1 style={titleStyle}>Contact Us</h1>
-        <p style={subtitleStyle}>
-          Have questions, feedback, or partnership ideas?  
-          We would love to hear from you.
-        </p>
-      </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        padding: "40px 20px 80px",
+        background:
+          "radial-gradient(circle at top, #062c22 0%, #02060b 45%, #000000 100%)",
+        color: "#ffffff",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      }}
+    >
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        {/* HEADER */}
+        <h1
+          style={{
+            fontSize: 38,
+            fontWeight: 900,
+            textAlign: "center",
+            marginBottom: 12,
+            textShadow: "0 0 14px rgba(0,255,180,0.35)",
+          }}
+        >
+          Contact & Support
+        </h1>
 
-      {/* MAIN CONTENT */}
-      <div style={containerStyle}>
-        
-        {/* EMAIL BOX */}
-        <div style={cardStyle}>
-          <div style={emailBoxStyle}>
-            <span style={iconStyle}>📩</span>
-            <span>infomeetoutdoors@gmail.com</span>
-          </div>
-          <p style={{ textAlign: "center", opacity: 0.7, marginTop: 10 }}>
-            Our team usually responds within 24–48 hours.
+        <p
+          style={{
+            fontSize: 16,
+            textAlign: "center",
+            opacity: 0.7,
+            maxWidth: 680,
+            margin: "0 auto 40px",
+          }}
+        >
+          We're here to help you with any questions, technical support,
+          collaborations or adventure guidelines. Reach out anytime!
+        </p>
+
+        {/* EMAIL */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(0,255,160,0.25)",
+            borderRadius: 18,
+            padding: 24,
+            marginBottom: 28,
+            boxShadow: "0 14px 40px rgba(0,0,0,0.6)",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              marginBottom: 10,
+              color: "#00ffb0",
+            }}
+          >
+            📧 Official Email
+          </h2>
+
+          <p
+            style={{
+              fontSize: 18,
+              fontWeight: 600,
+              letterSpacing: 0.5,
+            }}
+          >
+            infomeetoutdoors@gmail.com
           </p>
         </div>
 
-        {/* FORM */}
-        <div style={cardStyle}>
-          <h2 style={{ fontSize: 24, marginBottom: 20, fontWeight: 700 }}>
-            Send us a message
+        {/* SOCIAL LINKS */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(0,255,160,0.25)",
+            borderRadius: 18,
+            padding: 24,
+            marginBottom: 28,
+            boxShadow: "0 14px 40px rgba(0,0,0,0.6)",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              marginBottom: 12,
+              color: "#00ffb8",
+            }}
+          >
+            🌍 Follow us
           </h2>
 
-          <form onSubmit={handleSubmit}>
-            <div style={formLabel}>Your email *</div>
-            <input
-              type="email"
-              placeholder="example@gmail.com"
-              style={inputStyle}
-              value={userEmail}
-              onChange={(e) => setUserEmail(e.target.value)}
-            />
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <a
+              href="https://www.instagram.com"
+              target="_blank"
+              style={socialLink}
+            >
+              📸 Instagram
+            </a>
 
-            <div style={formLabel}>Message *</div>
-            <textarea
-              placeholder="Write your message here..."
-              style={messageStyle}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
+            <a
+              href="https://www.tiktok.com"
+              target="_blank"
+              style={socialLink}
+            >
+              🎵 TikTok
+            </a>
 
-            <button type="submit" style={submitBtnStyle}>
-              Send message
-            </button>
-
-            {success && <div style={successStyle}>{success}</div>}
-          </form>
+            <a
+              href="https://www.facebook.com"
+              target="_blank"
+              style={socialLink}
+            >
+              📘 Facebook
+            </a>
+          </div>
         </div>
 
-        {/* MAP */}
-        <div style={mapPreview} />
+        {/* SUPPORT TOPICS */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(0,255,160,0.25)",
+            borderRadius: 18,
+            padding: 24,
+            marginBottom: 28,
+            boxShadow: "0 14px 40px rgba(0,0,0,0.6)",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              marginBottom: 12,
+              color: "#00ffc8",
+            }}
+          >
+            💬 Support Topics
+          </h2>
+
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              fontSize: 15,
+            }}
+          >
+            <li>• How to create a tour</li>
+            <li>• How to join a tour</li>
+            <li>• Payment and fees</li>
+            <li>• Cancelation rules</li>
+            <li>• Editing your profile</li>
+            <li>• Uploading photos & videos</li>
+          </ul>
+        </div>
+
+        {/* POLICY LINKS */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: 18,
+            padding: 24,
+            textAlign: "center",
+            border: "1px solid rgba(255,255,255,0.15)",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: 18,
+              marginBottom: 14,
+              opacity: 0.8,
+            }}
+          >
+            Legal & Information
+          </h3>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 30,
+              flexWrap: "wrap",
+              fontSize: 15,
+            }}
+          >
+            <button
+              onClick={() => navigate("/privacy-policy")}
+              style={policyButton}
+            >
+              Privacy Policy
+            </button>
+
+            <button
+              onClick={() => navigate("/terms-of-service")}
+              style={policyButton}
+            >
+              Terms of Service
+            </button>
+          </div>
+        </div>
+
+        {/* FOOTER */}
+        <div
+          style={{
+            marginTop: 40,
+            textAlign: "center",
+            opacity: 0.5,
+            fontSize: 13,
+          }}
+        >
+          © {new Date().getFullYear()} Meet Outdoors — All rights reserved.
+        </div>
       </div>
     </div>
   );
 }
+
+const socialLink = {
+  fontSize: 16,
+  color: "white",
+  textDecoration: "none",
+  padding: "10px 14px",
+  borderRadius: 12,
+  background: "rgba(255,255,255,0.08)",
+  border: "1px solid rgba(255,255,255,0.15)",
+  display: "inline-block",
+  transition: "0.2s",
+};
+
+const policyButton = {
+  color: "#00ffb0",
+  textDecoration: "none",
+  fontWeight: 600,
+  letterSpacing: 0.5,
+  fontSize: 15,
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+};

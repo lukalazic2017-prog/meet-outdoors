@@ -15,54 +15,139 @@ export default function TourDetails() {
   const [loading, setLoading] = useState(true);
   const [currentImage, setCurrentImage] = useState(0);
 
-  // UČITAVANJE TURE + USERA
+  // realtime list
+  const [participants, setParticipants] = useState([]);
+  const [interested, setInterested] = useState([]);
+
+  // ========= INITIAL LOAD =========
   useEffect(() => {
     loadTour();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function loadTour() {
     setLoading(true);
 
+    // USER
     const { data: auth } = await supabase.auth.getUser();
     const currentUser = auth?.user || null;
     setUser(currentUser);
 
+    // TOUR
     const { data, error } = await supabase
       .from("tours")
       .select("*")
       .eq("id", id)
       .single();
 
-    if (!error && data) {
-      setTour(data);
-
-      // da li je user već prijavljen
-      if (currentUser) {
-        const { data: reg } = await supabase
-          .from("tour_registrations")
-          .select("*")
-          .eq("tour_id", id)
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
-
-        setIsJoined(!!reg);
-      }
-    } else {
+    if (error || !data) {
       console.error(error);
+      setLoading(false);
+      return;
     }
+
+    setTour(data);
+
+    // participants + interested + joined flag
+    await Promise.all([
+      loadParticipants(data, currentUser),
+      loadInterested(),
+    ]);
 
     setLoading(false);
   }
 
-  // PRIDRUŽI SE TURI
+  // ========= LOAD PARTICIPANTS (WITH PROFILES) =========
+  async function loadParticipants(currentTour = null, currentUser = null) {
+    const { data, error } = await supabase
+      .from("tour_registrations")
+      .select("user_id, profiles ( id, avatar_url, display_name )")
+      .eq("tour_id", id);
+
+    if (error) {
+      console.error("loadParticipants error:", error);
+      return;
+    }
+
+    const regs = data || [];
+    setParticipants(regs);
+
+    const u = currentUser || user;
+    if (u) {
+      const joined = regs.some((r) => r.user_id === u.id);
+      setIsJoined(joined);
+    }
+
+    // osveži lokalni tour.participants da bude tačan broj
+    const baseTour = currentTour || tour;
+    if (baseTour) {
+      setTour({ ...baseTour, participants: regs.length });
+    }
+  }
+
+  // ========= LOAD INTERESTED (WITH PROFILES) =========
+  async function loadInterested() {
+    const { data, error } = await supabase
+      .from("tour_interested")
+      .select("user_id, profiles ( id, avatar_url, display_name )")
+      .eq("tour_id", id);
+
+    if (error) {
+      console.error("loadInterested error:", error);
+      return;
+    }
+
+    setInterested(data || []);
+  }
+
+  // ========= REALTIME LISTENER (JOIN / LEAVE / INTERESTED) =========
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel("tour_live_" + id)
+      // registracije
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tour_registrations",
+          filter: `tour_id=eq.${id}`,
+        },
+        () => {
+          // refresuj samo učesnike
+          loadParticipants();
+        }
+      )
+      // interested
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tour_interested",
+          filter: `tour_id=eq.${id}`,
+        },
+        () => {
+          loadInterested();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // ========= JOIN TOUR =========
   async function joinTour() {
     if (!user) return navigate("/login");
 
-    const currentParticipants = tour.participants || 0;
     const maxPeople = tour.max_people || 0;
+    const currentCount = participants.length;
 
-    if (maxPeople && currentParticipants >= maxPeople) {
+    if (maxPeople && currentCount >= maxPeople) {
       return alert("This tour is full!");
     }
 
@@ -86,25 +171,61 @@ export default function TourDetails() {
       read: false,
     });
 
+    // update participants u tours tabeli (koristi realan broj)
+    const newCount = currentCount + 1;
     await supabase
       .from("tours")
-      .update({ participants: currentParticipants + 1 })
+      .update({ participants: newCount })
       .eq("id", id);
 
     alert("Joined tour!");
-    loadTour();
+
+    // instant refresh fronta (iako postoji realtime)
+    loadParticipants();
   }
 
-  // INTERESOVANJE ZA TURU
+  // ========= LEAVE TOUR =========
+  async function leaveTour() {
+    if (!user) return navigate("/login");
+
+    const { error } = await supabase
+      .from("tour_registrations")
+      .delete()
+      .eq("tour_id", id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error(error);
+      return alert("Could not leave the tour.");
+    }
+
+    const currentCount = participants.length;
+    const newCount = Math.max(currentCount - 1, 0);
+
+    await supabase
+      .from("tours")
+      .update({ participants: newCount })
+      .eq("id", id);
+
+    alert("You left the tour.");
+
+    loadParticipants();
+  }
+
+  // ========= MARK INTERESTED =========
   async function markInterested() {
     if (!user) return navigate("/login");
 
-    const { error } = await supabase.from("tour_interested").insert([
-      {
-        tour_id: id,
-        user_id: user.id,
-      },
-    ]);
+    // već postoji u interested listi
+    const already = interested.some((i) => i.user_id === user.id);
+    if (already) {
+      alert("You are already marked as interested for this tour.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("tour_interested")
+      .insert([{ tour_id: id, user_id: user.id }]);
 
     if (error) {
       console.error(error);
@@ -119,20 +240,21 @@ export default function TourDetails() {
     });
 
     alert("You will receive notifications!");
+
+    loadInterested();
   }
 
-  // BRISANJE TURE
+  // ========= DELETE TOUR =========
   async function deleteTour() {
     if (!window.confirm("Delete this tour forever?")) return;
 
-    // notifikacija svim učesnicima
-    const { data: participants } = await supabase
+    const { data: regs } = await supabase
       .from("tour_registrations")
       .select("user_id")
       .eq("tour_id", id);
 
-    if (participants && participants.length > 0) {
-      for (let p of participants) {
+    if (regs && regs.length > 0) {
+      for (let p of regs) {
         await supabase.from("notifications").insert({
           user_id: p.user_id,
           message: `The tour ${tour.title} has been cancelled.`,
@@ -153,6 +275,7 @@ export default function TourDetails() {
     }
   }
 
+  // ========= LOADING =========
   if (loading || !tour) {
     return (
       <div
@@ -170,11 +293,12 @@ export default function TourDetails() {
   }
 
   const isCreator = user && user.id === tour.creator_id;
+  const currentCount = participants.length;
   const isFull =
-    (tour.participants || 0) >= (tour.max_people || Number.MAX_SAFE_INTEGER);
+    tour.max_people && currentCount >= (tour.max_people || Number.MAX_SAFE_INTEGER);
   const gallery = Array.isArray(tour.image_urls) ? tour.image_urls : [];
 
-  // ===== STILOVI =====
+  // ===================== STILOVI ========================
   const pageWrapper = {
     minHeight: "100vh",
     padding: "24px 16px 50px",
@@ -302,7 +426,7 @@ export default function TourDetails() {
   return (
     <div style={pageWrapper}>
       <div style={container}>
-        {/* HERO / COVER */}
+        {/* HERO */}
         <div style={headerCard}>
           <div
             style={{
@@ -327,7 +451,6 @@ export default function TourDetails() {
             />
             <div style={coverOverlay} />
 
-            {/* tekst na coveru */}
             <div
               style={{
                 position: "absolute",
@@ -387,7 +510,7 @@ export default function TourDetails() {
 
         {/* GLAVNI LAYOUT */}
         <div style={layoutResponsive}>
-          {/* LEFT: opis + slike + mapa */}
+          {/* LEFT */}
           <div style={card}>
             {/* OVERVIEW */}
             <div style={{ marginBottom: 14 }}>
@@ -400,7 +523,7 @@ export default function TourDetails() {
                   💶 {tour.price ? `${tour.price} € per person` : "Free tour"}
                 </div>
                 <div style={pill}>
-                  👥 {tour.participants}/{tour.max_people} participants
+                  👥 {currentCount}/{tour.max_people || "∞"} participants
                   {isFull && (
                     <span style={{ color: "#ff8080", marginLeft: 6 }}>
                       (Full)
@@ -413,7 +536,7 @@ export default function TourDetails() {
               </div>
             </div>
 
-            {/* OPIS */}
+            {/* DESCRIPTION */}
             <div style={{ marginBottom: 18 }}>
               <div style={sectionTitle}>Description</div>
               <p
@@ -428,7 +551,7 @@ export default function TourDetails() {
               </p>
             </div>
 
-            {/* GALERIJA */}
+            {/* GALLERY */}
             {gallery.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={sectionTitle}>Gallery</div>
@@ -524,7 +647,7 @@ export default function TourDetails() {
               </div>
             )}
 
-            {/* MAPA */}
+            {/* MAP */}
             <div>
               <div style={sectionTitle}>Location on map</div>
               {tour.latitude && tour.longitude ? (
@@ -553,8 +676,7 @@ export default function TourDetails() {
                       color: "rgba(230,255,240,0.75)",
                     }}
                   >
-                    📌 {tour.latitude.toFixed(4)},{" "}
-                    {tour.longitude.toFixed(4)}
+                    📌 {tour.latitude.toFixed(4)}, {tour.longitude.toFixed(4)}
                   </div>
                 </>
               ) : (
@@ -565,7 +687,7 @@ export default function TourDetails() {
             </div>
           </div>
 
-          {/* RIGHT: akcije + rezime */}
+          {/* RIGHT */}
           <div style={card}>
             <div style={{ marginBottom: 16 }}>
               <div style={sectionTitle}>Your options</div>
@@ -586,6 +708,7 @@ export default function TourDetails() {
                     </button>
                   )}
 
+                  {/* INTERESTED */}
                   <button
                     style={secondaryBtn}
                     onClick={markInterested}
@@ -594,17 +717,33 @@ export default function TourDetails() {
                     I&apos;m interested
                   </button>
 
+                  {/* JOINED → CHAT + LEAVE */}
                   {isJoined && (
-                    <button
-                      style={secondaryBtn}
-                      onClick={() => navigate(`/chat/${tour.id}`)}
-                    >
-                      Open group chat
-                    </button>
+                    <>
+                      <button
+                        style={secondaryBtn}
+                        onClick={() => navigate(`/chat/${tour.id}`)}
+                      >
+                        Open group chat
+                      </button>
+
+                      <button
+                        style={{
+                          ...secondaryBtn,
+                          background: "rgba(255,60,60,0.25)",
+                          border: "1px solid rgba(255,60,60,0.5)",
+                          color: "white",
+                        }}
+                        onClick={leaveTour}
+                      >
+                        Leave tour
+                      </button>
+                    </>
                   )}
                 </>
               )}
 
+              {/* CREATOR OPTIONS */}
               {isCreator && (
                 <>
                   <button
@@ -626,7 +765,7 @@ export default function TourDetails() {
               )}
             </div>
 
-            {/* QUICK SUMMARY */}
+            {/* SUMMARY + PARTICIPANTS + INTERESTED */}
             <div>
               <div style={sectionTitle}>Quick summary</div>
               <div
@@ -650,7 +789,7 @@ export default function TourDetails() {
                     : "Location not set"}
                 </div>
                 <div style={pill}>
-                  👥 {tour.participants}/{tour.max_people} participants
+                  👥 {currentCount}/{tour.max_people || "∞"} participants
                 </div>
                 <div style={pill}>
                   💶 {tour.price ? `${tour.price} €` : "Free"}
@@ -658,6 +797,94 @@ export default function TourDetails() {
                 <div style={pill}>
                   🕒 {tour.date_start} → {tour.date_end}
                 </div>
+              </div>
+
+              {/* PARTICIPANTS LIST */}
+              <div style={{ marginTop: 22 }}>
+                <div style={sectionTitle}>Participants</div>
+
+                {participants.length === 0 && (
+                  <div style={{ opacity: 0.6, fontSize: 13 }}>
+                    No participants yet.
+                  </div>
+                )}
+
+                {participants.map((p, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 10,
+                      background: "rgba(255,255,255,0.05)",
+                      padding: "8px 12px",
+                      borderRadius: 12,
+                    }}
+                  >
+                    <img
+                      src={
+                        p.profiles?.avatar_url ||
+                        "https://i.pravatar.cc/150?img=5"
+                      }
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                      }}
+                      alt="avatar"
+                    />
+                    <div style={{ fontSize: 14 }}>
+                      {p.profiles?.display_name || "User"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* INTERESTED LIST */}
+              <div style={{ marginTop: 18 }}>
+                <div style={sectionTitle}>
+                  Interested ({interested.length})
+                </div>
+
+                {interested.length === 0 && (
+                  <div style={{ opacity: 0.6, fontSize: 13 }}>
+                    No one is marked as interested yet.
+                  </div>
+                )}
+
+                {interested.map((i, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 8,
+                      padding: "6px 10px",
+                      borderRadius: 10,
+                      background: "rgba(255,255,255,0.03)",
+                    }}
+                  >
+                    <img
+                      src={
+                        i.profiles?.avatar_url ||
+                        "https://i.pravatar.cc/150?img=6"
+                      }
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                      }}
+                      alt="avatar"
+                    />
+                    <div style={{ fontSize: 13 }}>
+                      {i.profiles?.display_name || "User"}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div
