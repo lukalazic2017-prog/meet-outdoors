@@ -28,8 +28,10 @@ import Timeline from "./pages/Timeline";
 import AddPost from "./pages/AddPost";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Notifications from "./pages/Notifications";
-
-
+import CreateEvent from "./pages/CreateEvent";
+import Event from "./pages/Event";
+import EventDetails from "./pages/EventDetails";
+import Events from "./pages/Events";
 
 // AUTH STRANICE
 import Login from "./pages/Login";
@@ -66,6 +68,11 @@ function App() {
           <Route path="/add-post" element={<AddPost />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/create-event" element={<CreateEvent />} />
+          <Route path="/event" element={<Event />} />
+          <Route path="/event-details" element={<EventDetails />} />
+          <Route path ="/events" element={<Events />} />
+          <Route path ="/event/:id" element={<EventDetails />} />
           
 
           {/* AUTH */}

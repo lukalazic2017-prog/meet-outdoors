@@ -1,4 +1,4 @@
- // src/components/Navbar.jsx
+// src/components/Navbar.jsx
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
@@ -18,6 +18,10 @@ export default function Navbar() {
 
   const [activitiesOpen, setActivitiesOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // 🔥 NEW: dropdowni za Tours i Events
+  const [toursMenuOpen, setToursMenuOpen] = useState(false);
+  const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
 
   // ----------------- LOAD USER + AVATAR + NOTIFICATIONS -----------------
   useEffect(() => {
@@ -156,6 +160,8 @@ export default function Navbar() {
 
   const goToActivity = (name) => {
     setActivitiesOpen(false);
+    setToursMenuOpen(false);
+    setEventsMenuOpen(false);
     navigate(`/tours?activity=${encodeURIComponent(name)}`);
   };
 
@@ -194,8 +200,9 @@ export default function Navbar() {
       <header
         style={{
           width: "100%",
-          position: "sticky",
+          position: "fixed",
           top: 0,
+          left: 0,
           zIndex: 999,
           background:
             "linear-gradient(90deg, rgba(4,20,12,0.95), rgba(3,18,16,0.96))",
@@ -206,13 +213,21 @@ export default function Navbar() {
       >
         <nav
           style={{
-            maxWidth: 1300,
+            width: "100%",
+            maxWidth: "1400px",
             margin: "0 auto",
-            padding: "10px 22px",
+            padding: "10px 40px",
+            boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 18,
+            overflow:"visible",
+            
+
+            position: "relative",
+            zIndex:99999,
+            
           }}
         >
           {/* BRAND */}
@@ -271,20 +286,41 @@ export default function Navbar() {
           {/* DESKTOP LINKS */}
           {!isMobile && (
             <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
-              <Link to="/" style={linkStyle("/")}>Home</Link>
+              <Link to="/" style={linkStyle("/")}>
+                Home
+              </Link>
 
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              {/* ACTIVITIES + DROPDOWN */}
+              <div
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+                onMouseEnter={() => {
+                  setActivitiesOpen(true);
+                  setToursMenuOpen(false);
+                  setEventsMenuOpen(false);
+                }}
+                onMouseLeave={() => setActivitiesOpen(false)}
+              >
                 <Link to="/activities" style={linkStyle("/activities")}>
                   Activities
                 </Link>
                 <button
-                  onClick={() => setActivitiesOpen((p) => !p)}
+                  onClick={() => {
+                    setActivitiesOpen((p) => !p);
+                    setToursMenuOpen(false);
+                    setEventsMenuOpen(false);
+                  }}
                   style={{
                     background: "transparent",
                     color: "white",
                     border: "none",
                     cursor: "pointer",
                     fontSize: 16,
+                    padding: 0,
                   }}
                 >
                   ▾
@@ -294,22 +330,26 @@ export default function Navbar() {
                   <div
                     style={{
                       position: "absolute",
-                      top: 38,
+                      top: 40,
                       left: 0,
                       padding: 14,
-                      borderRadius: 14,
-                      background: "rgba(3,22,15,0.98)",
+                      borderRadius: 16,
+                      background:
+                        "radial-gradient(circle at top, rgba(4,40,24,0.98), rgba(2,16,10,0.98))",
                       minWidth: 320,
-                      boxShadow: "0 18px 40px rgba(0,0,0,0.8)",
+                      boxShadow:
+                        "0 18px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,255,176,0.15)",
                       zIndex: 1200,
+                      backdropFilter: "blur(18px)",
                     }}
                   >
                     <div
                       style={{
                         fontSize: 12,
-                        color: "rgba(255,255,255,0.55)",
+                        color: "rgba(255,255,255,0.6)",
                         marginBottom: 8,
                         textTransform: "uppercase",
+                        letterSpacing: "0.12em",
                       }}
                     >
                       Popular activities
@@ -327,13 +367,15 @@ export default function Navbar() {
                           key={item}
                           onClick={() => goToActivity(item)}
                           style={{
-                            borderRadius: 10,
-                            padding: "7px 9px",
-                            background: "rgba(255,255,255,0.03)",
+                            borderRadius: 999,
+                            padding: "7px 10px",
+                            background:
+                              "linear-gradient(120deg, rgba(0,0,0,0.6), rgba(0,60,40,0.9))",
                             color: "white",
-                            border: "none",
+                            border: "1px solid rgba(0,255,176,0.25)",
                             cursor: "pointer",
                             fontSize: 13,
+                            textAlign: "left",
                           }}
                         >
                           {item}
@@ -344,25 +386,243 @@ export default function Navbar() {
                 )}
               </div>
 
-              <Link to="/create-tour" style={linkStyle("/create-tour")}>
-                Create Tour
-              </Link>
+              {/* TOURS + NEON DROPDOWN */}
+              <div
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+                onMouseEnter={() => {
+                  setToursMenuOpen(true);
+                  setActivitiesOpen(false);
+                  setEventsMenuOpen(false);
+                }}
+                onMouseLeave={() => setToursMenuOpen(false)}
+              >
+                <Link to="/tours" style={linkStyle("/tours")}>
+                  Tours
+                </Link>
+                <button
+                  onClick={() => {
+                    setToursMenuOpen((p) => !p);
+                    setActivitiesOpen(false);
+                    setEventsMenuOpen(false);
+                  }}
+                  style={{
+                    background: "transparent",
+                    color: "white",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 16,
+                    padding: 0,
+                  }}
+                >
+                  ▾
+                </button>
 
-              <Link to="/contact" style={linkStyle("/contact")}>
-                Contact
-              </Link>
+                {toursMenuOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 40,
+                      left: 0,
+                      padding: 12,
+                      borderRadius: 18,
+                      background:
+                        "radial-gradient(circle at top, rgba(1,25,18,0.98), rgba(0,10,8,0.98))",
+                      boxShadow:
+                        "0 18px 45px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,255,176,0.2)",
+                      minWidth: 220,
+                      zIndex: 1200,
+                      backdropFilter: "blur(20px)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "rgba(255,255,255,0.6)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.16em",
+                        marginBottom: 8,
+                      }}
+                    >
+                      Tours
+                    </div>
 
-              <Link to="/tours" style={linkStyle("/tours")}>
-                Tours
-              </Link>
+                    <button
+                      onClick={() => {
+                        navigate("/tours");
+                        setToursMenuOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        borderRadius: 999,
+                        padding: "8px 12px",
+                        border: "1px solid rgba(0,255,176,0.16)",
+                        background:
+                          "linear-gradient(120deg, rgba(0,0,0,0.7), rgba(0,50,40,0.9))",
+                        color: "rgba(235,255,248,0.96)",
+                        fontSize: 13,
+                        cursor: "pointer",
+                        marginBottom: 8,
+                        textAlign: "left",
+                      }}
+                    >
+                      All tours
+                    </button>
 
+                    <button
+                      onClick={() => {
+                        navigate("/create-tour");
+                        setToursMenuOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        borderRadius: 999,
+                        padding: "9px 12px",
+                        border: "none",
+                        background:
+                          "linear-gradient(120deg, #00ffb8, #35ffc9, #00c28a)",
+                        color: "#012216",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        boxShadow:
+                          "0 0 18px rgba(0,255,176,0.6), 0 12px 26px rgba(0,0,0,0.9)",
+                        textAlign: "center",
+                      }}
+                    >
+                      + Create tour
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* EVENTS + NEON DROPDOWN */}
+              <div
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+                onMouseEnter={() => {
+                  setEventsMenuOpen(true);
+                  setToursMenuOpen(false);
+                  setActivitiesOpen(false);
+                }}
+                onMouseLeave={() => setEventsMenuOpen(false)}
+              >
+                <Link to="/events" style={linkStyle("/events")}>
+                  Events
+                </Link>
+                <button
+                  onClick={() => {
+                    setEventsMenuOpen((p) => !p);
+                    setToursMenuOpen(false);
+                    setActivitiesOpen(false);
+                  }}
+                  style={{
+                    background: "transparent",
+                    color: "white",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 16,
+                    padding: 0,
+                  }}
+                >
+                  ▾
+                </button>
+
+                {eventsMenuOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 40,
+                      left: 0,
+                      padding: 12,
+                      borderRadius: 18,
+                      background:
+                        "radial-gradient(circle at top, rgba(12,22,40,0.98), rgba(2,6,15,0.98))",
+                      boxShadow:
+                        "0 18px 45px rgba(0,0,0,0.9), 0 0 0 1px rgba(88,170,255,0.2)",
+                      minWidth: 220,
+                      zIndex: 1200,
+                      backdropFilter: "blur(20px)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "rgba(255,255,255,0.6)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.16em",
+                        marginBottom: 8,
+                      }}
+                    >
+                      Events
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        navigate("/events");
+                        setEventsMenuOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        borderRadius: 999,
+                        padding: "8px 12px",
+                        border: "1px solid rgba(120,180,255,0.25)",
+                        background:
+                          "linear-gradient(120deg, rgba(0,0,0,0.7), rgba(5,25,55,0.9))",
+                        color: "rgba(235,245,255,0.96)",
+                        fontSize: 13,
+                        cursor: "pointer",
+                        marginBottom: 8,
+                        textAlign: "left",
+                      }}
+                    >
+                      All events
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigate("/create-event");
+                        setEventsMenuOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        borderRadius: 999,
+                        padding: "9px 12px",
+                        border: "none",
+                        background:
+                          "linear-gradient(120deg, #5bb3ff, #9ad0ff, #4f8cff)",
+                        color: "#021326",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        boxShadow:
+                          "0 0 18px rgba(120,190,255,0.7), 0 12px 26px rgba(0,0,0,0.9)",
+                        textAlign: "center",
+                      }}
+                    >
+                      + Create event
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* TIMELINE */}
               <Link to="/timeline" style={linkStyle("/timeline")}>
                 Timeline
               </Link>
             </div>
           )}
+
           {/* RIGHT SECTION */}
-                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             {/* NOTIFICATION BELL */}
             {user && (
               <div style={{ position: "relative" }}>
@@ -372,6 +632,8 @@ export default function Navbar() {
                     setNotificationsOpen(newState);
                     setUserMenuOpen(false);
                     setActivitiesOpen(false);
+                    setToursMenuOpen(false);
+                    setEventsMenuOpen(false);
 
                     if (newState) {
                       markAllAsRead(); // 🔥 kad otvori — sve pročitano
@@ -512,6 +774,8 @@ export default function Navbar() {
                     setUserMenuOpen((p) => !p);
                     setNotificationsOpen(false);
                     setActivitiesOpen(false);
+                    setToursMenuOpen(false);
+                    setEventsMenuOpen(false);
                   }}
                   style={{
                     width: 40,
@@ -641,6 +905,8 @@ export default function Navbar() {
                   setNotificationsOpen(false);
                   setUserMenuOpen(false);
                   setActivitiesOpen(false);
+                  setToursMenuOpen(false);
+                  setEventsMenuOpen(false);
                 }}
                 style={{
                   width: 40,
@@ -693,28 +959,60 @@ export default function Navbar() {
               marginTop: 40,
             }}
           >
-            <Link to="/" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              style={mobileLink}
+            >
               Home
             </Link>
 
-            <Link to="/timeline" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
+            <Link
+              to="/timeline"
+              onClick={() => setMobileMenuOpen(false)}
+              style={mobileLink}
+            >
               Timeline
             </Link>
 
-            <Link to="/activities" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
+            <Link
+              to="/activities"
+              onClick={() => setMobileMenuOpen(false)}
+              style={mobileLink}
+            >
               Activities
             </Link>
 
-            <Link to="/tours" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
+            <Link
+              to="/tours"
+              onClick={() => setMobileMenuOpen(false)}
+              style={mobileLink}
+            >
               Tours
             </Link>
 
-            <Link to="/create-tour" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
+            <Link
+              to="/create-tour"
+              onClick={() => setMobileMenuOpen(false)}
+              style={mobileLink}
+            >
               Create Tour
             </Link>
 
-            <Link to="/contact" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
-              Contact
+            <Link
+              to="/events"
+              onClick={() => setMobileMenuOpen(false)}
+              style={mobileLink}
+            >
+              Events
+            </Link>
+
+            <Link
+              to="/create-event"
+              onClick={() => setMobileMenuOpen(false)}
+              style={mobileLink}
+            >
+              Create Event
             </Link>
 
             {user && (

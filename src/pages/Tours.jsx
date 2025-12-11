@@ -1,36 +1,163 @@
+// src/pages/Tours.jsx
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
+
+import "leaflet/dist/leaflet.css";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 
 export default function Tours() {
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // FILTERS: activity, country, status, capacity, date
   const [activityFilter, setActivityFilter] = useState("All Activities");
   const [countryFilter, setCountryFilter] = useState("All Countries");
-  const [customActivity, setCustomActivity] = useState("");
-  const [customCountry, setCustomCountry] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All"); // All | Upcoming | In progress | Expired
+  const [capacityFilter, setCapacityFilter] = useState("all"); // all | availableOnly
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
 
-  // CUSTOM DROPDOWNS
   const [showActivityList, setShowActivityList] = useState(false);
   const [showCountryList, setShowCountryList] = useState(false);
 
+  // mapa – samo početni centar, bez state pomeranja
+  const mapCenter = [43.9, 21.0]; // Balkan default
+
   const navigate = useNavigate();
 
-  useEffect(() => {
-    async function loadTours() {
-      let { data, error } = await supabase
-        .from("tours")
-        .select("*")
-        .order("created_at", { ascending: false });
+  // ---------------------------------------------------------
+  // 1️⃣ UČITAVAMO SVE TURE — SIGURNO, BEZ RPC-A
+  // ---------------------------------------------------------
+  async function loadTours() {
+    const { data, error } = await supabase
+      .from("tours")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (!error && data) setTours(data);
-      setLoading(false);
+    if (error) {
+      console.log("Load tours error:", error);
+      setTours([]);
+    } else {
+      setTours(data || []);
     }
 
+    setLoading(false);
+  }
+
+  useEffect(() => {
     loadTours();
   }, []);
 
+  // ---------------------------------------------------------
+  // 2️⃣ STATUS & CAPACITY HELPERI
+  // ---------------------------------------------------------
+  function getStatus(tour) {
+    const now = new Date();
+
+    const start = tour.start_date ? new Date(tour.start_date) : null;
+    const end = tour.end_date ? new Date(tour.end_date) : null;
+
+    if (!start && !end) return "Upcoming";
+
+    if (start && !end) {
+      if (now < start) return "Upcoming";
+      if (now >= start) return "In progress";
+    }
+
+    if (!start && end) {
+      if (now <= end) return "In progress";
+      return "Expired";
+    }
+
+    if (start && end) {
+      if (now < start) return "Upcoming";
+      if (now >= start && now <= end) return "In progress";
+      if (now > end) return "Expired";
+    }
+
+    return "Upcoming";
+  }
+
+  function hasAvailableSpots(tour) {
+    const max =
+      tour.max_participants ??
+      tour.capacity ??
+      tour.max_people ??
+      null;
+
+    const booked =
+      tour.current_participants ??
+      tour.booked_count ??
+      tour.attendees_count ??
+      0;
+
+    if (!max) return true; // nema limita → računamo kao dostupno
+    return booked < max;
+  }
+
+  // ---------------------------------------------------------
+  // 3️⃣ FILTERI (aktivnost, država, status, datum, kapacitet)
+  // ---------------------------------------------------------
+  const filteredTours = tours.filter((tour) => {
+    const tourActivity = tour.activity ?? "";
+    const tourCountry = tour.country ?? "";
+
+    // Activity
+    const matchActivity =
+      activityFilter === "All Activities" ||
+      tourActivity === activityFilter;
+
+    // Country
+    const matchCountry =
+      countryFilter === "All Countries" ||
+      tourCountry === countryFilter;
+
+    // Status
+    const status = getStatus(tour);
+    const matchStatus =
+      statusFilter === "All" || statusFilter === status;
+
+    // Date – gledamo start_date
+    let matchDate = true;
+    if (startDateFilter) {
+      const start = tour.start_date ? new Date(tour.start_date) : null;
+      if (!start || start < new Date(startDateFilter)) {
+        matchDate = false;
+      }
+    }
+    if (endDateFilter) {
+      const start = tour.start_date ? new Date(tour.start_date) : null;
+      if (!start || start > new Date(endDateFilter)) {
+        matchDate = false;
+      }
+    }
+
+    // Capacity
+    const matchCapacity =
+      capacityFilter === "all" ? true : hasAvailableSpots(tour);
+
+    return (
+      matchActivity &&
+      matchCountry &&
+      matchStatus &&
+      matchDate &&
+      matchCapacity
+    );
+  });
+
+  // ---------------------------------------------------------
+  // 4️⃣ IMG FALLBACK
+  // ---------------------------------------------------------
+  const getCover = (tour) =>
+    tour.cover_url ??
+    tour.image_url ??
+    "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg";
+
+  // ---------------------------------------------------------
+  // LISTE
+  // ---------------------------------------------------------
   const activities = [
     "All Activities",
     "Hiking",
@@ -86,195 +213,304 @@ export default function Tours() {
     "Other",
   ];
 
-  const chooseActivity = (v) => {
-    setActivityFilter(v);
-    setShowActivityList(false);
-  };
-
-  const chooseCountry = (v) => {
-    setCountryFilter(v);
-    setShowCountryList(false);
-  };
-
-  const filteredTours = tours.filter((tour) => {
-    const matchActivity =
-      activityFilter === "All Activities"
-        ? true
-        : activityFilter === "Other"
-        ? customActivity
-          ? tour.activity?.toLowerCase() === customActivity.toLowerCase()
-          : true
-        : tour.activity === activityFilter;
-
-    const matchCountry =
-      countryFilter === "All Countries"
-        ? true
-        : countryFilter === "Other"
-        ? customCountry
-          ? tour.country?.toLowerCase() === customCountry.toLowerCase()
-          : true
-        : tour.country === countryFilter;
-
-    return matchActivity && matchCountry;
-  });
-
-  const getCover = (tour) => {
-    if (tour.cover_url) return tour.cover_url;
-    if (tour.image_url) return tour.image_url;
-    return "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg";
-  };
-
-  // -------------------------------------------
-  //  🔥 PREMIUM GLOBAL STYLES
-  // -------------------------------------------
+  // ---------------------------------------------------------
+  // DIZAJN — EARTH / OUTDOOR MINIMAL
+  // ---------------------------------------------------------
   const styles = {
     page: {
       minHeight: "100vh",
-      padding: "30px 16px 40px",
+      padding: "32px 16px 48px",
       background:
-        "radial-gradient(circle at top, #00b894 0%, #00171f 40%, #000000 90%)",
+        "radial-gradient(circle at top, #02140f 0%, #010508 45%, #000000 100%)",
       display: "flex",
       justifyContent: "center",
-      color: "#e6fff9",
-      fontFamily: "system-ui",
+      color: "#f3f8f5",
+      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
     },
     container: {
       width: "100%",
-      maxWidth: 1200,
+      maxWidth: 1180,
     },
-    header: {
-      textAlign: "center",
-      marginBottom: 30,
+    header: { textAlign: "left", marginBottom: 22 },
+    badge: {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "4px 10px",
+      borderRadius: 999,
+      border: "1px solid rgba(110,186,150,0.8)",
+      background: "rgba(8,40,26,0.85)",
+      fontSize: 11,
+      letterSpacing: "0.16em",
+      textTransform: "uppercase",
+      color: "rgba(214,244,227,0.9)",
+      marginBottom: 8,
     },
-    title: {
-      fontSize: 40,
-      fontWeight: 800,
-      background: "linear-gradient(120deg, #fff, #aaffee, #00ffb4, #00d1ff)",
-      WebkitBackgroundClip: "text",
-      color: "transparent",
-      textShadow: "0 0 30px rgba(0,255,180,0.7)",
-    },
-    subtitle: {
-      opacity: 0.8,
-      fontSize: 16,
-      marginTop: 8,
-    },
-
-    // 🔥 FILTER BAR
-    filterBar: {
+    titleRow: {
       display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-end",
       gap: 16,
       flexWrap: "wrap",
-      marginBottom: 35,
-      padding: 16,
-      borderRadius: 20,
-      background: "rgba(0,0,0,0.45)",
-      border: "1px solid rgba(0,255,180,0.3)",
-      backdropFilter: "blur(14px)",
-      position: "relative",
-      zIndex: 1000, // FIX: FILTER BAR ABOVE GRID
+    },
+    titleBox: { flex: "1 1 260px" },
+    title: {
+      fontSize: 30,
+      fontWeight: 800,
+      color: "#f9fefb",
+      marginBottom: 4,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: "rgba(220,240,230,0.8)",
+    },
+    statsRow: {
+      display: "flex",
+      gap: 14,
+      flexWrap: "wrap",
+      fontSize: 12,
+      color: "rgba(220,240,230,0.9)",
+    },
+    statPill: {
+      padding: "6px 10px",
+      borderRadius: 999,
+      background: "rgba(15,52,38,0.9)",
+      border: "1px solid rgba(110,186,150,0.65)",
+    },
+
+    // FILTER BAR
+    filterBar: {
+      marginTop: 20,
+      marginBottom: 18,
+      padding: 14,
+      borderRadius: 18,
+      background: "rgba(4,18,12,0.96)",
+      border: "1px solid rgba(60,120,90,0.7)",
+      display: "grid",
+      gridTemplateColumns: "2fr 2fr 2fr",
+      gap: 12,
     },
     filterGroup: {
-      flex: 1,
       display: "flex",
       flexDirection: "column",
-      position: "relative", // REQUIRED FOR ABSOLUTE DROPDOWN
+      position: "relative",
+      fontSize: 12,
+      color: "rgba(220,240,230,0.86)",
     },
     filterLabel: {
-      fontSize: 12,
-      opacity: 0.8,
-      marginBottom: 5,
+      marginBottom: 4,
+      opacity: 0.85,
     },
-
-    // 🔥 CUSTOM DROPDOWN BOX
     dropdownBox: {
-      padding: "12px 16px",
-      borderRadius: 12,
-      background: "rgba(0,255,180,0.15)",
-      border: "1px solid rgba(0,255,180,0.5)",
+      padding: "8px 12px",
+      borderRadius: 999,
+      background: "rgba(5,23,16,1)",
+      border: "1px solid rgba(110,186,150,0.7)",
       cursor: "pointer",
-      backdropFilter: "blur(10px)",
-      boxShadow: "0 0 15px rgba(0,255,180,0.4)",
-      color: "#e6fff9",
-      userSelect: "none",
+      fontSize: 13,
+      color: "#f3f8f5",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
     },
-
-    // 🔥 DROPDOWN LIST (FIXED zIndex)
     dropdownList: {
       position: "absolute",
-      top: 70,
-      width: "100%",
-      maxHeight: 220,
+      top: 54,
+      left: 0,
+      right: 0,
+      maxHeight: 230,
       overflowY: "auto",
-      background: "rgba(0, 0, 0, 0.85)",
-      border: "1px solid rgba(0,255,180,0.4)",
-      backdropFilter: "blur(10px)",
-      borderRadius: 14,
-      boxShadow: "0 0 20px rgba(0,255,180,0.45)",
-      zIndex: 9999, // FIX: ALWAYS ON TOP
+      background: "rgba(2,12,8,0.98)",
+      borderRadius: 16,
+      border: "1px solid rgba(110,186,150,0.8)",
+      zIndex: 9999,
+      boxShadow: "0 18px 50px rgba(0,0,0,0.85)",
     },
     dropdownItem: {
-      padding: "12px 16px",
+      padding: "9px 12px",
+      fontSize: 13,
       cursor: "pointer",
-      transition: "0.2s",
-      color: "#e6fff9",
+      color: "#f3f8f5",
     },
 
-    // 🔥 GRID
+    segmented: {
+      display: "inline-flex",
+      padding: 3,
+      borderRadius: 999,
+      background: "rgba(5,23,16,1)",
+      border: "1px solid rgba(110,186,150,0.7)",
+      gap: 4,
+    },
+    segButton: (active) => ({
+      padding: "5px 10px",
+      borderRadius: 999,
+      fontSize: 11,
+      border: "none",
+      cursor: "pointer",
+      background: active ? "rgba(118,196,149,1)" : "transparent",
+      color: active ? "#05150d" : "rgba(220,240,230,0.85)",
+      fontWeight: active ? 700 : 500,
+    }),
+
+    checkboxRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      fontSize: 12,
+      marginTop: 4,
+    },
+
+    dateInput: {
+      flex: 1,
+      padding: "7px 10px",
+      borderRadius: 999,
+      border: "1px solid rgba(110,186,150,0.7)",
+      background: "rgba(5,23,16,1)",
+      color: "#f3f8f5",
+      fontSize: 12,
+    },
+
+    // MAP WRAPPER
+    mapWrapper: {
+      marginTop: 16,
+      marginBottom: 22,
+      borderRadius: 20,
+      overflow: "hidden",
+      border: "1px solid rgba(70,130,100,0.75)",
+      background:
+        "radial-gradient(circle at top, rgba(24,72,51,0.7), rgba(4,12,9,1))",
+      boxShadow: "0 22px 60px rgba(0,0,0,0.9)",
+    },
+    mapTopBar: {
+      padding: "10px 14px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      flexWrap: "wrap",
+      fontSize: 12,
+      color: "rgba(226,244,235,0.92)",
+    },
+    mapTopLeft: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+    },
+    mapContainer: { height: 320, width: "100%" },
+
+    // GRID
     grid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-      gap: 22,
-      position: "relative",
-      zIndex: 1, // BELOW DROPDOWN
+      gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+      gap: 18,
     },
-
-    // 🔥 CARD
     card: {
-      borderRadius: 24,
+      borderRadius: 18,
       overflow: "hidden",
-      background: "linear-gradient(145deg, #000, #002920)",
-      border: "1px solid rgba(0,255,180,0.35)",
+      background:
+        "linear-gradient(145deg, rgba(4,16,11,0.98), rgba(7,29,20,0.98))",
+      border: "1px solid rgba(70,130,100,0.7)",
       cursor: "pointer",
-      boxShadow: "0 20px 50px rgba(0,0,0,0.75)",
-      transition: "0.3s",
+      boxShadow: "0 16px 40px rgba(0,0,0,0.85)",
+      display: "flex",
+      flexDirection: "column",
     },
-    imgWrapper: {
-      height: 210,
-      overflow: "hidden",
-      position: "relative",
-    },
+    imgWrapper: { height: 170, position: "relative", overflow: "hidden" },
     img: {
       width: "100%",
       height: "100%",
       objectFit: "cover",
-      transition: "0.3s",
+      transform: "scale(1.02)",
+      transition: "transform 0.35s ease-out",
     },
-    overlay: {
+    imgOverlay: {
       position: "absolute",
       inset: 0,
-      background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)",
+      background:
+        "linear-gradient(to top, rgba(0,0,0,0.76), rgba(0,0,0,0.1))",
     },
     cardBody: {
-      padding: 16,
+      padding: 14,
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      fontSize: 13,
     },
-    cardTitle: {
-      fontSize: 18,
+    statusPill: (status) => {
+      let bg = "rgba(40,80,60,0.9)";
+      let border = "rgba(110,186,150,0.9)";
+      if (status === "Upcoming") {
+        bg = "rgba(40,90,70,0.92)";
+        border = "rgba(150,220,180,0.95)";
+      } else if (status === "In progress") {
+        bg = "rgba(70,110,40,0.92)";
+        border = "rgba(190,230,150,0.95)";
+      } else if (status === "Expired") {
+        bg = "rgba(40,40,40,0.9)";
+        border = "rgba(140,140,140,0.9)";
+      }
+      return {
+        alignSelf: "flex-start",
+        padding: "4px 9px",
+        borderRadius: 999,
+        border: `1px solid ${border}`,
+        fontSize: 11,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        color: "#f5fff9",
+        background: bg,
+      };
+    },
+    titleText: {
+      fontSize: 15,
       fontWeight: 700,
-      textShadow: "0 0 10px rgba(0,255,180,0.5)",
-      marginBottom: 5,
+      color: "#f7fff9",
     },
-    location: { opacity: 0.85, marginBottom: 4 },
-    meta: { opacity: 0.8, fontSize: 12, marginBottom: 10 },
-    button: {
-      padding: "8px 14px",
-      border: "none",
+    locationText: {
+      fontSize: 12,
+      color: "rgba(220,240,230,0.85)",
+    },
+    metaRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 4,
+    },
+    metaLeft: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+      fontSize: 12,
+      color: "rgba(210,234,220,0.9)",
+    },
+    metaRight: {
+      fontSize: 11,
+      color: "rgba(200,220,210,0.8)",
+      textAlign: "right",
+    },
+    viewButton: {
+      marginTop: 8,
+      alignSelf: "flex-start",
+      padding: "7px 14px",
       borderRadius: 999,
-      background: "linear-gradient(120deg, #00ffb4, #00d1ff)",
-      color: "#003321",
+      border: "none",
+      background:
+        "linear-gradient(120deg, #a4e3c2, #6bc19a, #3f8d6a)",
+      color: "#032013",
+      fontSize: 12,
       fontWeight: 700,
       cursor: "pointer",
     },
+  };
+
+  // STATISTIKA ZA HEADER
+  const stats = {
+    total: filteredTours.length,
+    upcoming: filteredTours.filter((t) => getStatus(t) === "Upcoming").length,
+    inProgress: filteredTours.filter((t) => getStatus(t) === "In progress")
+      .length,
+    expired: filteredTours.filter((t) => getStatus(t) === "Expired").length,
   };
 
   return (
@@ -282,25 +518,49 @@ export default function Tours() {
       <div style={styles.container}>
         {/* HEADER */}
         <div style={styles.header}>
-          <h1 style={styles.title}>MeetOutdoors Tours</h1>
-          <p style={styles.subtitle}>
-            Discover adventures created by real outdoor lovers.
-          </p>
+          <div style={styles.badge}>Tours · MeetOutdoors</div>
+
+          <div style={styles.titleRow}>
+            <div style={styles.titleBox}>
+              <h1 style={styles.title}>Find your next outdoor story.</h1>
+              <p style={styles.subtitle}>
+                Browse verified adventures from real guides and hosts. Filter by
+                activity, location, date and availability.
+              </p>
+            </div>
+
+            <div style={styles.statsRow}>
+              <div style={styles.statPill}>
+                Total: <strong>{stats.total}</strong>
+              </div>
+              <div style={styles.statPill}>
+                Upcoming: <strong>{stats.upcoming}</strong>
+              </div>
+              <div style={styles.statPill}>
+                In progress: <strong>{stats.inProgress}</strong>
+              </div>
+              <div style={styles.statPill}>
+                Expired: <strong>{stats.expired}</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* FILTER BAR */}
         <div style={styles.filterBar}>
-          {/* ACTIVITY DROPDOWN */}
+          {/* ACTIVITIES */}
           <div style={styles.filterGroup}>
             <span style={styles.filterLabel}>Activity</span>
-
             <div
               style={styles.dropdownBox}
-              onClick={() => setShowActivityList(!showActivityList)}
+              onClick={() => {
+                setShowActivityList((p) => !p);
+                setShowCountryList(false);
+              }}
             >
-              {activityFilter}
+              <span>{activityFilter}</span>
+              <span>▾</span>
             </div>
-
             {showActivityList && (
               <div style={styles.dropdownList}>
                 {activities.map((a) => (
@@ -308,15 +568,15 @@ export default function Tours() {
                     key={a}
                     style={{
                       ...styles.dropdownItem,
-                      color: a === activityFilter ? "#00ffb4" : "#e6fff9",
+                      backgroundColor:
+                        a === activityFilter
+                          ? "rgba(20,70,50,0.9)"
+                          : "transparent",
                     }}
-                    onClick={() => chooseActivity(a)}
-                    onMouseEnter={(e) =>
-                      (e.target.style.background = "rgba(0,255,180,0.15)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.target.style.background = "transparent")
-                    }
+                    onClick={() => {
+                      setActivityFilter(a);
+                      setShowActivityList(false);
+                    }}
                   >
                     {a}
                   </div>
@@ -325,17 +585,19 @@ export default function Tours() {
             )}
           </div>
 
-          {/* COUNTRY DROPDOWN */}
+          {/* COUNTRY */}
           <div style={styles.filterGroup}>
             <span style={styles.filterLabel}>Country</span>
-
             <div
               style={styles.dropdownBox}
-              onClick={() => setShowCountryList(!showCountryList)}
+              onClick={() => {
+                setShowCountryList((p) => !p);
+                setShowActivityList(false);
+              }}
             >
-              {countryFilter}
+              <span>{countryFilter}</span>
+              <span>▾</span>
             </div>
-
             {showCountryList && (
               <div style={styles.dropdownList}>
                 {countries.map((c) => (
@@ -343,15 +605,15 @@ export default function Tours() {
                     key={c}
                     style={{
                       ...styles.dropdownItem,
-                      color: c === countryFilter ? "#00ffb4" : "#e6fff9",
+                      backgroundColor:
+                        c === countryFilter
+                          ? "rgba(20,70,50,0.9)"
+                          : "transparent",
                     }}
-                    onClick={() => chooseCountry(c)}
-                    onMouseEnter={(e) =>
-                      (e.target.style.background = "rgba(0,255,180,0.15)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.target.style.background = "transparent")
-                    }
+                    onClick={() => {
+                      setCountryFilter(c);
+                      setShowCountryList(false);
+                    }}
                   >
                     {c}
                   </div>
@@ -359,47 +621,207 @@ export default function Tours() {
               </div>
             )}
           </div>
+
+          {/* STATUS + CAPACITY */}
+          <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Status & availability</span>
+
+            <div style={styles.segmented}>
+              {["All", "Upcoming", "In progress", "Expired"].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  style={styles.segButton(statusFilter === s)}
+                  onClick={() => setStatusFilter(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            <div style={styles.checkboxRow}>
+              <input
+                id="capacityFilter"
+                type="checkbox"
+                checked={capacityFilter === "availableOnly"}
+                onChange={(e) =>
+                  setCapacityFilter(
+                    e.target.checked ? "availableOnly" : "all"
+                  )
+                }
+              />
+              <label htmlFor="capacityFilter">
+                Only tours with available spots
+              </label>
+            </div>
+          </div>
+
+          {/* DATE FROM */}
+          <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Start date from</span>
+            <input
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => setStartDateFilter(e.target.value)}
+              style={styles.dateInput}
+            />
+          </div>
+
+          {/* DATE TO */}
+          <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Start date to</span>
+            <input
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => setEndDateFilter(e.target.value)}
+              style={styles.dateInput}
+            />
+          </div>
+
+          {/* RESET */}
+          <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Reset filters</span>
+            <button
+              type="button"
+              onClick={() => {
+                setActivityFilter("All Activities");
+                setCountryFilter("All Countries");
+                setStatusFilter("All");
+                setCapacityFilter("all");
+                setStartDateFilter("");
+                setEndDateFilter("");
+              }}
+              style={{
+                padding: "7px 12px",
+                borderRadius: 999,
+                border: "none",
+                background: "rgba(20,60,45,0.95)",
+                color: "#f5fff9",
+                fontSize: 12,
+                cursor: "pointer",
+                alignSelf: "flex-start",
+              }}
+            >
+              Clear all
+            </button>
+          </div>
+        </div>
+
+        {/* MAPA – bez radijusa, samo klasteri */}
+        <div style={styles.mapWrapper}>
+          <div style={styles.mapTopBar}>
+            <div style={styles.mapTopLeft}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>
+                Map of tours
+              </span>
+              <span style={{ fontSize: 11, opacity: 0.8 }}>
+                Pan and zoom the map freely. Markers show tours with a location –
+                tap a marker to open the tour.
+              </span>
+            </div>
+          </div>
+
+          <MapContainer
+            center={mapCenter}
+            zoom={7}
+            scrollWheelZoom={true}
+            style={styles.mapContainer}
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+            <MarkerClusterGroup chunkedLoading>
+              {filteredTours
+                .filter((t) => t.latitude && t.longitude)
+                .map((tour) => (
+                  <Marker
+                    key={tour.id}
+                    position={[tour.latitude, tour.longitude]}
+                    eventHandlers={{
+                      click: () => navigate(`/tour/${tour.id}`),
+                    }}
+                  />
+                ))}
+            </MarkerClusterGroup>
+          </MapContainer>
         </div>
 
         {/* GRID */}
         <div style={styles.grid}>
           {!loading &&
-            filteredTours.map((tour) => (
-              <div
-                key={tour.id}
-                style={styles.card}
-                onClick={() => navigate(`/tour/${tour.id}`)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-6px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0px)";
-                }}
-              >
-                <div style={styles.imgWrapper}>
-                  <img src={getCover(tour)} style={styles.img} />
-                  <div style={styles.overlay} />
-                </div>
+            filteredTours.map((tour) => {
+              const status = getStatus(tour);
 
-                <div style={styles.cardBody}>
-                  <div style={styles.cardTitle}>{tour.title}</div>
-                  <div style={styles.location}>
-                    📍 {tour.location_name}, {tour.country}
+              const max =
+                tour.max_participants ??
+                tour.capacity ??
+                tour.max_people ??
+                null;
+              const attendees =
+                tour.attendees?.count ?? 0;
+                
+              const spotsText = max
+                ? `${attendees}/${max} spots booked`
+                : "Flexible capacity";
+
+              return (
+                <div
+                  key={tour.id}
+                  style={styles.card}
+                  onClick={() => navigate(`/tour/${tour.id}`)}
+                  onMouseEnter={(e) => {
+                    const img = e.currentTarget.querySelector("img");
+                    if (img) img.style.transform = "scale(1.06)";
+                  }}
+                  onMouseLeave={(e) => {
+                    const img = e.currentTarget.querySelector("img");
+                    if (img) img.style.transform = "scale(1.02)";
+                  }}
+                >
+                  <div style={styles.imgWrapper}>
+                    <img
+                      src={getCover(tour)}
+                      style={styles.img}
+                      alt={tour.title}
+                    />
+                    <div style={styles.imgOverlay} />
                   </div>
-                  <div style={styles.meta}>🧭 {tour.activity}</div>
 
-                  <button
-                    style={styles.button}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/tour/${tour.id}`);
-                    }}
-                  >
-                    View Tour
-                  </button>
+                  <div style={styles.cardBody}>
+                    <div style={styles.statusPill(status)}>{status}</div>
+
+                    <div style={styles.titleText}>{tour.title}</div>
+
+                    <div style={styles.metaRow}>
+                      <div style={styles.metaLeft}>
+                        <span>🧭 {tour.activity || "Activity"}</span>
+                        {tour.start_date && (
+                          <span>
+                            📅{" "}
+                            {new Date(tour.start_date).toLocaleDateString()}
+                            {tour.end_date
+                              ? ` – ${new Date(tour.end_date).toLocaleDateString()}`
+                              : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={styles.metaRight}>{spotsText}</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      style={styles.viewButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/tour/${tour.id}`);
+                      }}
+                    >
+                      View tour
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
         </div>
       </div>
     </div>

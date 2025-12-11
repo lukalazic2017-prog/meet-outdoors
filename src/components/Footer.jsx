@@ -2,7 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-export default function Footer() {
+export default function Footer({ user, avatarUrl, unreadCount, logout }) {
   return (
     <footer
       style={{
@@ -15,6 +15,7 @@ export default function Footer() {
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
+      {/* MAIN FOOTER CONTENT */}
       <div
         style={{
           maxWidth: 1100,
@@ -165,6 +166,120 @@ export default function Footer() {
         </div>
       </div>
 
+      {/* USER BAR SECTION */}
+      {user && (
+        <div
+          style={{
+            marginTop: 40,
+            marginBottom: 30,
+            width: "100%",
+            padding: "20px 0",
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 30,
+              padding: "10px 25px",
+              borderRadius: 20,
+              background:
+                "linear-gradient(180deg, rgba(0,30,18,0.4), rgba(0,0,0,0.5))",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 0 18px rgba(0,255,160,0.08)",
+            }}
+          >
+            {/* 🔔 Notifications */}
+            <div
+              style={{
+                position: "relative",
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                fontSize: 22,
+                color: "white",
+              }}
+            >
+              🔔
+
+              {unreadCount > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: -3,
+                    right: -3,
+                    background: "#ff3030",
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    color: "white",
+                    boxShadow: "0 0 6px red",
+                  }}
+                >
+                  {unreadCount}
+                </div>
+              )}
+            </div>
+
+            {/* 🧍 AVATAR */}
+            <div
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: "50%",
+                border: "2px solid #00ffb0",
+                overflow: "hidden",
+                boxShadow: "0 0 14px rgba(0,255,160,0.45)",
+                cursor: "pointer",
+              }}
+            >
+              <img
+                src={avatarUrl || "https://i.pravatar.cc/300"}
+                alt="avatar"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            </div>
+
+            {/* 🔴 LOGOUT */}
+            <button
+              onClick={logout}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 14,
+                border: "1px solid rgba(255,60,60,0.5)",
+                background: "rgba(255,40,40,0.15)",
+                color: "#ff7070",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: "pointer",
+                boxShadow: "0 0 14px rgba(255,80,80,0.35)",
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* bottom line */}
       <div
         style={{
@@ -180,7 +295,9 @@ export default function Footer() {
           gap: 8,
         }}
       >
-        <span>© {new Date().getFullYear()} MeetOutdoors. All rights reserved.</span>
+        <span>
+          © {new Date().getFullYear()} MeetOutdoors. All rights reserved.
+        </span>
         <span style={{ opacity: 0.85 }}>
           Made for explorers. Not for endless scrolling.
         </span>
