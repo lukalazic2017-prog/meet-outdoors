@@ -51,7 +51,7 @@ export default function Timeline() {
       if (userIds.length > 0) {
         const { data: profilesData, error: profilesErr } = await supabase
           .from("profiles")
-          .select("id, full_name, display_name, avatar_url")
+          .select("id, full_name, avatar_url")
           .in("id", userIds);
 
         if (!profilesErr && profilesData) {
@@ -502,7 +502,7 @@ export default function Timeline() {
               profile.avatar_url || "https://i.pravatar.cc/150?img=3";
             const name =
               profile.full_name ||
-              profile.display_name ||
+              profile.full_name ||
               "Outdoor explorer";
 
             const isVideo = post.type === "video";

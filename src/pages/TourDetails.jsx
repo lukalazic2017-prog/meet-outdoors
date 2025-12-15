@@ -1,4 +1,3 @@
-// src/pages/TourDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
@@ -12,100 +11,64 @@ export default function TourDetails() {
   const [tour, setTour] = useState(null);
   const [user, setUser] = useState(null);
   const [isJoined, setIsJoined] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentImage, setCurrentImage] = useState(0);
+  const [participantsList, setParticipantsList] = useState([]);
+  const [countdown, setCountdown] = useState("");
 
-  // realtime list
-  const [participants, setParticipants] = useState([]);
-  const [interested, setInterested] = useState([]);
+  // ================= HELPERS =================
+  function formatDate(date) {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
 
-  // ========= INITIAL LOAD =========
+  function getCountdown(deadline) {
+    if (!deadline) return "";
+
+    const now = new Date();
+    const end = new Date(deadline);
+    const diff = end - now;
+
+    if (diff <= 0) return "Applications closed";
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  }
+
+  // ================= COUNTDOWN =================
+  useEffect(() => {
+    if (!tour?.application_deadline) return;
+
+    setCountdown(getCountdown(tour.application_deadline));
+
+    const interval = setInterval(() => {
+      setCountdown(getCountdown(tour.application_deadline));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [tour?.application_deadline]);
+
+  // ================= LOAD =================
   useEffect(() => {
     loadTour();
+    // eslint-disable-next-line
   }, [id]);
 
-  async function loadTour() {
-    setLoading(true);
-
-    // USER
-    const { data: auth } = await supabase.auth.getUser();
-    const currentUser = auth?.user || null;
-    setUser(currentUser);
-
-    // TOUR
-    const { data, error } = await supabase
-      .from("tours")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error || !data) {
-      console.error(error);
-      setLoading(false);
-      return;
-    }
-
-    setTour(data);
-
-    // participants + interested + joined flag
-    await Promise.all([
-      loadParticipants(data, currentUser),
-      loadInterested(),
-    ]);
-
-    setLoading(false);
-  }
-
-  // ========= LOAD PARTICIPANTS (WITH PROFILES) =========
-  async function loadParticipants(currentTour = null, currentUser = null) {
-    const { data, error } = await supabase
-      .from("tour_registrations")
-      .select("user_id, profiles ( id, avatar_url, display_name )")
-      .eq("tour_id", id);
-
-    if (error) {
-      console.error("loadParticipants error:", error);
-      return;
-    }
-
-    const regs = data || [];
-    setParticipants(regs);
-
-    const u = currentUser || user;
-    if (u) {
-      const joined = regs.some((r) => r.user_id === u.id);
-      setIsJoined(joined);
-    }
-
-    // osveži lokalni tour.participants da bude tačan broj
-    const baseTour = currentTour || tour;
-    if (baseTour) {
-      setTour({ ...baseTour, participants: regs.length });
-    }
-  }
-
-  // ========= LOAD INTERESTED (WITH PROFILES) =========
-  async function loadInterested() {
-    const { data, error } = await supabase
-      .from("tour_interested")
-      .select("user_id, profiles ( id, avatar_url, display_name )")
-      .eq("tour_id", id);
-
-    if (error) {
-      console.error("loadInterested error:", error);
-      return;
-    }
-
-    setInterested(data || []);
-  }
-
-  // ========= REALTIME LISTENER (JOIN / LEAVE / INTERESTED) =========
   useEffect(() => {
     if (!id) return;
 
     const channel = supabase
-      .channel("tour_live_" + id)
-      // registracije
+      .channel(`tour-${id}-realtime`)
       .on(
         "postgres_changes",
         {
@@ -114,191 +77,154 @@ export default function TourDetails() {
           table: "tour_registrations",
           filter: `tour_id=eq.${id}`,
         },
-        () => {
-          // refresuj samo učesnike
-          loadParticipants();
-        }
-      )
-      // interested
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "tour_interested",
-          filter: `tour_id=eq.${id}`,
-        },
-        () => {
-          loadInterested();
+        async () => {
+          const { data: people } = await supabase
+            .from("tour_registrations")
+            .select(
+              `user_id, profiles:profiles ( full_name, avatar_url )`
+            )
+            .eq("tour_id", id);
+
+          setParticipantsList(people || []);
+
+          const { count } = await supabase
+            .from("tour_registrations")
+            .select("*", { count: "exact", head: true })
+            .eq("tour_id", id);
+
+          setTour((prev) =>
+            prev ? { ...prev, participants: count ?? 0 } : prev
+          );
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => supabase.removeChannel(channel);
   }, [id]);
 
-  // ========= JOIN TOUR =========
+  async function loadTour() {
+    setLoading(true);
+
+    const { data: auth } = await supabase.auth.getUser();
+    const currentUser = auth?.user || null;
+    setUser(currentUser);
+
+    const { data } = await supabase
+      .from("tours")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (data) {
+      const { count } = await supabase
+        .from("tour_registrations")
+        .select("*", { count: "exact", head: true })
+        .eq("tour_id", id);
+
+      setTour({ ...data, participants: count ?? 0 });
+
+      const { data: people } = await supabase
+        .from("tour_registrations")
+        .select(
+          `user_id, profiles:profiles ( full_name, avatar_url )`
+        )
+        .eq("tour_id", id);
+
+      setParticipantsList(people || []);
+
+      if (currentUser) {
+        const { data: reg } = await supabase
+          .from("tour_registrations")
+          .select("*")
+          .eq("tour_id", id)
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+
+        setIsJoined(!!reg);
+
+        const { data: saved } = await supabase
+          .from("saved_tours")
+          .select("id")
+          .eq("tour_id", id)
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+
+        setIsSaved(!!saved);
+      }
+    }
+
+    setLoading(false);
+  }
+
+  // ================= ACTIONS =================
   async function joinTour() {
     if (!user) return navigate("/login");
 
-    const maxPeople = tour.max_people || 0;
-    const currentCount = participants.length;
-
-    if (maxPeople && currentCount >= maxPeople) {
-      return alert("This tour is full!");
+    if (
+      tour.application_deadline &&
+      new Date() > new Date(tour.application_deadline)
+    ) {
+      return alert("Applications are closed.");
     }
 
-    const { error } = await supabase.from("tour_registrations").insert([
-      {
-        tour_id: id,
-        user_id: user.id,
-      },
+    await supabase.from("tour_registrations").insert([
+      { tour_id: id, user_id: user.id },
     ]);
 
-    if (error) {
-      console.error(error);
-      return alert("Could not join.");
-    }
-
-    // notifikacija kreatoru
-    await supabase.from("notifications").insert({
-      user_id: tour.creator_id,
-      message: `Someone joined your tour: ${tour.title}`,
-      link: `/tour/${id}`,
-      read: false,
-    });
-
-    // update participants u tours tabeli (koristi realan broj)
-    const newCount = currentCount + 1;
-    await supabase
-      .from("tours")
-      .update({ participants: newCount })
-      .eq("id", id);
-
-    alert("Joined tour!");
-
-    // instant refresh fronta (iako postoji realtime)
-    loadParticipants();
+    loadTour();
   }
 
-  // ========= LEAVE TOUR =========
   async function leaveTour() {
     if (!user) return navigate("/login");
 
-    const { error } = await supabase
+    await supabase
       .from("tour_registrations")
       .delete()
       .eq("tour_id", id)
       .eq("user_id", user.id);
 
-    if (error) {
-      console.error(error);
-      return alert("Could not leave the tour.");
-    }
-
-    const currentCount = participants.length;
-    const newCount = Math.max(currentCount - 1, 0);
-
-    await supabase
-      .from("tours")
-      .update({ participants: newCount })
-      .eq("id", id);
-
-    alert("You left the tour.");
-
-    loadParticipants();
+    setIsJoined(false);
+    loadTour();
   }
 
-  // ========= MARK INTERESTED =========
-  async function markInterested() {
+  async function toggleSave() {
     if (!user) return navigate("/login");
 
-    // već postoji u interested listi
-    const already = interested.some((i) => i.user_id === user.id);
-    if (already) {
-      alert("You are already marked as interested for this tour.");
-      return;
+    if (isSaved) {
+      await supabase
+        .from("saved_tours")
+        .delete()
+        .eq("tour_id", id)
+        .eq("user_id", user.id);
+      setIsSaved(false);
+    } else {
+      await supabase.from("saved_tours").insert([
+        { tour_id: id, user_id: user.id },
+      ]);
+      setIsSaved(true);
     }
-
-    const { error } = await supabase
-      .from("tour_interested")
-      .insert([{ tour_id: id, user_id: user.id }]);
-
-    if (error) {
-      console.error(error);
-      return alert("Could not mark as interested.");
-    }
-
-    await supabase.from("notifications").insert({
-      user_id: tour.creator_id,
-      message: `Someone is interested in your tour: ${tour.title}`,
-      link: `/tour/${id}`,
-      read: false,
-    });
-
-    alert("You will receive notifications!");
-
-    loadInterested();
   }
 
-  // ========= DELETE TOUR =========
   async function deleteTour() {
     if (!window.confirm("Delete this tour forever?")) return;
 
-    const { data: regs } = await supabase
-      .from("tour_registrations")
-      .select("user_id")
-      .eq("tour_id", id);
+    await supabase.from("tour_registrations").delete().eq("tour_id", id);
+    await supabase.from("tours").delete().eq("id", id);
 
-    if (regs && regs.length > 0) {
-      for (let p of regs) {
-        await supabase.from("notifications").insert({
-          user_id: p.user_id,
-          message: `The tour ${tour.title} has been cancelled.`,
-          link: "/tours",
-          read: false,
-        });
-      }
-    }
-
-    const { error } = await supabase.from("tours").delete().eq("id", id);
-
-    if (!error) {
-      alert("Tour deleted!");
-      navigate("/tours");
-    } else {
-      console.error(error);
-      alert("Error deleting tour.");
-    }
+    navigate("/tours");
   }
 
-  // ========= LOADING =========
+  // ================= UI =================
   if (loading || !tour) {
-    return (
-      <div
-        style={{
-          minHeight: "70vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "white",
-        }}
-      >
-        Loading tour...
-      </div>
-    );
+    return <div style={{ color: "white" }}>Loading tour...</div>;
   }
 
   const isCreator = user && user.id === tour.creator_id;
-  const currentCount = participants.length;
   const isFull =
-    tour.max_people && currentCount >= (tour.max_people || Number.MAX_SAFE_INTEGER);
+    (tour.participants || 0) >= (tour.max_people || Number.MAX_SAFE_INTEGER);
   const gallery = Array.isArray(tour.image_urls) ? tour.image_urls : [];
 
-  // ===================== STILOVI ========================
+  // ===== STILOVI =====
   const pageWrapper = {
     minHeight: "100vh",
     padding: "24px 16px 50px",
@@ -426,15 +352,9 @@ export default function TourDetails() {
   return (
     <div style={pageWrapper}>
       <div style={container}>
-        {/* HERO */}
+        {/* HERO / COVER */}
         <div style={headerCard}>
-          <div
-            style={{
-              position: "relative",
-              height: 260,
-              overflow: "hidden",
-            }}
-          >
+          <div style={{ position: "relative", height: 260, overflow: "hidden" }}>
             <img
               src={
                 tour.cover_url ||
@@ -451,14 +371,8 @@ export default function TourDetails() {
             />
             <div style={coverOverlay} />
 
-            <div
-              style={{
-                position: "absolute",
-                left: 18,
-                right: 18,
-                bottom: 18,
-              }}
-            >
+            {/* tekst na coveru */}
+            <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
               <div
                 style={{
                   display: "inline-flex",
@@ -490,13 +404,7 @@ export default function TourDetails() {
                 {tour.title}
               </h1>
 
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "rgba(230,255,240,0.78)",
-                  maxWidth: 520,
-                }}
-              >
+              <div style={{ fontSize: 13, color: "rgba(230,255,240,0.78)", maxWidth: 520 }}>
                 {tour.location_name && (
                   <>
                     📍 {tour.location_name}
@@ -510,33 +418,41 @@ export default function TourDetails() {
 
         {/* GLAVNI LAYOUT */}
         <div style={layoutResponsive}>
-          {/* LEFT */}
+          {/* LEFT: opis + slike + mapa */}
           <div style={card}>
             {/* OVERVIEW */}
             <div style={{ marginBottom: 14 }}>
               <div style={sectionTitle}>Overview</div>
               <div style={pillRow}>
-                <div style={pill}>
-                  🗓 {tour.date_start} → {tour.date_end}
-                </div>
+                <div style={pill}>🗓 {tour.date_start} → {tour.date_end}</div>
                 <div style={pill}>
                   💶 {tour.price ? `${tour.price} € per person` : "Free tour"}
                 </div>
                 <div style={pill}>
-                  👥 {currentCount}/{tour.max_people || "∞"} participants
-                  {isFull && (
-                    <span style={{ color: "#ff8080", marginLeft: 6 }}>
-                      (Full)
-                    </span>
-                  )}
+                  👥 {tour.participants}/{tour.max_people} participants
+                  {isFull && <span style={{ color: "#ff8080", marginLeft: 6 }}>(Full)</span>}
                 </div>
-                {tour.is_legal_entity && (
-                  <div style={pill}>🏢 Organized by a legal entity</div>
-                )}
+                {tour.is_legal_entity && <div style={pill}>🏢 Organized by a legal entity</div>}
               </div>
             </div>
+            {tour.application_start && (
+  <div style={pill}>
+    📝 Applications from {formatDate(tour.application_start)}
+  </div>
+)}
 
-            {/* DESCRIPTION */}
+{tour.application_deadline && (
+  <div style={pill}>
+    ⏳ Applications until {formatDate(tour.application_deadline)}
+    {countdown && (
+      <span style={{ marginLeft: 6, color: "#00ffb0", fontWeight: 600 }}>
+        ({countdown})
+      </span>
+    )}
+  </div>
+)}
+
+            {/* OPIS */}
             <div style={{ marginBottom: 18 }}>
               <div style={sectionTitle}>Description</div>
               <p
@@ -550,8 +466,9 @@ export default function TourDetails() {
                 {tour.description || "No description provided."}
               </p>
             </div>
+            
 
-            {/* GALLERY */}
+            {/* GALERIJA */}
             {gallery.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={sectionTitle}>Gallery</div>
@@ -567,11 +484,7 @@ export default function TourDetails() {
                   <img
                     src={gallery[currentImage]}
                     alt="Tour"
-                    style={{
-                      width: "100%",
-                      height: 230,
-                      objectFit: "cover",
-                    }}
+                    style={{ width: "100%", height: 230, objectFit: "cover" }}
                   />
                 </div>
 
@@ -608,14 +521,7 @@ export default function TourDetails() {
                   </button>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 6,
-                    overflowX: "auto",
-                    paddingBottom: 4,
-                  }}
-                >
+                <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
                   {gallery.map((img, idx) => (
                     <div
                       key={idx}
@@ -635,11 +541,7 @@ export default function TourDetails() {
                       <img
                         src={img}
                         alt={`thumb-${idx}`}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
                       />
                     </div>
                   ))}
@@ -647,18 +549,12 @@ export default function TourDetails() {
               </div>
             )}
 
-            {/* MAP */}
+            {/* MAPA */}
             <div>
               <div style={sectionTitle}>Location on map</div>
               {tour.latitude && tour.longitude ? (
                 <>
-                  <div
-                    style={{
-                      marginTop: 15,
-                      borderRadius: 12,
-                      overflow: "hidden",
-                    }}
-                  >
+                  <div style={{ marginTop: 15, borderRadius: 12, overflow: "hidden" }}>
                     <MapContainer
                       center={[tour.latitude, tour.longitude]}
                       zoom={12}
@@ -669,13 +565,7 @@ export default function TourDetails() {
                       <Marker position={[tour.latitude, tour.longitude]} />
                     </MapContainer>
                   </div>
-                  <div
-                    style={{
-                      marginTop: 8,
-                      fontSize: 12,
-                      color: "rgba(230,255,240,0.75)",
-                    }}
-                  >
+                  <div style={{ marginTop: 8, fontSize: 12, color: "rgba(230,255,240,0.75)" }}>
                     📌 {tour.latitude.toFixed(4)}, {tour.longitude.toFixed(4)}
                   </div>
                 </>
@@ -687,63 +577,50 @@ export default function TourDetails() {
             </div>
           </div>
 
-          {/* RIGHT */}
+          {/* RIGHT: akcije + rezime */}
           <div style={card}>
             <div style={{ marginBottom: 16 }}>
               <div style={sectionTitle}>Your options</div>
 
               {!isCreator && (
                 <>
-                  {!isJoined && (
-                    <button
-                      style={{
-                        ...primaryBtn,
-                        opacity: isFull ? 0.5 : 1,
-                        cursor: isFull ? "default" : "pointer",
-                      }}
-                      disabled={isFull || loading}
-                      onClick={joinTour}
-                    >
-                      {isFull ? "Tour is full" : "Join tour"}
-                    </button>
-                  )}
+                 {!isJoined ? (
+  <button
+    style={{
+      ...primaryBtn,
+      opacity: isFull ? 0.5 : 1,
+      cursor: isFull ? "default" : "pointer",
+    }}
+    disabled={isFull || loading}
+    onClick={joinTour}
+  >
+    {isFull ? "Tour is full" : "Join tour"}
+  </button>
+) : (
+  <button
+    style={secondaryBtn}
+    onClick={leaveTour}
+    disabled={loading}
+  >
+    Leave tour
+  </button>
+)}
 
-                  {/* INTERESTED */}
-                  <button
-                    style={secondaryBtn}
-                    onClick={markInterested}
-                    disabled={loading}
-                  >
-                    I&apos;m interested
+                  <button style={secondaryBtn} onClick={toggleSave} disabled={loading}>
+                    {isSaved ? "♥ Saved" : "♡ Save tour"}
                   </button>
 
-                  {/* JOINED → CHAT + LEAVE */}
                   {isJoined && (
-                    <>
-                      <button
-                        style={secondaryBtn}
-                        onClick={() => navigate(`/chat/${tour.id}`)}
-                      >
-                        Open group chat
-                      </button>
-
-                      <button
-                        style={{
-                          ...secondaryBtn,
-                          background: "rgba(255,60,60,0.25)",
-                          border: "1px solid rgba(255,60,60,0.5)",
-                          color: "white",
-                        }}
-                        onClick={leaveTour}
-                      >
-                        Leave tour
-                      </button>
-                    </>
+                    <button
+                      style={secondaryBtn}
+                      onClick={() => navigate(`/chat/${tour.id}`)}
+                    >
+                      Open group chat
+                    </button>
                   )}
                 </>
               )}
 
-              {/* CREATOR OPTIONS */}
               {isCreator && (
                 <>
                   <button
@@ -765,139 +642,87 @@ export default function TourDetails() {
               )}
             </div>
 
-            {/* SUMMARY + PARTICIPANTS + INTERESTED */}
+            {/* QUICK SUMMARY */}
             <div>
               <div style={sectionTitle}>Quick summary</div>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  fontSize: 13,
-                }}
-              >
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <div style={pill}>🏷️ {tour.title || "Tour title"}</div>
-                <div style={pill}>
-                  🧭 {tour.activity || "Activity not set"}
-                </div>
+                <div style={pill}>🧭 {tour.activity || "Activity not set"}</div>
                 <div style={pill}>
                   📍{" "}
                   {tour.location_name
-                    ? `${tour.location_name}${
-                        tour.country ? ", " + tour.country : ""
-                      }`
+                    ? `${tour.location_name}${tour.country ? ", " + tour.country : ""}`
                     : "Location not set"}
                 </div>
-                <div style={pill}>
-                  👥 {currentCount}/{tour.max_people || "∞"} participants
-                </div>
-                <div style={pill}>
-                  💶 {tour.price ? `${tour.price} €` : "Free"}
-                </div>
-                <div style={pill}>
-                  🕒 {tour.date_start} → {tour.date_end}
-                </div>
+                <div style={pill}>👥 {tour.participants}/{tour.max_people} participants</div>
+                <div style={pill}>💶 {tour.price ? `${tour.price} €` : "Free"}</div>
+                <div style={pill}>🕒 {tour.date_start} → {tour.date_end}</div>
               </div>
 
-              {/* PARTICIPANTS LIST */}
-              <div style={{ marginTop: 22 }}>
-                <div style={sectionTitle}>Participants</div>
-
-                {participants.length === 0 && (
-                  <div style={{ opacity: 0.6, fontSize: 13 }}>
-                    No participants yet.
-                  </div>
-                )}
-
-                {participants.map((p, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      marginBottom: 10,
-                      background: "rgba(255,255,255,0.05)",
-                      padding: "8px 12px",
-                      borderRadius: 12,
-                    }}
-                  >
-                    <img
-                      src={
-                        p.profiles?.avatar_url ||
-                        "https://i.pravatar.cc/150?img=5"
-                      }
-                      style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                      }}
-                      alt="avatar"
-                    />
-                    <div style={{ fontSize: 14 }}>
-                      {p.profiles?.display_name || "User"}
-                    </div>
-                  </div>
-                ))}
+              <div style={{ marginTop: 14, fontSize: 11, opacity: 0.7, lineHeight: 1.5 }}>
+                Tip: use the group chat to coordinate meeting points, gear and timing so everyone arrives relaxed and ready.
               </div>
+               {/* PARTICIPANTS */}
+<div style={{ marginTop: 14 }}>
+  <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 6 }}>
+    Participants
+  </div>
 
-              {/* INTERESTED LIST */}
-              <div style={{ marginTop: 18 }}>
-                <div style={sectionTitle}>
-                  Interested ({interested.length})
-                </div>
-
-                {interested.length === 0 && (
-                  <div style={{ opacity: 0.6, fontSize: 13 }}>
-                    No one is marked as interested yet.
-                  </div>
-                )}
-
-                {interested.map((i, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      marginBottom: 8,
-                      padding: "6px 10px",
-                      borderRadius: 10,
-                      background: "rgba(255,255,255,0.03)",
-                    }}
-                  >
-                    <img
-                      src={
-                        i.profiles?.avatar_url ||
-                        "https://i.pravatar.cc/150?img=6"
-                      }
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                      }}
-                      alt="avatar"
-                    />
-                    <div style={{ fontSize: 13 }}>
-                      {i.profiles?.display_name || "User"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div
-                style={{
-                  marginTop: 14,
-                  fontSize: 11,
-                  opacity: 0.7,
-                  lineHeight: 1.5,
-                }}
-              >
-                Tip: use the group chat to coordinate meeting points, gear and
-                timing so everyone arrives relaxed and ready.
-              </div>
+  {participantsList.length === 0 ? (
+    <div style={{ fontSize: 13, opacity: 0.6 }}>
+      No participants yet
+    </div>
+  ) : (
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      {participantsList.map((p, idx) => (
+        <div
+          key={idx}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "rgba(255,255,255,0.06)",
+            padding: "6px 10px",
+            borderRadius: 999,
+          }}
+        >
+          {p.profiles?.avatar_url ? (
+            <img
+              src={p.profiles.avatar_url}
+              alt=""
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "#00ffb0",
+                color: "#022",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+                fontSize: 12,
+              }}
+            >
+              {p.profiles?.full_name?.[0] || "U"}
+            </div>
+          )}
+          <span style={{ fontSize: 13 }}>
+            {p.profiles?.full_name || "User"}
+          </span>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
             </div>
           </div>
         </div>

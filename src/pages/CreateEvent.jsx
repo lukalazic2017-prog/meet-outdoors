@@ -1,5 +1,5 @@
 // src/pages/CreateEvent.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -19,6 +19,20 @@ function LocationPicker({ lat, lng, onChange }) {
 
 export default function CreateEvent() {
   const navigate = useNavigate();
+
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) setUser(user);
+    };
+
+    loadUser();
+  }, []);
 
   const [form, setForm] = useState({
     title: "",
@@ -91,78 +105,58 @@ export default function CreateEvent() {
   const handleChange = (field) => (e) => {
     const value =
       e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleCategoryClick = (cat) => {
-    setForm((prev) => ({
-      ...prev,
-      category: cat,
-    }));
+    setForm((prev) => ({ ...prev, category: cat }));
   };
 
   const handleLocationChange = ({ latitude, longitude }) => {
-    setForm((prev) => ({
-      ...prev,
-      latitude,
-      longitude,
-    }));
+    setForm((prev) => ({ ...prev, latitude, longitude }));
   };
 
   const buildDateTime = (date, time) => {
-    if (!date && !time) return null;
     if (!date) return null;
     const safeTime = time || "00:00";
-    const iso = `${date}T${safeTime}:00`;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return null;
-    return d.toISOString();
+    const d = new Date(`${date}T${safeTime}:00`);
+    return isNaN(d.getTime()) ? null : d.toISOString();
   };
 
   const validate = () => {
     if (!form.title.trim()) return "Title is required.";
-    if (!form.category.trim()) return "Please select a category.";
+    if (!form.category) return "Category is required.";
     if (!form.startDate) return "Start date is required.";
     if (!form.country) return "Country is required.";
+    if (!user) return "You must be logged in.";
     return "";
   };
+
   const handleImageUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
 
-  setFileUploading(true);
+    setFileUploading(true);
 
-  const uniqueName = `event_${Date.now()}_${file.name}`;
+    const fileName = `event_${Date.now()}_${file.name}`;
 
-  const { data, error } = await supabase.storage
-    .from("event-covers")
-    .upload(uniqueName, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
+    const { error } = await supabase.storage
+      .from("event-covers")
+      .upload(fileName, file);
 
-  if (error) {
-    console.log("Upload error:", error);
-    setErrorMsg("Image upload failed.");
+    if (error) {
+      setErrorMsg("Image upload failed.");
+      setFileUploading(false);
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("event-covers")
+      .getPublicUrl(fileName);
+
+    setForm((prev) => ({ ...prev, coverUrl: data.publicUrl }));
     setFileUploading(false);
-    return;
-  }
-
-  // GET PUBLIC URL
-  const { data: urlData } = supabase.storage
-    .from("event-covers")
-    .getPublicUrl(uniqueName);
-
-  setForm((prev) => ({
-    ...prev,
-    coverUrl: urlData.publicUrl,
-  }));
-
-  setFileUploading(false);
-};
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -177,71 +171,50 @@ export default function CreateEvent() {
 
     setSaving(true);
 
-    const start_time = buildDateTime(form.startDate, form.startTime);
-    const end_time = buildDateTime(form.endDate, form.endTime);
-
-    const is_free = !!form.isFree;
-    const price_from = is_free
-      ? 0
-      : form.priceFrom
-      ? Number(form.priceFrom)
-      : null;
-
     const payload = {
       title: form.title.trim(),
-      subtitle: form.subtitle.trim() || null,
+      subtitle: form.subtitle || null,
       category: form.category,
-      description: form.description.trim() || null,
-      start_time,
-      end_time,
-      location_name: form.locationName.trim() || null,
-      city: form.city.trim() || null,
-      country: form.country || null,
+      description: form.description || null,
+      start_time: buildDateTime(form.startDate, form.startTime),
+      end_time: buildDateTime(form.endDate, form.endTime),
+      location_name: form.locationName || null,
+      city: form.city || null,
+      country: form.country,
       latitude: form.latitude,
       longitude: form.longitude,
-      is_free,
-      price_from,
-      organizer_name: form.organizerName.trim() || null,
-      website_url: form.websiteUrl.trim() || null,
-      cover_url: form.coverUrl.trim() || null,
+      is_free: form.isFree,
+      price_from: form.isFree ? 0 : Number(form.priceFrom) || null,
+      organizer_name: form.organizerName || null,
+      website_url: form.websiteUrl || null,
+      cover_url: form.coverUrl || null,
+      creator_id: user.id,
     };
 
-    try {
-      const { data, error } = await supabase
-        .from("events")
-        .insert([payload])
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from("events")
+      .insert([payload])
+      .select()
+      .single();
 
-      if (error) {
-        console.log("Create event error:", error);
-        setErrorMsg("Could not create event. Please try again.");
-      } else {
-        setSuccessMsg("Event created successfully.");
-        if (data?.id) {
-          navigate(`/event/${data.id}`);
-        } else {
-          navigate("/events");
-        }
-      }
-    } catch (err) {
-      console.log("Create event exception:", err);
-      setErrorMsg("Unexpected error. Please try again.");
-    } finally {
-      setSaving(false);
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      setSuccessMsg("Event created successfully.");
+      navigate(`/event/${data.id}`);
     }
-  };
 
-  const pricePreview = form.isFree
-    ? "Free event"
-    : form.priceFrom
-    ? `From ${form.priceFrom} €`
-    : "Price on request";
+    setSaving(false);
+  };
 
   const defaultCover =
     "https://images.pexels.com/photos/3324422/pexels-photo-3324422.jpeg";
   const cover = form.coverUrl || defaultCover;
-
+  const pricePreview = form.isFree
+  ? "Free event"
+  : form.priceFrom
+  ? `From ${form.priceFrom} €`
+  : "Price on request";
   const pageStyles = {
     page: {
       minHeight: "100vh",

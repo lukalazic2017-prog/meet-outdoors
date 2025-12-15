@@ -751,17 +751,12 @@ export default function Tours() {
             filteredTours.map((tour) => {
               const status = getStatus(tour);
 
-              const max =
-                tour.max_participants ??
-                tour.capacity ??
-                tour.max_people ??
-                null;
-              const attendees =
-                tour.attendees?.count ?? 0;
+              const attendees = tour.participants ?? 0;
+const max = tour.max_people ?? null;
+
+const spotsText = "Join the experience";
                 
-              const spotsText = max
-                ? `${attendees}/${max} spots booked`
-                : "Flexible capacity";
+
 
               return (
                 <div

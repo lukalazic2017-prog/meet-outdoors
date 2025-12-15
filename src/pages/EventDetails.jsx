@@ -1,4 +1,4 @@
-// src/pages/EventDetails.jsx
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
@@ -19,148 +19,113 @@ export default function EventDetails() {
   const [user, setUser] = useState(null);
 
   const [attendees, setAttendees] = useState([]);
-  const [attendeesLoading, setAttendeesLoading] = useState(true);
   const [attendeesCount, setAttendeesCount] = useState(0);
   const [hasJoined, setHasJoined] = useState(false);
 
   const [joining, setJoining] = useState(false);
   const [leaving, setLeaving] = useState(false);
-
   const [errorMsg, setErrorMsg] = useState("");
 
   // ===== HELPERS =====
-  const formatDateTime = (isoString) => {
-    if (!isoString) return null;
-    const d = new Date(isoString);
-    if (Number.isNaN(d.getTime())) return null;
-
-    const date = d.toLocaleDateString(undefined, {
+  const formatDateTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return `${d.toLocaleDateString(undefined, {
       weekday: "short",
       month: "short",
       day: "numeric",
       year: "numeric",
-    });
-    const time = d.toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    return  `${date} · ${time};`
+    })} · ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   };
 
-  const buildDateLine = (ev) => {
-    if (!ev) return "";
-    const start = formatDateTime(ev.start_time);
-    const end = formatDateTime(ev.end_time);
-
-    if (start && end) {
-      return `${start}  —  ${end};`
-    }
-    return start || end || "Date will be announced";
-  };
-
-  const coverUrl = event?.cover_url || defaultCover;
-  const dateLine = buildDateLine(event);
-  const locationLine = event
-    ? event.location_name || event.city || event.country || "Location TBA"
+  const dateLine = event
+    ? `${formatDateTime(event.start_time)}${
+        event.end_time ? " — " + formatDateTime(event.end_time) : ""
+      }`
     : "";
 
-  // ===== LOAD ATTENDEES (LIST + HAS JOINED) =====
-  async function loadAttendees(eventId, currentUser) {
-    setAttendeesLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("event_attendees")
-        .select(
-          `
-          id,
-          user_id,
-          created_at,
-          profiles (
-            id,
-            full_name,
-            avatar_url,
-            display_name
-          )
+  const locationLine =
+    event?.location_name || event?.city || event?.country || "Location TBA";
+
+  const priceLine = event
+    ? event.is_free
+      ? "Free to join"
+      : event.price_from
+      ? `From ${event.price_from} €`
+      : "Price on request"
+    : "";
+
+  const coverUrl = event?.cover_url || defaultCover;
+
+  const initialsFromName = (name) => {
+    const safe = (name || "").trim();
+    if (!safe) return "👤";
+    const parts = safe.split(" ").filter(Boolean);
+    const a = parts[0]?.[0]?.toUpperCase() || "";
+    const b = parts[1]?.[0]?.toUpperCase() || "";
+    return (a + b) || "👤";
+  };
+
+  // ===== LOAD ATTENDEES =====
+  const loadAttendees = async (eventId, currentUser) => {
+    const { data } = await supabase
+      .from("event_attendees")
+      .select(
         `
+        id,
+        user_id,
+        profiles (
+          id,
+          full_name,
+          avatar_url
         )
-        .eq("event_id", eventId)
-        .order("created_at", { ascending: true });
+      `
+      )
+      .eq("event_id", eventId)
+      .order("id");
 
-      if (error) {
-        console.log("Load attendees error:", error);
-        return;
-      }
+    setAttendees(data || []);
+    setAttendeesCount(data?.length || 0);
 
-      setAttendees(data || []);
-      setAttendeesCount(data ? data.length : 0);
-
-      if (currentUser) {
-        const joined = (data || []).some(
-          (row) => row.user_id === currentUser.id
-        );
-        setHasJoined(joined);
-      } else {
-        setHasJoined(false);
-      }
-    } catch (err) {
-      console.log("Load attendees exception:", err);
-    } finally {
-      setAttendeesLoading(false);
+    if (currentUser) {
+      setHasJoined((data || []).some((row) => row.user_id === currentUser.id));
+    } else {
+      setHasJoined(false);
     }
-  }
+  };
 
-  // ===== LOAD EVENT + USER =====
+  // ===== LOAD EVENT =====
   useEffect(() => {
     const load = async () => {
-      if (!id) return;
       setLoading(true);
       setErrorMsg("");
 
-      try {
-        // 1) user
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user ?? null);
 
-        if (userError) {
-          console.log("getUser error:", userError);
-        }
-        setUser(user ?? null);
+      const { data: ev, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-        // 2) event
-        const { data: eventData, error: eventError } = await supabase
-          .from("events")
-          .select("*")
-          .eq("id", id)
-          .single();
-
-        if (eventError) {
-          console.log("Event load error:", eventError);
-          setEvent(null);
-          setErrorMsg("Event not found.");
-          setLoading(false);
-          return;
-        }
-
-        setEvent(eventData);
-
-        // 3) attendees
-        await loadAttendees(eventData.id, user ?? null);
-      } catch (err) {
-        console.log("EventDetails load exception:", err);
-        setErrorMsg("Something went wrong while loading this event.");
-      } finally {
+      if (error) {
         setLoading(false);
+        return;
       }
+
+      setEvent(ev);
+      await loadAttendees(ev.id, user);
+      setLoading(false);
     };
 
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ===== JOIN EVENT =====
-  const handleJoinEvent = async () => {
+  // ===== JOIN =====
+  const handleJoin = async () => {
     if (!event) return;
 
     if (!user) {
@@ -168,115 +133,126 @@ export default function EventDetails() {
       return;
     }
 
-    if (hasJoined || joining) {
-      return;
-    }
+    if (joining || hasJoined) return;
 
     setJoining(true);
     setErrorMsg("");
 
-    try {
-      const { error } = await supabase
-        .from("event_attendees")
-        .upsert(
-          [
-            {
-              event_id: event.id,
-              user_id: user.id,
-            },
-          ],
-          {
-            onConflict: "event_id,user_id",
-            ignoreDuplicates: true,
-          }
-        );
+    await supabase.from("event_attendees").upsert(
+      [{ event_id: event.id, user_id: user.id }],
+      { onConflict: "event_id,user_id" }
+    );
 
-      if (error) {
-        console.log("Join event error:", error);
-        setErrorMsg("Could not join this event. Please try again.");
-      } else {
-        await loadAttendees(event.id, user);
-      }
-    } catch (err) {
-      console.log("Join event exception:", err);
-      setErrorMsg("Unexpected error while joining. Please try again.");
-    } finally {
-      setJoining(false);
-    }
+    await loadAttendees(event.id, user);
+    setJoining(false);
   };
 
-  // ===== LEAVE EVENT =====
-  const handleLeaveEvent = async () => {
-    if (!event || !user || leaving) return;
+  // ===== LEAVE =====
+  const handleLeave = async () => {
+    if (!event) return;
+
+    if (!user) {
+      setErrorMsg("Please sign in to leave this event.");
+      return;
+    }
+
+    if (leaving) return;
 
     setLeaving(true);
     setErrorMsg("");
 
-    try {
-      const { error } = await supabase
-        .from("event_attendees")
-        .delete()
-        .eq("event_id", event.id)
-        .eq("user_id", user.id);
+    await supabase
+      .from("event_attendees")
+      .delete()
+      .eq("event_id", event.id)
+      .eq("user_id", user.id);
 
-      if (error) {
-        console.log("Leave event error:", error);
-        setErrorMsg("Could not leave this event. Please try again.");
-      } else {
-        await loadAttendees(event.id, user);
-      }
-    } catch (err) {
-      console.log("Leave event exception:", err);
-      setErrorMsg("Unexpected error while leaving. Please try again.");
-    } finally {
-      setLeaving(false);
+    await loadAttendees(event.id, user);
+    setLeaving(false);
+  };
+
+  // ===== DELETE EVENT =====
+  const handleDeleteEvent = async () => {
+    if (!event) return;
+
+    const ok = window.confirm("Delete this event permanently?");
+    if (!ok) return;
+
+    const { error } = await supabase.from("events").delete().eq("id", event.id);
+
+    if (!error) {
+      navigate("/events");
     }
   };
 
-  // ===== STYLES =====
+  const isOwner = user && event && user.id === event.creator_id;
+
+  // ===== STYLES (Outdoor Luxury / Patagonia vibe) =====
   const styles = {
     page: {
       minHeight: "100vh",
-      padding: "26px 16px 40px",
       background:
-        "radial-gradient(circle at top, #010d0e 0%, #020308 45%, #000000 100%)",
+        "radial-gradient(circle at top, rgba(245,242,235,1) 0%, rgba(241,236,227,1) 30%, rgba(236,231,221,1) 100%)",
+      color: "#1a1d17",
+      padding: "22px 16px 40px",
+      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
       display: "flex",
       justifyContent: "center",
-      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      color: "#f6fbf8",
     },
     container: {
       width: "100%",
       maxWidth: 1180,
     },
-    backRow: {
+
+    topBar: {
       display: "flex",
       alignItems: "center",
-      gap: 8,
-      marginBottom: 10,
-      fontSize: 12,
-      color: "rgba(210,235,225,0.85)",
-      cursor: "pointer",
+      justifyContent: "space-between",
+      gap: 10,
+      flexWrap: "wrap",
+      marginBottom: 14,
     },
+    backBtn: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "10px 14px",
+      borderRadius: 999,
+      border: "1px solid rgba(58, 72, 46, 0.18)",
+      background: "rgba(255,255,255,0.7)",
+      backdropFilter: "blur(8px)",
+      cursor: "pointer",
+      fontWeight: 700,
+      fontSize: 13,
+      color: "#1f2a1d",
+      boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
+    },
+    crumb: {
+      fontSize: 12,
+      color: "rgba(40,52,34,0.72)",
+      fontWeight: 600,
+    },
+
     hero: {
       position: "relative",
-      borderRadius: 24,
+      borderRadius: 26,
       overflow: "hidden",
-      border: "1px solid rgba(0,255,184,0.35)",
-      boxShadow: "0 28px 80px rgba(0,0,0,0.9)",
-      marginBottom: 20,
+      border: "1px solid rgba(55, 72, 44, 0.18)",
+      boxShadow: "0 30px 90px rgba(16, 20, 14, 0.18)",
+      background: "rgba(255,255,255,0.55)",
     },
     heroImg: {
       width: "100%",
-      height: 280,
+      height: 320,
       objectFit: "cover",
       transform: "scale(1.02)",
+      filter: "saturate(1.05) contrast(1.02)",
     },
     heroOverlay: {
       position: "absolute",
       inset: 0,
       background:
-        "linear-gradient(to top right, rgba(0,0,0,0.82), rgba(0,0,0,0.20))",
+        "linear-gradient(to top, rgba(236,231,221,0.96) 0%, rgba(236,231,221,0.25) 55%, rgba(236,231,221,0.0) 100%)",
     },
     heroContent: {
       position: "absolute",
@@ -284,284 +260,366 @@ export default function EventDetails() {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "flex-end",
-      gap: 18,
+      gap: 16,
       flexWrap: "wrap",
     },
     heroLeft: {
-      maxWidth: "70%",
-      minWidth: 260,
+      minWidth: 280,
+      maxWidth: 720,
     },
-    categoryBadge: {
-      display: "inline-flex",
-      padding: "4px 10px",
-      borderRadius: 999,
-      border: "1px solid rgba(0,255,184,0.9)",
-      background: "rgba(0,30,22,0.95)",
-      fontSize: 11,
-      letterSpacing: "0.16em",
-      textTransform: "uppercase",
-      marginBottom: 10,
-      color: "#e2fff7",
-    },
-    heroTitle: {
-      fontSize: 30,
-      fontWeight: 800,
-      marginBottom: 4,
-    },
-    heroSubtitle: {
-      fontSize: 13,
-      color: "rgba(225,245,235,0.9)",
-    },
-    heroMetaRow: {
+    badgesRow: {
       display: "flex",
+      alignItems: "center",
+      gap: 8,
       flexWrap: "wrap",
-      gap: 10,
-      marginTop: 10,
-      fontSize: 12,
-      color: "rgba(215,235,225,0.9)",
+      marginBottom: 10,
     },
-    pill: {
+    badge: {
       display: "inline-flex",
       alignItems: "center",
-      gap: 6,
-      padding: "4px 10px",
+      gap: 8,
+      padding: "7px 12px",
       borderRadius: 999,
-      background: "rgba(5,35,25,0.92)",
-      border: "1px solid rgba(120,200,165,0.8)",
-      fontSize: 11,
+      border: "1px solid rgba(58, 72, 46, 0.18)",
+      background: "rgba(255,255,255,0.72)",
+      backdropFilter: "blur(8px)",
+      fontSize: 12,
+      fontWeight: 800,
+      color: "#263321",
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
     },
+    heroTitle: {
+      fontSize: 36,
+      fontWeight: 900,
+      lineHeight: 1.05,
+      margin: 0,
+      color: "#162014",
+      textShadow: "0 10px 18px rgba(0,0,0,0.10)",
+    },
+    heroSubtitle: {
+      marginTop: 8,
+      fontSize: 14,
+      fontWeight: 600,
+      color: "rgba(28, 34, 22, 0.78)",
+      maxWidth: 620,
+    },
+    metaRow: {
+      marginTop: 12,
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+    },
+    metaPill: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "10px 12px",
+      borderRadius: 14,
+      border: "1px solid rgba(58, 72, 46, 0.16)",
+      background: "rgba(255,255,255,0.78)",
+      backdropFilter: "blur(10px)",
+      fontSize: 12,
+      fontWeight: 700,
+      color: "rgba(26, 32, 20, 0.9)",
+      boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
+    },
+
     heroRight: {
-      minWidth: 220,
-      maxWidth: 280,
+      minWidth: 280,
+      maxWidth: 360,
       alignSelf: "flex-end",
     },
-    joinCard: {
-      borderRadius: 18,
+    actionCard: {
+      borderRadius: 20,
       padding: 14,
-      background:
-        "radial-gradient(circle at top left, rgba(2,40,28,0.98), rgba(3,18,14,0.98))",
-      border: "1px solid rgba(0,255,184,0.6)",
-      boxShadow: "0 18px 55px rgba(0,0,0,0.88)",
-      fontSize: 12,
+      border: "1px solid rgba(58, 72, 46, 0.18)",
+      background: "rgba(255,255,255,0.82)",
+      backdropFilter: "blur(10px)",
+      boxShadow: "0 18px 40px rgba(0,0,0,0.10)",
     },
-    joinHeader: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "baseline",
-      marginBottom: 8,
-    },
-    joinTitle: {
+    actionTitle: {
       fontSize: 13,
-      fontWeight: 700,
+      fontWeight: 900,
+      letterSpacing: "0.02em",
+      marginBottom: 6,
+      color: "#1b2617",
     },
-    joinBadge: {
-      fontSize: 11,
-      textTransform: "uppercase",
-      letterSpacing: "0.12em",
-      color: "rgba(180,255,220,0.9)",
-    },
-    joinCount: {
+    actionSub: {
       fontSize: 12,
-      color: "rgba(220,245,235,0.9)",
+      fontWeight: 700,
+      color: "rgba(35, 45, 30, 0.76)",
       marginBottom: 12,
     },
-    joinButton: (secondary) => ({
-      width: "100%",
-      padding: "9px 16px",
-      borderRadius: 999,
-      border: secondary
-        ? "1px solid rgba(140,200,170,0.8)"
-        : "none",
-      cursor: secondary ? "default" : "pointer",
+    bigCount: {
+      fontSize: 28,
+      fontWeight: 900,
+      color: "#1b2617",
+      lineHeight: 1,
+    },
+    countHint: {
+      marginTop: 4,
+      fontSize: 12,
       fontWeight: 700,
+      color: "rgba(35,45,30,0.7)",
+    },
+    primaryBtn: (disabled) => ({
+      marginTop: 12,
+      width: "100%",
+      padding: "12px 14px",
+      borderRadius: 999,
+      border: "none",
+      cursor: disabled ? "default" : "pointer",
+      fontWeight: 900,
       fontSize: 13,
-      background: secondary
-        ? "rgba(4,22,18,0.95)"
-        : "linear-gradient(125deg, #00ffb8, #00c287, #00905c)",
-      color: secondary ? "rgba(220,245,235,0.9)" : "#022015",
-      boxShadow: secondary
-        ? "none"
-        : "0 0 20px rgba(0,255,184,0.45)",
+      background: disabled
+        ? "rgba(38, 60, 32, 0.25)"
+        : "linear-gradient(135deg, #28402a, #1f3423)",
+      color: "#f3f1ea",
+      boxShadow: disabled ? "none" : "0 14px 32px rgba(33, 52, 31, 0.25)",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    }),
+    secondaryBtn: {
+      marginTop: 10,
+      width: "100%",
+      padding: "11px 14px",
+      borderRadius: 999,
+      border: "1px solid rgba(96, 52, 37, 0.25)",
+      cursor: "pointer",
+      fontWeight: 900,
+      fontSize: 13,
+      background: "rgba(255,255,255,0.85)",
+      color: "#5a2d22",
+      boxShadow: "0 12px 26px rgba(0,0,0,0.06)",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    },
+    ownerRow: {
+      marginTop: 10,
+      display: "flex",
+      gap: 10,
+    },
+    ownerBtn: (danger) => ({
+      flex: 1,
+      padding: "11px 12px",
+      borderRadius: 999,
+      border: danger
+        ? "1px solid rgba(140, 60, 40, 0.28)"
+        : "1px solid rgba(58, 72, 46, 0.18)",
+      cursor: "pointer",
+      fontWeight: 900,
+      fontSize: 12,
+      background: danger ? "rgba(255, 240, 235, 0.9)" : "rgba(255,255,255,0.9)",
+      color: danger ? "#7a2a1a" : "#1f2a1d",
+      boxShadow: "0 12px 26px rgba(0,0,0,0.06)",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
     }),
-    leaveButton: {
-      width: "100%",
-      marginTop: 8,
-      padding: "8px 16px",
-      borderRadius: 999,
-      border: "1px solid rgba(255,120,120,0.9)",
-      cursor: "pointer",
-      fontWeight: 600,
+    errorBox: {
+      marginTop: 10,
+      borderRadius: 14,
+      padding: "10px 12px",
+      border: "1px solid rgba(140,60,40,0.22)",
+      background: "rgba(255, 238, 234, 0.9)",
+      color: "#7a2a1a",
+      fontWeight: 800,
       fontSize: 12,
-      background: "rgba(40,8,8,0.95)",
-      color: "#ffb3b3",
-      boxShadow: "0 0 12px rgba(255,80,80,0.5)",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
     },
-    errorInline: {
-      marginTop: 8,
-      borderRadius: 8,
-      padding: "6px 8px",
-      background: "rgba(255,60,60,0.08)",
-      border: "1px solid rgba(255,100,100,0.8)",
-      color: "#ff9a9a",
-      fontSize: 11,
-    },
-    mainGrid: {
+
+    grid: {
       display: "grid",
-      gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2.2fr)",
-      gap: 18,
-      alignItems: "flex-start",
+      gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
+      gap: 16,
+      marginTop: 16,
+      alignItems: "start",
     },
     card: {
-      borderRadius: 18,
-      padding: 18,
-      background:
-        "radial-gradient(circle at top left, rgba(10,32,26,0.97), rgba(5,16,13,0.97))",
-      border: "1px solid rgba(80,145,115,0.9)",
-      boxShadow: "0 20px 60px rgba(0,0,0,0.85)",
-      fontSize: 13,
+      borderRadius: 22,
+      padding: 16,
+      border: "1px solid rgba(58, 72, 46, 0.18)",
+      background: "rgba(255,255,255,0.82)",
+      backdropFilter: "blur(10px)",
+      boxShadow: "0 20px 55px rgba(0,0,0,0.10)",
     },
     sectionTitleRow: {
       display: "flex",
-      justifyContent: "space-between",
       alignItems: "baseline",
-      gap: 8,
+      justifyContent: "space-between",
+      gap: 10,
       marginBottom: 10,
     },
     sectionTitle: {
       fontSize: 14,
-      fontWeight: 700,
+      fontWeight: 1000,
+      color: "#1b2617",
+      letterSpacing: "0.02em",
     },
     sectionHint: {
-      fontSize: 11,
-      color: "rgba(210,235,225,0.8)",
+      fontSize: 12,
+      fontWeight: 700,
+      color: "rgba(35,45,30,0.72)",
     },
     paragraph: {
+      marginTop: 6,
       fontSize: 13,
-      color: "rgba(230,245,237,0.9)",
-      lineHeight: 1.55,
+      lineHeight: 1.65,
+      fontWeight: 650,
+      color: "rgba(26, 32, 20, 0.86)",
       whiteSpace: "pre-wrap",
     },
-    infoList: {
-      marginTop: 6,
+    infoGrid: {
+      marginTop: 12,
       display: "grid",
-      gridTemplateColumns: "minmax(0,1.1fr) minmax(0,1fr)",
+      gridTemplateColumns: "repeat(2, minmax(0,1fr))",
       gap: 10,
-      fontSize: 12,
     },
-    infoItem: {
-      padding: 10,
-      borderRadius: 12,
-      background: "rgba(4,22,18,0.95)",
-      border: "1px solid rgba(120,190,155,0.8)",
+    infoBox: {
+      borderRadius: 16,
+      padding: 12,
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      background: "rgba(245,242,235,0.65)",
     },
     infoLabel: {
       fontSize: 11,
       textTransform: "uppercase",
       letterSpacing: "0.12em",
-      color: "rgba(190,220,210,0.9)",
-      marginBottom: 4,
+      fontWeight: 900,
+      color: "rgba(35,45,30,0.65)",
+      marginBottom: 6,
     },
     infoValue: {
       fontSize: 13,
-      color: "rgba(235,250,242,0.96)",
+      fontWeight: 900,
+      color: "#1b2617",
     },
+
     mapBox: {
-      borderRadius: 16,
+      borderRadius: 18,
       overflow: "hidden",
-      border: "1px solid rgba(85,145,120,0.9)",
-      marginTop: 10,
+      border: "1px solid rgba(58, 72, 46, 0.18)",
+      boxShadow: "0 14px 38px rgba(0,0,0,0.08)",
     },
-    mapContainer: {
-      height: 220,
+    mapWrap: {
+      height: 260,
       width: "100%",
     },
-    skeleton: {
-      opacity: 0.6,
+
+    attendeesWrap: {
+      marginTop: 16,
     },
-    attendeesCardWrapper: {
-      marginTop: 20,
+    attendeesHeader: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+      flexWrap: "wrap",
     },
-    attendeesList: {
-      marginTop: 10,
-      maxHeight: 260,
+    attendeesCountChip: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "8px 12px",
+      borderRadius: 999,
+      border: "1px solid rgba(58, 72, 46, 0.16)",
+      background: "rgba(245,242,235,0.75)",
+      fontWeight: 900,
+      fontSize: 12,
+      color: "#1f2a1d",
+    },
+    attendeeList: {
+      marginTop: 12,
+      maxHeight: 320,
       overflowY: "auto",
       paddingRight: 4,
     },
     attendeeRow: {
       display: "flex",
       alignItems: "center",
-      gap: 10,
-      padding: "7px 8px",
-      borderRadius: 10,
-      background: "rgba(3,18,14,0.96)",
-      border: "1px solid rgba(80,140,115,0.88)",
-      marginBottom: 6,
+      gap: 12,
+      padding: "10px 10px",
+      borderRadius: 16,
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      background: "rgba(255,255,255,0.88)",
+      boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
+      marginBottom: 10,
     },
-    attendeeAvatar: {
-      width: 34,
-      height: 34,
+    avatar: {
+      width: 40,
+      height: 40,
       borderRadius: "50%",
       objectFit: "cover",
-      border: "1px solid rgba(0,255,184,0.9)",
-      background:
-        "linear-gradient(135deg, rgba(0,255,184,0.2), rgba(0,140,90,0.4))",
+      border: "1px solid rgba(58, 72, 46, 0.18)",
+      background: "rgba(245,242,235,0.9)",
     },
-    attendeeFallbackAvatar: {
-      width: 34,
-      height: 34,
+    avatarFallback: {
+      width: 40,
+      height: 40,
       borderRadius: "50%",
+      border: "1px solid rgba(58, 72, 46, 0.18)",
+      background:
+        "linear-gradient(135deg, rgba(40,64,42,0.18), rgba(160,140,95,0.18))",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background:
-        "radial-gradient(circle at top, rgba(0,255,184,0.25), rgba(0,120,80,0.6))",
-      color: "#022015",
-      fontSize: 14,
-      fontWeight: 700,
-      border: "1px solid rgba(0,255,184,0.9)",
-    },
-    attendeeText: {
-      display: "flex",
-      flexDirection: "column",
-      fontSize: 12,
+      fontWeight: 1000,
+      color: "#1f2a1d",
     },
     attendeeName: {
-      fontWeight: 600,
-      color: "rgba(235,250,242,0.96)",
+      fontSize: 13,
+      fontWeight: 1000,
+      color: "#1b2617",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
     },
-    attendeeSub: {
-      fontSize: 11,
-      color: "rgba(200,225,215,0.9)",
-    },
-    attendeeYouTag: {
-      marginLeft: 6,
-      padding: "2px 6px",
+    youTag: {
+      display: "inline-flex",
+      padding: "3px 8px",
       borderRadius: 999,
-      border: "1px solid rgba(0,255,184,0.9)",
-      fontSize: 9,
-      textTransform: "uppercase",
+      border: "1px solid rgba(40,64,42,0.24)",
+      background: "rgba(245,242,235,0.9)",
+      fontSize: 10,
+      fontWeight: 1000,
       letterSpacing: "0.12em",
-      color: "rgba(190,255,230,0.98)",
+      textTransform: "uppercase",
+      color: "#1f2a1d",
     },
   };
 
-  // ===== RENDERING =====
+  // ===== RENDER =====
   if (loading) {
     return (
       <div style={styles.page}>
         <div style={styles.container}>
-          <div style={styles.backRow}>Loading event…</div>
-          <div style={{ ...styles.hero, ...styles.skeleton }}>
+          <div style={styles.topBar}>
+            <div style={styles.backBtn} onClick={() => navigate(-1)}>
+              ← Back
+            </div>
+            <div style={styles.crumb}>Loading event…</div>
+          </div>
+
+          <div style={styles.hero}>
             <img src={defaultCover} alt="loading" style={styles.heroImg} />
             <div style={styles.heroOverlay} />
+          </div>
+
+          <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+            <div style={styles.card}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>About this event</div>
+                <div style={styles.sectionHint}>Loading details…</div>
+              </div>
+              <div style={{ height: 14, borderRadius: 10, background: "rgba(0,0,0,0.06)" }} />
+              <div style={{ height: 14, marginTop: 10, borderRadius: 10, background: "rgba(0,0,0,0.06)" }} />
+              <div style={{ height: 14, marginTop: 10, borderRadius: 10, background: "rgba(0,0,0,0.06)" }} />
+            </div>
           </div>
         </div>
       </div>
@@ -572,28 +630,41 @@ export default function EventDetails() {
     return (
       <div style={styles.page}>
         <div style={styles.container}>
-          <div style={styles.backRow} onClick={() => navigate(-1)}>
-            ← Back
+          <div style={styles.topBar}>
+            <div style={styles.backBtn} onClick={() => navigate(-1)}>
+              ← Back
+            </div>
+            <div style={styles.crumb}>Event not found</div>
           </div>
-          <div style={styles.joinCard}>
-            We couldn't find this event. It may have been removed.
+
+          <div style={styles.card}>
+            <div style={styles.sectionTitleRow}>
+              <div style={styles.sectionTitle}>We couldn’t find this event</div>
+              <div style={styles.sectionHint}>It may have been removed.</div>
+            </div>
+            <div style={styles.paragraph}>
+              Try going back and exploring other events.
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  const now = new Date();
+  const joinLabel = hasJoined ? "You’re going" : "Join event";
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        {/* BACK */}
-        <div style={styles.backRow} onClick={() => navigate(-1)}>
-          <span>← Back to explore</span>
-          <span style={{ opacity: 0.6 }}>
-            · Today {now.toLocaleDateString()}
-          </span>
+        {/* TOP BAR */}
+        <div style={styles.topBar}>
+          <div style={styles.backBtn} onClick={() => navigate(-1)}>
+            ← Back to explore
+          </div>
+          <div style={styles.crumb}>
+            {event.category ? `${event.category} · ` : ""}
+            {event.country || "Outdoor"}
+          </div>
         </div>
 
         {/* HERO */}
@@ -603,282 +674,223 @@ export default function EventDetails() {
 
           <div style={styles.heroContent}>
             <div style={styles.heroLeft}>
-              {event.category && (
-                <div style={styles.categoryBadge}>{event.category}</div>
-              )}
+              <div style={styles.badgesRow}>
+                {event.category && (
+                  <div style={styles.badge}>⛰ {event.category}</div>
+                )}
+                <div style={styles.badge}>🌿 Outdoor event</div>
+              </div>
+
               <h1 style={styles.heroTitle}>{event.title}</h1>
+
               {event.subtitle && (
                 <div style={styles.heroSubtitle}>{event.subtitle}</div>
               )}
 
-              <div style={styles.heroMetaRow}>
-                <span style={styles.pill}>
-                  <span>📅</span>
-                  <span>{dateLine}</span>
-                </span>
-                <span style={styles.pill}>
-                  <span>📍</span>
-                  <span>{locationLine}</span>
-                </span>
-                <span style={styles.pill}>
-                  <span>👥</span>
-                  <span>
-                    {attendeesCount === 0
-                      ? "Be the first to join"
-                      : `${attendeesCount} going`}
-                  </span>
-                </span>
+              <div style={styles.metaRow}>
+                <div style={styles.metaPill}>📅 {dateLine || "Date TBA"}</div>
+                <div style={styles.metaPill}>📍 {locationLine}</div>
+                <div style={styles.metaPill}>👥 {attendeesCount} going</div>
+                <div style={styles.metaPill}>🏷 {priceLine}</div>
               </div>
             </div>
 
             <div style={styles.heroRight}>
-              <div style={styles.joinCard}>
-                <div style={styles.joinHeader}>
-                  <div style={styles.joinTitle}>
-                    Join this outdoor experience
-                  </div>
-                  <div style={styles.joinBadge}>
-                    {hasJoined ? "You're in" : "Limited spots"}
-                  </div>
+              <div style={styles.actionCard}>
+                <div style={styles.actionTitle}>Reserve your spot</div>
+                <div style={styles.actionSub}>
+                  Join the group and see who’s going.
                 </div>
 
-                <div style={styles.joinCount}>
-                  {attendeesCount === 0 &&
-                    "No one has joined yet – start the group!"}
-                  {attendeesCount === 1 &&
-                    "1 person is going so far."}
-                  {attendeesCount > 1 &&
-                    `${attendeesCount} people are going so far.`}
+                <div style={styles.bigCount}>{attendeesCount}</div>
+                <div style={styles.countHint}>
+                  {attendeesCount === 0
+                    ? "Be the first one to join."
+                    : attendeesCount === 1
+                    ? "Person going so far."
+                    : "People going so far."}
                 </div>
 
                 {hasJoined ? (
                   <>
-                    <button style={styles.joinButton(true)} disabled>
+                    <button style={styles.primaryBtn(true)} disabled>
                       ✅ You’re going
                     </button>
                     <button
-                      style={styles.leaveButton}
-                      onClick={handleLeaveEvent}
+                      onClick={handleLeave}
                       disabled={leaving}
+                      style={styles.secondaryBtn}
                     >
                       {leaving ? "Leaving…" : "Leave event"}
                     </button>
                   </>
                 ) : (
                   <button
-                    style={styles.joinButton(false)}
-                    onClick={handleJoinEvent}
+                    onClick={handleJoin}
                     disabled={joining}
+                    style={styles.primaryBtn(joining)}
                   >
-                    {joining ? "Joining…" : "Join event"}
-                    {!joining && <span>➜</span>}
+                    {joining ? "Joining…" : joinLabel} {!joining && <span>➜</span>}
                   </button>
                 )}
 
                 {!user && (
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 11,
-                      color: "rgba(200,225,215,0.95)",
-                    }}
-                  >
-                    Sign in to confirm your spot and see who else is going.
+                  <div style={{ marginTop: 10, fontSize: 12, fontWeight: 750, color: "rgba(35,45,30,0.72)" }}>
+                    Sign in to join this event.
                   </div>
                 )}
 
-                {errorMsg && (
-                  <div style={styles.errorInline}>{errorMsg}</div>
+                {isOwner && (
+                  <div style={styles.ownerRow}>
+                    <button
+                      onClick={() => navigate(`/edit-event/${event.id}`)}
+                      style={styles.ownerBtn(false)}
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      onClick={handleDeleteEvent}
+                      style={styles.ownerBtn(true)}
+                    >
+                      🗑 Delete
+                    </button>
+                  </div>
                 )}
+
+                {errorMsg && <div style={styles.errorBox}>{errorMsg}</div>}
               </div>
             </div>
           </div>
         </div>
 
         {/* MAIN GRID */}
-        <div style={styles.mainGrid}>
-          {/* LEFT – ABOUT */}
+        <div style={styles.grid}>
+          {/* LEFT - ABOUT + INFO */}
           <div style={styles.card}>
             <div style={styles.sectionTitleRow}>
               <div style={styles.sectionTitle}>About this event</div>
               <div style={styles.sectionHint}>
-                Get a feel for the vibe, pace and people.
+                Details, vibe and what to expect.
               </div>
             </div>
 
             <div style={styles.paragraph}>
-              {event.description
-                ? event.description
-                : "The organizer hasn’t added a detailed description yet. Expect an outdoor gathering built around fresh air, good company and shared adventure."}
+              {event.description || "The organizer hasn’t added a description yet."}
             </div>
 
-            <div style={styles.infoList}>
-              <div style={styles.infoItem}>
+            <div style={styles.infoGrid}>
+              <div style={styles.infoBox}>
                 <div style={styles.infoLabel}>Location</div>
                 <div style={styles.infoValue}>{locationLine}</div>
               </div>
 
-              <div style={styles.infoItem}>
-                <div style={styles.infoLabel}>Dates & timing</div>
-                <div style={styles.infoValue}>{dateLine}</div>
+              <div style={styles.infoBox}>
+                <div style={styles.infoLabel}>Dates</div>
+                <div style={styles.infoValue}>{dateLine || "Date TBA"}</div>
               </div>
 
-              <div style={styles.infoItem}>
+              <div style={styles.infoBox}>
                 <div style={styles.infoLabel}>Price</div>
-                <div style={styles.infoValue}>
-                  {event.is_free
-                    ? "Free to join"
-                    : event.price_from
-                    ? `From ${event.price_from} €`
-                    : "Price on request"}
-                </div>
+                <div style={styles.infoValue}>{priceLine}</div>
               </div>
 
-              <div style={styles.infoItem}>
+              <div style={styles.infoBox}>
                 <div style={styles.infoLabel}>Organizer</div>
                 <div style={styles.infoValue}>
-                  {event.organizer_name || "Host not specified yet"}
-                  {event.website_url && (
-                    <>
-                      <br />
-                      <a
-                        href={event.website_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          fontSize: 11,
-                          color: "rgba(150,230,200,0.95)",
-                          textDecoration: "underline",
-                        }}
-                      >
-                        Visit event website
-                      </a>
-                    </>
-                  )}
+                  {event.organizer_name || "Host not specified"}
+                </div>
+                {event.website_url && (
+                  <a
+                    href={event.website_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: "inline-block",
+                      marginTop: 8,
+                      fontSize: 12,
+                      fontWeight: 900,
+                      color: "#1f3423",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Visit event website
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* ATTENDEES */}
+            <div style={styles.attendeesWrap}>
+              <div style={styles.attendeesHeader}>
+                <div style={styles.sectionTitle}>People going</div>
+                <div style={styles.attendeesCountChip}>
+                  👥 {attendeesCount} {attendeesCount === 1 ? "person" : "people"}
                 </div>
               </div>
+
+              {attendees.length === 0 ? (
+                <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: "rgba(35,45,30,0.72)" }}>
+                  No one yet. Be the first to join.
+                </div>
+              ) : (
+                <div style={styles.attendeeList}>
+                  {attendees.map((row) => {
+                    const p = row.profiles;
+                    const fullName = p?.full_name || "Outdoor friend";
+                    const isYou = user && row.user_id === user.id;
+
+                    return (
+                      <div key={row.id} style={styles.attendeeRow}>
+                        {p?.avatar_url ? (
+                          <img src={p.avatar_url} alt="" style={styles.avatar} />
+                        ) : (
+                          <div style={styles.avatarFallback}>
+                            {initialsFromName(fullName)}
+                          </div>
+                        )}
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <div style={styles.attendeeName}>
+                            {fullName}
+                            {isYou && <span style={styles.youTag}>YOU</span>}
+                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 750, color: "rgba(35,45,30,0.68)" }}>
+                            {isYou ? "That’s you" : "Joining the adventure"}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* RIGHT – MAP & COORDINATES */}
+          {/* RIGHT - MAP */}
           <div style={styles.card}>
             <div style={styles.sectionTitleRow}>
-              <div style={styles.sectionTitle}>Where you’ll meet</div>
-              <div style={styles.sectionHint}>
-                Exact spot so you can plan your trip.
-              </div>
+              <div style={styles.sectionTitle}>Meeting point</div>
+              <div style={styles.sectionHint}>Plan your route.</div>
             </div>
 
             <div style={styles.mapBox}>
               <MapContainer
-                center={[
-                  event.latitude || 43.9,
-                  event.longitude || 21.0,
-                ]}
+                center={[event.latitude || 43.9, event.longitude || 21]}
                 zoom={7}
                 scrollWheelZoom={true}
-                style={styles.mapContainer}
+                style={styles.mapWrap}
               >
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <Marker
-                  position={[
-                    event.latitude || 43.9,
-                    event.longitude || 21.0,
-                  ]}
-                />
+                <Marker position={[event.latitude || 43.9, event.longitude || 21]} />
               </MapContainer>
             </div>
 
-            <div style={{ marginTop: 10, fontSize: 12 }}>
-              <div style={styles.sectionHint}>
-                Coordinates for this event:
-              </div>
-              <div
-                style={{
-                  marginTop: 4,
-                  color: "rgba(220,245,235,0.95)",
-                }}
-              >
-                {event.latitude?.toFixed(4) ?? "—"},{" "}
-                {event.longitude?.toFixed(4) ?? "—"}
+            <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: "rgba(35,45,30,0.72)" }}>
+              Coordinates:
+              <div style={{ marginTop: 6, fontSize: 13, fontWeight: 1000, color: "#1b2617" }}>
+                {event.latitude?.toFixed(4) ?? "—"}, {event.longitude?.toFixed(4) ?? "—"}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* ATTENDEES SECTION – SCROLL LIST */}
-        <div style={styles.attendeesCardWrapper}>
-          <div style={styles.card}>
-            <div style={styles.sectionTitleRow}>
-              <div style={styles.sectionTitle}>
-                People going to this event
-              </div>
-              <div style={styles.sectionHint}>
-                See who you’ll be sharing the trail with.
-              </div>
-            </div>
-
-            {attendeesLoading ? (
-              <div style={styles.sectionHint}>
-                Loading attendees…
-              </div>
-            ) : attendees.length === 0 ? (
-              <div style={styles.sectionHint}>
-                No one has joined yet. Be the first one to click “Join
-                event” and start the group.
-              </div>
-            ) : (
-              <div style={styles.attendeesList}>
-                {attendees.map((row) => {
-                  const profile = row.profiles;
-                  const fullName =
-                    profile?.full_name || "Outdoor friend";
-                  const displayName = profile?.display_name || "";
-                  const avatarUrl = profile?.avatar_url || null;
-
-                  const initials = fullName
-                    .split(" ")
-                    .filter(Boolean)
-                    .map((s) => s[0]?.toUpperCase())
-                    .slice(0, 2)
-                    .join("");
-
-                  const isYou = user && profile?.id === user.id;
-
-                  return (
-                    <div key={row.id} style={styles.attendeeRow}>
-                      {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={fullName}
-                          style={styles.attendeeAvatar}
-                        />
-                      ) : (
-                        <div style={styles.attendeeFallbackAvatar}>
-                          {initials || "👤"}
-                        </div>
-                      )}
-
-                      <div style={styles.attendeeText}>
-                        <div style={styles.attendeeName}>
-                          {fullName}
-                          {isYou && (
-                            <span style={styles.attendeeYouTag}>
-                              YOU
-                            </span>
-                          )}
-                        </div>
-                        {displayName && (
-                          <div style={styles.attendeeSub}>
-                            @{displayName}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </div>
       </div>

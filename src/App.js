@@ -32,6 +32,7 @@ import CreateEvent from "./pages/CreateEvent";
 import Event from "./pages/Event";
 import EventDetails from "./pages/EventDetails";
 import Events from "./pages/Events";
+import SavedTours from "./pages/SavedTours";
 
 // AUTH STRANICE
 import Login from "./pages/Login";
@@ -73,6 +74,7 @@ function App() {
           <Route path="/event-details" element={<EventDetails />} />
           <Route path ="/events" element={<Events />} />
           <Route path ="/event/:id" element={<EventDetails />} />
+          <Route path="/saved-tours" element={<SavedTours />} />
           
 
           {/* AUTH */}

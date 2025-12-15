@@ -17,7 +17,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-/* Custom component for selecting location */
+/* Component for selecting location */
 function LocationMarker({ onSelect }) {
   const [position, setPosition] = useState(null);
 
@@ -47,6 +47,9 @@ export default function CreateTour() {
   const [price, setPrice] = useState("");
   const [maxPeople, setMaxPeople] = useState("");
 
+  // --- APPLICATION DEADLINE ---
+  const [applicationDeadline, setApplicationDeadline] = useState("");
+
   // --- LEGAL ENTITY ---
   const [isLegalEntity, setIsLegalEntity] = useState(false);
 
@@ -60,6 +63,9 @@ export default function CreateTour() {
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [galleryPreviews, setGalleryPreviews] = useState([]);
 
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+
   // --- STATE ---
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -71,6 +77,10 @@ export default function CreateTour() {
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
       setUser(data.user || null);
+      if (!data.user) {
+        // po želji redirect na login
+        // navigate("/login");
+      }
     }
     loadUser();
   }, []);
@@ -126,7 +136,7 @@ export default function CreateTour() {
 
   // ------------ FILE HANDLERS ------------
   function handleCoverChange(e) {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
@@ -134,7 +144,10 @@ export default function CreateTour() {
 
   function handleGalleryChange(e) {
     const files = Array.from(e.target.files || []);
-    const maxSix = files.slice(0, 6);
+    if (!files.length) return;
+
+    const combined = [...files];
+    const maxSix = combined.slice(0, 6);
     setGalleryFiles(maxSix);
     setGalleryPreviews(maxSix.map((f) => URL.createObjectURL(f)));
   }
@@ -142,13 +155,23 @@ export default function CreateTour() {
   function handleGalleryDrop(e) {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files || []);
-    const maxSix = files.slice(0, 6);
+    if (!files.length) return;
+
+    const combined = [...files];
+    const maxSix = combined.slice(0, 6);
     setGalleryFiles(maxSix);
     setGalleryPreviews(maxSix.map((f) => URL.createObjectURL(f)));
   }
 
   function preventDefault(e) {
     e.preventDefault();
+  }
+
+  function handleVideoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
   }
 
   // ------------ VALIDATION ------------
@@ -165,6 +188,9 @@ export default function CreateTour() {
     if (!description.trim()) return "Description is required.";
     if (!latitude || !longitude) return "Please pick a location on the map.";
     if (!coverFile) return "Cover image is required.";
+    if (!applicationDeadline)
+      return "Application deadline is required.";
+
     return null;
   }
 
@@ -177,6 +203,11 @@ export default function CreateTour() {
     const validationError = validate();
     if (validationError) {
       setErrorMsg(validationError);
+      return;
+    }
+
+    if (!user) {
+      setErrorMsg("You must be logged in to create a tour.");
       return;
     }
 
@@ -201,7 +232,7 @@ export default function CreateTour() {
         coverUrl = publicUrlData.publicUrl;
       }
 
-      // 2) Upload gallery
+      // 2) Upload gallery images
       const galleryUrls = [];
       for (const file of galleryFiles) {
         const ext = file.name.split(".").pop();
@@ -222,7 +253,30 @@ export default function CreateTour() {
         galleryUrls.push(publicUrlData.publicUrl);
       }
 
-      // 3) Insert into DB
+      // 3) Upload video (optional)
+      let videoUrl = null;
+      if (videoFile) {
+        const ext = videoFile.name.split(".").pop();
+        const fileName = `video-${Date.now()}.${ext}`;
+        const { data: vData, error: vError } = await supabase.storage
+          .from("tour-videos")
+          .upload(fileName, videoFile);
+
+        if (vError) throw vError;
+
+        const { data: publicVideoUrlData } = supabase.storage
+          .from("tour-videos")
+          .getPublicUrl(vData.path);
+
+        videoUrl = publicVideoUrlData.publicUrl;
+      }
+
+      // 4) Application deadline as ISO
+      const deadlineISO = applicationDeadline
+        ? new Date(applicationDeadline).toISOString()
+        : null;
+
+      // 5) Insert into DB
       const { error: insertError } = await supabase.from("tours").insert([
         {
           title,
@@ -239,14 +293,18 @@ export default function CreateTour() {
           longitude,
           cover_url: coverUrl,
           image_urls: galleryUrls,
-          user_id: user?.id,
-        creator_id: user?.id,
+          video_url: videoUrl,
+          application_deadline: deadlineISO,
+          status: "ACTIVE",
+          user_id: user.id,
+          creator_id: user.id,
         },
       ]);
 
       if (insertError) throw insertError;
 
       setSuccessMsg("Tour created successfully! 🌿");
+      setTimeout(() => navigate("/my-tours"), 1200);
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || "Error creating tour. Please try again.");
@@ -255,11 +313,12 @@ export default function CreateTour() {
     }
   }
 
-  // ------------ STYLES (YOUR ORIGINAL) ------------
+  // ------------ STYLES ------------
   const pageWrapperStyle = {
     minHeight: "100vh",
     padding: "30px 16px 60px",
-    background: "radial-gradient(circle at top, #062a1d 0%, #030b08 55%, #020605 100%)",
+    background:
+      "radial-gradient(circle at top, #062a1d 0%, #030b08 55%, #020605 100%)",
     color: "#ffffff",
     boxSizing: "border-box",
   };
@@ -332,7 +391,11 @@ export default function CreateTour() {
     boxSizing: "border-box",
   };
 
-  const textareaStyle = { ...inputBaseStyle, minHeight: 90, resize: "vertical" };
+  const textareaStyle = {
+    ...inputBaseStyle,
+    minHeight: 90,
+    resize: "vertical",
+  };
 
   const selectStyle = {
     ...inputBaseStyle,
@@ -434,8 +497,8 @@ export default function CreateTour() {
           <div style={badgeStyle}>🗺️ Create a new tour</div>
           <h1 style={titleStyle}>Share your next outdoor experience.</h1>
           <p style={subtitleStyle}>
-            Describe your tour, upload photos, choose the exact location on the
-            map, and let people join your adventure.
+            Describe your tour, upload photos and a video, choose the exact
+            location on the map, and let people join your adventure.
           </p>
         </div>
 
@@ -549,6 +612,7 @@ export default function CreateTour() {
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: 10,
+                  marginBottom: 10,
                 }}
               >
                 <div>
@@ -573,6 +637,20 @@ export default function CreateTour() {
                     value={maxPeople}
                     onChange={(e) => setMaxPeople(e.target.value)}
                   />
+                </div>
+              </div>
+
+              <div>
+                <div style={labelStyle}>Applications open until *</div>
+                <input
+                  style={inputBaseStyle}
+                  type="datetime-local"
+                  value={applicationDeadline}
+                  onChange={(e) => setApplicationDeadline(e.target.value)}
+                />
+                <div style={hintTextStyle}>
+                  After this date, people will no longer be able to apply. The
+                  tour will automatically disappear from public lists.
                 </div>
               </div>
             </div>
@@ -609,9 +687,9 @@ export default function CreateTour() {
               </label>
             </div>
 
-            {/* IMAGES */}
+            {/* IMAGES & VIDEO */}
             <div style={{ marginBottom: 18 }}>
-              <div style={sectionTitleStyle}>Images</div>
+              <div style={sectionTitleStyle}>Images & video</div>
 
               {/* COVER IMAGE */}
               <div style={{ marginBottom: 14 }}>
@@ -628,7 +706,9 @@ export default function CreateTour() {
                       "radial-gradient(circle at top left, rgba(0,255,160,0.2), rgba(0,0,0,0.9))",
                   }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 3 }}>📷 Click to upload</div>
+                  <div style={{ fontWeight: 600, marginBottom: 3 }}>
+                    📷 Click to upload
+                  </div>
                   <div style={{ fontSize: 11, opacity: 0.7 }}>
                     JPG / PNG • max 5 MB
                   </div>
@@ -653,14 +733,18 @@ export default function CreateTour() {
                     <img
                       src={coverPreview}
                       alt="Cover preview"
-                      style={{ width: "100%", height: 160, objectFit: "cover" }}
+                      style={{
+                        width: "100%",
+                        height: 160,
+                        objectFit: "cover",
+                      }}
                     />
                   </div>
                 )}
               </div>
 
               {/* GALLERY */}
-              <div>
+              <div style={{ marginBottom: 14 }}>
                 <div style={labelStyle}>Gallery images (max 6)</div>
 
                 <label
@@ -699,7 +783,8 @@ export default function CreateTour() {
                     style={{
                       marginTop: 10,
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))",
+                      gridTemplateColumns:
+                        "repeat(auto-fill,minmax(80px,1fr))",
                       gap: 8,
                     }}
                   >
@@ -715,10 +800,66 @@ export default function CreateTour() {
                         <img
                           src={src}
                           alt="gallery"
-                          style={{ width: "100%", height: 70, objectFit: "cover" }}
+                          style={{
+                            width: "100%",
+                            height: 70,
+                            objectFit: "cover",
+                          }}
                         />
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* VIDEO */}
+              <div>
+                <div style={labelStyle}>Promo video (optional)</div>
+                <label
+                  style={{
+                    borderRadius: 14,
+                    border: "1px dashed rgba(255,255,255,0.25)",
+                    padding: 14,
+                    cursor: "pointer",
+                    display: "block",
+                    background:
+                      "radial-gradient(circle at top right, rgba(0,255,160,0.18), rgba(0,0,0,0.9))",
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 3 }}>
+                    🎬 Click to upload video
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.7 }}>
+                    MP4 / WebM • max 50 MB (recommended short teaser)
+                  </div>
+
+                  <input
+                    type="file"
+                    accept="video/*"
+                    style={{ display: "none" }}
+                    onChange={handleVideoChange}
+                  />
+                </label>
+
+                {videoPreview && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                    }}
+                  >
+                    <video
+                      src={videoPreview}
+                      controls
+                      style={{
+                        width: "100%",
+                        height: 200,
+                        objectFit: "cover",
+                        backgroundColor: "black",
+                      }}
+                    />
                   </div>
                 )}
               </div>
@@ -741,7 +882,7 @@ export default function CreateTour() {
               <p style={hintTextStyle}>Click on the map to place a marker.</p>
             </div>
 
-            {/* MAP HERE */}
+            {/* MAP */}
             <div style={mapContainerOuterStyle}>
               <MapContainer
                 center={[44.0, 21.0]} // Serbia center
@@ -782,6 +923,12 @@ export default function CreateTour() {
                 <div style={miniPillStyle}>
                   💶 {price ? `${price} €` : "No price set"}
                 </div>
+
+                {applicationDeadline && (
+                  <div style={miniPillStyle}>
+                    ⏳ Applications until: {applicationDeadline}
+                  </div>
+                )}
 
                 {latitude && longitude && (
                   <div style={miniPillStyle}>

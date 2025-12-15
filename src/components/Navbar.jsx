@@ -223,7 +223,7 @@ export default function Navbar() {
             justifyContent: "space-between",
             gap: 18,
             overflow:"visible",
-            
+
 
             position: "relative",
             zIndex:99999,
@@ -496,6 +496,24 @@ export default function Navbar() {
                     >
                       + Create tour
                     </button>
+                          {/* SAVED TOURS */}
+      <div
+        onClick={() => {
+          navigate("/saved-tours");
+          setToursMenuOpen(false);
+        }}
+        style={{
+          padding: "10px 14px",
+          cursor: "pointer",
+          color: "#a2ffd4",
+          fontSize: 14,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        ❤️ Saved tours
+      </div>
                   </div>
                 )}
               </div>

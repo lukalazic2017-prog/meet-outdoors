@@ -60,7 +60,7 @@ export default function Chat() {
     if (ids.length > 0) {
       const { data: profs } = await supabase
         .from("profiles")
-        .select("id, full_name, display_name, avatar_url")
+        .select("id, full_name, avatar_url")
         .in("id", ids);
 
       let map = {};
