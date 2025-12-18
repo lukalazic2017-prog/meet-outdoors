@@ -138,6 +138,10 @@ export default function CreateTour() {
   function handleCoverChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // cleanup old preview
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
   }
@@ -146,10 +150,18 @@ export default function CreateTour() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    const combined = [...files];
-    const maxSix = combined.slice(0, 6);
-    setGalleryFiles(maxSix);
-    setGalleryPreviews(maxSix.map((f) => URL.createObjectURL(f)));
+    // DODATO: kombinuj postojeće + nove (da možeš dodavati u više puta)
+    const combined = [...galleryFiles, ...files].slice(0, 6);
+
+    // cleanup prethodnih preview-a
+    galleryPreviews.forEach((p) => {
+      try {
+        URL.revokeObjectURL(p);
+      } catch {}
+    });
+
+    setGalleryFiles(combined);
+    setGalleryPreviews(combined.map((f) => URL.createObjectURL(f)));
   }
 
   function handleGalleryDrop(e) {
@@ -157,10 +169,18 @@ export default function CreateTour() {
     const files = Array.from(e.dataTransfer.files || []);
     if (!files.length) return;
 
-    const combined = [...files];
-    const maxSix = combined.slice(0, 6);
-    setGalleryFiles(maxSix);
-    setGalleryPreviews(maxSix.map((f) => URL.createObjectURL(f)));
+    // DODATO: kombinuj postojeće + nove (drag & drop)
+    const combined = [...galleryFiles, ...files].slice(0, 6);
+
+    // cleanup prethodnih preview-a
+    galleryPreviews.forEach((p) => {
+      try {
+        URL.revokeObjectURL(p);
+      } catch {}
+    });
+
+    setGalleryFiles(combined);
+    setGalleryPreviews(combined.map((f) => URL.createObjectURL(f)));
   }
 
   function preventDefault(e) {
@@ -170,8 +190,58 @@ export default function CreateTour() {
   function handleVideoChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // cleanup old preview
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+
     setVideoFile(file);
     setVideoPreview(URL.createObjectURL(file));
+  }
+
+  // ------------ DODATO: BRISANJE SLIKA/VIDEA (NE MENJA OSTALE FUNKCIJE) ------------
+  function removeCover() {
+    if (coverPreview) {
+      try {
+        URL.revokeObjectURL(coverPreview);
+      } catch {}
+    }
+    setCoverFile(null);
+    setCoverPreview(null);
+  }
+
+  function removeGalleryImage(index) {
+    const removedPreview = galleryPreviews[index];
+    if (removedPreview) {
+      try {
+        URL.revokeObjectURL(removedPreview);
+      } catch {}
+    }
+
+    const newFiles = galleryFiles.filter((_, i) => i !== index);
+    const newPreviews = galleryPreviews.filter((_, i) => i !== index);
+
+    setGalleryFiles(newFiles);
+    setGalleryPreviews(newPreviews);
+  }
+
+  function clearGallery() {
+    galleryPreviews.forEach((p) => {
+      try {
+        URL.revokeObjectURL(p);
+      } catch {}
+    });
+    setGalleryFiles([]);
+    setGalleryPreviews([]);
+  }
+
+  function removeVideo() {
+    if (videoPreview) {
+      try {
+        URL.revokeObjectURL(videoPreview);
+      } catch {}
+    }
+    setVideoFile(null);
+    setVideoPreview(null);
   }
 
   // ------------ VALIDATION ------------
@@ -188,8 +258,7 @@ export default function CreateTour() {
     if (!description.trim()) return "Description is required.";
     if (!latitude || !longitude) return "Please pick a location on the map.";
     if (!coverFile) return "Cover image is required.";
-    if (!applicationDeadline)
-      return "Application deadline is required.";
+    if (!applicationDeadline) return "Application deadline is required.";
 
     return null;
   }
@@ -480,6 +549,34 @@ export default function CreateTour() {
     border: "1px solid rgba(255,255,255,0.16)",
   };
 
+  // DODATO: mini dugme stil (ne dira ostatak UI-a)
+  const removeBtnStyle = {
+    padding: "7px 10px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.18)",
+    background: "rgba(0,0,0,0.55)",
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 12,
+    cursor: "pointer",
+  };
+
+  const removeXStyle = {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.22)",
+    background: "rgba(0,0,0,0.6)",
+    color: "white",
+    cursor: "pointer",
+    display: "grid",
+    placeItems: "center",
+    fontSize: 14,
+    lineHeight: 1,
+  };
+
   const isSmallScreen =
     typeof window !== "undefined" && window.innerWidth < 800;
   const responsiveLayoutStyle = isSmallScreen
@@ -722,23 +819,40 @@ export default function CreateTour() {
                 </label>
 
                 {coverPreview && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border: "1px solid rgba(255,255,255,0.22)",
-                    }}
-                  >
-                    <img
-                      src={coverPreview}
-                      alt="Cover preview"
+                  <div style={{ marginTop: 10 }}>
+                    <div
                       style={{
-                        width: "100%",
-                        height: 160,
-                        objectFit: "cover",
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        marginBottom: 8,
                       }}
-                    />
+                    >
+                      <button
+                        type="button"
+                        style={removeBtnStyle}
+                        onClick={removeCover}
+                      >
+                        🗑️ Remove cover
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        border: "1px solid rgba(255,255,255,0.22)",
+                      }}
+                    >
+                      <img
+                        src={coverPreview}
+                        alt="Cover preview"
+                        style={{
+                          width: "100%",
+                          height: 160,
+                          objectFit: "cover",
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -779,35 +893,67 @@ export default function CreateTour() {
                 </label>
 
                 {galleryPreviews.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fill,minmax(80px,1fr))",
-                      gap: 8,
-                    }}
-                  >
-                    {galleryPreviews.map((src, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          borderRadius: 10,
-                          overflow: "hidden",
-                          border: "1px solid rgba(255,255,255,0.18)",
-                        }}
-                      >
-                        <img
-                          src={src}
-                          alt="gallery"
-                          style={{
-                            width: "100%",
-                            height: 70,
-                            objectFit: "cover",
-                          }}
-                        />
+                  <div style={{ marginTop: 10 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 8,
+                        gap: 10,
+                      }}
+                    >
+                      <div style={{ fontSize: 11, opacity: 0.75 }}>
+                        Selected: {galleryPreviews.length}/6
                       </div>
-                    ))}
+                      <button
+                        type="button"
+                        style={removeBtnStyle}
+                        onClick={clearGallery}
+                      >
+                        🧹 Clear gallery
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fill,minmax(80px,1fr))",
+                        gap: 8,
+                      }}
+                    >
+                      {galleryPreviews.map((src, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            position: "relative",
+                            borderRadius: 10,
+                            overflow: "hidden",
+                            border: "1px solid rgba(255,255,255,0.18)",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            style={removeXStyle}
+                            onClick={() => removeGalleryImage(i)}
+                            title="Remove this image"
+                          >
+                            ✕
+                          </button>
+
+                          <img
+                            src={src}
+                            alt="gallery"
+                            style={{
+                              width: "100%",
+                              height: 70,
+                              objectFit: "cover",
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -842,24 +988,41 @@ export default function CreateTour() {
                 </label>
 
                 {videoPreview && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border: "1px solid rgba(255,255,255,0.22)",
-                    }}
-                  >
-                    <video
-                      src={videoPreview}
-                      controls
+                  <div style={{ marginTop: 10 }}>
+                    <div
                       style={{
-                        width: "100%",
-                        height: 200,
-                        objectFit: "cover",
-                        backgroundColor: "black",
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        marginBottom: 8,
                       }}
-                    />
+                    >
+                      <button
+                        type="button"
+                        style={removeBtnStyle}
+                        onClick={removeVideo}
+                      >
+                        🗑️ Remove video
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        border: "1px solid rgba(255,255,255,0.22)",
+                      }}
+                    >
+                      <video
+                        src={videoPreview}
+                        controls
+                        style={{
+                          width: "100%",
+                          height: 200,
+                          objectFit: "cover",
+                          backgroundColor: "black",
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

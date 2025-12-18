@@ -9,7 +9,7 @@ export default function MyTours() {
 
   const [createdTours, setCreatedTours] = useState([]);
   const [joinedTours, setJoinedTours] = useState([]);
-  const [interestedTours, setInterestedTours] = useState([]);
+  const [savedTours, setSavedTours] = useState([]);
 
   const navigate = useNavigate();
 
@@ -61,24 +61,29 @@ export default function MyTours() {
       setJoinedTours([]);
     }
 
-    // 3) Tours user is interested in
-    const { data: interestedRows } = await supabase
-      .from("tour_interested")
-      .select("tour_id")
-      .eq("user_id", userId);
+    // 3) Saved tours (user saved)
+const { data: savedRows, error: savedErr } = await supabase
+  .from("saved_tours")
+  .select("tour_id")
+  .eq("user_id", userId);
 
-    if (interestedRows && interestedRows.length > 0) {
-      const intIds = interestedRows.map((r) => r.tour_id);
-      const { data: interested } = await supabase
-        .from("tours")
-        .select("*")
-        .in("id", intIds)
-        .order("date_start", { ascending: true });
+if (savedErr) console.error("saved_tours error:", savedErr);
 
-      setInterestedTours(interested || []);
-    } else {
-      setInterestedTours([]);
-    }
+if (savedRows && savedRows.length > 0) {
+  const savedIds = savedRows.map((r) => r.tour_id);
+
+  const { data: savedTours, error: toursErr } = await supabase
+    .from("tours")
+    .select("*")
+    .in("id", savedIds)
+    .order("date_start", { ascending: true });
+
+  if (toursErr) console.error("tours error:", toursErr);
+
+  setSavedTours(savedTours || []);
+} else {
+  setSavedTours([]);
+}
 
     setLoading(false);
   }
@@ -405,7 +410,7 @@ export default function MyTours() {
           <h1 style={title}>All your adventures in one place.</h1>
           <p style={subtitle}>
             See the tours you created, the groups you joined and the trips
-            you&apos;re interested in.
+            you saved.
           </p>
         </div>
 
@@ -425,10 +430,10 @@ export default function MyTours() {
         )}
 
         {renderSection(
-          "Tours you are interested in",
-          "You marked these tours as interesting.",
-          interestedTours,
-          "Interested"
+          "Tours you saved",
+          "You saved these tours.",
+          savedTours,
+          "Saved"
         )}
       </div>
     </div>

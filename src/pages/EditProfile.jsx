@@ -10,7 +10,7 @@ export default function EditProfile() {
   const [profile, setProfile] = useState(null);
 
   // TEXT POLJA
-  const [displayName, setDisplayName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [homeBase, setHomeBase] = useState("");
   const [favoriteActivity, setFavoriteActivity] = useState("");
@@ -109,7 +109,7 @@ setProfile(existing);
 
       setProfile(data);
 
-      setDisplayName(data.display_name || "");
+      setFullName(data.full_name || "");
       setBio(data.bio || "");
       setHomeBase(data.home_base || "");
       setFavoriteActivity(data.favorite_activity || "");
@@ -142,8 +142,8 @@ setProfile(existing);
 
   // -------- VALIDATION --------
   function validate() {
-    if (!displayName.trim()) return "Display name is required.";
-    if (displayName.trim().length < 2)
+    if (!fullName.trim()) return "Display name is required.";
+    if (fullName.trim().length < 2)
       return "Display name is too short.";
     if (bio.length > 500) return "Bio must be under 500 characters.";
     return null;
@@ -207,7 +207,7 @@ setProfile(existing);
       const { error: updErr } = await supabase
         .from("profiles")
         .update({
-          display_name: displayName.trim(),
+         full_name: fullName.trim(),
           bio: bio.trim(),
           home_base: homeBase.trim(),
           favorite_activity: favoriteActivity.trim(),
@@ -424,8 +424,8 @@ setProfile(existing);
                 <div style={labelStyle}>Display name *</div>
                 <input
                   style={inputBase}
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   placeholder="Example: Luka"
                 />
               </div>
@@ -725,7 +725,7 @@ setProfile(existing);
                     marginBottom: 4,
                   }}
                 >
-                  {displayName || "Your name"}
+                  {fullName || "Your name"}
                 </div>
                 <div
                   style={{

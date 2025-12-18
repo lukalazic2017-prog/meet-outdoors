@@ -4,7 +4,14 @@ import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import L from "leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Circle,
+  useMapEvents,
+} from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 
 export default function Tours() {
@@ -22,30 +29,96 @@ export default function Tours() {
   const [showActivityList, setShowActivityList] = useState(false);
   const [showCountryList, setShowCountryList] = useState(false);
 
+  // ✅ RADIUS FILTER (0-300 km) + ✅ CENTER (klik na mapu menja)
+  const [radiusKm, setRadiusKm] = useState(0);
+  const [radiusCenter, setRadiusCenter] = useState([43.9, 21.0]); // start center
+
   // mapa – samo početni centar, bez state pomeranja
   const mapCenter = [43.9, 21.0]; // Balkan default
 
   const navigate = useNavigate();
 
   // ---------------------------------------------------------
-  // 1️⃣ UČITAVAMO SVE TURE — SIGURNO, BEZ RPC-A
+  // ✅ DISTANCE HELPER (KM)
   // ---------------------------------------------------------
-  async function loadTours() {
-    const { data, error } = await supabase
-      .from("tours")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.log("Load tours error:", error);
-      setTours([]);
-    } else {
-      setTours(data || []);
-    }
-
-    setLoading(false);
+  function distanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
+  // ---------------------------------------------------------
+  // ✅ MAP CLICK HANDLER (menja center radius kruga)
+  // ---------------------------------------------------------
+  function MapClickCenter() {
+    useMapEvents({
+      click(e) {
+        setRadiusCenter([e.latlng.lat, e.latlng.lng]);
+      },
+    });
+    return null;
+  }
+
+  // ---------------------------------------------------------
+  // ✅ OUTDOOR MARKER ICON
+  // ---------------------------------------------------------
+  const getOutdoorMarkerIcon = () =>
+    L.divIcon({
+      html: `
+        <div style="
+          width:40px;
+          height:40px;
+          border-radius:999px;
+          background: radial-gradient(circle at 30% 30%, rgba(164,227,194,1), rgba(30,120,85,1));
+          border:2px solid rgba(10,45,30,0.95);
+          box-shadow: 0 14px 30px rgba(0,0,0,0.55), 0 0 18px rgba(164,227,194,0.45);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:18px;
+          color:#052013;
+          font-weight:900;
+        ">
+          🧭
+        </div>
+      `,
+      className: "",
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+
+  // ---------------------------------------------------------
+  // 1️⃣ UČITAVAMO SVE TURE — SIGURNO, BEZ RPC-A
+  // ✅ DODATO: učitaj creator (profiles) preko creator_id
+  // ---------------------------------------------------------
+  async function loadTours() {
+  const { data, error } = await supabase
+    .from("tours")
+    .select(`
+      *,
+      profiles:creator_id (
+        full_name,
+        avatar_url
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.log("Load tours error:", error);
+    setTours([]);
+  } else {
+    setTours(data || []);
+  }
+
+  setLoading(false);
+}
   useEffect(() => {
     loadTours();
   }, []);
@@ -81,17 +154,10 @@ export default function Tours() {
   }
 
   function hasAvailableSpots(tour) {
-    const max =
-      tour.max_participants ??
-      tour.capacity ??
-      tour.max_people ??
-      null;
+    const max = tour.max_participants ?? tour.capacity ?? tour.max_people ?? null;
 
     const booked =
-      tour.current_participants ??
-      tour.booked_count ??
-      tour.attendees_count ??
-      0;
+      tour.current_participants ?? tour.booked_count ?? tour.attendees_count ?? 0;
 
     if (!max) return true; // nema limita → računamo kao dostupno
     return booked < max;
@@ -99,6 +165,7 @@ export default function Tours() {
 
   // ---------------------------------------------------------
   // 3️⃣ FILTERI (aktivnost, država, status, datum, kapacitet)
+  // ✅ DODATO: radius filter (0-300km)
   // ---------------------------------------------------------
   const filteredTours = tours.filter((tour) => {
     const tourActivity = tour.activity ?? "";
@@ -106,18 +173,15 @@ export default function Tours() {
 
     // Activity
     const matchActivity =
-      activityFilter === "All Activities" ||
-      tourActivity === activityFilter;
+      activityFilter === "All Activities" || tourActivity === activityFilter;
 
     // Country
     const matchCountry =
-      countryFilter === "All Countries" ||
-      tourCountry === countryFilter;
+      countryFilter === "All Countries" || tourCountry === countryFilter;
 
     // Status
     const status = getStatus(tour);
-    const matchStatus =
-      statusFilter === "All" || statusFilter === status;
+    const matchStatus = statusFilter === "All" || statusFilter === status;
 
     // Date – gledamo start_date
     let matchDate = true;
@@ -135,16 +199,25 @@ export default function Tours() {
     }
 
     // Capacity
-    const matchCapacity =
-      capacityFilter === "all" ? true : hasAvailableSpots(tour);
+    const matchCapacity = capacityFilter === "all" ? true : hasAvailableSpots(tour);
 
-    return (
-      matchActivity &&
-      matchCountry &&
-      matchStatus &&
-      matchDate &&
-      matchCapacity
-    );
+    // ✅ Radius
+    let matchRadius = true;
+    if (radiusKm > 0) {
+      const lat = tour.latitude;
+      const lng = tour.longitude;
+      if (!lat || !lng) {
+        matchRadius = false;
+      } else {
+        const d = distanceKm(radiusCenter[0], radiusCenter[1], lat, lng);
+        matchRadius = d <= radiusKm;
+      }
+    } else {
+      // radius=0 => sve ture (ne filtriramo po lokaciji)
+      matchRadius = true;
+    }
+
+    return matchActivity && matchCountry && matchStatus && matchDate && matchCapacity && matchRadius;
   });
 
   // ---------------------------------------------------------
@@ -370,6 +443,22 @@ export default function Tours() {
       fontSize: 12,
     },
 
+    // ✅ DODATO: radius slider styling (ne menja ostatak UI)
+    range: {
+      width: "100%",
+      accentColor: "rgba(164,227,194,1)",
+    },
+    rangeValue: {
+      fontSize: 12,
+      color: "rgba(230,255,240,0.88)",
+      marginTop: 6,
+    },
+    rangeHint: {
+      fontSize: 11,
+      opacity: 0.7,
+      marginTop: 2,
+    },
+
     // MAP WRAPPER
     mapWrapper: {
       marginTop: 16,
@@ -495,8 +584,7 @@ export default function Tours() {
       padding: "7px 14px",
       borderRadius: 999,
       border: "none",
-      background:
-        "linear-gradient(120deg, #a4e3c2, #6bc19a, #3f8d6a)",
+      background: "linear-gradient(120deg, #a4e3c2, #6bc19a, #3f8d6a)",
       color: "#032013",
       fontSize: 12,
       fontWeight: 700,
@@ -508,8 +596,7 @@ export default function Tours() {
   const stats = {
     total: filteredTours.length,
     upcoming: filteredTours.filter((t) => getStatus(t) === "Upcoming").length,
-    inProgress: filteredTours.filter((t) => getStatus(t) === "In progress")
-      .length,
+    inProgress: filteredTours.filter((t) => getStatus(t) === "In progress").length,
     expired: filteredTours.filter((t) => getStatus(t) === "Expired").length,
   };
 
@@ -645,9 +732,7 @@ export default function Tours() {
                 type="checkbox"
                 checked={capacityFilter === "availableOnly"}
                 onChange={(e) =>
-                  setCapacityFilter(
-                    e.target.checked ? "availableOnly" : "all"
-                  )
+                  setCapacityFilter(e.target.checked ? "availableOnly" : "all")
                 }
               />
               <label htmlFor="capacityFilter">
@@ -690,6 +775,8 @@ export default function Tours() {
                 setCapacityFilter("all");
                 setStartDateFilter("");
                 setEndDateFilter("");
+                setRadiusKm(0); // ✅ reset radius
+                setRadiusCenter(mapCenter); // ✅ reset center
               }}
               style={{
                 padding: "7px 12px",
@@ -705,9 +792,28 @@ export default function Tours() {
               Clear all
             </button>
           </div>
+
+          {/* ✅ RADIUS (DODATO) */}
+          <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Map radius</span>
+            <input
+              type="range"
+              min={0}
+              max={300}
+              value={radiusKm}
+              onChange={(e) => setRadiusKm(Number(e.target.value))}
+              style={styles.range}
+            />
+            <div style={styles.rangeValue}>
+              Radius: <strong>{radiusKm} km</strong>
+            </div>
+            <div style={styles.rangeHint}>
+              Click on map to change center
+            </div>
+          </div>
         </div>
 
-        {/* MAPA – bez radijusa, samo klasteri */}
+        {/* MAPA – ✅ radius + ✅ klik centar + ✅ outdoor marker */}
         <div style={styles.mapWrapper}>
           <div style={styles.mapTopBar}>
             <div style={styles.mapTopLeft}>
@@ -729,6 +835,23 @@ export default function Tours() {
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+            {/* ✅ klik na mapu menja centar */}
+            <MapClickCenter />
+
+            {/* ✅ radius krug (samo kad je >0) */}
+            {radiusKm > 0 && (
+              <Circle
+                center={radiusCenter}
+                radius={radiusKm * 1000}
+                pathOptions={{
+                  color: "rgba(164,227,194,0.9)",
+                  fillColor: "rgba(164,227,194,0.9)",
+                  fillOpacity: 0.08,
+                  weight: 2,
+                }}
+              />
+            )}
+
             <MarkerClusterGroup chunkedLoading>
               {filteredTours
                 .filter((t) => t.latitude && t.longitude)
@@ -736,6 +859,7 @@ export default function Tours() {
                   <Marker
                     key={tour.id}
                     position={[tour.latitude, tour.longitude]}
+                    icon={getOutdoorMarkerIcon()}
                     eventHandlers={{
                       click: () => navigate(`/tour/${tour.id}`),
                     }}
@@ -751,12 +875,11 @@ export default function Tours() {
             filteredTours.map((tour) => {
               const status = getStatus(tour);
 
-              const attendees = tour.participants ?? 0;
-const max = tour.max_people ?? null;
-
-const spotsText = "Join the experience";
-                
-
+              // ✅ umesto booked mesta — creator
+              const creatorName =
+                tour.profiles?.full_name ||
+                tour.creator_name ||
+                "Unknown creator";
 
               return (
                 <div
@@ -800,7 +923,10 @@ const spotsText = "Join the experience";
                         )}
                       </div>
 
-                      <div style={styles.metaRight}>{spotsText}</div>
+                      {/* ✅ ovde sada piše creator (umesto booked) */}
+                      <div style={styles.metaRight}>
+                        👤 {creatorName}
+                      </div>
                     </div>
 
                     <button

@@ -1,800 +1,1487 @@
 // src/pages/Profile.jsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
+/* ================= FRIEND BADGE ================= */
+const FriendBadge = () => (
+  <span
+    style={{
+      fontSize: 11,
+      padding: "4px 12px",
+      borderRadius: 999,
+      background: "linear-gradient(135deg, #00ffc3, #00b4ff, #7c4dff)",
+      color: "#02130d",
+      fontWeight: 950,
+      boxShadow: "0 0 18px rgba(0,255,195,0.45)",
+      whiteSpace: "nowrap",
+      border: "1px solid rgba(255,255,255,0.20)",
+      letterSpacing: "0.06em",
+    }}
+  >
+    🤝 FRIEND
+  </span>
+);
+
 export default function Profile() {
-  const { id } = useParams(); // user id čiji profil gledamo
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [authUser, setAuthUser] = useState(null);
-  const [profileUser, setProfileUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [tours, setTours] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [timeline, setTimeline] = useState([]);
+
+  const [followersList, setFollowersList] = useState([]);
+  const [friendsList, setFriendsList] = useState([]);
+
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isFriend, setIsFriend] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   const [avgRating, setAvgRating] = useState(null);
   const [ratingsCount, setRatingsCount] = useState(0);
-  const [myRating, setMyRating] = useState(0);
-  const [isRatingSaving, setIsRatingSaving] = useState(false);
+  const [myRating, setMyRating] = useState(null);
+  const [ratingBusy, setRatingBusy] = useState(false);
 
-  const [timeline, setTimeline] = useState([]);
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
 
-  const [ratingPanelOpen, setRatingPanelOpen] = useState(false);
-
-  // ================== LOAD AUTH USER ==================
-  useEffect(() => {
-    async function loadAuth() {
-      const { data } = await supabase.auth.getUser();
-      setAuthUser(data?.user || null);
-    }
-    loadAuth();
-  }, []);
-
-  // ================== LOAD PROFILE DATA ==================
-  useEffect(() => {
-    if (!id) return;
-    async function loadProfile() {
-      setLoading(true);
-
-      // 1) PROFILE (pretpostavljam tabela "profiles")
-     let { data: profileData } = await supabase
-  .from("profiles")
-  .select("*")
-  .eq("id", id)
-  .maybeSingle();
-
-if (!profileData) {
-  const { error: insertErr } = await supabase
-    .from("profiles")
-    .insert({
-      id,
-      full_name: "",
-      bio: "",
-      avatar_url: "",
-      cover_url: "",
-      home_base: "",
-      favorite_activity: "",
-      instagram_url: "",
-      tiktok_url: "",
-      youtube_url: "",
-    });
-
-  if (insertErr) console.error("Auto create profile:", insertErr);
-
-  profileData = {
-    id,
-    full_name: "",
-    bio: "",
-    avatar_url: "",
-    cover_url: "",
-    home_base: "",
-    favorite_activity: "",
-    instagram_url: "",
-    tiktok_url: "",
-    youtube_url: "",
-  };
-}
-
-setProfileUser(profileData);
-
-
-      setProfileUser(profileData);
-
-      // 2) TOURS (tabela "tours", polje creator_id)
-      const { data: toursData } = await supabase
-        .from("tours")
-        .select("*")
-        .eq("creator_id", id)
-        .order("created_at", { ascending: false });
-
-      setTours(toursData || []);
-
-      // 3) FOLLOWERS
-      const { data: followers } = await supabase
-        .from("followers")
-        .select("*", { count: "exact", head: true })
-        .eq("following_id", id);
-
-      setFollowersCount(followers?.length ?? followers?.count ?? 0);
-
-      // broj ljudi koje on prati
-      const { data: following } = await supabase
-        .from("followers")
-        .select("*", { count: "exact", head: true })
-        .eq("follower_id", id);
-
-      setFollowingCount(following?.length ?? following?.count ?? 0);
-
-      // da li JA pratim njega
-      if (authUser) {
-        const { data: rel } = await supabase
-          .from("followers")
-          .select("id")
-          .eq("follower_id", authUser.id)
-          .eq("following_id", id)
-          .maybeSingle();
-
-        setIsFollowing(!!rel);
-      }
-
-      // 4) RATING
-      const { data: ratingRows } = await supabase
-        .from("user_ratings")
-        .select("*")
-        .eq("rated_user_id", id);
-
-      if (ratingRows && ratingRows.length > 0) {
-        const sum = ratingRows.reduce((acc, r) => acc + (r.rating || 0), 0);
-        const avg = sum / ratingRows.length;
-        setAvgRating(avg);
-        setRatingsCount(ratingRows.length);
-      } else {
-        setAvgRating(null);
-        setRatingsCount(0);
-      }
-
-      if (authUser) {
-        const { data: myRow } = await supabase
-          .from("user_ratings")
-          .select("*")
-          .eq("rated_user_id", id)
-          .eq("rater_id", authUser.id)
-          .maybeSingle();
-
-        setMyRating(myRow?.rating || 0);
-      }
-
-      // 5) TIMELINE – miks tura + ratinga (samo da izgleda brutalno)
-      const timelineItems = [];
-
-      (toursData || []).forEach((t) => {
-        timelineItems.push({
-          type: "tour",
-          created_at: t.created_at,
-          title: `Created a new tour: ${t.title}`,
-          description: `${t.location_name || "Unknown place"}, ${
-            t.country || ""
-          }`,
-        });
-      });
-
-      (ratingRows || []).forEach((r) => {
-        timelineItems.push({
-          type: "rating",
-          created_at: r.created_at,
-          title: `Received a ${r.rating}★ rating`,
-          description: r.comment || "Someone enjoyed this adventure.",
-        });
-      });
-
-      timelineItems.sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
-      setTimeline(timelineItems.slice(0, 15));
-
-      setLoading(false);
-    }
-
-    loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, authUser?.id]);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const isOwnProfile = authUser && authUser.id === id;
 
-  // ================== XP & LEVEL ==================
-  const { level, xp, nextLevelXp, levelName, levelColor } = useMemo(() => {
-    const toursCount = tours.length;
-    const followers = followersCount;
-    const ratingBonus = avgRating ? avgRating * 40 : 0;
+  // ================= AUTH =================
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthUser(data?.user || null);
+    });
+  }, []);
 
-    const baseXp = toursCount * 120 + followers * 40 + ratingBonus * 3;
-    const totalXp = Math.round(baseXp);
+  // ================= LOAD (SVE IZ BAZE) =================
+  async function loadAll() {
+    if (!id) return;
+    setLoading(true);
 
-    // jednostavan sistem:
-    // lvl1: 0-199, lvl2: 200-399, lvl3: 400-699, lvl4: 700-1199, lvl5+: 1200+
+    const { data: auth } = await supabase.auth.getUser();
+    const me = auth?.user || null;
+
+    // PROFILE
+    const { data: prof, error: profErr } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (profErr) console.log("PROFILE ERR", profErr);
+    setProfile(prof || null);
+
+    // TOURS
+    const { data: toursData, error: toursErr } = await supabase
+      .from("tours")
+      .select("*")
+      .eq("creator_id", id)
+      .order("created_at", { ascending: false });
+    if (toursErr) console.log("TOURS ERR", toursErr);
+    setTours(toursData || []);
+
+    // EVENTS (created by user)
+    const { data: eventsData, error: eventsErr } = await supabase
+      .from("events")
+      .select("*")
+      .eq("creator_id", id)
+      .order("start_date", { ascending: true })
+      .limit(6);
+    if (eventsErr) console.log("EVENTS ERR", eventsErr);
+    setEvents(eventsData || []);
+
+    // FOLLOWERS COUNT (koliko prati njega)
+    const { count: followersCnt, error: followersCntErr } = await supabase
+      .from("profile_follows")
+      .select("*", { count: "exact", head: true })
+      .eq("following_id", id);
+    if (followersCntErr) console.log("FOLLOWERS COUNT ERR", followersCntErr);
+    setFollowersCount(followersCnt || 0);
+
+    // FOLLOWING COUNT (koliko on prati)
+    const { count: followingCnt, error: followingCntErr } = await supabase
+      .from("profile_follows")
+      .select("*", { count: "exact", head: true })
+      .eq("follower_id", id);
+    if (followingCntErr) console.log("FOLLOWING COUNT ERR", followingCntErr);
+    setFollowingCount(followingCnt || 0);
+
+    // DO I FOLLOW?
+    if (me && me.id !== id) {
+      const { data: row, error: rowErr } = await supabase
+        .from("profile_follows")
+        .select("id")
+        .eq("follower_id", me.id)
+        .eq("following_id", id)
+        .maybeSingle();
+      if (rowErr) console.log("FOLLOW CHECK ERR", rowErr);
+      setIsFollowing(!!row);
+    } else {
+      setIsFollowing(false);
+    }
+
+    // FRIEND CHECK (mutual follow)
+    if (me && me.id !== id) {
+      const { data: a, error: aErr } = await supabase
+        .from("profile_follows")
+        .select("id")
+        .eq("follower_id", me.id)
+        .eq("following_id", id)
+        .maybeSingle();
+      if (aErr) console.log("FRIEND A ERR", aErr);
+
+      const { data: b, error: bErr } = await supabase
+        .from("profile_follows")
+        .select("id")
+        .eq("follower_id", id)
+        .eq("following_id", me.id)
+        .maybeSingle();
+      if (bErr) console.log("FRIEND B ERR", bErr);
+
+      setIsFriend(!!a && !!b);
+    } else {
+      setIsFriend(false);
+    }
+
+    // FOLLOWERS LIST (SIGURNO - 2 koraka)
+    const { data: folIdsRows, error: folIdsErr } = await supabase
+      .from("profile_follows")
+      .select("follower_id, created_at")
+      .eq("following_id", id)
+      .order("created_at", { ascending: false })
+      .limit(80);
+
+    if (folIdsErr) console.log("FOLLOWERS IDS ERR", folIdsErr);
+
+    const followerIds = (folIdsRows || []).map((r) => r.follower_id).filter(Boolean);
+
+    if (followerIds.length === 0) {
+      setFollowersList([]);
+    } else {
+      const { data: folProfiles, error: folProfilesErr } = await supabase
+        .from("profiles")
+        .select("id, full_name, username, avatar_url, country, city")
+        .in("id", followerIds);
+
+      if (folProfilesErr) console.log("FOLLOWERS PROFILES ERR", folProfilesErr);
+
+      const map = new Map((folProfiles || []).map((p) => [p.id, p]));
+      const ordered = followerIds.map((pid) => map.get(pid)).filter(Boolean);
+      setFollowersList(ordered);
+    }
+
+    // FRIENDS LIST (PRIVATE)
+    // Prikazujemo samo ako je: (a) moj profil, ili (b) ja sam friend sa njim
+    const canSeeFriends = isOwnProfile || (me && me.id !== id && isFriend);
+    if (canSeeFriends) {
+      // mutual = (he follows X) AND (X follows him)
+      const { data: followingRows, error: fr1Err } = await supabase
+        .from("profile_follows")
+        .select("following_id")
+        .eq("follower_id", id)
+        .limit(500);
+      if (fr1Err) console.log("FRIENDS following ERR", fr1Err);
+
+      const { data: followersRows2, error: fr2Err } = await supabase
+        .from("profile_follows")
+        .select("follower_id")
+        .eq("following_id", id)
+        .limit(500);
+      if (fr2Err) console.log("FRIENDS followers ERR", fr2Err);
+
+      const followingIds = new Set((followingRows || []).map((r) => r.following_id).filter(Boolean));
+      const mutualIds = (followersRows2 || [])
+        .map((r) => r.follower_id)
+        .filter((x) => x && followingIds.has(x));
+
+      if (mutualIds.length === 0) {
+        setFriendsList([]);
+      } else {
+        const { data: mutualProfiles, error: mpErr } = await supabase
+          .from("profiles")
+          .select("id, full_name, username, avatar_url, country, city")
+          .in("id", mutualIds);
+        if (mpErr) console.log("FRIENDS PROFILES ERR", mpErr);
+
+        const m = new Map((mutualProfiles || []).map((p) => [p.id, p]));
+        const ordered = mutualIds.map((pid) => m.get(pid)).filter(Boolean);
+        setFriendsList(ordered);
+      }
+    } else {
+      setFriendsList([]);
+    }
+
+    // RATINGS (AVG + COUNT)
+    const { data: ratings, error: rErr } = await supabase
+      .from("profile_ratings")
+      .select("rating, created_at")
+      .eq("rated_user_id", id);
+    if (rErr) console.log("RATINGS ERR", rErr);
+
+    if (ratings && ratings.length > 0) {
+      const sum = ratings.reduce((a, r) => a + (r.rating || 0), 0);
+      setAvgRating(sum / ratings.length);
+      setRatingsCount(ratings.length);
+    } else {
+      setAvgRating(null);
+      setRatingsCount(0);
+    }
+
+    // MY RATING
+    if (me && me.id !== id) {
+      const { data: my, error: myErr } = await supabase
+        .from("profile_ratings")
+        .select("rating")
+        .eq("rater_id", me.id)
+        .eq("rated_user_id", id)
+        .maybeSingle();
+      if (myErr) console.log("MY RATING ERR", myErr);
+      setMyRating(my?.rating || null);
+    } else {
+      setMyRating(null);
+    }
+
+    // TIMELINE (tours + events + rating)
+    const items = [];
+
+    (toursData || []).forEach((t) => {
+      items.push({
+        type: "tour",
+        created_at: t.created_at,
+        title: "Created a new tour",
+        subtitle: t.title,
+        meta: `${t.location_name || "Unknown place"}${t.country ? `, ${t.country}` : ""}`,
+        cover: t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null),
+        id: t.id,
+      });
+    });
+
+    (eventsData || []).forEach((e) => {
+      items.push({
+        type: "event",
+        created_at: e.created_at || e.start_date || new Date().toISOString(),
+        title: "Created an event",
+        subtitle: e.title,
+        meta: `${e.city || "City"}${e.country ? `, ${e.country}` : ""}`,
+        cover: e.cover_url || null,
+        id: e.id,
+      });
+    });
+
+    (ratings || []).slice(0, 8).forEach((r) => {
+      items.push({
+        type: "rating",
+        created_at: r.created_at,
+        title: "Received a rating",
+        subtitle: `${r.rating} ★`,
+        meta: "Someone rated this explorer.",
+        cover: null,
+        id: null,
+      });
+    });
+
+    items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    setTimeline(items.slice(0, 14));
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line
+  }, [id]);
+
+  // ================= ACTIONS =================
+  async function toggleFollow(e) {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+
+    if (!authUser) return navigate("/login");
+    if (isOwnProfile) return;
+    if (followBusy) return;
+
+    setFollowBusy(true);
+
+    if (isFollowing) {
+      const { error } = await supabase
+        .from("profile_follows")
+        .delete()
+        .eq("follower_id", authUser.id)
+        .eq("following_id", id);
+      if (error) console.log("UNFOLLOW ERR", error);
+    } else {
+      const { error } = await supabase.from("profile_follows").insert({
+        follower_id: authUser.id,
+        following_id: id,
+      });
+      if (error) console.log("FOLLOW ERR", error);
+    }
+
+    await loadAll();
+    setFollowBusy(false);
+  }
+
+  async function rate(value) {
+    if (!authUser) return navigate("/login");
+    if (isOwnProfile) return;
+    if (ratingBusy) return;
+
+    setRatingBusy(true);
+
+    const { error } = await supabase.from("profile_ratings").upsert(
+      { rater_id: authUser.id, rated_user_id: id, rating: value },
+      { onConflict: "rater_id,rated_user_id" }
+    );
+    if (error) console.log("RATE ERR", error);
+
+    setMyRating(value);
+    await loadAll();
+    setRatingBusy(false);
+  }
+
+  // ================= XP / LEVEL / BADGES =================
+  const { level, levelName, theme, xp, nextCap, progress, badgeText, badges } = useMemo(() => {
+    const totalXp =
+      (tours.length || 0) * 120 +
+      (events.length || 0) * 80 +
+      (followersCount || 0) * 40 +
+      (avgRating ? avgRating * 60 : 0) +
+      (isFriend ? 200 : 0);
+
     let lvl = 1;
-    if (totalXp >= 200) lvl = 2;
-    if (totalXp >= 400) lvl = 3;
-    if (totalXp >= 700) lvl = 4;
-    if (totalXp >= 1200) lvl = 5;
+    if (totalXp >= 250) lvl = 2;
+    if (totalXp >= 550) lvl = 3;
+    if (totalXp >= 950) lvl = 4;
+    if (totalXp >= 1500) lvl = 5;
 
-    const lvlNames = {
+    const names = {
       1: "Trail Rookie",
       2: "Forest Explorer",
-      3: "Mountain Wolf",
-      4: "Summit Hunter",
-      5: "Wilderness Master",
+      3: "Pathfinder",
+      4: "Summit Alpha",
+      5: "Wilderness Legend",
     };
 
-    const lvlColors = {
-      1: "#7fefb5",
-      2: "#4dd0ff",
-      3: "#b184ff",
-      4: "#ffe26b",
-      5: "#ff9b6b",
+    const caps = { 1: 250, 2: 550, 3: 950, 4: 1500, 5: 2200 };
+    const prev = lvl === 1 ? 0 : caps[lvl - 1];
+    const cap = caps[lvl];
+    const prog = Math.max(0, Math.min(1, (totalXp - prev) / (cap - prev)));
+
+    const themes = {
+      1: { a: "#00ffc3", b: "#00b4ff", c: "#7c4dff" },
+      2: { a: "#00ffb0", b: "#00d1ff", c: "#ffffff" },
+      3: { a: "#b184ff", b: "#00ffc3", c: "#00b4ff" },
+      4: { a: "#ffe26b", b: "#ff9b6b", c: "#00ffc3" },
+      5: { a: "#ff4dd8", b: "#00ffc3", c: "#00b4ff" },
     };
 
-    const threshold = {
-      1: 200,
-      2: 400,
-      3: 700,
-      4: 1200,
-      5: 1600,
+    const badge = {
+      1: "🌱 Just getting started",
+      2: "🌲 Growing explorer",
+      3: "🧭 Pathfinder energy",
+      4: "⛰️ Summit grinder",
+      5: "🏆 Absolute legend",
     }[lvl];
 
-    const prevThreshold = {
-      1: 0,
-      2: 200,
-      3: 400,
-      4: 700,
-      5: 1200,
-    }[lvl];
-
-    const inLevelXp = Math.max(0, totalXp - prevThreshold);
-    const neededInLevel = Math.max(1, threshold - prevThreshold);
-    const nextXp = threshold;
+    const b = [];
+    if ((tours.length || 0) >= 1) b.push({ t: "🧭 Explorer", tip: "Created at least 1 tour" });
+    if ((events.length || 0) >= 1) b.push({ t: "🏕️ Host", tip: "Created at least 1 event" });
+    if (followersCount >= 10) b.push({ t: "🔥 Popular", tip: "10+ followers" });
+    if (lvl >= 4) b.push({ t: "💠 Elite", tip: "Level 4+" });
+    if (lvl >= 5) b.push({ t: "🏆 Legend", tip: "Level 5" });
 
     return {
       level: lvl,
-      xp: totalXp,
-      nextLevelXp: nextXp,
-      levelName: lvlNames[lvl],
-      levelColor: lvlColors[lvl],
-      inLevelXp,
-      neededInLevel,
+      levelName: names[lvl],
+      theme: themes[lvl] || themes[1],
+      xp: Math.round(totalXp),
+      nextCap: cap,
+      progress: prog,
+      badgeText: badge,
+      badges: b,
     };
-  }, [tours.length, followersCount, avgRating]);
+  }, [tours.length, events.length, followersCount, avgRating, isFriend]);
 
-  // progress (0–1) za XP bar
-  const xpProgress = useMemo(() => {
-    if (!nextLevelXp) return 0;
-    const prevThreshold =
-      level === 1 ? 0 : level === 2 ? 200 : level === 3 ? 400 : level === 4 ? 700 : 1200;
-    const inLevelXp = xp - prevThreshold;
-    const needed = nextLevelXp - prevThreshold;
-    return Math.max(0, Math.min(1, inLevelXp / needed));
-  }, [xp, level, nextLevelXp]);
-
-  // ================== FOLLOW / UNFOLLOW ==================
-  async function toggleFollow() {
-    if (!authUser) {
-      navigate("/login");
-      return;
-    }
-    if (isOwnProfile) return;
-
+  const fmtDate = (d) => {
+    if (!d) return "";
     try {
-      if (!isFollowing) {
-        const { error } = await supabase.from("followers").insert({
-          follower_id: authUser.id,
-          following_id: id,
-        });
-        if (error) throw error;
-        setIsFollowing(true);
-        setFollowersCount((c) => c + 1);
-      } else {
-        const { error } = await supabase
-          .from("followers")
-          .delete()
-          .eq("follower_id", authUser.id)
-          .eq("following_id", id);
-        if (error) throw error;
-        setIsFollowing(false);
-        setFollowersCount((c) => Math.max(0, c - 1));
-      }
-    } catch (err) {
-      console.error("Follow error:", err);
-      alert("Could not update follow status.");
+      return new Date(d).toLocaleString();
+    } catch {
+      return "";
     }
-  }
+  };
 
-  // ================== RATING SAVE ==================
-  async function handleRate(newRating) {
-    if (!authUser) {
-      navigate("/login");
-      return;
-    }
-    if (isOwnProfile) return;
-
-    setIsRatingSaving(true);
-    try {
-      const { error } = await supabase.from("user_ratings").upsert(
-        {
-          rater_id: authUser.id,
-          rated_user_id: id,
-          rating: newRating,
-        },
-        {
-          onConflict: "rater_id,rated_user_id",
-        }
-      );
-      if (error) throw error;
-
-      setMyRating(newRating);
-
-      // recompute avg
-      const { data: ratingRows } = await supabase
-        .from("user_ratings")
-        .select("*")
-        .eq("rated_user_id", id);
-
-      if (ratingRows && ratingRows.length > 0) {
-        const sum = ratingRows.reduce((acc, r) => acc + (r.rating || 0), 0);
-        const avg = sum / ratingRows.length;
-        setAvgRating(avg);
-        setRatingsCount(ratingRows.length);
-      } else {
-        setAvgRating(null);
-        setRatingsCount(0);
-      }
-    } catch (err) {
-      console.error("Rating error:", err);
-      alert("Could not save rating.");
-    } finally {
-      setIsRatingSaving(false);
-    }
-  }
-
-  // ================== STYLES ==================
-  const pageStyle = {
+  // ================= UI STYLES =================
+  const page = {
     minHeight: "100vh",
+    color: "#eafff7",
     background:
-      "radial-gradient(circle at top, #04251a 0%, #02070a 45%, #000000 100%)",
-    color: "#ffffff",
-    paddingBottom: 40,
+      "radial-gradient(1200px 600px at 15% 0%, rgba(0,255,195,0.18), transparent 55%)," +
+      "radial-gradient(900px 500px at 85% 10%, rgba(124,77,255,0.16), transparent 55%)," +
+      "linear-gradient(180deg, #02080a 0%, #010405 100%)",
     fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   };
 
-  const containerStyle = {
-    maxWidth: 1150,
+  const wrap = {
+    maxWidth: 1200,
     margin: "0 auto",
-    padding: "18px 16px 40px",
-  };
-
-  const heroCardStyle = {
-    position: "relative",
-    borderRadius: 26,
-    overflow: "hidden",
-    border: "1px solid rgba(0,255,160,0.28)",
-    boxShadow:
-      "0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(0,255,160,0.32)",
-    marginBottom: 22,
-  };
-
-  const heroBackdropStyle = {
-    width: "100%",
-    height: 210,
-    objectFit: "cover",
-    filter: "saturate(1.15) contrast(1.03)",
-    transform: "scale(1.03)",
-  };
-
-  const heroOverlayStyle = {
-    position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.92) 90%)",
-  };
-
-  const avatarOuterStyle = {
-    position: "absolute",
-    left: "50%",
-    bottom: 20,
-    transform: "translateX(-50%)",
-    width: 104,
-    height: 104,
-    borderRadius: "50%",
-    background:
-      "radial-gradient(circle at 30% 0%, rgba(255,255,255,0.6), transparent 60%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const avatarRingStyle = {
-    width: 94,
-    height: 94,
-    borderRadius: "50%",
-    padding: 3,
-    background: `conic-gradient(from 190deg, ${levelColor}, #00ffc3, #00b4ff, #7c4dff, ${levelColor})`,
-    boxShadow:
-      "0 0 30px rgba(0,255,190,0.7), 0 0 60px rgba(0,255,150,0.4)",
-  };
-
-  const avatarImgStyle = {
-    width: "100%",
-    height: "100%",
-    borderRadius: "50%",
-    objectFit: "cover",
-    border: "3px solid #02150e",
-  };
-
-  const heroContentStyle = {
-    position: "absolute",
-    left: 24,
-    right: 24,
-    bottom: 20,
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    gap: 12,
-  };
-
-  const heroTextLeft = {
-    maxWidth: 360,
-  };
-
-  const heroNameStyle = {
-    fontSize: 26,
-    fontWeight: 800,
-    marginBottom: 4,
-  };
-
-  const heroSubStyle = {
-    fontSize: 13,
-    color: "rgba(230,255,245,0.8)",
-  };
-
-  const heroButtonsRight = {
+    padding: "18px 16px 90px",
     display: "flex",
     flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 6,
+    gap: 18, // ✅ RAZDVAJA KARTICE SVUDA
   };
 
-  const mainLayoutStyle = {
-    marginTop: 60,
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1.7fr) minmax(0, 1.3fr)",
-    gap: 18,
-  };
-
-  const cardStyle = {
-    background: "rgba(0,0,0,0.55)",
-    borderRadius: 20,
-    padding: 16,
-    border: "1px solid rgba(255,255,255,0.08)",
-    boxShadow: "0 24px 60px rgba(0,0,0,0.85)",
+  const glass = {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    boxShadow: "0 30px 90px rgba(0,0,0,0.65)",
     backdropFilter: "blur(18px)",
+    borderRadius: 26,
   };
 
-  const sectionTitleStyle = {
-    fontSize: 13,
+  const card = { ...glass, padding: 18 };
+
+  const sectionTitle = {
+    fontSize: 12,
+    letterSpacing: "0.14em",
     textTransform: "uppercase",
-    letterSpacing: "0.12em",
-    color: "rgba(210,255,230,0.85)",
+    color: "rgba(230,255,245,0.75)",
     marginBottom: 10,
   };
 
-  const pillRowStyle = {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-  };
-
-  const pillStyle = {
-    padding: "4px 10px",
+  const pill = {
+    padding: "8px 12px",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.18)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(0,0,0,0.35)",
     fontSize: 12,
-    background: "rgba(0,0,0,0.5)",
+    display: "inline-flex",
+    gap: 8,
+    alignItems: "center",
   };
 
-  const primaryActionBtn = {
-    padding: "8px 16px",
+  const btnPrimary = {
+    padding: "12px 18px",
     borderRadius: 999,
     border: "none",
     cursor: "pointer",
-    fontWeight: 700,
-    fontSize: 13,
-    color: "#02130b",
-    background:
-      "linear-gradient(135deg, #00ffb0 0%, #00d1ff 50%, #ffffff 100%)",
-    boxShadow: "0 0 18px rgba(0,255,180,0.65)",
+    fontWeight: 950,
+    color: "#03120c",
+    background: `linear-gradient(135deg, ${theme.a}, ${theme.b}, ${theme.c})`,
+    boxShadow: "0 10px 34px rgba(0,255,195,0.26)",
+    transition: "transform .15s ease, opacity .15s ease",
   };
 
-  const ghostBtn = {
-    padding: "7px 14px",
+  const btnGhost = {
+    padding: "11px 16px",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.35)",
+    border: "1px solid rgba(255,255,255,0.26)",
+    background: "rgba(0,0,0,0.35)",
+    color: "white",
     cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 12,
-    background: "rgba(0,0,0,0.3)",
-    color: "#ffffff",
+    fontWeight: 900,
+    transition: "transform .15s ease, opacity .15s ease",
   };
 
-  const ratingStarStyle = (active) => ({
-    cursor: "pointer",
-    fontSize: 24,
-    marginRight: 2,
-    filter: active
-      ? "drop-shadow(0 0 8px rgba(255,230,120,0.8))"
-      : "none",
+  const tabsWrap = {
+    ...glass,
+    padding: 10,
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+  };
+
+  const tabBtn = (active) => ({
+    ...btnGhost,
+    padding: "10px 14px",
+    borderRadius: 999,
+    background: active ? `linear-gradient(135deg, ${theme.a}, ${theme.b}, ${theme.c})` : "rgba(0,0,0,0.35)",
+    color: active ? "#03120c" : "white",
+    border: "1px solid rgba(255,255,255,0.14)",
+    boxShadow: active ? "0 10px 30px rgba(0,255,195,0.18)" : "none",
   });
 
-  const miniLabel = {
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: "0.12em",
-    color: "rgba(255,255,255,0.6)",
+  const grid = {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1.1fr)",
+    gap: 18,
   };
 
-  const statNumber = {
-    fontSize: 18,
-    fontWeight: 800,
-  };
+  const isSmall = typeof window !== "undefined" && window.innerWidth < 900;
+  const gridResponsive = isSmall ? { ...grid, gridTemplateColumns: "1fr" } : grid;
 
-  const isSmallScreen =
-    typeof window !== "undefined" && window.innerWidth < 850;
-
-  const responsiveLayout = isSmallScreen
-    ? { ...mainLayoutStyle, gridTemplateColumns: "1fr" }
-    : mainLayoutStyle;
-
-  // ================== RENDER ==================
-  if (loading || !profileUser) {
+  // ================= RENDER =================
+  if (loading || !profile) {
     return (
-      <div style={pageStyle}>
-        <div style={containerStyle}>
-          <div
-            style={{
-              minHeight: "60vh",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#ffffff",
-            }}
-          >
-            Loading profile...
+      <div style={page}>
+        <div style={wrap}>
+          <div style={{ ...glass, padding: 28, minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+            Loading profile…
           </div>
         </div>
       </div>
     );
   }
 
-  const avatarUrl =
-    profileUser.avatar_url ||
-    "https://i.pravatar.cc/300?img=12";
+  const avatar = profile.avatar_url || "https://i.pravatar.cc/300?img=12";
 
-  const coverUrl =
-    profileUser.cover_url ||
-    (tours[0]?.cover_url ||
-      "https://images.pexels.com/photos/417173/pexels-photo-417173.jpeg");
+  // ✅ COVER samo iz edit-profile polja (bez random slika)
+  const cover =
+    profile.cover_url ||
+    profile.header_url ||
+    profile.banner_url ||
+    profile.cover ||
+    profile.cover_image_url ||
+    ""; // ako nema → nema slike, samo cinematic gradient
 
-  return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        {/* HERO */}
-        <div style={heroCardStyle}>
-          <img src={coverUrl} alt="backdrop" style={heroBackdropStyle} />
-          <div style={heroOverlayStyle} />
+  const canSeeFriends = isOwnProfile || isFriend;
 
-          {/* avatar ring */}
-          <div style={avatarOuterStyle}>
-            <div style={avatarRingStyle}>
-              <img src={avatarUrl} alt="avatar" style={avatarImgStyle} />
-            </div>
-          </div>
+  const actionBar = (
+    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+      {!isOwnProfile ? (
+        <>
+          <button
+            type="button"
+            style={{ ...btnPrimary, opacity: followBusy ? 0.7 : 1 }}
+            onClick={toggleFollow}
+            disabled={followBusy}
+          >
+            {isFollowing ? "Following ✓" : "Follow"}
+          </button>
 
-          {/* hero content */}
-          <div style={heroContentStyle}>
-            <div style={heroTextLeft}>
-              <div style={miniLabel}>
-                Level {level} · {levelName}
-              </div>
-              <h1 style={heroNameStyle}>
-                {profileUser.display_name || profileUser.username || "Explorer"}
-              </h1>
-              <div style={heroSubStyle}>
-                {profileUser.bio ||
-                  "No description yet. This explorer prefers actions over words."}
-              </div>
-            </div>
+          {/* CHAT samo za friends (PRIVATE) */}
+          {isFriend && (
+            <button style={btnGhost} onClick={() => navigate(`/chat/${id}`)}>
+              💬 Chat
+            </button>
+          )}
 
-            <div style={heroButtonsRight}>
-              {!isOwnProfile && (
-                <button
-                  style={primaryActionBtn}
-                  onClick={toggleFollow}
-                >
-                  {isFollowing ? "Following ✓" : "Follow"}
-                </button>
-              )}
+          {isFriend && <FriendBadge />}
+        </>
+      ) : (
+        <>
+          <button style={btnGhost} onClick={() => navigate("/edit-profile")}>
+            Edit profile
+          </button>
+          <button style={btnGhost} onClick={() => navigate("/my-tours")}>
+            🎒 Manage tours
+          </button>
+        </>
+      )}
+    </div>
+  );
 
-              {!isOwnProfile && (
-                <button
-                  style={ghostBtn}
-                  onClick={() => setRatingPanelOpen((p) => !p)}
-                >
-                  {ratingPanelOpen ? "Close rating" : "Rate profile"}
-                </button>
-              )}
+  const heroCard = (
+    <div style={{ ...glass, overflow: "hidden", position: "relative", padding: 0 }}>
+      {/* cover */}
+      <div style={{ position: "relative", height: 340 }}>
+        {cover ? (
+          <img
+            src={cover}
+            alt="cover"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: "saturate(1.18) contrast(1.06) brightness(0.92)",
+              transform: "scale(1.03)",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              background:
+                "radial-gradient(800px 320px at 18% 18%, rgba(0,255,195,0.22), transparent 60%)," +
+                "radial-gradient(820px 340px at 82% 18%, rgba(124,77,255,0.20), transparent 65%)," +
+                "linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.92))",
+            }}
+          />
+        )}
 
-              {isOwnProfile && (
-                <button
-                  style={ghostBtn}
-                  onClick={() => navigate("/edit-profile")}
-                >
-                  Edit profile
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.92) 92%)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(520px 260px at 18% 12%, rgba(0,255,195,0.25), transparent 65%)," +
+              "radial-gradient(540px 280px at 82% 12%, rgba(124,77,255,0.22), transparent 70%)",
+            mixBlendMode: "screen",
+            opacity: 0.9,
+          }}
+        />
+      </div>
 
-        {/* MAIN LAYOUT */}
-        <div style={responsiveLayout}>
-          {/* LEFT – XP, badges, timeline */}
-          <div style={cardStyle}>
-            {/* XP / LEVEL */}
-            <div style={{ marginBottom: 18 }}>
-              <div style={sectionTitleStyle}>Adventure level</div>
-              <div
+      {/* hero content */}
+      <div style={{ padding: 18, marginTop: -92, position: "relative" }}>
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap" }}>
+          {/* LEFT */}
+          <div style={{ display: "flex", gap: 14, alignItems: "flex-end" }}>
+            {/* avatar ring */}
+            <div
+              style={{
+                width: 126,
+                height: 126,
+                borderRadius: "50%",
+                padding: 4,
+                background: `conic-gradient(from 210deg, ${theme.a}, ${theme.b}, ${theme.c}, ${theme.a})`,
+                boxShadow: "0 0 44px rgba(0,255,195,0.35), 0 0 90px rgba(124,77,255,0.18)",
+              }}
+            >
+              <img
+                src={avatar}
+                alt="avatar"
                 style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  alignItems: "center",
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "3px solid rgba(0,0,0,0.8)",
                 }}
-              >
-                <div>
-                  <div style={miniLabel}>XP</div>
-                  <div style={statNumber}>{xp}</div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "rgba(255,255,255,0.65)",
-                    }}
-                  >
-                    Next level at {nextLevelXp} XP
-                  </div>
-                </div>
+              />
+            </div>
 
-                <div style={{ flex: 1, minWidth: 180 }}>
-                  <div
-                    style={{
-                      height: 10,
-                      borderRadius: 999,
-                      background: "rgba(255,255,255,0.1)",
-                      overflow: "hidden",
-                      boxShadow:
-                        "0 0 16px rgba(0,255,190,0.35)",
-                    }}
-                  >
-                    <div
+            <div style={{ paddingBottom: 6, maxWidth: 620 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+                <div style={pill}>
+                  🧬 Level <b style={{ color: "white" }}>{level}</b>
+                  <span style={{ opacity: 0.6 }}>•</span>
+                  <span style={{ color: "rgba(255,255,255,0.9)" }}>{levelName}</span>
+                </div>
+                <div style={pill}>🏅 {badgeText}</div>
+                <div style={pill}>
+                  📍 {profile.city || "City"}
+                  <span style={{ opacity: 0.6 }}>•</span>
+                  {profile.country || "Country"}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ fontSize: 36, fontWeight: 950, lineHeight: 1.03 }}>
+                  {profile.full_name || profile.username || "Explorer"}
+                </div>
+                {isFriend && <FriendBadge />}
+              </div>
+
+              <div style={{ marginTop: 8, fontSize: 13, opacity: 0.82, lineHeight: 1.6 }}>
+                {profile.bio || "No description yet. This explorer prefers actions over words."}
+              </div>
+              {/* SOCIAL LINKS */}
+{( profile.instagram_url || profile.tiktok_url || profile.youtube_url) && (
+  <div
+    style={{
+      marginTop: 14,
+      display: "flex",
+      gap: 12,
+      flexWrap: "wrap",
+      alignItems: "center",
+    }}
+  >
+    {/* INSTAGRAM */}
+    {profile.instagram_url && (
+      <a
+        href={
+          profile.instagram_url.startsWith("http")
+            ? profile.instagram_url
+            : `https://instagram.com/${profile.instagram_url}`
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 16px",
+          borderRadius: 999,
+          fontSize: 12,
+          fontWeight: 950,
+          letterSpacing: "0.05em",
+          background:
+            "linear-gradient(135deg, rgba(225,48,108,0.35), rgba(255,220,128,0.25))",
+          border: "1px solid rgba(225,48,108,0.45)",
+          color: "#fff0f7",
+          textDecoration: "none",
+          boxShadow: "0 0 24px rgba(225,48,108,0.35)",
+          transition: "transform .15s ease, box-shadow .15s ease",
+        }}
+      >
+        📸 Instagram
+      </a>
+    )}
+
+    {/* TIKTOK */}
+    {profile.tiktok_url && (
+      <a
+        href={
+          profile.tiktok_url.startsWith("http")
+            ? profile.tiktok_url
+            : `https://www.tiktok.com/@${profile.tiktok_url.replace("@", "")}`
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 16px",
+          borderRadius: 999,
+          fontSize: 12,
+          fontWeight: 950,
+          letterSpacing: "0.05em",
+          background:
+            "linear-gradient(135deg, rgba(0,0,0,0.85), rgba(255,0,80,0.35), rgba(0,255,255,0.35))",
+          border: "1px solid rgba(255,255,255,0.25)",
+          color: "#ffffff",
+          textDecoration: "none",
+          boxShadow:
+            "0 0 28px rgba(255,0,80,0.35), 0 0 28px rgba(0,255,255,0.25)",
+          transition: "transform .15s ease, box-shadow .15s ease",
+        }}
+      >
+        🎵 TikTok
+      </a>
+    )}
+
+    {/* YOUTUBE */}
+    {profile.youtube_url && (
+      <a
+        href={
+          profile.youtube_url.startsWith("http")
+            ? profile.youtube_url
+            : `https://youtube.com/@${profile.youtube_url.replace("@", "")}`
+        }
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 16px",
+          borderRadius: 999,
+          fontSize: 12,
+          fontWeight: 950,
+          letterSpacing: "0.05em",
+          background:
+            "linear-gradient(135deg, rgba(255,0,0,0.35), rgba(255,80,80,0.20))",
+          border: "1px solid rgba(255,0,0,0.55)",
+          color: "#ffeaea",
+          textDecoration: "none",
+          boxShadow: "0 0 30px rgba(255,0,0,0.45)",
+          transition: "transform .15s ease, box-shadow .15s ease",
+        }}
+      >
+        ▶️ YouTube
+      </a>
+    )}
+  </div>
+)}
+              {/* extra badges */}
+              {badges.length > 0 && (
+                <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {badges.map((b) => (
+                    <span
+                      key={b.t}
+                      title={b.tip}
                       style={{
-                        width: `${Math.round(xpProgress * 100)}%`,
-                        height: "100%",
+                        fontSize: 12,
+                        padding: "6px 10px",
                         borderRadius: 999,
-                        background: `linear-gradient(90deg, ${levelColor}, #00ffb0, #00d1ff)`,
-                        transition: "width 0.4s ease",
-                      }}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 4,
-                      fontSize: 11,
-                      color: "rgba(230,255,245,0.8)",
-                    }}
-                  >
-                    {levelName}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* BADGES */}
-            <div style={{ marginBottom: 18 }}>
-              <div style={sectionTitleStyle}>Badges</div>
-              <div style={pillRowStyle}>
-                <div style={pillStyle}>
-                  🏔️ {tours.length >= 3 ? "Trail Creator" : "New Guide"}
-                </div>
-                <div style={pillStyle}>
-                  👥{" "}
-                  {followersCount >= 5
-                    ? "Community Builder"
-                    : "Growing crew"}
-                </div>
-                <div style={pillStyle}>
-                  ⭐{" "}
-                  {avgRating
-                    ? `Rated ${avgRating.toFixed(1)}★`
-                    : "Awaiting first rating"}
-                </div>
-                {xp > 700 && (
-                  <div style={pillStyle}>🔥 High-Altitude Grinder</div>
-                )}
-                {tours.length === 0 && (
-                  <div style={pillStyle}>🌱 Just getting started</div>
-                )}
-              </div>
-            </div>
-
-            {/* TIMELINE */}
-            <div>
-              <div style={sectionTitleStyle}>Activity timeline</div>
-              {timeline.length === 0 && (
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "rgba(255,255,255,0.7)",
-                  }}
-                >
-                  No public activity yet. Once tours and ratings appear,
-                  they will show up here.
-                </div>
-              )}
-
-              {timeline.length > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                    marginTop: 6,
-                  }}
-                >
-                  {timeline.map((item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        display: "flex",
-                        gap: 10,
-                        fontSize: 13,
-                        background: "rgba(0,0,0,0.5)",
-                        borderRadius: 14,
-                        padding: 10,
-                        border:
-                          "1px solid rgba(255,255,255,0.06)",
+                        background: "rgba(0,0,0,0.35)",
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        opacity: 0.95,
                       }}
                     >
-                      <div
-                        style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: 999,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          background:
-                            item.type === "tour"
-                              ? "rgba(0,255,160,0.18)"
-                              : "rgba(255,230,120,0.2)",
-                        }}
+                      {b.t}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* XP bar */}
+              <div style={{ marginTop: 12, maxWidth: 620 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.78, marginBottom: 6 }}>
+                  <span>XP</span>
+                  <span>
+                    {xp} / {nextCap}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: 11,
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.12)",
+                    overflow: "hidden",
+                    boxShadow: "0 0 22px rgba(0,255,195,0.15)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${Math.round(progress * 100)}%`,
+                      height: "100%",
+                      borderRadius: 999,
+                      background: `linear-gradient(90deg, ${theme.a}, ${theme.b}, ${theme.c})`,
+                      transition: "width 0.35s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT actions */}
+          {actionBar}
+        </div>
+
+        {/* stats strip */}
+        <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+          {[
+            { label: "Tours", value: tours.length, icon: "🗺️", click: () => setActiveTab("tours") },
+            { label: "Followers", value: followersCount, icon: "👥", click: () => setShowFollowers(true) },
+            { label: "Following", value: followingCount, icon: "🧷", click: () => setActiveTab("overview") },
+            { label: "Rating", value: avgRating ? avgRating.toFixed(1) : "N/A", icon: "⭐", click: () => setActiveTab("overview") },
+          ].map((s) => (
+            <div
+              key={s.label}
+              onClick={s.click}
+              style={{
+                cursor: "pointer",
+                background: "rgba(0,0,0,0.35)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: 18,
+                padding: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                boxShadow: "0 16px 50px rgba(0,0,0,0.45)",
+              }}
+            >
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "linear-gradient(135deg, rgba(0,255,195,0.14), rgba(124,77,255,0.14))",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              >
+                {s.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: 11, opacity: 0.75 }}>{s.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 950, lineHeight: 1.1 }}>{s.value}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const tabs = (
+    <div style={tabsWrap}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button style={tabBtn(activeTab === "overview")} onClick={() => setActiveTab("overview")}>
+          Overview
+        </button>
+        <button style={tabBtn(activeTab === "tours")} onClick={() => setActiveTab("tours")}>
+          Tours
+        </button>
+        <button style={tabBtn(activeTab === "events")} onClick={() => setActiveTab("events")}>
+          Events
+        </button>
+
+        {/* FRIENDS TAB (PRIVATE) */}
+        <button
+          style={tabBtn(activeTab === "friends")}
+          onClick={() => {
+            if (canSeeFriends) setActiveTab("friends");
+            else setShowFriends(true); // pokaži lock modal
+          }}
+        >
+          Friends {canSeeFriends ? "" : "🔒"}
+        </button>
+
+        <button style={tabBtn(activeTab === "timeline")} onClick={() => setActiveTab("timeline")}>
+          Timeline
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <div style={pill}>🧠 XP: <b style={{ color: "white" }}>{xp}</b></div>
+        <div style={pill}>🎟️ Events: <b style={{ color: "white" }}>{events.length}</b></div>
+      </div>
+    </div>
+  );
+
+  const OverviewGrid = (
+    <div style={gridResponsive}>
+      {/* LEFT: Timeline */}
+      <div style={card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={sectionTitle}>Timeline</div>
+            <div style={{ fontSize: 18, fontWeight: 950 }}>Recent activity</div>
+          </div>
+          <div style={{ ...pill, opacity: 0.95 }}>🕒 {timeline.length} items</div>
+        </div>
+
+        {timeline.length === 0 ? (
+          <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No activity yet.</div>
+        ) : (
+          <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+            {timeline.map((it, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: it.cover ? "84px 1fr" : "1fr",
+                  gap: 12,
+                  padding: 12,
+                  borderRadius: 18,
+                  background: "rgba(0,0,0,0.35)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              >
+                {it.cover ? (
+                  <div
+                    style={{
+                      width: 84,
+                      height: 66,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      cursor: it.type === "tour" ? "pointer" : "default",
+                    }}
+                    onClick={() => {
+                      if (it.type === "tour" && it.id) navigate(`/tour/${it.id}`);
+                      if (it.type === "event" && it.id) navigate(`/event/${it.id}`);
+                    }}
+                  >
+                    <img src={it.cover} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(1.15)" }} />
+                  </div>
+                ) : null}
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 16,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background:
+                        it.type === "tour"
+                          ? "rgba(0,255,195,0.16)"
+                          : it.type === "event"
+                          ? "rgba(124,77,255,0.18)"
+                          : "rgba(255,215,100,0.18)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {it.type === "tour" ? "🗺️" : it.type === "event" ? "🎟️" : "⭐"}
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>{fmtDate(it.created_at)}</div>
+                    <div style={{ fontWeight: 950, fontSize: 14 }}>{it.title}</div>
+                    <div style={{ fontSize: 14, opacity: 0.95, marginTop: 2 }}>{it.subtitle}</div>
+                    <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{it.meta}</div>
+
+                    {(it.type === "tour" || it.type === "event") && it.id && (
+                      <button
+                        style={{ marginTop: 10, ...btnGhost, padding: "8px 12px", fontSize: 12 }}
+                        onClick={() => navigate(`/${it.type}/${it.id}`)}
                       >
-                        {item.type === "tour" ? "🗺️" : "⭐"}
+                        Open {it.type} →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* RIGHT: Rating + Quick cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {/* Rating */}
+        <div style={card}>
+          <div style={sectionTitle}>Rating</div>
+
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 36, fontWeight: 950, lineHeight: 1 }}>
+                {avgRating ? avgRating.toFixed(1) : "N/A"}
+                <span style={{ fontSize: 16, opacity: 0.9 }}> ★</span>
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>
+                {ratingsCount} rating{ratingsCount === 1 ? "" : "s"}
+              </div>
+            </div>
+
+            <div style={pill}>
+              🏆 Boost: <b style={{ color: "white" }}>{Math.round((avgRating || 0) * 60)}</b> XP
+            </div>
+          </div>
+
+          {!isOwnProfile && (
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Your rating:</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <span
+                    key={s}
+                    onClick={() => rate(s)}
+                    style={{
+                      cursor: ratingBusy ? "default" : "pointer",
+                      fontSize: 32,
+                      color: s <= (myRating || 0) ? "#ffd36b" : "rgba(255,255,255,0.28)",
+                      textShadow: s <= (myRating || 0) ? "0 0 14px rgba(255,211,107,0.45)" : "none",
+                      userSelect: "none",
+                      opacity: ratingBusy ? 0.7 : 1,
+                    }}
+                  >
+                    ★
+                  </span>
+                ))}
+                {ratingBusy && <span style={{ fontSize: 12, opacity: 0.7, marginLeft: 8 }}>Saving…</span>}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick: Tours */}
+        <div style={card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={sectionTitle}>Tours</div>
+              <div style={{ fontSize: 18, fontWeight: 950 }}>Created tours</div>
+            </div>
+            <div style={pill}>🗺️ {tours.length}</div>
+          </div>
+
+          {tours.length === 0 ? (
+            <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No tours created yet.</div>
+          ) : (
+            <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
+              {tours.slice(0, 8).map((t) => {
+                const img =
+                  t.cover_url ||
+                  (Array.isArray(t.image_urls) ? t.image_urls[0] : null) ||
+                  ""; // bez random
+
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => navigate(`/tour/${t.id}`)}
+                    style={{
+                      cursor: "pointer",
+                      borderRadius: 18,
+                      overflow: "hidden",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "rgba(0,0,0,0.35)",
+                      boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  >
+                    <div style={{ position: "relative", height: 122 }}>
+                      {img ? (
+                        <img
+                          src={img}
+                          alt=""
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            filter: "saturate(1.15) contrast(1.05) brightness(0.92)",
+                            transform: "scale(1.03)",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            background:
+                              "radial-gradient(300px 140px at 20% 25%, rgba(0,255,195,0.20), transparent 60%)," +
+                              "radial-gradient(320px 160px at 80% 25%, rgba(124,77,255,0.18), transparent 65%)," +
+                              "linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.92))",
+                          }}
+                        />
+                      )}
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.85))" }} />
+                      <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
+                        <div style={{ fontWeight: 950, fontSize: 13 }}>{t.title}</div>
+                        <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
+                          {t.location_name || "Unknown place"}
+                          {t.country ? `, ${t.country}` : ""}
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>
-                          {item.title}
+                    </div>
+
+                    <div style={{ padding: 10, display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ fontSize: 11, opacity: 0.72 }}>{t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}</div>
+                      <div style={{ fontSize: 11, opacity: 0.9 }}>{t.price ? `💶 ${t.price}€` : "Free"}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <button style={{ ...btnGhost, marginTop: 14, width: "100%" }} onClick={() => setActiveTab("tours")}>
+            View tours →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ToursTab = (
+    <div style={card}>
+      <div style={sectionTitle}>Tours</div>
+      <div style={{ fontSize: 20, fontWeight: 950 }}>All created tours</div>
+
+      {tours.length === 0 ? (
+        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No tours created yet.</div>
+      ) : (
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+          {tours.map((t) => {
+            const img = t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+            return (
+              <div
+                key={t.id}
+                onClick={() => navigate(`/tour/${t.id}`)}
+                style={{
+                  cursor: "pointer",
+                  borderRadius: 18,
+                  overflow: "hidden",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(0,0,0,0.35)",
+                  boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
+                }}
+              >
+                <div style={{ position: "relative", height: 140 }}>
+                  {img ? (
+                    <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(1.15) contrast(1.05) brightness(0.92)" }} />
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background:
+                          "radial-gradient(340px 160px at 20% 25%, rgba(0,255,195,0.20), transparent 60%)," +
+                          "radial-gradient(360px 180px at 80% 25%, rgba(124,77,255,0.18), transparent 65%)," +
+                          "linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.92))",
+                      }}
+                    />
+                  )}
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.88))" }} />
+                  <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
+                    <div style={{ fontWeight: 950, fontSize: 14 }}>{t.title}</div>
+                    <div style={{ fontSize: 12, opacity: 0.78, marginTop: 3 }}>
+                      📍 {t.location_name || "Unknown place"}
+                      {t.country ? `, ${t.country}` : ""}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: 10, display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, opacity: 0.9 }}>
+                  <span>{t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}</span>
+                  <span>{t.price ? `💶 ${t.price}€` : "Free"}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  const EventsTab = (
+    <div style={card}>
+      <div style={sectionTitle}>Events</div>
+      <div style={{ fontSize: 20, fontWeight: 950 }}>Upcoming adventures</div>
+
+      {events.length === 0 ? (
+        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No events created yet.</div>
+      ) : (
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+          {events.map((e) => {
+            const c = e.cover_url || "";
+            return (
+              <div
+                key={e.id}
+                onClick={() => navigate(`/event/${e.id}`)}
+                style={{
+                  cursor: "pointer",
+                  borderRadius: 18,
+                  overflow: "hidden",
+                  background: "rgba(0,0,0,0.35)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
+                }}
+              >
+                <div style={{ position: "relative", height: 140 }}>
+                  {c ? (
+                    <img src={c} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(1.15) contrast(1.05)" }} />
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background:
+                          "radial-gradient(340px 160px at 20% 25%, rgba(124,77,255,0.22), transparent 60%)," +
+                          "radial-gradient(360px 180px at 80% 25%, rgba(0,255,195,0.18), transparent 65%)," +
+                          "linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.92))",
+                      }}
+                    />
+                  )}
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.90))" }} />
+                  <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
+                    <div style={{ fontWeight: 950, fontSize: 14 }}>{e.title}</div>
+                    <div style={{ fontSize: 12, opacity: 0.82, marginTop: 2 }}>
+                      📍 {e.city || "City"}{e.country ? `, ${e.country}` : ""}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: 10, display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.9 }}>
+                  <span>🗓️ {e.start_date ? new Date(e.start_date).toLocaleDateString() : "Date TBA"}</span>
+                  <span>→ Open</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  const TimelineTab = (
+    <div style={card}>
+      <div style={sectionTitle}>Timeline</div>
+      <div style={{ fontSize: 20, fontWeight: 950 }}>Everything this explorer did</div>
+
+      {timeline.length === 0 ? (
+        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No activity yet.</div>
+      ) : (
+        <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+          {timeline.map((it, i) => (
+            <div
+              key={i}
+              style={{
+                padding: 14,
+                borderRadius: 18,
+                background: "rgba(0,0,0,0.35)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background:
+                    it.type === "tour"
+                      ? "rgba(0,255,195,0.16)"
+                      : it.type === "event"
+                      ? "rgba(124,77,255,0.18)"
+                      : "rgba(255,215,100,0.18)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  flexShrink: 0,
+                }}
+              >
+                {it.type === "tour" ? "🗺️" : it.type === "event" ? "🎟️" : "⭐"}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 12, opacity: 0.75 }}>{fmtDate(it.created_at)}</div>
+                <div style={{ fontWeight: 950, fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {it.title} — {it.subtitle}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>{it.meta}</div>
+              </div>
+              {(it.type === "tour" || it.type === "event") && it.id ? (
+                <button style={{ ...btnGhost, padding: "8px 12px", fontSize: 12 }} onClick={() => navigate(`/${it.type}/${it.id}`)}>
+                  Open →
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const FriendsTab = (
+    <div style={card}>
+      <div style={sectionTitle}>Friends</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 20, fontWeight: 950 }}>Mutual follows</div>
+        {!canSeeFriends && (
+          <div style={pill}>
+            🔒 Private
+          </div>
+        )}
+      </div>
+
+      {!canSeeFriends ? (
+        <div style={{ marginTop: 12, opacity: 0.78, fontSize: 13, lineHeight: 1.6 }}>
+          Friends list is private.  
+          <b> Only friends</b> can see it.
+        </div>
+      ) : friendsList.length === 0 ? (
+        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No friends yet.</div>
+      ) : (
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
+          {friendsList.map((u) => (
+            <div
+              key={u.id}
+              onClick={() => navigate(`/profile/${u.id}`)}
+              style={{
+                cursor: "pointer",
+                borderRadius: 16,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(0,0,0,0.35)",
+                padding: 12,
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
+              <img
+                src={u.avatar_url || "https://i.pravatar.cc/80"}
+                alt=""
+                style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover" }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", gap: 8, alignItems: "center" }}>
+                  {u.full_name || u.username || "Explorer"}
+                  <FriendBadge />
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.75 }}>
+                  {u.city || "City"}, {u.country || "Country"}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={page}>
+      <div style={wrap}>
+        {heroCard}
+        {tabs}
+
+        {activeTab === "overview" && OverviewGrid}
+        {activeTab === "tours" && ToursTab}
+        {activeTab === "events" && EventsTab}
+        {activeTab === "timeline" && TimelineTab}
+        {activeTab === "friends" && FriendsTab}
+
+        {/* FOLLOWERS MODAL */}
+        {showFollowers && (
+          <div
+            onClick={() => setShowFollowers(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+              zIndex: 9999,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "min(760px, 96vw)",
+                maxHeight: "78vh",
+                overflow: "auto",
+                ...glass,
+                padding: 16,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div>
+                  <div style={sectionTitle}>Followers</div>
+                  <div style={{ fontSize: 18, fontWeight: 950 }}>{followersCount} people</div>
+                </div>
+                <button style={btnGhost} onClick={() => setShowFollowers(false)}>
+                  Close
+                </button>
+              </div>
+
+              {followersList.length === 0 ? (
+                <div style={{ opacity: 0.75, padding: 10 }}>No followers yet.</div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10, marginTop: 10 }}>
+                  {followersList.map((u) => (
+                    <div
+                      key={u.id}
+                      onClick={() => {
+                        setShowFollowers(false);
+                        navigate(`/profile/${u.id}`);
+                      }}
+                      style={{
+                        cursor: "pointer",
+                        borderRadius: 16,
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(0,0,0,0.35)",
+                        padding: 12,
+                        display: "flex",
+                        gap: 10,
+                        alignItems: "center",
+                      }}
+                    >
+                      <img
+                        src={u.avatar_url || "https://i.pravatar.cc/80"}
+                        alt=""
+                        style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover" }}
+                      />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {u.full_name || u.username || "Explorer"}
                         </div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: "rgba(255,255,255,0.7)",
-                          }}
-                        >
-                          {item.description}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: "rgba(255,255,255,0.5)",
-                            marginTop: 3,
-                          }}
-                        >
-                          {item.created_at &&
-                            new Date(
-                              item.created_at
-                            ).toLocaleString()}
+                        <div style={{ fontSize: 12, opacity: 0.75 }}>
+                          {u.city || "City"}, {u.country || "Country"}
                         </div>
                       </div>
                     </div>
@@ -803,236 +1490,47 @@ setProfileUser(profileData);
               )}
             </div>
           </div>
+        )}
 
-          {/* RIGHT – STATS, rating, gallery */}
-          <div style={cardStyle}>
-            {/* STATS */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={sectionTitleStyle}>Stats</div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: 10,
-                }}
-              >
-                <div>
-                  <div style={miniLabel}>Tours</div>
-                  <div style={statNumber}>{tours.length}</div>
-                </div>
-                <div>
-                  <div style={miniLabel}>Followers</div>
-                  <div style={statNumber}>{followersCount}</div>
-                </div>
-                <div>
-                  <div style={miniLabel}>Following</div>
-                  <div style={statNumber}>{followingCount}</div>
-                </div>
+        {/* FRIENDS PRIVATE LOCK MODAL */}
+        {showFriends && !canSeeFriends && (
+          <div
+            onClick={() => setShowFriends(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+              zIndex: 9999,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "min(620px, 96vw)",
+                ...glass,
+                padding: 18,
+              }}
+            >
+              <div style={sectionTitle}>Friends</div>
+              <div style={{ fontSize: 20, fontWeight: 950 }}>🔒 Private list</div>
+              <div style={{ marginTop: 10, fontSize: 13, opacity: 0.82, lineHeight: 1.6 }}>
+                Only friends can see friends list.  
+                Follow each other to unlock.
               </div>
-            </div>
-
-            {/* RATING SUMMARY */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={sectionTitleStyle}>Rating</div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 6,
-                }}
-              >
-                <div style={{ fontSize: 26 }}>
-                  {avgRating ? avgRating.toFixed(1) : "N/A"}
-                  <span style={{ fontSize: 16 }}> ★</span>
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "rgba(255,255,255,0.7)",
-                  }}
-                >
-                  {ratingsCount} rating
-                  {ratingsCount === 1 ? "" : "s"}
-                </div>
-              </div>
-
-              {!isOwnProfile && (
-                <div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      marginBottom: 4,
-                      color: "rgba(255,255,255,0.8)",
-                    }}
-                  >
-                    Your rating:
-                  </div>
-                  <div>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <span
-                        key={star}
-                        onClick={() => handleRate(star)}
-                        style={ratingStarStyle(star <= myRating)}
-                      >
-                        {star <= myRating ? "★" : "☆"}
-                      </span>
-                    ))}
-                    {isRatingSaving && (
-                      <span
-                        style={{
-                          marginLeft: 8,
-                          fontSize: 11,
-                          opacity: 0.7,
-                        }}
-                      >
-                        Saving...
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* GALLERY */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={sectionTitleStyle}>Recent adventures</div>
-              {tours.length === 0 && (
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "rgba(255,255,255,0.7)",
-                  }}
-                >
-                  No tours created yet.
-                </div>
-              )}
-
-              {tours.length > 0 && (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-                    gap: 8,
-                  }}
-                >
-                  {tours.slice(0, 6).map((t) => {
-                    const img =
-                      t.cover_url ||
-                      (Array.isArray(t.image_urls) &&
-                        t.image_urls[0]);
-                    return (
-                      <div
-                        key={t.id}
-                        onClick={() => navigate(`/tour/${t.id}`)}
-                        style={{
-                          borderRadius: 12,
-                          overflow: "hidden",
-                          cursor: "pointer",
-                          border:
-                            "1px solid rgba(255,255,255,0.15)",
-                        }}
-                      >
-                        {img ? (
-                          <img
-                            src={img}
-                            alt={t.title}
-                            style={{
-                              width: "100%",
-                              height: 90,
-                              objectFit: "cover",
-                            }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: "100%",
-                              height: 90,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 12,
-                              background:
-                                "linear-gradient(135deg,#063624,#020b0a)",
-                            }}
-                          >
-                            {t.title}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* QUICK ACTIONS */}
-            <div>
-              <div style={sectionTitleStyle}>Quick actions</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
+                <button style={btnGhost} onClick={() => setShowFriends(false)}>
+                  Close
+                </button>
                 {!isOwnProfile && (
-                  <>
-                    <button
-                      style={ghostBtn}
-                      onClick={() => navigate(`/chat/${id}`)}
-                    >
-                      💬 Start chat
-                    </button>
-                    <button
-                      style={ghostBtn}
-                      onClick={() => navigate("/create-tour")}
-                    >
-                      🗺️ Invite to a tour
-                    </button>
-                  </>
-                )}
-
-                {isOwnProfile && (
-                  <button
-                    style={ghostBtn}
-                    onClick={() => navigate("/my-tours")}
-                  >
-                    🎒 Manage my tours
+                  <button style={btnPrimary} onClick={toggleFollow} disabled={followBusy}>
+                    {isFollowing ? "Following ✓" : "Follow"}
                   </button>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RATING PANEL (ako želiš da iskače extra, ali već imamo gore) */}
-        {ratingPanelOpen && !isOwnProfile && (
-          <div
-            style={{
-              marginTop: 16,
-              ...cardStyle,
-            }}
-          >
-            <div style={sectionTitleStyle}>Rate this explorer</div>
-            <div style={{ marginBottom: 6 }}>
-              Click a star to rate between 1 and 5.
-            </div>
-            <div>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  onClick={() => handleRate(star)}
-                  style={ratingStarStyle(star <= myRating)}
-                >
-                  {star <= myRating ? "★" : "☆"}
-                </span>
-              ))}
-              {isRatingSaving && (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 11,
-                    opacity: 0.7,
-                  }}
-                >
-                  Saving...
-                </span>
-              )}
             </div>
           </div>
         )}

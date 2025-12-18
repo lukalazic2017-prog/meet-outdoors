@@ -200,6 +200,12 @@ export default function CreateEvent() {
     if (error) {
       setErrorMsg(error.message);
     } else {
+      if (success) {
+  window.gtag("event", "create_event", {
+    event_category: "events",
+    event_label: "event_created"
+  });
+}
       setSuccessMsg("Event created successfully.");
       navigate(`/event/${data.id}`);
     }

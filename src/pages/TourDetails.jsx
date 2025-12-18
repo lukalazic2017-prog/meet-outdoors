@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
@@ -16,6 +16,9 @@ export default function TourDetails() {
   const [currentImage, setCurrentImage] = useState(0);
   const [participantsList, setParticipantsList] = useState([]);
   const [countdown, setCountdown] = useState("");
+
+  // ✅ NEW: creator profile
+  const [creatorProfile, setCreatorProfile] = useState(null);
 
   // ================= HELPERS =================
   function formatDate(date) {
@@ -80,9 +83,7 @@ export default function TourDetails() {
         async () => {
           const { data: people } = await supabase
             .from("tour_registrations")
-            .select(
-              `user_id, profiles:profiles ( full_name, avatar_url )`
-            )
+            .select(`user_id, profiles:profiles ( full_name, avatar_url )`)
             .eq("tour_id", id);
 
           setParticipantsList(people || []);
@@ -125,12 +126,22 @@ export default function TourDetails() {
 
       const { data: people } = await supabase
         .from("tour_registrations")
-        .select(
-          `user_id, profiles:profiles ( full_name, avatar_url )`
-        )
+        .select(`user_id, profiles:profiles ( full_name, avatar_url )`)
         .eq("tour_id", id);
 
       setParticipantsList(people || []);
+
+      // ✅ NEW: load creator profile (organizer)
+      if (data?.creator_id) {
+        const { data: cp } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, home_base")
+          .eq("id", data.creator_id)
+          .maybeSingle();
+        setCreatorProfile(cp || null);
+      } else {
+        setCreatorProfile(null);
+      }
 
       if (currentUser) {
         const { data: reg } = await supabase
@@ -423,6 +434,54 @@ export default function TourDetails() {
             {/* OVERVIEW */}
             <div style={{ marginBottom: 14 }}>
               <div style={sectionTitle}>Overview</div>
+
+              {/* ✅ NEW: ORGANIZER (creator) */}
+              {creatorProfile && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>
+                    Organized by
+                  </div>
+
+                  <Link
+                    to={`/profile/${creatorProfile.id}`}
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        background: "rgba(255,255,255,0.06)",
+                        padding: "8px 10px",
+                        borderRadius: 999,
+                        width: "fit-content",
+                        border: "1px solid rgba(255,255,255,0.10)",
+                      }}
+                    >
+                      <img
+                        src={creatorProfile.avatar_url || "https://i.pravatar.cc/80"}
+                        alt=""
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                        }}
+                      />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {creatorProfile.full_name || creatorProfile.username || "Organizer"}
+                        </div>
+                        <div style={{ fontSize: 11, opacity: 0.7, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {creatorProfile.home_base ||
+                            [creatorProfile.city, creatorProfile.country].filter(Boolean).join(", ")}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              )}
+
               <div style={pillRow}>
                 <div style={pill}>🗓 {tour.date_start} → {tour.date_end}</div>
                 <div style={pill}>
@@ -435,22 +494,23 @@ export default function TourDetails() {
                 {tour.is_legal_entity && <div style={pill}>🏢 Organized by a legal entity</div>}
               </div>
             </div>
-            {tour.application_start && (
-  <div style={pill}>
-    📝 Applications from {formatDate(tour.application_start)}
-  </div>
-)}
 
-{tour.application_deadline && (
-  <div style={pill}>
-    ⏳ Applications until {formatDate(tour.application_deadline)}
-    {countdown && (
-      <span style={{ marginLeft: 6, color: "#00ffb0", fontWeight: 600 }}>
-        ({countdown})
-      </span>
-    )}
-  </div>
-)}
+            {tour.application_start && (
+              <div style={pill}>
+                📝 Applications from {formatDate(tour.application_start)}
+              </div>
+            )}
+
+            {tour.application_deadline && (
+              <div style={pill}>
+                ⏳ Applications until {formatDate(tour.application_deadline)}
+                {countdown && (
+                  <span style={{ marginLeft: 6, color: "#00ffb0", fontWeight: 600 }}>
+                    ({countdown})
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* OPIS */}
             <div style={{ marginBottom: 18 }}>
@@ -466,7 +526,6 @@ export default function TourDetails() {
                 {tour.description || "No description provided."}
               </p>
             </div>
-            
 
             {/* GALERIJA */}
             {gallery.length > 0 && (
@@ -548,6 +607,48 @@ export default function TourDetails() {
                 </div>
               </div>
             )}
+            {/* VIDEO */}
+{tour.video_url && (
+  <div style={{ marginBottom: 22 }}>
+    <div style={sectionTitle}>Video</div>
+
+    <div
+      style={{
+        borderRadius: 18,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(0,0,0,0.75)",
+        boxShadow: "0 18px 50px rgba(0,0,0,0.85)",
+      }}
+    >
+      <video
+        src={tour.video_url}
+        controls
+        playsInline
+        preload="metadata"
+        style={{
+          width: "100%",
+          height: 260,
+          objectFit: "cover",
+          backgroundColor: "black",
+        }}
+      />
+    </div>
+
+    <div
+      style={{
+        marginTop: 8,
+        fontSize: 11,
+        opacity: 0.7,
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      🎬 Tour video preview
+    </div>
+  </div>
+)}
 
             {/* MAPA */}
             <div>
@@ -584,27 +685,23 @@ export default function TourDetails() {
 
               {!isCreator && (
                 <>
-                 {!isJoined ? (
-  <button
-    style={{
-      ...primaryBtn,
-      opacity: isFull ? 0.5 : 1,
-      cursor: isFull ? "default" : "pointer",
-    }}
-    disabled={isFull || loading}
-    onClick={joinTour}
-  >
-    {isFull ? "Tour is full" : "Join tour"}
-  </button>
-) : (
-  <button
-    style={secondaryBtn}
-    onClick={leaveTour}
-    disabled={loading}
-  >
-    Leave tour
-  </button>
-)}
+                  {!isJoined ? (
+                    <button
+                      style={{
+                        ...primaryBtn,
+                        opacity: isFull ? 0.5 : 1,
+                        cursor: isFull ? "default" : "pointer",
+                      }}
+                      disabled={isFull || loading}
+                      onClick={joinTour}
+                    >
+                      {isFull ? "Tour is full" : "Join tour"}
+                    </button>
+                  ) : (
+                    <button style={secondaryBtn} onClick={leaveTour} disabled={loading}>
+                      Leave tour
+                    </button>
+                  )}
 
                   <button style={secondaryBtn} onClick={toggleSave} disabled={loading}>
                     {isSaved ? "♥ Saved" : "♡ Save tour"}
@@ -648,6 +745,20 @@ export default function TourDetails() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <div style={pill}>🏷️ {tour.title || "Tour title"}</div>
                 <div style={pill}>🧭 {tour.activity || "Activity not set"}</div>
+
+                {/* ✅ NEW: organizer in quick summary */}
+                {creatorProfile && (
+                  <div style={pill}>
+                    👤 Organizer:{" "}
+                    <Link
+                      to={`/profile/${creatorProfile.id}`}
+                      style={{ color: "#00ffb0", textDecoration: "none", fontWeight: 700 }}
+                    >
+                      {creatorProfile.full_name ||  "Organizer"}
+                    </Link>
+                  </div>
+                )}
+
                 <div style={pill}>
                   📍{" "}
                   {tour.location_name
@@ -662,67 +773,76 @@ export default function TourDetails() {
               <div style={{ marginTop: 14, fontSize: 11, opacity: 0.7, lineHeight: 1.5 }}>
                 Tip: use the group chat to coordinate meeting points, gear and timing so everyone arrives relaxed and ready.
               </div>
-               {/* PARTICIPANTS */}
-<div style={{ marginTop: 14 }}>
-  <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 6 }}>
-    Participants
-  </div>
 
-  {participantsList.length === 0 ? (
-    <div style={{ fontSize: 13, opacity: 0.6 }}>
-      No participants yet
-    </div>
-  ) : (
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      {participantsList.map((p, idx) => (
-        <div
-          key={idx}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            background: "rgba(255,255,255,0.06)",
-            padding: "6px 10px",
-            borderRadius: 999,
-          }}
-        >
-          {p.profiles?.avatar_url ? (
-            <img
-              src={p.profiles.avatar_url}
-              alt=""
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                objectFit: "cover",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: "#00ffb0",
-                color: "#022",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 700,
-                fontSize: 12,
-              }}
-            >
-              {p.profiles?.full_name?.[0] || "U"}
-            </div>
-          )}
-          <span style={{ fontSize: 13 }}>
-            {p.profiles?.full_name || "User"}
-          </span>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+              {/* PARTICIPANTS */}
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 6 }}>
+                  Participants
+                </div>
+
+                {participantsList.length === 0 ? (
+                  <div style={{ fontSize: 13, opacity: 0.6 }}>
+                    No participants yet
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    {participantsList.map((p, idx) => (
+                      <Link
+                        key={idx}
+                        to={`/profile/${p.user_id}`}
+                        style={{ textDecoration: "none", color: "inherit" }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            background: "rgba(255,255,255,0.06)",
+                            padding: "6px 10px",
+                            borderRadius: 999,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {p.profiles?.avatar_url ? (
+                            <img
+                              src={p.profiles.avatar_url}
+                              alt=""
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: "50%",
+                                background: "#1abc9c",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "#000",
+                              }}
+                            >
+                              {p.profiles?.full_name?.[0] || "U"}
+                            </div>
+                          )}
+
+                          <span style={{ fontSize: 13 }}>
+                            {p.profiles?.full_name || "User"}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         </div>

@@ -17,6 +17,18 @@ export default function Timeline() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedPost, setSelectedPost] = useState(null);
 
+  // ⭐ NEW: interactions state
+  const [likedMap, setLikedMap] = useState({}); // {postId: true}
+  const [repostedMap, setRepostedMap] = useState({}); // {postId: true}
+  const [busyMap, setBusyMap] = useState({}); // {key: true}
+
+  // ⭐ NEW: comments modal
+  const [showComments, setShowComments] = useState(false);
+  const [commentsPost, setCommentsPost] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState("");
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
   // ⭐ UCITAJ USERA
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -69,6 +81,51 @@ export default function Timeline() {
     load();
   }, []);
 
+  // ⭐ NEW: after we have user + posts, load which posts I liked / reposted
+  useEffect(() => {
+    async function loadMyInteractions() {
+      if (!user?.id) {
+        setLikedMap({});
+        setRepostedMap({});
+        return;
+      }
+      const ids = posts.map((p) => p.id).filter(Boolean);
+      if (ids.length === 0) return;
+
+      // LIKES
+      const { data: myLikes, error: likeErr } = await supabase
+        .from("timeline_post_likes")
+        .select("post_id")
+        .eq("user_id", user.id)
+        .in("post_id", ids);
+
+      if (likeErr) console.log("MY LIKES ERR", likeErr);
+
+      const lm = {};
+      (myLikes || []).forEach((r) => {
+        lm[r.post_id] = true;
+      });
+      setLikedMap(lm);
+
+      // REPOSTS
+      const { data: myReposts, error: repErr } = await supabase
+        .from("timeline_post_reposts")
+        .select("post_id")
+        .eq("user_id", user.id)
+        .in("post_id", ids);
+
+      if (repErr) console.log("MY REPOSTS ERR", repErr);
+
+      const rm = {};
+      (myReposts || []).forEach((r) => {
+        rm[r.post_id] = true;
+      });
+      setRepostedMap(rm);
+    }
+
+    loadMyInteractions();
+  }, [user?.id, posts]);
+
   // ---- ACTIVITIES ----
   const activities = useMemo(() => {
     const s = new Set();
@@ -100,6 +157,9 @@ export default function Timeline() {
 
   const formatDate = (v) => (v ? new Date(v).toLocaleString() : "");
 
+  const setBusy = (key, val) =>
+    setBusyMap((prev) => ({ ...prev, [key]: val }));
+
   // ⭐ DELETE POST (jedina nova funkcija)
   async function deletePost(postId) {
     if (!window.confirm("Delete this story permanently?")) return;
@@ -116,6 +176,277 @@ export default function Timeline() {
     }
 
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }
+
+  // ⭐ NEW: LIKE / UNLIKE
+  async function toggleLike(post) {
+    if (!user) return navigate("/login");
+    const key = `like-${post.id}`;
+    if (busyMap[key]) return;
+
+    setBusy(key, true);
+
+    const isLiked = !!likedMap[post.id];
+
+    try {
+      if (isLiked) {
+        const { error } = await supabase
+          .from("timeline_post_likes")
+          .delete()
+          .eq("post_id", post.id)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        setLikedMap((prev) => {
+          const copy = { ...prev };
+          delete copy[post.id];
+          return copy;
+        });
+
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === post.id
+              ? { ...p, likes_count: Math.max(0, (p.likes_count || 0) - 1) }
+              : p
+          )
+        );
+      } else {
+        const { error } = await supabase
+          .from("timeline_post_likes")
+          .insert({ post_id: post.id, user_id: user.id });
+
+        if (error) throw error;
+
+        setLikedMap((prev) => ({ ...prev, [post.id]: true }));
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === post.id
+              ? { ...p, likes_count: (p.likes_count || 0) + 1 }
+              : p
+          )
+        );
+      }
+    } catch (e) {
+      console.error("LIKE ERR", e);
+      alert("Could not update like.");
+    } finally {
+      setBusy(key, false);
+    }
+  }
+
+  // ⭐ NEW: OPEN COMMENTS
+  async function openComments(post) {
+    setCommentsPost(post);
+    setShowComments(true);
+    setCommentText("");
+    setComments([]);
+    setCommentsLoading(true);
+
+    try {
+      const { data: rows, error } = await supabase
+        .from("timeline_post_comments")
+        .select("id, post_id, user_id, content, created_at")
+        .eq("post_id", post.id)
+        .order("created_at", { ascending: true })
+        .limit(120);
+
+      if (error) throw error;
+
+      const commenterIds = [...new Set((rows || []).map((r) => r.user_id).filter(Boolean))];
+      if (commenterIds.length > 0) {
+        const missing = commenterIds.filter((cid) => !profiles[cid]);
+        if (missing.length > 0) {
+          const { data: profs, error: pErr } = await supabase
+            .from("profiles")
+            .select("id, full_name, avatar_url")
+            .in("id", missing);
+
+          if (!pErr && profs) {
+            setProfiles((prev) => {
+              const next = { ...prev };
+              profs.forEach((p) => (next[p.id] = p));
+              return next;
+            });
+          }
+        }
+      }
+
+      setComments(rows || []);
+    } catch (e) {
+      console.error("COMMENTS LOAD ERR", e);
+      alert("Could not load comments.");
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  }
+
+  // ⭐ NEW: ADD COMMENT
+  async function addComment() {
+    if (!user) return navigate("/login");
+    if (!commentsPost) return;
+    const text = (commentText || "").trim();
+    if (!text) return;
+
+    const key = `comment-${commentsPost.id}`;
+    if (busyMap[key]) return;
+    setBusy(key, true);
+
+    try {
+      const { data: inserted, error } = await supabase
+        .from("timeline_post_comments")
+        .insert({
+          post_id: commentsPost.id,
+          user_id: user.id,
+          content: text,
+        })
+        .select("id, post_id, user_id, content, created_at")
+        .single();
+
+      if (error) throw error;
+
+      setComments((prev) => [...prev, inserted]);
+      setCommentText("");
+
+      // bump count locally
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === commentsPost.id
+            ? { ...p, comments_count: (p.comments_count || 0) + 1 }
+            : p
+        )
+      );
+    } catch (e) {
+      console.error("ADD COMMENT ERR", e);
+      alert("Could not add comment.");
+    } finally {
+      setBusy(key, false);
+    }
+  }
+
+  // ⭐ NEW: REPOST
+  async function repost(post) {
+  if (!user) return navigate("/login");
+
+  const key = `repost-${post.id}`;
+  if (busyMap[key]) return;
+
+  setBusy(key, true);
+
+  const already = !!repostedMap[post.id];
+
+  try {
+    if (already) {
+      // ❌ UNREPOST
+      const { error } = await supabase
+        .from("timeline_post_reposts")
+        .delete()
+        .eq("post_id", post.id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setRepostedMap((prev) => {
+        const c = { ...prev };
+        delete c[post.id];
+        return c;
+      });
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id
+            ? {
+                ...p,
+                reposts_count: Math.max(0, (p.reposts_count || 0) - 1),
+              }
+            : p
+        )
+      );
+    } else {
+      // 🔁 REPOST
+      const { error } = await supabase
+        .from("timeline_post_reposts")
+        .insert({ post_id: post.id, user_id: user.id });
+
+      if (error) throw error;
+
+      setRepostedMap((prev) => ({ ...prev, [post.id]: true }));
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id
+            ? { ...p, reposts_count: (p.reposts_count || 0) + 1 }
+            : p
+        )
+      );
+    }
+  } catch (e) {
+    console.error("REPOST ERR", e);
+    alert("Could not update repost.");
+  } finally {
+    setBusy(key, false);
+  }
+}
+
+  // ⭐ NEW: SHARE
+  async function sharePost(post) {
+    const key = `share-${post.id}`;
+    if (busyMap[key]) return;
+    setBusy(key, true);
+
+    try {
+      const shareUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/timeline?post=${post.id}`
+          : "";
+
+      // try native share
+      let shared = false;
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "MeetOutdoors Story",
+            text: post.caption || "Outdoor story",
+            url: shareUrl,
+          });
+          shared = true;
+        } catch {
+          // user canceled -> ignore
+        }
+      }
+
+      if (!shared && shareUrl) {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          alert("Link copied ✅");
+        } catch {
+          alert("Could not copy link.");
+        }
+      }
+
+      // log share (optional, if table exists)
+      try {
+        await supabase.from("timeline_post_shares").insert({
+          post_id: post.id,
+          user_id: user?.id || null,
+          url: shareUrl || null,
+        });
+      } catch {
+        // ignore
+      }
+
+      // bump local shares_count
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id
+            ? { ...p, shares_count: (p.shares_count || 0) + 1 }
+            : p
+        )
+      );
+    } finally {
+      setBusy(key, false);
+    }
   }
 
   // ---- STYLES (isti tvoji) ----
@@ -376,6 +707,60 @@ export default function Timeline() {
     cursor: "pointer",
   };
 
+  // ⭐ NEW: comments modal styles (minimal, u istom stilu)
+  const commentsBoxStyle = {
+    borderRadius: 22,
+    background: "rgba(0,0,0,0.75)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 22px 50px rgba(0,0,0,0.9)",
+    padding: 14,
+  };
+
+  const commentInputStyle = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "rgba(0,0,0,0.6)",
+    color: "#ffffff",
+    fontSize: 14,
+    outline: "none",
+    boxSizing: "border-box",
+  };
+  
+async function deleteComment(comment) {
+  if (!user) return;
+  if (comment.user_id !== user.id) return;
+
+  if (!window.confirm("Delete this comment?")) return;
+
+  try {
+    const { error } = await supabase
+      .from("timeline_post_comments")
+      .delete()
+      .eq("id", comment.id);
+
+    if (error) throw error;
+
+    setComments((prev) => prev.filter((c) => c.id !== comment.id));
+
+    // lokalno smanji count
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === comment.post_id
+          ? {
+              ...p,
+              comments_count: Math.max(0, (p.comments_count || 0) - 1),
+            }
+          : p
+      )
+    );
+  } catch (e) {
+    console.error("DELETE COMMENT ERR", e);
+    alert("Could not delete comment.");
+  }
+}
+
   // -------------------------------
   //            RENDER
   // -------------------------------
@@ -508,8 +893,12 @@ export default function Timeline() {
             const isVideo = post.type === "video";
 
             const likes = post.likes_count || 0;
-            const comments = post.comments_count || 0;
+            const commentsCount = post.comments_count || 0;
             const shares = post.shares_count || 0;
+            const reposts = post.reposts_count || 0;
+
+            const iLiked = !!likedMap[post.id];
+            const iReposted = !!repostedMap[post.id];
 
             return (
               <div key={post.id} style={cardStyle}>
@@ -599,8 +988,9 @@ export default function Timeline() {
                       }}
                     >
                       <span>❤️ {likes}</span>
-                      <span>· 💬 {comments}</span>
-                      <span>· 🔁 {shares}</span>
+                      <span>· 💬 {commentsCount}</span>
+                      <span>· 🔁 {reposts}</span>
+                      <span>· 📤 {shares}</span>
                     </div>
 
                     {/* ⭐ DELETE BUTTON — vidi ga samo autor */}
@@ -621,6 +1011,101 @@ export default function Timeline() {
                         Delete
                       </button>
                     )}
+
+                    {/* ⭐ NEW: LIKE / COMMENT / REPOST / SHARE */}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        style={{
+                          padding: "7px 12px",
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.14)",
+                          background: iLiked
+                            ? "rgba(255,0,80,0.22)"
+                            : "rgba(0,0,0,0.55)",
+                          color: iLiked ? "#ffd1df" : "#ffffff",
+                          fontSize: 11,
+                          fontWeight: 800,
+                          letterSpacing: "0.06em",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                        onClick={() => toggleLike(post)}
+                        disabled={busyMap[`like-${post.id}`]}
+                      >
+                        {iLiked ? "❤️ Liked" : "♡ Like"}
+                      </button>
+
+                      <button
+                        type="button"
+                        style={{
+                          padding: "7px 12px",
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.14)",
+                          background: "rgba(0,0,0,0.55)",
+                          color: "#ffffff",
+                          fontSize: 11,
+                          fontWeight: 800,
+                          letterSpacing: "0.06em",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                        onClick={() => openComments(post)}
+                      >
+                        💬 Comment
+                      </button>
+
+                      <button
+                        type="button"
+                        style={{
+                          padding: "7px 12px",
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.14)",
+                          background: iReposted
+                            ? "rgba(0,209,255,0.18)"
+                            : "rgba(0,0,0,0.55)",
+                          color: "#ffffff",
+                          fontSize: 11,
+                          fontWeight: 800,
+                          letterSpacing: "0.06em",
+                          cursor: iReposted ? "default" : "pointer",
+                          whiteSpace: "nowrap",
+                          opacity: iReposted ? 0.9 : 1,
+                        }}
+                        onClick={() => repost(post)}
+                        disabled={iReposted || busyMap[`repost-${post.id}`]}
+                        title={iReposted ? "Already reposted" : "Repost this story"}
+                      >
+                        🔁 {iReposted ? "Reposted" : "Repost"}
+                      </button>
+
+                      <button
+                        type="button"
+                        style={{
+                          padding: "7px 12px",
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.14)",
+                          background: "rgba(0,0,0,0.55)",
+                          color: "#ffffff",
+                          fontSize: 11,
+                          fontWeight: 800,
+                          letterSpacing: "0.06em",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                        onClick={() => sharePost(post)}
+                        disabled={busyMap[`share-${post.id}`]}
+                      >
+                        📤 Share
+                      </button>
+                    </div>
 
                     <button
                       type="button"
@@ -709,6 +1194,140 @@ export default function Timeline() {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ⭐ COMMENTS MODAL */}
+      {showComments && commentsPost && (
+        <div
+          style={modalOverlayStyle}
+          onClick={() => {
+            setShowComments(false);
+            setCommentsPost(null);
+            setComments([]);
+            setCommentText("");
+          }}
+        >
+          <div
+            style={modalInnerStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={commentsBoxStyle}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+                <div style={{ fontWeight: 800, fontSize: 14 }}>
+                  💬 Comments · <span style={{ opacity: 0.75 }}>Post {commentsPost.id.slice(0, 6)}…</span>
+                </div>
+                <button
+                  type="button"
+                  style={modalCloseBtnStyle}
+                  onClick={() => {
+                    setShowComments(false);
+                    setCommentsPost(null);
+                    setComments([]);
+                    setCommentText("");
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+
+              {commentsLoading ? (
+                <div style={{ opacity: 0.8, fontSize: 13, padding: "10px 0" }}>
+                  Loading comments...
+                </div>
+              ) : comments.length === 0 ? (
+                <div style={{ opacity: 0.75, fontSize: 13, padding: "10px 0" }}>
+                  No comments yet. Be the first.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "44vh", overflow: "auto", paddingRight: 6 }}>
+                  {comments.map((c) => {
+                    const p = profiles[c.user_id] || {};
+                    const av = p.avatar_url || "https://i.pravatar.cc/80?img=5";
+                    const nm = p.full_name || "Explorer";
+                    return (
+                      <div
+                        key={c.id}
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          alignItems: "flex-start",
+                          background: "rgba(0,0,0,0.45)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 16,
+                          padding: 10,
+                        }}
+                      >
+                        <img
+                          src={av}
+                          alt={nm}
+                          style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(0,255,176,0.7)" }}
+                        />
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                            <div style={{ fontWeight: 800, fontSize: 13 }}>{nm}</div>
+                            <div style={{ fontSize: 11, opacity: 0.7 }}>{formatDate(c.created_at)}</div>
+                          </div>
+                          <div style={{ fontSize: 13, opacity: 0.92, marginTop: 4, whiteSpace: "pre-wrap" }}>
+                            {c.content}
+                          </div>
+                          {user?.id === c.user_id && (
+  <button
+    onClick={() => deleteComment(c)}
+    style={{
+      marginTop: 4,
+      padding: "4px 10px",
+      borderRadius: 999,
+      border: "1px solid rgba(255,80,80,0.5)",
+      background: "rgba(255,0,0,0.2)",
+      color: "#ffb3b3",
+      fontSize: 11,
+      fontWeight: 700,
+      cursor: "pointer",
+    }}
+  >
+    Delete
+  </button>
+)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  style={commentInputStyle}
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder={user ? "Write a comment..." : "Login to comment..."}
+                  disabled={!user}
+                />
+                <button
+                  type="button"
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 999,
+                    border: "none",
+                    background:
+                      "linear-gradient(135deg, #00ffb0 0%, #00d1ff 50%, #ffffff 100%)",
+                    color: "#02150b",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    cursor: user ? "pointer" : "default",
+                    opacity: user ? 1 : 0.6,
+                    whiteSpace: "nowrap",
+                  }}
+                  onClick={addComment}
+                  disabled={!user || busyMap[`comment-${commentsPost.id}`]}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
