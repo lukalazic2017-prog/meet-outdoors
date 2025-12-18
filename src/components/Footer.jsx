@@ -90,30 +90,6 @@ export default function Footer({ user, avatarUrl, unreadCount, logout }) {
                 Become a Host
               </Link>
             </li>
-            <li style={{ marginBottom: 6 }}>
-              <Link
-                to="/profiles"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                User Profiles
-              </Link>
-            </li>
-            <li style={{ marginBottom: 6 }}>
-              <Link
-                to="/safety-tips"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                Safety Tips
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/host-guidelines"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                Host Guidelines
-              </Link>
-            </li>
           </ul>
         </div>
 
@@ -139,12 +115,7 @@ export default function Footer({ user, avatarUrl, unreadCount, logout }) {
               </Link>
             </li>
             <li style={{ marginBottom: 6 }}>
-              <Link
-                to="/about"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                About Us
-              </Link>
+              
             </li>
             <li style={{ marginBottom: 6 }}>
               <Link
@@ -279,6 +250,35 @@ export default function Footer({ user, avatarUrl, unreadCount, logout }) {
           </div>
         </div>
       )}
+      {/* BETA NOTICE */}
+<div
+  style={{
+    maxWidth: 900,
+    margin: "40px auto 0",
+    padding: "18px 22px",
+    borderRadius: 16,
+    background:
+      "linear-gradient(135deg, rgba(0,255,176,0.12), rgba(0,120,90,0.08))",
+    border: "1px solid rgba(0,255,176,0.35)",
+    boxShadow:
+      "0 0 20px rgba(0,255,176,0.18), inset 0 0 20px rgba(0,0,0,0.4)",
+    textAlign: "center",
+    color: "rgba(235,255,245,0.95)",
+    fontSize: 14,
+    fontWeight: 600,
+    lineHeight: 1.6,
+  }}
+>
+  🚧 <strong>MeetOutdoors is currently in Beta.</strong>  
+  <br />
+  This application is currently in beta and free to use.
+
+Feel free to explore all features and use the platform freely.
+If you have any feedback, ideas, or notice anything that could be improved,
+we would love to hear from you.
+
+Our contact email is available in the Contact section.
+</div>
 
       {/* bottom line */}
       <div
