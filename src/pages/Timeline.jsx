@@ -10,33 +10,44 @@ export default function Timeline() {
   const [profiles, setProfiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
-  const [user, setUser] = useState(null); // ⭐ DODATO
+  const [user, setUser] = useState(null);
 
   const [search, setSearch] = useState("");
   const [activityFilter, setActivityFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedPost, setSelectedPost] = useState(null);
 
-  // ⭐ NEW: interactions state
-  const [likedMap, setLikedMap] = useState({}); // {postId: true}
-  const [repostedMap, setRepostedMap] = useState({}); // {postId: true}
-  const [busyMap, setBusyMap] = useState({}); // {key: true}
+  // interactions
+  const [likedMap, setLikedMap] = useState({});
+  const [repostedMap, setRepostedMap] = useState({});
+  const [busyMap, setBusyMap] = useState({});
 
-  // ⭐ NEW: comments modal
+  // comments modal
   const [showComments, setShowComments] = useState(false);
   const [commentsPost, setCommentsPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [commentsLoading, setCommentsLoading] = useState(false);
 
-  // ⭐ UCITAJ USERA
+  // ✅ mobile detect (samo UI)
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 720 : false
+  );
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 720);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // load user
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data?.user || null);
     });
   }, []);
 
-  // ---- LOAD POSTS ----
+  // load posts
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -56,8 +67,10 @@ export default function Timeline() {
         return;
       }
 
-      // Skupljanje user_id
-      const userIds = [...new Set(postsData.map((p) => p.user_id).filter(Boolean))];
+      const safePosts = postsData || [];
+
+      // collect user ids
+      const userIds = [...new Set(safePosts.map((p) => p.user_id).filter(Boolean))];
 
       let profilesMap = {};
       if (userIds.length > 0) {
@@ -74,14 +87,14 @@ export default function Timeline() {
       }
 
       setProfiles(profilesMap);
-      setPosts(postsData || []);
+      setPosts(safePosts);
       setLoading(false);
     }
 
     load();
   }, []);
 
-  // ⭐ NEW: after we have user + posts, load which posts I liked / reposted
+  // load my interactions (likes/reposts)
   useEffect(() => {
     async function loadMyInteractions() {
       if (!user?.id) {
@@ -89,10 +102,11 @@ export default function Timeline() {
         setRepostedMap({});
         return;
       }
+
       const ids = posts.map((p) => p.id).filter(Boolean);
       if (ids.length === 0) return;
 
-      // LIKES
+      // likes
       const { data: myLikes, error: likeErr } = await supabase
         .from("timeline_post_likes")
         .select("post_id")
@@ -107,7 +121,7 @@ export default function Timeline() {
       });
       setLikedMap(lm);
 
-      // REPOSTS
+      // reposts
       const { data: myReposts, error: repErr } = await supabase
         .from("timeline_post_reposts")
         .select("post_id")
@@ -126,14 +140,14 @@ export default function Timeline() {
     loadMyInteractions();
   }, [user?.id, posts]);
 
-  // ---- ACTIVITIES ----
+  // activities list
   const activities = useMemo(() => {
     const s = new Set();
     posts.forEach((p) => p.activity && s.add(p.activity));
     return [...s];
   }, [posts]);
 
-  // ---- STATISTIKA ----
+  // stats
   const stats = useMemo(() => {
     const total = posts.length;
     const videos = posts.filter((p) => p.type === "video").length;
@@ -142,7 +156,7 @@ export default function Timeline() {
     return { total, videos, photos, uniqueActivities };
   }, [posts, activities]);
 
-  // ---- FILTER ----
+  // filter posts
   const filteredPosts = useMemo(() => {
     return posts.filter((p) => {
       if (activityFilter !== "all" && p.activity !== activityFilter) return false;
@@ -157,17 +171,13 @@ export default function Timeline() {
 
   const formatDate = (v) => (v ? new Date(v).toLocaleString() : "");
 
-  const setBusy = (key, val) =>
-    setBusyMap((prev) => ({ ...prev, [key]: val }));
+  const setBusy = (key, val) => setBusyMap((prev) => ({ ...prev, [key]: val }));
 
-  // ⭐ DELETE POST (jedina nova funkcija)
+  // delete post
   async function deletePost(postId) {
     if (!window.confirm("Delete this story permanently?")) return;
 
-    const { error } = await supabase
-      .from("timeline_posts")
-      .delete()
-      .eq("id", postId);
+    const { error } = await supabase.from("timeline_posts").delete().eq("id", postId);
 
     if (error) {
       console.error(error);
@@ -178,14 +188,15 @@ export default function Timeline() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }
 
-  // ⭐ NEW: LIKE / UNLIKE
+  // like/unlike
   async function toggleLike(post) {
     if (!user) return navigate("/login");
+
+    // ✅ FIX: mora template string
     const key = `like-${post.id}`;
     if (busyMap[key]) return;
 
     setBusy(key, true);
-
     const isLiked = !!likedMap[post.id];
 
     try {
@@ -221,9 +232,7 @@ export default function Timeline() {
         setLikedMap((prev) => ({ ...prev, [post.id]: true }));
         setPosts((prev) =>
           prev.map((p) =>
-            p.id === post.id
-              ? { ...p, likes_count: (p.likes_count || 0) + 1 }
-              : p
+            p.id === post.id ? { ...p, likes_count: (p.likes_count || 0) + 1 } : p
           )
         );
       }
@@ -235,7 +244,7 @@ export default function Timeline() {
     }
   }
 
-  // ⭐ NEW: OPEN COMMENTS
+  // open comments
   async function openComments(post) {
     setCommentsPost(post);
     setShowComments(true);
@@ -282,10 +291,11 @@ export default function Timeline() {
     }
   }
 
-  // ⭐ NEW: ADD COMMENT
+  // add comment
   async function addComment() {
     if (!user) return navigate("/login");
     if (!commentsPost) return;
+
     const text = (commentText || "").trim();
     if (!text) return;
 
@@ -309,7 +319,6 @@ export default function Timeline() {
       setComments((prev) => [...prev, inserted]);
       setCommentText("");
 
-      // bump count locally
       setPosts((prev) =>
         prev.map((p) =>
           p.id === commentsPost.id
@@ -325,72 +334,67 @@ export default function Timeline() {
     }
   }
 
-  // ⭐ NEW: REPOST
+  // repost/unrepost
   async function repost(post) {
-  if (!user) return navigate("/login");
+    if (!user) return navigate("/login");
 
-  const key = `repost-${post.id}`;
-  if (busyMap[key]) return;
+    // ✅ FIX: mora template string
+    const key = `repost-${post.id}`;
+    if (busyMap[key]) return;
 
-  setBusy(key, true);
+    setBusy(key, true);
 
-  const already = !!repostedMap[post.id];
+    const already = !!repostedMap[post.id];
 
-  try {
-    if (already) {
-      // ❌ UNREPOST
-      const { error } = await supabase
-        .from("timeline_post_reposts")
-        .delete()
-        .eq("post_id", post.id)
-        .eq("user_id", user.id);
+    try {
+      if (already) {
+        const { error } = await supabase
+          .from("timeline_post_reposts")
+          .delete()
+          .eq("post_id", post.id)
+          .eq("user_id", user.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setRepostedMap((prev) => {
-        const c = { ...prev };
-        delete c[post.id];
-        return c;
-      });
+        setRepostedMap((prev) => {
+          const c = { ...prev };
+          delete c[post.id];
+          return c;
+        });
 
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? {
-                ...p,
-                reposts_count: Math.max(0, (p.reposts_count || 0) - 1),
-              }
-            : p
-        )
-      );
-    } else {
-      // 🔁 REPOST
-      const { error } = await supabase
-        .from("timeline_post_reposts")
-        .insert({ post_id: post.id, user_id: user.id });
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === post.id
+              ? { ...p, reposts_count: Math.max(0, (p.reposts_count || 0) - 1) }
+              : p
+          )
+        );
+      } else {
+        const { error } = await supabase
+          .from("timeline_post_reposts")
+          .insert({ post_id: post.id, user_id: user.id });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setRepostedMap((prev) => ({ ...prev, [post.id]: true }));
+        setRepostedMap((prev) => ({ ...prev, [post.id]: true }));
 
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? { ...p, reposts_count: (p.reposts_count || 0) + 1 }
-            : p
-        )
-      );
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === post.id ? { ...p, reposts_count: (p.reposts_count || 0) + 1 } : p
+          )
+        );
+      }
+    } catch (e) {
+      console.error("REPOST ERR", e);
+      alert("Could not update repost.");
+    } finally {
+      setBusy(key, false);
     }
-  } catch (e) {
-    console.error("REPOST ERR", e);
-    alert("Could not update repost.");
-  } finally {
-    setBusy(key, false);
   }
-}
 
-  // ⭐ NEW: SHARE
+  // share
   async function sharePost(post) {
+    // ✅ FIX: mora template string
     const key = `share-${post.id}`;
     if (busyMap[key]) return;
     setBusy(key, true);
@@ -401,7 +405,6 @@ export default function Timeline() {
           ? `${window.location.origin}/timeline?post=${post.id}`
           : "";
 
-      // try native share
       let shared = false;
       if (navigator.share) {
         try {
@@ -425,7 +428,7 @@ export default function Timeline() {
         }
       }
 
-      // log share (optional, if table exists)
+      // optional logging
       try {
         await supabase.from("timeline_post_shares").insert({
           post_id: post.id,
@@ -436,20 +439,47 @@ export default function Timeline() {
         // ignore
       }
 
-      // bump local shares_count
       setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? { ...p, shares_count: (p.shares_count || 0) + 1 }
-            : p
-        )
+        prev.map((p) => (p.id === post.id ? { ...p, shares_count: (p.shares_count || 0) + 1 } : p))
       );
     } finally {
       setBusy(key, false);
     }
   }
 
-  // ---- STYLES (isti tvoji) ----
+  // delete comment (author only)
+  async function deleteComment(comment) {
+    if (!user) return;
+    if (comment.user_id !== user.id) return;
+
+    if (!window.confirm("Delete this comment?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("timeline_post_comments")
+        .delete()
+        .eq("id", comment.id);
+
+      if (error) throw error;
+
+      setComments((prev) => prev.filter((c) => c.id !== comment.id));
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === comment.post_id
+            ? { ...p, comments_count: Math.max(0, (p.comments_count || 0) - 1) }
+            : p
+        )
+      );
+    } catch (e) {
+      console.error("DELETE COMMENT ERR", e);
+      alert("Could not delete comment.");
+    }
+  }
+
+  // -------------------------------
+  //            STYLES
+  // -------------------------------
   const pageStyle = {
     minHeight: "100vh",
     padding: "24px 16px 40px",
@@ -461,10 +491,30 @@ export default function Timeline() {
   };
 
   const containerStyle = { maxWidth: 1180, margin: "0 auto" };
-  const heroWrapperStyle = { display: "flex", flexDirection: "column", gap: 18, marginBottom: 22 };
-  const heroTopRowStyle = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" };
+
+  const heroWrapperStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 18,
+    marginBottom: 22,
+  };
+
+  const heroTopRowStyle = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 16,
+    flexWrap: "wrap",
+  };
+
   const heroLeftStyle = { flex: "1 1 260px" };
-  const heroRightStyle = { flex: "0 0 260px", display: "flex", flexDirection: "column", gap: 10 };
+  const heroRightStyle = {
+    flex: "0 0 260px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    width: isMobile ? "100%" : undefined,
+  };
 
   const badgeStyle = {
     display: "inline-flex",
@@ -473,16 +523,19 @@ export default function Timeline() {
     padding: "6px 14px",
     borderRadius: 999,
     border: "1px solid rgba(0,255,160,0.7)",
-    background:
-      "linear-gradient(120deg, rgba(0,0,0,0.94), rgba(0,255,160,0.14))",
+    background: "linear-gradient(120deg, rgba(0,0,0,0.94), rgba(0,255,160,0.14))",
     fontSize: 11,
     letterSpacing: "0.12em",
     textTransform: "uppercase",
     color: "rgba(210,255,230,0.9)",
   };
 
-  const titleStyle = { fontSize: 34, fontWeight: 800, margin: "10px 0 4px" };
-  const subtitleStyle = { fontSize: 14, color: "rgba(255,255,255,0.76)", maxWidth: 520 };
+  const titleStyle = { fontSize: isMobile ? 26 : 34, fontWeight: 800, margin: "10px 0 4px" };
+  const subtitleStyle = {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.76)",
+    maxWidth: 520,
+  };
 
   const statRowStyle = {
     display: "grid",
@@ -494,8 +547,7 @@ export default function Timeline() {
   const statBoxStyle = {
     padding: "10px 12px",
     borderRadius: 14,
-    background:
-      "linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,255,160,0.12))",
+    background: "linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,255,160,0.12))",
     border: "1px solid rgba(0,255,160,0.3)",
   };
 
@@ -506,8 +558,7 @@ export default function Timeline() {
     padding: "10px 16px",
     borderRadius: 999,
     border: "none",
-    background:
-      "linear-gradient(135deg, #00ffb0 0%, #00d1ff 45%, #ffffff 100%)",
+    background: "linear-gradient(135deg, #00ffb0 0%, #00d1ff 45%, #ffffff 100%)",
     color: "#022015",
     fontWeight: 800,
     fontSize: 12,
@@ -537,7 +588,7 @@ export default function Timeline() {
   };
 
   const selectStyle = {
-    flex: "0 0 170px",
+    flex: isMobile ? "1 1 160px" : "0 0 170px",
     padding: "9px 12px",
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,0.18)",
@@ -551,28 +602,33 @@ export default function Timeline() {
 
   const cardStyle = {
     display: "flex",
-    flexDirection: "row",
+    flexDirection: isMobile ? "column" : "row",
     gap: 16,
     padding: 16,
     borderRadius: 22,
-    background:
-      "linear-gradient(135deg, rgba(0,0,0,0.92), rgba(0,40,22,0.9))",
+    background: "linear-gradient(135deg, rgba(0,0,0,0.92), rgba(0,40,22,0.9))",
     boxShadow: "0 22px 50px rgba(0,0,0,0.9)",
     border: "1px solid rgba(255,255,255,0.04)",
   };
 
   const cardLeftStyle = {
     position: "relative",
-    width: 260,
-    minWidth: 260,
-    height: 170,
+    width: isMobile ? "100%" : 260,
+    minWidth: isMobile ? "100%" : 260,
+    height: isMobile ? 210 : 170,
     borderRadius: 18,
     overflow: "hidden",
     cursor: "pointer",
     background: "rgba(0,0,0,0.7)",
   };
 
-  const mediaImageStyle = { width: "100%", height: "100%", objectFit: "cover", display: "block" };
+  const mediaImageStyle = {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  };
+
   const playOverlayStyle = {
     position: "absolute",
     inset: 0,
@@ -587,8 +643,7 @@ export default function Timeline() {
   const gradientEdgeStyle = {
     position: "absolute",
     inset: 0,
-    background:
-      "radial-gradient(circle at top left, rgba(0,255,160,0.5), transparent 55%)",
+    background: "radial-gradient(circle at top left, rgba(0,255,160,0.5), transparent 55%)",
     mixBlendMode: "soft-light",
     pointerEvents: "none",
   };
@@ -707,7 +762,6 @@ export default function Timeline() {
     cursor: "pointer",
   };
 
-  // ⭐ NEW: comments modal styles (minimal, u istom stilu)
   const commentsBoxStyle = {
     borderRadius: 22,
     background: "rgba(0,0,0,0.75)",
@@ -727,44 +781,10 @@ export default function Timeline() {
     outline: "none",
     boxSizing: "border-box",
   };
-  
-async function deleteComment(comment) {
-  if (!user) return;
-  if (comment.user_id !== user.id) return;
-
-  if (!window.confirm("Delete this comment?")) return;
-
-  try {
-    const { error } = await supabase
-      .from("timeline_post_comments")
-      .delete()
-      .eq("id", comment.id);
-
-    if (error) throw error;
-
-    setComments((prev) => prev.filter((c) => c.id !== comment.id));
-
-    // lokalno smanji count
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === comment.post_id
-          ? {
-              ...p,
-              comments_count: Math.max(0, (p.comments_count || 0) - 1),
-            }
-          : p
-      )
-    );
-  } catch (e) {
-    console.error("DELETE COMMENT ERR", e);
-    alert("Could not delete comment.");
-  }
-}
 
   // -------------------------------
   //            RENDER
   // -------------------------------
-
   if (loading) {
     return (
       <div style={pageStyle}>
@@ -799,8 +819,8 @@ async function deleteComment(comment) {
               </div>
               <h1 style={titleStyle}>See what the outdoors feels like.</h1>
               <p style={subtitleStyle}>
-                Real moments from real explorers. Photos, videos and tours from
-                mountains, rivers and cities all around the world.
+                Real moments from real explorers. Photos, videos and tours from mountains,
+                rivers and cities all around the world.
               </p>
             </div>
 
@@ -824,11 +844,7 @@ async function deleteComment(comment) {
                 </div>
               </div>
 
-              <button
-                type="button"
-                style={addPostButtonStyle}
-                onClick={() => navigate("/add-post")}
-              >
+              <button type="button" style={addPostButtonStyle} onClick={() => navigate("/add-post")}>
                 + Add new story
               </button>
             </div>
@@ -843,11 +859,7 @@ async function deleteComment(comment) {
               onChange={(e) => setSearch(e.target.value)}
             />
 
-            <select
-              style={selectStyle}
-              value={activityFilter}
-              onChange={(e) => setActivityFilter(e.target.value)}
-            >
+            <select style={selectStyle} value={activityFilter} onChange={(e) => setActivityFilter(e.target.value)}>
               <option value="all">All activities</option>
               {activities.map((act) => (
                 <option key={act} value={act}>
@@ -857,7 +869,7 @@ async function deleteComment(comment) {
             </select>
 
             <select
-              style={{ ...selectStyle, flex: "0 0 140px" }}
+              style={{ ...selectStyle, flex: isMobile ? "1 1 160px" : "0 0 140px" }}
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
             >
@@ -874,21 +886,16 @@ async function deleteComment(comment) {
         {/* EMPTY */}
         {filteredPosts.length === 0 && !errorMsg && (
           <div style={emptyStyle}>
-            No posts found yet. Be the first to share an adventure – use{" "}
-            <strong>“Add new story”</strong> above.
+            No posts found yet. Be the first to share an adventure – use <strong>“Add new story”</strong> above.
           </div>
         )}
 
-        {/* LISTA POSTOVA */}
+        {/* POSTS */}
         <div style={gridStyle}>
           {filteredPosts.map((post) => {
             const profile = profiles[post.user_id] || {};
-            const avatar =
-              profile.avatar_url || "https://i.pravatar.cc/150?img=3";
-            const name =
-              profile.full_name ||
-              profile.full_name ||
-              "Outdoor explorer";
+            const avatar = profile.avatar_url || "https://i.pravatar.cc/150?img=3";
+            const name = profile.full_name || "Outdoor explorer";
 
             const isVideo = post.type === "video";
 
@@ -903,10 +910,7 @@ async function deleteComment(comment) {
             return (
               <div key={post.id} style={cardStyle}>
                 {/* MEDIA */}
-                <div
-                  style={cardLeftStyle}
-                  onClick={() => setSelectedPost(post)}
-                >
+                <div style={cardLeftStyle} onClick={() => setSelectedPost(post)}>
                   {isVideo ? (
                     <>
                       <img
@@ -917,11 +921,7 @@ async function deleteComment(comment) {
                       <div style={playOverlayStyle}>▶</div>
                     </>
                   ) : (
-                    <img
-                      src={post.media_url}
-                      alt={post.caption || "Image"}
-                      style={mediaImageStyle}
-                    />
+                    <img src={post.media_url} alt={post.caption || "Image"} style={mediaImageStyle} />
                   )}
                   <div style={gradientEdgeStyle} />
                 </div>
@@ -933,37 +933,20 @@ async function deleteComment(comment) {
                       <img src={avatar} alt={name} style={avatarStyle} />
                       <div>
                         <div style={nameStyle}>{name}</div>
-                        <div style={timeStyle}>
-                          {formatDate(post.created_at)}
-                        </div>
+                        <div style={timeStyle}>{formatDate(post.created_at)}</div>
                       </div>
                     </div>
 
-                    {post.caption && (
-                      <div style={captionStyle}>{post.caption}</div>
-                    )}
+                    {post.caption && <div style={captionStyle}>{post.caption}</div>}
 
                     <div style={metaRowStyle}>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 8,
-                          alignItems: "center",
-                          flexWrap: "wrap",
-                        }}
-                      >
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         {post.activity && (
-                          <span style={activityTagStyle}>
-                            {post.activity.toUpperCase()}
-                          </span>
+                          <span style={activityTagStyle}>{post.activity.toUpperCase()}</span>
                         )}
-                        <span style={chipStyle}>
-                          {isVideo ? "Video story" : "Photo story"}
-                        </span>
+                        <span style={chipStyle}>{isVideo ? "Video story" : "Photo story"}</span>
                       </div>
-                      <div style={{ fontSize: 11, opacity: 0.8 }}>
-                        ID: {post.id.slice(0, 6)}…
-                      </div>
+                      <div style={{ fontSize: 11, opacity: 0.8 }}>ID: {post.id.slice(0, 6)}…</div>
                     </div>
                   </div>
 
@@ -993,7 +976,7 @@ async function deleteComment(comment) {
                       <span>· 📤 {shares}</span>
                     </div>
 
-                    {/* ⭐ DELETE BUTTON — vidi ga samo autor */}
+                    {/* DELETE POST — author only */}
                     {user?.id === post.user_id && (
                       <button
                         style={{
@@ -1012,24 +995,15 @@ async function deleteComment(comment) {
                       </button>
                     )}
 
-                    {/* ⭐ NEW: LIKE / COMMENT / REPOST / SHARE */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                      }}
-                    >
+                    {/* ACTIONS */}
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <button
                         type="button"
                         style={{
                           padding: "7px 12px",
                           borderRadius: 999,
                           border: "1px solid rgba(255,255,255,0.14)",
-                          background: iLiked
-                            ? "rgba(255,0,80,0.22)"
-                            : "rgba(0,0,0,0.55)",
+                          background: iLiked ? "rgba(255,0,80,0.22)" : "rgba(0,0,0,0.55)",
                           color: iLiked ? "#ffd1df" : "#ffffff",
                           fontSize: 11,
                           fontWeight: 800,
@@ -1068,9 +1042,7 @@ async function deleteComment(comment) {
                           padding: "7px 12px",
                           borderRadius: 999,
                           border: "1px solid rgba(255,255,255,0.14)",
-                          background: iReposted
-                            ? "rgba(0,209,255,0.18)"
-                            : "rgba(0,0,0,0.55)",
+                          background: iReposted ? "rgba(0,209,255,0.18)" : "rgba(0,0,0,0.55)",
                           color: "#ffffff",
                           fontSize: 11,
                           fontWeight: 800,
@@ -1113,8 +1085,7 @@ async function deleteComment(comment) {
                         padding: "7px 13px",
                         borderRadius: 999,
                         border: "none",
-                        background:
-                          "linear-gradient(135deg, #00ffb0 0%, #00d1ff 50%, #ffffff 100%)",
+                        background: "linear-gradient(135deg, #00ffb0 0%, #00d1ff 50%, #ffffff 100%)",
                         color: "#02150b",
                         fontSize: 11,
                         fontWeight: 800,
@@ -1125,11 +1096,7 @@ async function deleteComment(comment) {
                       }}
                       onClick={() => {
                         if (post.activity) {
-                          navigate(
-                            `/tours?activity=${encodeURIComponent(
-                              post.activity
-                            )}`
-                          );
+                          navigate(`/tours?activity=${encodeURIComponent(post.activity)}`);
                         } else if (post.tour_id) {
                           navigate(`/tours?from=timeline`);
                         } else {
@@ -1149,23 +1116,13 @@ async function deleteComment(comment) {
 
       {/* FULLSCREEN MODAL */}
       {selectedPost && (
-        <div
-          style={modalOverlayStyle}
-          onClick={() => setSelectedPost(null)}
-        >
-          <div
-            style={modalInnerStyle}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div style={modalOverlayStyle} onClick={() => setSelectedPost(null)}>
+          <div style={modalInnerStyle} onClick={(e) => e.stopPropagation()}>
             <div style={modalMediaWrapperStyle}>
               {selectedPost.type === "video" ? (
                 <video
                   src={selectedPost.media_url}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain",
-                  }}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
                   controls
                   autoPlay
                 />
@@ -1173,32 +1130,21 @@ async function deleteComment(comment) {
                 <img
                   src={selectedPost.media_url}
                   alt={selectedPost.caption || "Media"}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain",
-                  }}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
               )}
             </div>
 
-            {selectedPost.caption && (
-              <div style={{ fontSize: 14, marginBottom: 6 }}>
-                {selectedPost.caption}
-              </div>
-            )}
-            <button
-              type="button"
-              style={modalCloseBtnStyle}
-              onClick={() => setSelectedPost(null)}
-            >
+            {selectedPost.caption && <div style={{ fontSize: 14, marginBottom: 6 }}>{selectedPost.caption}</div>}
+
+            <button type="button" style={modalCloseBtnStyle} onClick={() => setSelectedPost(null)}>
               Close
             </button>
           </div>
         </div>
       )}
 
-      {/* ⭐ COMMENTS MODAL */}
+      {/* COMMENTS MODAL */}
       {showComments && commentsPost && (
         <div
           style={modalOverlayStyle}
@@ -1209,15 +1155,22 @@ async function deleteComment(comment) {
             setCommentText("");
           }}
         >
-          <div
-            style={modalInnerStyle}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div style={modalInnerStyle} onClick={(e) => e.stopPropagation()}>
             <div style={commentsBoxStyle}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  alignItems: "center",
+                  marginBottom: 10,
+                  flexWrap: "wrap",
+                }}
+              >
                 <div style={{ fontWeight: 800, fontSize: 14 }}>
                   💬 Comments · <span style={{ opacity: 0.75 }}>Post {commentsPost.id.slice(0, 6)}…</span>
                 </div>
+
                 <button
                   type="button"
                   style={modalCloseBtnStyle}
@@ -1233,19 +1186,25 @@ async function deleteComment(comment) {
               </div>
 
               {commentsLoading ? (
-                <div style={{ opacity: 0.8, fontSize: 13, padding: "10px 0" }}>
-                  Loading comments...
-                </div>
+                <div style={{ opacity: 0.8, fontSize: 13, padding: "10px 0" }}>Loading comments...</div>
               ) : comments.length === 0 ? (
-                <div style={{ opacity: 0.75, fontSize: 13, padding: "10px 0" }}>
-                  No comments yet. Be the first.
-                </div>
+                <div style={{ opacity: 0.75, fontSize: 13, padding: "10px 0" }}>No comments yet. Be the first.</div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "44vh", overflow: "auto", paddingRight: 6 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    maxHeight: "44vh",
+                    overflow: "auto",
+                    paddingRight: 6,
+                  }}
+                >
                   {comments.map((c) => {
                     const p = profiles[c.user_id] || {};
                     const av = p.avatar_url || "https://i.pravatar.cc/80?img=5";
                     const nm = p.full_name || "Explorer";
+
                     return (
                       <div
                         key={c.id}
@@ -1262,40 +1221,63 @@ async function deleteComment(comment) {
                         <img
                           src={av}
                           alt={nm}
-                          style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(0,255,176,0.7)" }}
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            border: "2px solid rgba(0,255,176,0.7)",
+                          }}
                         />
                         <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              flexWrap: "wrap",
+                            }}
+                          >
                             <div style={{ fontWeight: 800, fontSize: 13 }}>{nm}</div>
                             <div style={{ fontSize: 11, opacity: 0.7 }}>{formatDate(c.created_at)}</div>
                           </div>
-                          <div style={{ fontSize: 13, opacity: 0.92, marginTop: 4, whiteSpace: "pre-wrap" }}>
+
+                          <div
+                            style={{
+                              fontSize: 13,
+                              opacity: 0.92,
+                              marginTop: 4,
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
                             {c.content}
                           </div>
+
                           {user?.id === c.user_id && (
-  <button
-    onClick={() => deleteComment(c)}
-    style={{
-      marginTop: 4,
-      padding: "4px 10px",
-      borderRadius: 999,
-      border: "1px solid rgba(255,80,80,0.5)",
-      background: "rgba(255,0,0,0.2)",
-      color: "#ffb3b3",
-      fontSize: 11,
-      fontWeight: 700,
-      cursor: "pointer",
-    }}
-  >
-    Delete
-  </button>
-)}
+                            <button
+                              onClick={() => deleteComment(c)}
+                              style={{
+                                marginTop: 4,
+                                padding: "4px 10px",
+                                borderRadius: 999,
+                                border: "1px solid rgba(255,80,80,0.5)",
+                                background: "rgba(255,0,0,0.2)",
+                                color: "#ffb3b3",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               )}
+
               <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <input
                   style={commentInputStyle}
@@ -1310,8 +1292,7 @@ async function deleteComment(comment) {
                     padding: "10px 14px",
                     borderRadius: 999,
                     border: "none",
-                    background:
-                      "linear-gradient(135deg, #00ffb0 0%, #00d1ff 50%, #ffffff 100%)",
+                    background: "linear-gradient(135deg, #00ffb0 0%, #00d1ff 50%, #ffffff 100%)",
                     color: "#02150b",
                     fontSize: 11,
                     fontWeight: 800,
