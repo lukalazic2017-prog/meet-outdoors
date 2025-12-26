@@ -1,4 +1,4 @@
-// src/pages/Profile.jsx
+ // src/pages/Profile.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
@@ -23,9 +23,339 @@ const FriendBadge = () => (
   </span>
 );
 
+/* ================= SMALL SCREEN HOOK ================= */
+function useIsSmall(breakpoint = 900) {
+  const [isSmall, setIsSmall] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < breakpoint;
+  });
+
+  useEffect(() => {
+    const onResize = () => setIsSmall(window.innerWidth < breakpoint);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [breakpoint]);
+
+  return isSmall;
+}
+
+/* ================= MOBILE PROFILE VIEW ================= */
+function MobileProfileView({
+  profile,
+  cover,
+  avatar,
+  xp,
+  level,
+  levelName,
+  followersCount,
+  followingCount,
+  toursCount,
+  avgRating,
+  isOwnProfile,
+  isFollowing,
+  isFriend,
+  followBusy,
+  toggleFollow,
+  goEdit,
+}) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(700px 320px at 20% 0%, rgba(0,255,195,0.22), transparent 60%)," +
+          "radial-gradient(700px 320px at 80% 0%, rgba(124,77,255,0.18), transparent 60%)," +
+          "linear-gradient(180deg, #02080a, #010405)",
+        color: "white",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      }}
+    >
+      {/* COVER */}
+      <div style={{ position: "relative", height: 220 }}>
+        {cover ? (
+          <img
+            src={cover}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: "saturate(1.18) contrast(1.06) brightness(0.88)",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              background:
+                "radial-gradient(520px 220px at 15% 20%, rgba(0,255,195,0.25), transparent 60%)," +
+                "radial-gradient(520px 240px at 85% 20%, rgba(124,77,255,0.22), transparent 60%)," +
+                "linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.92))",
+            }}
+          />
+        )}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.88))",
+          }}
+        />
+      </div>
+
+      <div style={{ padding: 16, marginTop: -62 }}>
+        {/* AVATAR */}
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <div
+            style={{
+              width: 112,
+              height: 112,
+              margin: "24px auto 0",
+              borderRadius: "50%",
+              padding: 4,
+              background: "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
+              boxShadow: "0 0 26px rgba(0,255,195,0.35)",
+            }}
+          >
+            <img
+              src={avatar}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                objectFit: "cover",
+                border: "3px solid rgba(0,0,0,0.75)",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* NAME + META */}
+        <div style={{ textAlign: "center", marginTop: 10 }}>
+          <div style={{ fontSize: 24, fontWeight: 950 }}>
+            {profile.full_name || profile.username || "Explorer"}
+          </div>
+          <div style={{ opacity: 0.78, fontSize: 13, marginTop: 4 }}>
+            📍 {profile.city || "City"}, {profile.country || "Country"}
+          </div>
+
+          <div
+            style={{
+              marginTop: 10,
+              display: "inline-flex",
+              gap: 10,
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 12,
+                padding: "7px 12px",
+                borderRadius: 999,
+                background: "rgba(0,0,0,0.35)",
+                border: "1px solid rgba(255,255,255,0.14)",
+              }}
+            >
+              🧬 Level <b>{level}</b> • {levelName}
+            </span>
+            <span
+              style={{
+                fontSize: 12,
+                padding: "7px 12px",
+                borderRadius: 999,
+                background: "rgba(0,0,0,0.35)",
+                border: "1px solid rgba(255,255,255,0.14)",
+              }}
+            >
+              🧠 XP <b>{xp}</b>
+            </span>
+            {isFriend && <FriendBadge />}
+          </div>
+        </div>
+
+        {/* BIO */}
+        <div
+          style={{
+            marginTop: 14,
+            background: "rgba(0,0,0,0.40)",
+            borderRadius: 18,
+            padding: 14,
+            lineHeight: 1.6,
+            fontSize: 14,
+            opacity: 0.92,
+            border: "1px solid rgba(255,255,255,0.10)",
+          }}
+        >
+          {profile.bio || "No description yet. This explorer prefers actions over words."}
+        </div>
+
+        {/* STATS */}
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 10,
+          }}
+        >
+          {[
+            { label: "Tours", value: toursCount },
+            { label: "Followers", value: followersCount },
+            { label: "Following", value: followingCount },
+            { label: "Rating", value: avgRating || "N/A" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 14,
+                padding: 12,
+                textAlign: "center",
+                border: "1px solid rgba(255,255,255,0.10)",
+              }}
+            >
+              <div style={{ fontSize: 18, fontWeight: 950 }}>{s.value}</div>
+              <div style={{ fontSize: 11, opacity: 0.75 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+          {isOwnProfile ? (
+            <button
+              onClick={goEdit}
+              style={{
+                width: "100%",
+                padding: "14px 0",
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.22)",
+                background: "rgba(0,0,0,0.35)",
+                fontWeight: 950,
+                color: "white",
+              }}
+            >
+              Edit profile
+            </button>
+          ) : (
+            <button
+              onClick={toggleFollow}
+              disabled={followBusy}
+              style={{
+                width: "100%",
+                padding: "14px 0",
+                borderRadius: 999,
+                border: "none",
+                fontWeight: 950,
+                fontSize: 15,
+                background: isFollowing
+                  ? "rgba(255,255,255,0.14)"
+                  : "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
+                color: isFollowing ? "white" : "#02130d",
+                boxShadow: "0 0 30px rgba(0,255,195,0.35)",
+                opacity: followBusy ? 0.75 : 1,
+              }}
+            >
+              {isFollowing ? "Following ✓" : "Follow"}
+            </button>
+          )}
+        </div>
+
+        {/* SOCIAL LINKS */}
+        {(profile.instagram_url || profile.tiktok_url || profile.youtube_url) && (
+          <div
+            style={{
+              marginTop: 16,
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
+            {profile.instagram_url && (
+              <a
+                href={
+                  profile.instagram_url.startsWith("http")
+                    ? profile.instagram_url
+                    : `https://instagram.com/${profile.instagram_url.replace("@", "")}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  background: "rgba(225,48,108,0.18)",
+                  border: "1px solid rgba(225,48,108,0.35)",
+                  color: "white",
+                  textDecoration: "none",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                📸 Instagram
+              </a>
+            )}
+            {profile.tiktok_url && (
+              <a
+                href={
+                  profile.tiktok_url.startsWith("http")
+                    ? profile.tiktok_url
+                    : `https://www.tiktok.com/@${profile.tiktok_url.replace("@", "")}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  background: "rgba(255,0,80,0.16)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  color: "white",
+                  textDecoration: "none",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                🎵 TikTok
+              </a>
+            )}
+            {profile.youtube_url && (
+              <a
+                href={
+                  profile.youtube_url.startsWith("http")
+                    ? profile.youtube_url
+                    : `https://youtube.com/@${profile.youtube_url.replace("@", "")}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  background: "rgba(255,0,0,0.16)",
+                  border: "1px solid rgba(255,0,0,0.35)",
+                  color: "white",
+                  textDecoration: "none",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                ▶️ YouTube
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isSmall = useIsSmall(900);
 
   const [authUser, setAuthUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -59,18 +389,27 @@ export default function Profile() {
 
   // ================= AUTH =================
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setAuthUser(data?.user || null);
-    });
+    supabase.auth.getUser().then(({ data }) => setAuthUser(data?.user || null));
   }, []);
 
-  // ================= LOAD (SVE IZ BAZE) =================
+  // ================= HELPERS =================
+  const fmtDate = (d) => {
+    if (!d) return "";
+    try {
+      return new Date(d).toLocaleString();
+    } catch {
+      return "";
+    }
+  };
+
+  // ================= LOAD ALL =================
   async function loadAll() {
     if (!id) return;
     setLoading(true);
 
     const { data: auth } = await supabase.auth.getUser();
     const me = auth?.user || null;
+    setAuthUser(me);
 
     // PROFILE
     const { data: prof, error: profErr } = await supabase
@@ -90,17 +429,17 @@ export default function Profile() {
     if (toursErr) console.log("TOURS ERR", toursErr);
     setTours(toursData || []);
 
-    // EVENTS (created by user)
+    // EVENTS
     const { data: eventsData, error: eventsErr } = await supabase
       .from("events")
       .select("*")
       .eq("creator_id", id)
       .order("start_date", { ascending: true })
-      .limit(6);
+      .limit(12);
     if (eventsErr) console.log("EVENTS ERR", eventsErr);
     setEvents(eventsData || []);
 
-    // FOLLOWERS COUNT (koliko prati njega)
+    // FOLLOWERS COUNT
     const { count: followersCnt, error: followersCntErr } = await supabase
       .from("profile_follows")
       .select("*", { count: "exact", head: true })
@@ -108,7 +447,7 @@ export default function Profile() {
     if (followersCntErr) console.log("FOLLOWERS COUNT ERR", followersCntErr);
     setFollowersCount(followersCnt || 0);
 
-    // FOLLOWING COUNT (koliko on prati)
+    // FOLLOWING COUNT
     const { count: followingCnt, error: followingCntErr } = await supabase
       .from("profile_follows")
       .select("*", { count: "exact", head: true })
@@ -117,6 +456,7 @@ export default function Profile() {
     setFollowingCount(followingCnt || 0);
 
     // DO I FOLLOW?
+    let iFollow = false;
     if (me && me.id !== id) {
       const { data: row, error: rowErr } = await supabase
         .from("profile_follows")
@@ -125,41 +465,42 @@ export default function Profile() {
         .eq("following_id", id)
         .maybeSingle();
       if (rowErr) console.log("FOLLOW CHECK ERR", rowErr);
+      iFollow = !!row;
       setIsFollowing(!!row);
     } else {
       setIsFollowing(false);
     }
 
-    // FRIEND CHECK (mutual follow)
+    // FRIEND CHECK (mutual follow) — računamo u istom loadAll (bez starih state-ova)
+    let friendNow = false;
     if (me && me.id !== id) {
-      const { data: a, error: aErr } = await supabase
+      const { data: a } = await supabase
         .from("profile_follows")
         .select("id")
         .eq("follower_id", me.id)
         .eq("following_id", id)
         .maybeSingle();
-      if (aErr) console.log("FRIEND A ERR", aErr);
 
-      const { data: b, error: bErr } = await supabase
+      const { data: b } = await supabase
         .from("profile_follows")
         .select("id")
         .eq("follower_id", id)
         .eq("following_id", me.id)
         .maybeSingle();
-      if (bErr) console.log("FRIEND B ERR", bErr);
 
-      setIsFriend(!!a && !!b);
+      friendNow = !!a && !!b;
+      setIsFriend(friendNow);
     } else {
       setIsFriend(false);
     }
 
-    // FOLLOWERS LIST (SIGURNO - 2 koraka)
+    // FOLLOWERS LIST (2-step safe)
     const { data: folIdsRows, error: folIdsErr } = await supabase
       .from("profile_follows")
       .select("follower_id, created_at")
       .eq("following_id", id)
       .order("created_at", { ascending: false })
-      .limit(80);
+      .limit(120);
 
     if (folIdsErr) console.log("FOLLOWERS IDS ERR", folIdsErr);
 
@@ -180,23 +521,21 @@ export default function Profile() {
       setFollowersList(ordered);
     }
 
-    // FRIENDS LIST (PRIVATE)
-    // Prikazujemo samo ako je: (a) moj profil, ili (b) ja sam friend sa njim
-    const canSeeFriends = isOwnProfile || (me && me.id !== id && isFriend);
-    if (canSeeFriends) {
-      // mutual = (he follows X) AND (X follows him)
+    // FRIENDS LIST (private)
+    const canSeeFriendsNow = (me && me.id === id) || friendNow;
+    if (canSeeFriendsNow) {
       const { data: followingRows, error: fr1Err } = await supabase
         .from("profile_follows")
         .select("following_id")
         .eq("follower_id", id)
-        .limit(500);
+        .limit(800);
       if (fr1Err) console.log("FRIENDS following ERR", fr1Err);
 
       const { data: followersRows2, error: fr2Err } = await supabase
         .from("profile_follows")
         .select("follower_id")
         .eq("following_id", id)
-        .limit(500);
+        .limit(800);
       if (fr2Err) console.log("FRIENDS followers ERR", fr2Err);
 
       const followingIds = new Set((followingRows || []).map((r) => r.following_id).filter(Boolean));
@@ -278,7 +617,7 @@ export default function Profile() {
       });
     });
 
-    (ratings || []).slice(0, 8).forEach((r) => {
+    (ratings || []).slice(0, 10).forEach((r) => {
       items.push({
         type: "rating",
         created_at: r.created_at,
@@ -291,7 +630,7 @@ export default function Profile() {
     });
 
     items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    setTimeline(items.slice(0, 14));
+    setTimeline(items.slice(0, 16));
 
     setLoading(false);
   }
@@ -312,23 +651,25 @@ export default function Profile() {
 
     setFollowBusy(true);
 
-    if (isFollowing) {
-      const { error } = await supabase
-        .from("profile_follows")
-        .delete()
-        .eq("follower_id", authUser.id)
-        .eq("following_id", id);
-      if (error) console.log("UNFOLLOW ERR", error);
-    } else {
-      const { error } = await supabase.from("profile_follows").insert({
-        follower_id: authUser.id,
-        following_id: id,
-      });
-      if (error) console.log("FOLLOW ERR", error);
+    try {
+      if (isFollowing) {
+        const { error } = await supabase
+          .from("profile_follows")
+          .delete()
+          .eq("follower_id", authUser.id)
+          .eq("following_id", id);
+        if (error) console.log("UNFOLLOW ERR", error);
+      } else {
+        const { error } = await supabase.from("profile_follows").insert({
+          follower_id: authUser.id,
+          following_id: id,
+        });
+        if (error) console.log("FOLLOW ERR", error);
+      }
+      await loadAll();
+    } finally {
+      setFollowBusy(false);
     }
-
-    await loadAll();
-    setFollowBusy(false);
   }
 
   async function rate(value) {
@@ -337,16 +678,18 @@ export default function Profile() {
     if (ratingBusy) return;
 
     setRatingBusy(true);
+    try {
+      const { error } = await supabase.from("profile_ratings").upsert(
+        { rater_id: authUser.id, rated_user_id: id, rating: value },
+        { onConflict: "rater_id,rated_user_id" }
+      );
+      if (error) console.log("RATE ERR", error);
 
-    const { error } = await supabase.from("profile_ratings").upsert(
-      { rater_id: authUser.id, rated_user_id: id, rating: value },
-      { onConflict: "rater_id,rated_user_id" }
-    );
-    if (error) console.log("RATE ERR", error);
-
-    setMyRating(value);
-    await loadAll();
-    setRatingBusy(false);
+      setMyRating(value);
+      await loadAll();
+    } finally {
+      setRatingBusy(false);
+    }
   }
 
   // ================= XP / LEVEL / BADGES =================
@@ -412,15 +755,6 @@ export default function Profile() {
     };
   }, [tours.length, events.length, followersCount, avgRating, isFriend]);
 
-  const fmtDate = (d) => {
-    if (!d) return "";
-    try {
-      return new Date(d).toLocaleString();
-    } catch {
-      return "";
-    }
-  };
-
   // ================= UI STYLES =================
   const page = {
     minHeight: "100vh",
@@ -438,7 +772,7 @@ export default function Profile() {
     padding: "18px 16px 90px",
     display: "flex",
     flexDirection: "column",
-    gap: 18, // ✅ RAZDVAJA KARTICE SVUDA
+    gap: 18,
   };
 
   const glass = {
@@ -518,16 +852,24 @@ export default function Profile() {
     gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1.1fr)",
     gap: 18,
   };
-
-  const isSmall = typeof window !== "undefined" && window.innerWidth < 900;
   const gridResponsive = isSmall ? { ...grid, gridTemplateColumns: "1fr" } : grid;
 
-  // ================= RENDER =================
+  // ================= RENDER LOADING =================
   if (loading || !profile) {
     return (
       <div style={page}>
         <div style={wrap}>
-          <div style={{ ...glass, padding: 28, minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+          <div
+            style={{
+              ...glass,
+              padding: 28,
+              minHeight: "60vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+            }}
+          >
             Loading profile…
           </div>
         </div>
@@ -535,19 +877,43 @@ export default function Profile() {
     );
   }
 
+  // ================= ASSETS (AVATAR + COVER) =================
   const avatar = profile.avatar_url || "https://i.pravatar.cc/300?img=12";
-
-  // ✅ COVER samo iz edit-profile polja (bez random slika)
   const cover =
     profile.cover_url ||
     profile.header_url ||
     profile.banner_url ||
     profile.cover ||
     profile.cover_image_url ||
-    ""; // ako nema → nema slike, samo cinematic gradient
+    "";
 
   const canSeeFriends = isOwnProfile || isFriend;
 
+  // ================= MOBILE OVERRIDE =================
+  if (isSmall) {
+    return (
+      <MobileProfileView
+        profile={profile}
+        cover={cover}
+        avatar={avatar}
+        xp={xp}
+        level={level}
+        levelName={levelName}
+        followersCount={followersCount}
+        followingCount={followingCount}
+        toursCount={tours.length}
+        avgRating={avgRating ? avgRating.toFixed(1) : null}
+        isOwnProfile={isOwnProfile}
+        isFollowing={isFollowing}
+        isFriend={isFriend}
+        followBusy={followBusy}
+        toggleFollow={toggleFollow}
+        goEdit={() => navigate("/edit-profile")}
+      />
+    );
+  }
+
+  // ================= DESKTOP UI =================
   const actionBar = (
     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
       {!isOwnProfile ? (
@@ -561,7 +927,6 @@ export default function Profile() {
             {isFollowing ? "Following ✓" : "Follow"}
           </button>
 
-          {/* CHAT samo za friends (PRIVATE) */}
           {isFriend && (
             <button style={btnGhost} onClick={() => navigate(`/chat/${id}`)}>
               💬 Chat
@@ -661,7 +1026,7 @@ export default function Profile() {
               />
             </div>
 
-            <div style={{ paddingBottom: 6, maxWidth: 620 }}>
+            <div style={{ paddingBottom: 6, maxWidth: 640 }}>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
                 <div style={pill}>
                   🧬 Level <b style={{ color: "white" }}>{level}</b>
@@ -686,115 +1051,100 @@ export default function Profile() {
               <div style={{ marginTop: 8, fontSize: 13, opacity: 0.82, lineHeight: 1.6 }}>
                 {profile.bio || "No description yet. This explorer prefers actions over words."}
               </div>
+
               {/* SOCIAL LINKS */}
-{( profile.instagram_url || profile.tiktok_url || profile.youtube_url) && (
-  <div
-    style={{
-      marginTop: 14,
-      display: "flex",
-      gap: 12,
-      flexWrap: "wrap",
-      alignItems: "center",
-    }}
-  >
-    {/* INSTAGRAM */}
-    {profile.instagram_url && (
-      <a
-        href={
-          profile.instagram_url.startsWith("http")
-            ? profile.instagram_url
-            : `https://instagram.com/${profile.instagram_url}`
-        }
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "8px 16px",
-          borderRadius: 999,
-          fontSize: 12,
-          fontWeight: 950,
-          letterSpacing: "0.05em",
-          background:
-            "linear-gradient(135deg, rgba(225,48,108,0.35), rgba(255,220,128,0.25))",
-          border: "1px solid rgba(225,48,108,0.45)",
-          color: "#fff0f7",
-          textDecoration: "none",
-          boxShadow: "0 0 24px rgba(225,48,108,0.35)",
-          transition: "transform .15s ease, box-shadow .15s ease",
-        }}
-      >
-        📸 Instagram
-      </a>
-    )}
+              {(profile.instagram_url || profile.tiktok_url || profile.youtube_url) && (
+                <div style={{ marginTop: 14, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  {profile.instagram_url && (
+                    <a
+                      href={
+                        profile.instagram_url.startsWith("http")
+                          ? profile.instagram_url
+                          : `https://instagram.com/${profile.instagram_url}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 16px",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        fontWeight: 950,
+                        letterSpacing: "0.05em",
+                        background: "linear-gradient(135deg, rgba(225,48,108,0.35), rgba(255,220,128,0.25))",
+                        border: "1px solid rgba(225,48,108,0.45)",
+                        color: "#fff0f7",
+                        textDecoration: "none",
+                        boxShadow: "0 0 24px rgba(225,48,108,0.35)",
+                      }}
+                    >
+                      📸 Instagram
+                    </a>
+                  )}
 
-    {/* TIKTOK */}
-    {profile.tiktok_url && (
-      <a
-        href={
-          profile.tiktok_url.startsWith("http")
-            ? profile.tiktok_url
-            : `https://www.tiktok.com/@${profile.tiktok_url.replace("@", "")}`
-        }
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "8px 16px",
-          borderRadius: 999,
-          fontSize: 12,
-          fontWeight: 950,
-          letterSpacing: "0.05em",
-          background:
-            "linear-gradient(135deg, rgba(0,0,0,0.85), rgba(255,0,80,0.35), rgba(0,255,255,0.35))",
-          border: "1px solid rgba(255,255,255,0.25)",
-          color: "#ffffff",
-          textDecoration: "none",
-          boxShadow:
-            "0 0 28px rgba(255,0,80,0.35), 0 0 28px rgba(0,255,255,0.25)",
-          transition: "transform .15s ease, box-shadow .15s ease",
-        }}
-      >
-        🎵 TikTok
-      </a>
-    )}
+                  {profile.tiktok_url && (
+                    <a
+                      href={
+                        profile.tiktok_url.startsWith("http")
+                          ? profile.tiktok_url
+                          : `https://www.tiktok.com/@${profile.tiktok_url.replace("@", "")}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 16px",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        fontWeight: 950,
+                        letterSpacing: "0.05em",
+                        background:
+                          "linear-gradient(135deg, rgba(0,0,0,0.85), rgba(255,0,80,0.35), rgba(0,255,255,0.35))",
+                        border: "1px solid rgba(255,255,255,0.25)",
+                        color: "#ffffff",
+                        textDecoration: "none",
+                        boxShadow: "0 0 28px rgba(255,0,80,0.35), 0 0 28px rgba(0,255,255,0.25)",
+                      }}
+                    >
+                      🎵 TikTok
+                    </a>
+                  )}
 
-    {/* YOUTUBE */}
-    {profile.youtube_url && (
-      <a
-        href={
-          profile.youtube_url.startsWith("http")
-            ? profile.youtube_url
-            : `https://youtube.com/@${profile.youtube_url.replace("@", "")}`
-        }
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "8px 16px",
-          borderRadius: 999,
-          fontSize: 12,
-          fontWeight: 950,
-          letterSpacing: "0.05em",
-          background:
-            "linear-gradient(135deg, rgba(255,0,0,0.35), rgba(255,80,80,0.20))",
-          border: "1px solid rgba(255,0,0,0.55)",
-          color: "#ffeaea",
-          textDecoration: "none",
-          boxShadow: "0 0 30px rgba(255,0,0,0.45)",
-          transition: "transform .15s ease, box-shadow .15s ease",
-        }}
-      >
-        ▶️ YouTube
-      </a>
-    )}
-  </div>
-)}
+                  {profile.youtube_url && (
+                    <a
+                      href={
+                        profile.youtube_url.startsWith("http")
+                          ? profile.youtube_url
+                          : `https://youtube.com/@${profile.youtube_url.replace("@", "")}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 16px",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        fontWeight: 950,
+                        letterSpacing: "0.05em",
+                        background: "linear-gradient(135deg, rgba(255,0,0,0.35), rgba(255,80,80,0.20))",
+                        border: "1px solid rgba(255,0,0,0.55)",
+                        color: "#ffeaea",
+                        textDecoration: "none",
+                        boxShadow: "0 0 30px rgba(255,0,0,0.45)",
+                      }}
+                    >
+                      ▶️ YouTube
+                    </a>
+                  )}
+                </div>
+              )}
+
               {/* extra badges */}
               {badges.length > 0 && (
                 <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -818,7 +1168,7 @@ export default function Profile() {
               )}
 
               {/* XP bar */}
-              <div style={{ marginTop: 12, maxWidth: 620 }}>
+              <div style={{ marginTop: 12, maxWidth: 640 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.78, marginBottom: 6 }}>
                   <span>XP</span>
                   <span>
@@ -913,12 +1263,11 @@ export default function Profile() {
           Events
         </button>
 
-        {/* FRIENDS TAB (PRIVATE) */}
         <button
           style={tabBtn(activeTab === "friends")}
           onClick={() => {
             if (canSeeFriends) setActiveTab("friends");
-            else setShowFriends(true); // pokaži lock modal
+            else setShowFriends(true);
           }}
         >
           Friends {canSeeFriends ? "" : "🔒"}
@@ -930,12 +1279,17 @@ export default function Profile() {
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-        <div style={pill}>🧠 XP: <b style={{ color: "white" }}>{xp}</b></div>
-        <div style={pill}>🎟️ Events: <b style={{ color: "white" }}>{events.length}</b></div>
+        <div style={pill}>
+          🧠 XP: <b style={{ color: "white" }}>{xp}</b>
+        </div>
+        <div style={pill}>
+          🎟️ Events: <b style={{ color: "white" }}>{events.length}</b>
+        </div>
       </div>
     </div>
   );
 
+  // ================= OVERVIEW GRID =================
   const OverviewGrid = (
     <div style={gridResponsive}>
       {/* LEFT: Timeline */}
@@ -973,7 +1327,7 @@ export default function Profile() {
                       borderRadius: 14,
                       overflow: "hidden",
                       border: "1px solid rgba(255,255,255,0.10)",
-                      cursor: it.type === "tour" ? "pointer" : "default",
+                      cursor: it.type === "tour" || it.type === "event" ? "pointer" : "default",
                     }}
                     onClick={() => {
                       if (it.type === "tour" && it.id) navigate(`/tour/${it.id}`);
@@ -1091,11 +1445,7 @@ export default function Profile() {
           ) : (
             <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
               {tours.slice(0, 8).map((t) => {
-                const img =
-                  t.cover_url ||
-                  (Array.isArray(t.image_urls) ? t.image_urls[0] : null) ||
-                  ""; // bez random
-
+                const img = t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
                 return (
                   <div
                     key={t.id}
@@ -1107,7 +1457,6 @@ export default function Profile() {
                       border: "1px solid rgba(255,255,255,0.12)",
                       background: "rgba(0,0,0,0.35)",
                       boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
-                      transition: "transform 0.2s ease",
                     }}
                   >
                     <div style={{ position: "relative", height: 122 }}>
@@ -1120,7 +1469,6 @@ export default function Profile() {
                             height: "100%",
                             objectFit: "cover",
                             filter: "saturate(1.15) contrast(1.05) brightness(0.92)",
-                            transform: "scale(1.03)",
                           }}
                         />
                       ) : (
@@ -1163,6 +1511,7 @@ export default function Profile() {
     </div>
   );
 
+  // ================= TABS CONTENT =================
   const ToursTab = (
     <div style={card}>
       <div style={sectionTitle}>Tours</div>
@@ -1171,7 +1520,7 @@ export default function Profile() {
       {tours.length === 0 ? (
         <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No tours created yet.</div>
       ) : (
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
           {tours.map((t) => {
             const img = t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
             return (
@@ -1187,7 +1536,7 @@ export default function Profile() {
                   boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
                 }}
               >
-                <div style={{ position: "relative", height: 140 }}>
+                <div style={{ position: "relative", height: 150 }}>
                   {img ? (
                     <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(1.15) contrast(1.05) brightness(0.92)" }} />
                   ) : (
@@ -1232,7 +1581,7 @@ export default function Profile() {
       {events.length === 0 ? (
         <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No events created yet.</div>
       ) : (
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
           {events.map((e) => {
             const c = e.cover_url || "";
             return (
@@ -1248,7 +1597,7 @@ export default function Profile() {
                   boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
                 }}
               >
-                <div style={{ position: "relative", height: 140 }}>
+                <div style={{ position: "relative", height: 150 }}>
                   {c ? (
                     <img src={c} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(1.15) contrast(1.05)" }} />
                   ) : (
@@ -1267,7 +1616,8 @@ export default function Profile() {
                   <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
                     <div style={{ fontWeight: 950, fontSize: 14 }}>{e.title}</div>
                     <div style={{ fontSize: 12, opacity: 0.82, marginTop: 2 }}>
-                      📍 {e.city || "City"}{e.country ? `, ${e.country}` : ""}
+                      📍 {e.city || "City"}
+                      {e.country ? `, ${e.country}` : ""}
                     </div>
                   </div>
                 </div>
@@ -1326,6 +1676,7 @@ export default function Profile() {
               >
                 {it.type === "tour" ? "🗺️" : it.type === "event" ? "🎟️" : "⭐"}
               </div>
+
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 12, opacity: 0.75 }}>{fmtDate(it.created_at)}</div>
                 <div style={{ fontWeight: 950, fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -1333,6 +1684,7 @@ export default function Profile() {
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>{it.meta}</div>
               </div>
+
               {(it.type === "tour" || it.type === "event") && it.id ? (
                 <button style={{ ...btnGhost, padding: "8px 12px", fontSize: 12 }} onClick={() => navigate(`/${it.type}/${it.id}`)}>
                   Open →
@@ -1350,17 +1702,12 @@ export default function Profile() {
       <div style={sectionTitle}>Friends</div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <div style={{ fontSize: 20, fontWeight: 950 }}>Mutual follows</div>
-        {!canSeeFriends && (
-          <div style={pill}>
-            🔒 Private
-          </div>
-        )}
+        {!canSeeFriends && <div style={pill}>🔒 Private</div>}
       </div>
 
       {!canSeeFriends ? (
         <div style={{ marginTop: 12, opacity: 0.78, fontSize: 13, lineHeight: 1.6 }}>
-          Friends list is private.  
-          <b> Only friends</b> can see it.
+          Friends list is private. <b>Only friends</b> can see it.
         </div>
       ) : friendsList.length === 0 ? (
         <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No friends yet.</div>
@@ -1388,8 +1735,7 @@ export default function Profile() {
               />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", gap: 8, alignItems: "center" }}>
-                  {u.full_name || u.username || "Explorer"}
-                  <FriendBadge />
+                  {u.full_name || u.username || "Explorer"} <FriendBadge />
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.75 }}>
                   {u.city || "City"}, {u.country || "Country"}
@@ -1402,6 +1748,7 @@ export default function Profile() {
     </div>
   );
 
+  // ================= RETURN =================
   return (
     <div style={page}>
       <div style={wrap}>
@@ -1516,17 +1863,45 @@ export default function Profile() {
               }}
             >
               <div style={sectionTitle}>Friends</div>
-              <div style={{ fontSize: 20, fontWeight: 950 }}>🔒 Private list</div>
-              <div style={{ marginTop: 10, fontSize: 13, opacity: 0.82, lineHeight: 1.6 }}>
-                Only friends can see friends list.  
+
+              <div style={{ fontSize: 20, fontWeight: 950 }}>
+                🔒 Private list
+              </div>
+
+              <div
+                style={{
+                  marginTop: 10,
+                  fontSize: 13,
+                  opacity: 0.82,
+                  lineHeight: 1.6,
+                }}
+              >
+                Friends list is private.  
+                <b> Only friends</b> can see it.  
                 Follow each other to unlock.
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
-                <button style={btnGhost} onClick={() => setShowFriends(false)}>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 10,
+                  marginTop: 14,
+                }}
+              >
+                <button
+                  style={btnGhost}
+                  onClick={() => setShowFriends(false)}
+                >
                   Close
                 </button>
+
                 {!isOwnProfile && (
-                  <button style={btnPrimary} onClick={toggleFollow} disabled={followBusy}>
+                  <button
+                    style={btnPrimary}
+                    onClick={toggleFollow}
+                    disabled={followBusy}
+                  >
                     {isFollowing ? "Following ✓" : "Follow"}
                   </button>
                 )}
