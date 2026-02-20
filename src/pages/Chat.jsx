@@ -1,363 +1,158 @@
-// src/pages/Chat.jsx
-import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
-export default function Chat() {
-  const { tourId } = useParams();
+export default function FollowersList() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const [messages, setMessages] = useState([]);
-  const [profiles, setProfiles] = useState({});
-  const [tour, setTour] = useState(null);
-  const [user, setUser] = useState(null);
-  const [text, setText] = useState("");
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const bottomRef = useRef(null);
+  // ================= LOAD LISTS =================
+  const loadLists = useCallback(async () => {
+    if (!user?.id) return;
 
-  const scrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    setLoading(true);
 
-  // MAIN LOAD
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Followers (ko mene prati)
+    const { data: followersData } = await supabase
+      .from("follows")
+      .select("follower_id, profiles:profiles!follows_follower_id_fkey(*)")
+      .eq("following_id", user.id);
+
+    setFollowers(followersData?.map((row) => row.profiles) || []);
+
+    // Following (koga ja pratim)
+    const { data: followingData } = await supabase
+      .from("follows")
+      .select("following_id, profiles:profiles!follows_following_id_fkey(*)")
+      .eq("follower_id", user.id);
+
+    setFollowing(followingData?.map((row) => row.profiles) || []);
+
+    setLoading(false);
+  }, [user?.id]);
+
+  // ================= USE EFFECT =================
   useEffect(() => {
-  let channel;
+    loadLists();
+  }, [loadLists]);
 
-  const init = async () => {
-    // LOAD USER
-    const { data } = await supabase.auth.getUser();
-    setUser(data.user);
-
-    // LOAD TOUR
-    await loadTour();
-
-    // LOAD MESSAGES
-    await loadMessages();
-
-    // SUBSCRIBE REALTIME
-    channel = subscribeToMessages();
-  };
-
-  init();
-
-  return () => {
-    if (channel) {
-      supabase.removeChannel(channel);
-    }
-  };
-}, []);
-
-  // LOAD TOUR DATA
-  async function loadTour() {
-    const { data } = await supabase
-      .from("tours")
-      .select("*")
-      .eq("id", tourId)
-      .single();
-
-    setTour(data);
+  if (loading) {
+    return (
+      <div style={{ color: "white", padding: "20px" }}>
+        Loading...
+      </div>
+    );
   }
-
-  // LOAD MESSAGES + PROFILES
-  async function loadMessages() {
-    const { data } = await supabase
-      .from("tour_messages")
-      .select("*")
-      .eq("tour_id", tourId)
-      .order("created_at", { ascending: true });
-
-    if (!data) return;
-
-    setMessages(data);
-
-    const ids = [...new Set(data.map((m) => m.user_id))];
-
-    if (ids.length > 0) {
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url")
-        .in("id", ids);
-
-      let map = {};
-      profs?.forEach((p) => (map[p.id] = p));
-      setProfiles(map);
-    }
-
-    setTimeout(scrollToBottom, 200);
-  }
-
-  // REALTIME SUBSCRIBE (FIXED)
-function subscribeToMessages() {
-  console.log("SUBSCRIBING TO REALTIME CHAT", tourId);
-
-  supabase
-    .channel(`tour_chat_${tourId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "tour_messages",
-        filter: `tour_id=eq.${tourId}`,
-      },
-      (payload) => {
-        console.log("REALTIME MESSAGE:", payload.new);
-        setMessages((prev) => [...prev, payload.new]);
-        scrollToBottom();
-      }
-    )
-    .subscribe((status) => {
-      console.log("SUBSCRIPTION STATUS:", status);
-    });
-}
- 
-    
-
-  // SEND MESSAGE
-  async function sendMessage() {
-    if (!text.trim() || !user) return;
-
-    await supabase.from("tour_messages").insert([
-      {
-        tour_id: tourId,
-        user_id: user.id,
-        message: text.trim(),
-      },
-    ]);
-
-    setText("");
-    setTimeout(scrollToBottom, 50);
-  }
-
-  if (!tour || !user)
-    return <div style={{ padding: 20, color: "white" }}>Loading chat…</div>;
 
   return (
-  <div
-    style={{
-      height: "86vh",
-      padding: 16,
-      display: "flex",
-      flexDirection: "column",
-      color: "#ffffff",
-      background:
-        "radial-gradient(circle at top, #062c22 0%, #02060b 45%, #000 100%)",
-      fontFamily:
-        "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    }}
-  >
-    {/* HEADER */}
     <div
       style={{
-        padding: "14px 18px",
-        borderRadius: 18,
-        marginBottom: 14,
-        background:
-          "linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,255,160,0.18))",
-        border: "1px solid rgba(0,255,160,0.35)",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.9)",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
+        minHeight: "100vh",
+        background: "#04140c",
+        color: "white",
+        padding: "20px",
       }}
     >
-      <div>
-        <div
-          style={{
-            fontSize: 11,
-            letterSpacing: "0.14em",
-            opacity: 0.7,
-            textTransform: "uppercase",
-          }}
-        >
-          Tour chat
-        </div>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>
-          💬 {tour.title}
-        </div>
-      </div>
+      <h2 style={{ textAlign: "center", marginBottom: "25px" }}>
+        Followers & Following
+      </h2>
 
-      <div
-        style={{
-          fontSize: 12,
-          padding: "6px 12px",
-          borderRadius: 999,
-          background: "rgba(0,255,160,0.15)",
-          border: "1px solid rgba(0,255,160,0.5)",
-          color: "#baffea",
-          fontWeight: 700,
-        }}
-      >
-        Live
-      </div>
-    </div>
+      {/* FOLLOWERS */}
+      <section style={{ marginBottom: "35px" }}>
+        <h3>Followers</h3>
 
-    {/* MESSAGE LIST */}
-    <div
-      style={{
-        flex: 1,
-        overflowY: "auto",
-        padding: "10px 6px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-      }}
-    >
-      {messages.map((msg) => {
-        const p = profiles[msg.user_id];
-        const mine = msg.user_id === user.id;
-        const creator = msg.user_id === tour.creator_id;
+        {followers.length === 0 && (
+          <p style={{ opacity: 0.6 }}>Nobody follows you yet.</p>
+        )}
 
-        return (
+        {followers.map((p) => (
           <div
-            key={msg.id}
+            key={p.id}
+            onClick={() => navigate(`/profile/${p.id}`)}
             style={{
               display: "flex",
-              flexDirection: mine ? "row-reverse" : "row",
-              alignItems: "flex-end",
-              gap: 10,
+              alignItems: "center",
+              gap: "12px",
+              background: "rgba(255,255,255,0.08)",
+              padding: "12px",
+              borderRadius: "12px",
+              marginBottom: "10px",
+              cursor: "pointer",
             }}
           >
-            {/* AVATAR */}
             <img
-              src={p?.avatar_url || "https://i.pravatar.cc/150?img=1"}
-              alt=""
+              src={p.avatar_url || "https://i.pravatar.cc/100?img=12"}
+              alt="avatar"
               style={{
-                width: 42,
-                height: 42,
+                width: "45px",
+                height: "45px",
                 borderRadius: "50%",
                 objectFit: "cover",
-                border: creator
-                  ? "3px solid gold"
-                  : mine
-                  ? "2px solid #00ffb0"
-                  : "2px solid rgba(255,255,255,0.25)",
               }}
             />
-
-            {/* MESSAGE BUBBLE */}
-            <div
-              style={{
-                maxWidth: "72%",
-                padding: "12px 16px",
-                borderRadius: 18,
-                background: mine
-                  ? "linear-gradient(135deg, rgba(0,255,160,0.35), rgba(0,180,255,0.25))"
-                  : "rgba(255,255,255,0.08)",
-                border: creator
-                  ? "1px solid gold"
-                  : "1px solid rgba(255,255,255,0.12)",
-                boxShadow: "0 12px 30px rgba(0,0,0,0.6)",
-                backdropFilter: "blur(10px)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 800,
-                  marginBottom: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                {p?.display_name || p?.full_name || "Explorer"}
-                {creator && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                      background: "rgba(255,215,0,0.18)",
-                      border: "1px solid gold",
-                      color: "gold",
-                      fontWeight: 800,
-                    }}
-                  >
-                    ORGANIZER
-                  </span>
-                )}
+            <div>
+              <div style={{ fontWeight: 600 }}>
+                {p.full_name || "User"}
               </div>
-
-              <div
-                style={{
-                  fontSize: 14,
-                  lineHeight: 1.5,
-                  opacity: 0.95,
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {msg.message}
-              </div>
-
-              <div
-                style={{
-                  fontSize: 11,
-                  opacity: 0.55,
-                  marginTop: 6,
-                  textAlign: mine ? "right" : "left",
-                }}
-              >
-                {new Date(msg.created_at).toLocaleTimeString()}
+              <div style={{ opacity: 0.6, fontSize: "14px" }}>
+                {p.role === "creator" ? "Tour Creator" : "Member"}
               </div>
             </div>
           </div>
-        );
-      })}
+        ))}
+      </section>
 
-      <div ref={bottomRef} />
+      {/* FOLLOWING */}
+      <section>
+        <h3>Following</h3>
+
+        {following.length === 0 && (
+          <p style={{ opacity: 0.6 }}>
+            You're not following anyone yet.
+          </p>
+        )}
+
+        {following.map((p) => (
+          <div
+            key={p.id}
+            onClick={() => navigate(`/profile/${p.id}`)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              background: "rgba(255,255,255,0.08)",
+              padding: "12px",
+              borderRadius: "12px",
+              marginBottom: "10px",
+              cursor: "pointer",
+            }}
+          >
+            <img
+              src={p.avatar_url || "https://i.pravatar.cc/100?img=12"}
+              alt="avatar"
+              style={{
+                width: "45px",
+                height: "45px",
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+            <div>
+              <div style={{ fontWeight: 600 }}>
+                {p.full_name || "User"}
+              </div>
+              <div style={{ opacity: 0.6, fontSize: "14px" }}>
+                {p.role === "creator" ? "Tour Creator" : "Member"}
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
     </div>
-
-    {/* INPUT BAR */}
-    <div
-      style={{
-        marginTop: 12,
-        padding: 12,
-        borderRadius: 18,
-        background:
-          "linear-gradient(135deg, rgba(0,0,0,0.85), rgba(0,255,160,0.18))",
-        border: "1px solid rgba(0,255,160,0.35)",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.9)",
-        display: "flex",
-        gap: 10,
-        alignItems: "center",
-      }}
-    >
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Write a message…"
-        style={{
-          flex: 1,
-          padding: "14px 16px",
-          borderRadius: 999,
-          border: "1px solid rgba(255,255,255,0.2)",
-          background: "rgba(0,0,0,0.7)",
-          color: "#ffffff",
-          fontSize: 14,
-          outline: "none",
-        }}
-      />
-
-      <button
-        onClick={sendMessage}
-        style={{
-          padding: "14px 22px",
-          borderRadius: 999,
-          border: "none",
-          background:
-            "linear-gradient(135deg, #00ffb0 0%, #00d1ff 45%, #ffffff 100%)",
-          color: "#022015",
-          fontWeight: 900,
-          fontSize: 13,
-          letterSpacing: "0.08em",
-          cursor: "pointer",
-          boxShadow: "0 10px 30px rgba(0,255,160,0.4)",
-        }}
-      >
-        SEND
-      </button>
-    </div>
-  </div>
-  
-)};
+  );
+}
