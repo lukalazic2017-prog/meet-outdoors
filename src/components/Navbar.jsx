@@ -976,7 +976,7 @@ export default function Navbar() {
                   style={{
                     ...dropdownBase,
                     right: 0,
-                    width: 280,
+                    width: 300,
                     maxWidth: "92vw",
                   }}
                 >
