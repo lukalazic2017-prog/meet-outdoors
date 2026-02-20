@@ -840,7 +840,6 @@ export default function Profile() {
     setFollowingCount(followingCnt || 0);
 
     // DO I FOLLOW?
-    let iFollow = false;
     if (me && me.id !== id) {
       const { data: row, error: rowErr } = await supabase
         .from("profile_follows")

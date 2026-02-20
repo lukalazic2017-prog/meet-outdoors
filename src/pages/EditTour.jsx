@@ -1,6 +1,6 @@
 // src/pages/EditTour.jsx
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";

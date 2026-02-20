@@ -20,11 +20,31 @@ export default function Chat() {
 
   // MAIN LOAD
   useEffect(() => {
-    loadUser();
-    loadTour();
-    loadMessages();
-    subscribeToMessages();
-  }, []);
+  let channel;
+
+  const init = async () => {
+    // LOAD USER
+    const { data } = await supabase.auth.getUser();
+    setUser(data.user);
+
+    // LOAD TOUR
+    await loadTour();
+
+    // LOAD MESSAGES
+    await loadMessages();
+
+    // SUBSCRIBE REALTIME
+    channel = subscribeToMessages();
+  };
+
+  init();
+
+  return () => {
+    if (channel) {
+      supabase.removeChannel(channel);
+    }
+  };
+}, []);
 
   // LOAD CURRENT USER
   async function loadUser() {

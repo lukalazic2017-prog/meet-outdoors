@@ -1,11 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function Activities() {
-  const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [activeChip, setActiveChip] = useState("All");
-
 const activities = [
     { name: "Hiking", img: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aGlraW5nfGVufDB8fDB8fHww" },
     { name: "Cycling", img: "https://images.unsplash.com/photo-1534146789009-76ed5060ec70?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y3ljbGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
@@ -26,6 +21,12 @@ const activities = [
     { name: "Snorkeling", img: "https://images.unsplash.com/photo-1658298208155-ab71765747a1?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8c25vcmtlbGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
     { name: "Boat Rides", img: "https://images.unsplash.com/photo-1633892224063-8ef7ff14508f?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGJvYXQlMjByaWRlc3xlbnwwfHwwfHx8MA%3D%3D" },
   ];
+
+export default function Activities() {
+  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  const [activeChip, setActiveChip] = useState("All");
+
 
   const chips = ["All", "Popular", "Air", "Water", "Mountain", "Calm", "Extreme"];
 

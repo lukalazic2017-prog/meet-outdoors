@@ -12,10 +12,12 @@ export default function FollowersList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      loadLists();
-    }
-  }, [user]);
+  const init = async () => {
+    await loadLists();
+  };
+
+  init();
+}, []);
 
   async function loadLists() {
     setLoading(true);

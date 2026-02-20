@@ -101,7 +101,7 @@ export default function Contact() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <a
               href="https://www.instagram.com"
-              target="_blank"
+              target="_blank" rel="noopener noreferrer"
               style={socialLink}
             >
               📸 Instagram
@@ -109,7 +109,7 @@ export default function Contact() {
 
             <a
               href="https://www.tiktok.com"
-              target="_blank"
+              target="_blank" rel="noopener noreferrer"
               style={socialLink}
             >
               🎵 TikTok
@@ -117,7 +117,7 @@ export default function Contact() {
 
             <a
               href="https://www.facebook.com"
-              target="_blank"
+              target="_blank" rel="noopener noreferrer"
               style={socialLink}
             >
               📘 Facebook
