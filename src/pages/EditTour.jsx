@@ -40,7 +40,7 @@ function EditLocationMarker({ latitude, longitude, onSelect }) {
 
 export default function EditTour() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  
 
   // --- BASIC INFO ---
   const [title, setTitle] = useState("");

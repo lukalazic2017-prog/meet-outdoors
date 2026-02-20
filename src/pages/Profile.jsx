@@ -849,7 +849,6 @@ export default function Profile() {
         .eq("following_id", id)
         .maybeSingle();
       if (rowErr) console.log("FOLLOW CHECK ERR", rowErr);
-      iFollow = !!row;
       setIsFollowing(!!row);
     } else {
       setIsFollowing(false);

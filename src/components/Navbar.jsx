@@ -307,7 +307,7 @@ export default function Navbar() {
     const t = setTimeout(async () => {
       setSearchLoading(true);
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("profiles")
         .select("id, full_name, avatar_url, home_base")
         .or(`full_name.ilike.%${q}%,home_base.ilike.%${q}%`)

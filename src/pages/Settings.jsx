@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import {useAuth} from "../context/AuthContext"
+
 
 export default function Settings() {
   const navigate = useNavigate();

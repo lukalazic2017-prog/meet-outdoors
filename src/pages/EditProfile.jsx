@@ -46,7 +46,7 @@ export default function EditProfile() {
         error: authErr,
       } = await supabase.auth.getUser();
       // ===== AUTO CREATE PROFILE IF MISSING =====
-let { data: existing, error: exErr } = await supabase
+let { data: existing } = await supabase
   .from("profiles")
   .select("*")
   .eq("id", user.id)

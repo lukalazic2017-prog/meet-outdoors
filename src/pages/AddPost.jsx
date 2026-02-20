@@ -129,7 +129,7 @@ export default function AddPost() {
       const ext = file.name.split(".").pop();
       const fileName = `${user.id}_${Date.now()}.${ext}`;
 
-      const { data: storageData, error: storageErr } = await supabase.storage
+      const { error: storageErr } = await supabase.storage
         .from("timeline_media")
         .upload(fileName, file);
 
