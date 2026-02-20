@@ -51,12 +51,12 @@ export default function Activities() {
     if (q) list = list.filter((a) => a.name.toLowerCase().includes(q));
 
     return list;
-  }, [activities, search, activeChip]);
+  }, [search, activeChip]);
 
   const featured = useMemo(() => {
     const picks = ["Hiking", "Paragliding", "Rafting"];
     return activities.filter((a) => picks.includes(a.name));
-  }, [activities]);
+  }, []);
 
   // ====== STYLES ======
   const page = {

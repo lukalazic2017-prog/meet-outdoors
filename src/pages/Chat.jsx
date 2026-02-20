@@ -19,6 +19,7 @@ export default function Chat() {
   };
 
   // MAIN LOAD
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
   let channel;
 
@@ -45,12 +46,6 @@ export default function Chat() {
     }
   };
 }, []);
-
-  // LOAD CURRENT USER
-  async function loadUser() {
-    const { data } = await supabase.auth.getUser();
-    setUser(data.user);
-  }
 
   // LOAD TOUR DATA
   async function loadTour() {

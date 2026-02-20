@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -7,19 +7,14 @@ export default function FollowersList() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [followers, setFollowers] = useState([]); // Ljudi koji prate mene
-  const [following, setFollowing] = useState([]); // Ljudi koje ja pratim
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-  const init = async () => {
-    await loadLists();
-  };
+  // ================= LOAD LISTS =================
+  const loadLists = useCallback(async () => {
+    if (!user?.id) return;
 
-  init();
-}, []);
-
-  async function loadLists() {
     setLoading(true);
 
     // Followers (ko mene prati)
@@ -28,9 +23,7 @@ export default function FollowersList() {
       .select("follower_id, profiles:profiles!follows_follower_id_fkey(*)")
       .eq("following_id", user.id);
 
-    setFollowers(
-      followersData?.map((row) => row.profiles) || []
-    );
+    setFollowers(followersData?.map((row) => row.profiles) || []);
 
     // Following (koga ja pratim)
     const { data: followingData } = await supabase
@@ -38,12 +31,15 @@ export default function FollowersList() {
       .select("following_id, profiles:profiles!follows_following_id_fkey(*)")
       .eq("follower_id", user.id);
 
-    setFollowing(
-      followingData?.map((row) => row.profiles) || []
-    );
+    setFollowing(followingData?.map((row) => row.profiles) || []);
 
     setLoading(false);
-  }
+  }, [user?.id]);
+
+  // ================= USE EFFECT =================
+  useEffect(() => {
+    loadLists();
+  }, [loadLists]);
 
   if (loading) {
     return (
@@ -77,7 +73,7 @@ export default function FollowersList() {
         {followers.map((p) => (
           <div
             key={p.id}
-            onClick={() => navigate`(/profile/${p.id})`}
+            onClick={() => navigate(`/profile/${p.id}`)}
             style={{
               display: "flex",
               alignItems: "center",
@@ -116,13 +112,15 @@ export default function FollowersList() {
         <h3>Following</h3>
 
         {following.length === 0 && (
-          <p style={{ opacity: 0.6 }}>You're not following anyone yet.</p>
+          <p style={{ opacity: 0.6 }}>
+            You're not following anyone yet.
+          </p>
         )}
 
         {following.map((p) => (
           <div
             key={p.id}
-            onClick={() => navigate`(/profile/${p.id})`}
+            onClick={() => navigate(`/profile/${p.id}`)}
             style={{
               display: "flex",
               alignItems: "center",
