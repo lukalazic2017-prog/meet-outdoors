@@ -71,6 +71,7 @@ export default function CreateTour() {
   const [user, setUser] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const isVerifiedCreator = user?.is_verified_creator;
 
   // ------------ LOAD AUTH USER ------------
   useEffect(() => {
@@ -139,7 +140,6 @@ export default function CreateTour() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // cleanup old preview
     if (coverPreview) URL.revokeObjectURL(coverPreview);
 
     setCoverFile(file);
@@ -150,10 +150,8 @@ export default function CreateTour() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    // DODATO: kombinuj postojeće + nove (da možeš dodavati u više puta)
     const combined = [...galleryFiles, ...files].slice(0, 6);
 
-    // cleanup prethodnih preview-a
     galleryPreviews.forEach((p) => {
       try {
         URL.revokeObjectURL(p);
@@ -169,10 +167,8 @@ export default function CreateTour() {
     const files = Array.from(e.dataTransfer.files || []);
     if (!files.length) return;
 
-    // DODATO: kombinuj postojeće + nove (drag & drop)
     const combined = [...galleryFiles, ...files].slice(0, 6);
 
-    // cleanup prethodnih preview-a
     galleryPreviews.forEach((p) => {
       try {
         URL.revokeObjectURL(p);
@@ -191,14 +187,13 @@ export default function CreateTour() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // cleanup old preview
     if (videoPreview) URL.revokeObjectURL(videoPreview);
 
     setVideoFile(file);
     setVideoPreview(URL.createObjectURL(file));
   }
 
-  // ------------ DODATO: BRISANJE SLIKA/VIDEA (NE MENJA OSTALE FUNKCIJE) ------------
+  // ------------ DODATO: BRISANJE SLIKA/VIDEA ------------
   function removeCover() {
     if (coverPreview) {
       try {
@@ -370,7 +365,21 @@ export default function CreateTour() {
         },
       ]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // ❌ RLS blok (nije verifikovan creator)
+        if (insertError.code === "42501") {
+          setErrorMsg(
+            "⛔ You must be a verified creator to publish tours. Apply for verification."
+          );
+          setLoading(false);
+          return;
+        }
+
+        // ❌ ostale greške
+        setErrorMsg(insertError.message);
+        setLoading(false);
+        return;
+      }
 
       setSuccessMsg("Tour created successfully! 🌿");
       setTimeout(() => navigate("/my-tours"), 1200);
@@ -504,11 +513,12 @@ export default function CreateTour() {
   const errorStyle = {
     marginTop: 10,
     fontSize: 13,
-    padding: "8px 10px",
-    borderRadius: 10,
+    padding: "10px 12px",
+    borderRadius: 12,
     background: "rgba(255,60,80,0.16)",
     border: "1px solid rgba(255,90,110,0.7)",
     color: "#ffd3d8",
+    lineHeight: 1.45,
   };
 
   const successStyle = {
@@ -549,7 +559,6 @@ export default function CreateTour() {
     border: "1px solid rgba(255,255,255,0.16)",
   };
 
-  // DODATO: mini dugme stil (ne dira ostatak UI-a)
   const removeBtnStyle = {
     padding: "7px 10px",
     borderRadius: 999,
@@ -575,6 +584,18 @@ export default function CreateTour() {
     placeItems: "center",
     fontSize: 14,
     lineHeight: 1,
+  };
+
+  // ✅ DODATO (UI): klikabilan link kad je verified error
+  const showVerifiedBanner =
+    !!errorMsg &&
+    (errorMsg.includes("verified creator") || errorMsg.startsWith("⛔"));
+
+  const applyInlineLinkStyle = {
+    textDecoration: "underline",
+    cursor: "pointer",
+    fontWeight: 800,
+    color: "#fff",
   };
 
   const isSmallScreen =
@@ -1029,13 +1050,72 @@ export default function CreateTour() {
             </div>
 
             {/* ERRORS & SUCCESS */}
-            {errorMsg && <div style={errorStyle}>{errorMsg}</div>}
+            {errorMsg && (
+              <div style={errorStyle}>
+                {showVerifiedBanner ? (
+                  <>
+                    ⛔ You must be a verified creator to publish tours.{" "}
+                    <span
+                      onClick={() => navigate("/apply-creator")}
+                      style={applyInlineLinkStyle}
+                    >
+                      Apply for verification
+                    </span>
+                  </>
+                ) : (
+                  errorMsg
+                )}
+              </div>
+            )}
+
             {successMsg && <div style={successStyle}>{successMsg}</div>}
 
             {/* SUBMIT */}
-            <button type="submit" disabled={loading} style={submitBtnStyle}>
-              {loading ? "Creating..." : "Create Tour"}
-            </button>
+           {!isVerifiedCreator ? (
+  <div style={{ marginTop: 14 }}>
+    <button
+      type="button"
+      disabled
+      style={{
+        ...submitBtnStyle,
+        background: "linear-gradient(135deg, #555, #333)",
+        cursor: "not-allowed",
+        boxShadow: "none",
+      }}
+    >
+      🔒 Verification required
+    </button>
+
+    <div
+      style={{
+        marginTop: 10,
+        fontSize: 13,
+        padding: "10px",
+        borderRadius: 10,
+        background: "rgba(255,60,80,0.16)",
+        border: "1px solid rgba(255,90,110,0.7)",
+        color: "#ffd3d8",
+        textAlign: "center",
+      }}
+    >
+      ⛔ You must be a verified creator to publish tours.{" "}
+      <span
+        onClick={() => navigate("/apply-creator")}
+        style={{
+          textDecoration: "underline",
+          cursor: "pointer",
+          fontWeight: 700,
+        }}
+      >
+        Apply for verification
+      </span>
+    </div>
+  </div>
+) : (
+  <button type="submit" disabled={loading} style={submitBtnStyle}>
+    {loading ? "Creating..." : "Create Tour"}
+  </button>
+)}
           </form>
 
           {/* RIGHT SIDE — MAP + PREVIEW */}

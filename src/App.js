@@ -34,6 +34,9 @@ import EventDetails from "./pages/EventDetails";
 import Events from "./pages/Events";
 import SavedTours from "./pages/SavedTours";
 
+
+
+
 // AUTH STRANICE
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -76,10 +79,12 @@ function App() {
           <Route path ="/event/:id" element={<EventDetails />} />
           <Route path="/saved-tours" element={<SavedTours />} />
           
-
           {/* AUTH */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          
+
           
 
           {/* STRANICE ZA ULOGOVANE */}

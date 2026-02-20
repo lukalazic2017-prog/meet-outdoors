@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
+
 /* ================= FRIEND BADGE ================= */
 const FriendBadge = () => (
   <span
@@ -40,6 +41,7 @@ function useIsSmall(breakpoint = 900) {
 }
 
 /* ================= MOBILE PROFILE VIEW ================= */
+/* ================= MOBILE PROFILE VIEW (FULL) ================= */
 function MobileProfileView({
   profile,
   cover,
@@ -47,17 +49,338 @@ function MobileProfileView({
   xp,
   level,
   levelName,
+  badgeText,
+  badges,
+
   followersCount,
   followingCount,
   toursCount,
+  eventsCount,
   avgRating,
+
   isOwnProfile,
   isFollowing,
   isFriend,
   followBusy,
   toggleFollow,
   goEdit,
+
+  tours = [],
+  events = [],
+  timeline = [],
+  navigate,
 }) {
+  const safeName = profile?.full_name || profile?.username || "Explorer";
+  const safeCity = profile?.city || "City";
+  const safeCountry = profile?.country || "Country";
+
+  const openExternal = (url, type) => {
+    if (!url) return "#";
+    if (url.startsWith("http")) return url;
+
+    const clean = url.replace("@", "").trim();
+    if (type === "instagram") return `https://instagram.com/${clean}`;
+    if (type === "tiktok") return `https://www.tiktok.com/@${clean}`;
+    if (type === "youtube") return `https://youtube.com/@${clean}`;
+    return url;
+  };
+
+  const fmtDate = (d) => {
+    if (!d) return "";
+    try {
+      return new Date(d).toLocaleDateString();
+    } catch {
+      return "";
+    }
+  };
+
+  const glass = {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    boxShadow: "0 20px 70px rgba(0,0,0,0.65)",
+    backdropFilter: "blur(16px)",
+    borderRadius: 22,
+  };
+
+  const pill = {
+    fontSize: 12,
+    padding: "7px 12px",
+    borderRadius: 999,
+    background: "rgba(0,0,0,0.35)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    whiteSpace: "nowrap",
+  };
+
+  const btnPrimary = {
+    width: "100%",
+    padding: "14px 0",
+    borderRadius: 999,
+    border: "none",
+    fontWeight: 950,
+    fontSize: 15,
+    cursor: followBusy ? "default" : "pointer",
+    background: isFollowing
+      ? "rgba(255,255,255,0.14)"
+      : "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
+    color: isFollowing ? "white" : "#02130d",
+    boxShadow: "0 0 30px rgba(0,255,195,0.30)",
+    opacity: followBusy ? 0.7 : 1,
+  };
+
+  const btnGhost = {
+    width: "100%",
+    padding: "12px 0",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.22)",
+    background: "rgba(0,0,0,0.35)",
+    fontWeight: 950,
+    color: "white",
+    cursor: "pointer",
+  };
+
+  const sectionTitle = {
+    fontSize: 12,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    color: "rgba(230,255,245,0.75)",
+    marginBottom: 10,
+  };
+
+  const card = { ...glass, padding: 14 };
+
+  const Stat = ({ label, value, onClick }) => (
+    <div
+      onClick={onClick}
+      style={{
+        background: "rgba(255,255,255,0.08)",
+        borderRadius: 16,
+        padding: 12,
+        textAlign: "center",
+        border: "1px solid rgba(255,255,255,0.10)",
+        cursor: onClick ? "pointer" : "default",
+      }}
+    >
+      <div style={{ fontSize: 18, fontWeight: 950 }}>{value}</div>
+      <div style={{ fontSize: 11, opacity: 0.75 }}>{label}</div>
+    </div>
+  );
+
+  const TourCard = ({ t }) => {
+    const img =
+      t.cover_url ||
+      (Array.isArray(t.image_urls) ? t.image_urls[0] : null) ||
+      "";
+
+    return (
+      <div
+        onClick={() => navigate?.(`/tour/${t.id}`)}
+        style={{
+          cursor: "pointer",
+          borderRadius: 18,
+          overflow: "hidden",
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(0,0,0,0.35)",
+        }}
+      >
+        <div style={{ position: "relative", height: 140 }}>
+          {img ? (
+            <img
+              src={img}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                background:
+                  "radial-gradient(320px 140px at 20% 25%, rgba(0,255,195,0.20), transparent 60%)," +
+                  "radial-gradient(360px 160px at 80% 25%, rgba(124,77,255,0.18), transparent 65%)," +
+                  "linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.92))",
+              }}
+            />
+          )}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.88))",
+            }}
+          />
+          <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
+            <div style={{ fontWeight: 950, fontSize: 14 }}>{t.title}</div>
+            <div style={{ fontSize: 12, opacity: 0.8, marginTop: 3 }}>
+              📍 {t.location_name || "Unknown place"}
+              {t.country ? `, ${t.country}` : ""}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: 10,
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: 12,
+            opacity: 0.9,
+          }}
+        >
+          <span>{t.date_start ? `🗓 ${t.date_start}` : "🗓 Date TBA"}</span>
+          <span>{t.price ? `💶 ${t.price}€` : "Free"}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const EventCard = ({ e }) => {
+    const img = e.cover_url || "";
+    return (
+      <div
+        onClick={() => navigate?.(`/event/${e.id}`)}
+        style={{
+          cursor: "pointer",
+          borderRadius: 18,
+          overflow: "hidden",
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(0,0,0,0.35)",
+        }}
+      >
+        <div style={{ position: "relative", height: 140 }}>
+          {img ? (
+            <img
+              src={img}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                background:
+                  "radial-gradient(320px 140px at 20% 25%, rgba(124,77,255,0.22), transparent 60%)," +
+                  "radial-gradient(360px 160px at 80% 25%, rgba(0,255,195,0.18), transparent 65%)," +
+                  "linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.92))",
+              }}
+            />
+          )}
+
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.90))",
+            }}
+          />
+
+          <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
+            <div style={{ fontWeight: 950, fontSize: 14 }}>{e.title}</div>
+            <div style={{ fontSize: 12, opacity: 0.82, marginTop: 3 }}>
+              📍 {e.city || "City"}
+              {e.country ? `, ${e.country}` : ""}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: 10,
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: 12,
+            opacity: 0.9,
+          }}
+        >
+          <span>🗓 {e.start_date ? fmtDate(e.start_date) : "Date TBA"}</span>
+          <span>→ Open</span>
+        </div>
+      </div>
+    );
+  };
+
+  const TimelineRow = ({ it }) => {
+    const icon = it.type === "tour" ? "🗺️" : it.type === "event" ? "🎟️" : "⭐";
+    return (
+      <div
+        onClick={() => {
+          if (it.type === "tour" && it.id) navigate?.(`/tour/${it.id}`);
+          if (it.type === "event" && it.id) navigate?.(`/event/${it.id}`);
+        }}
+        style={{
+          cursor: it.type === "rating" ? "default" : "pointer",
+          borderRadius: 16,
+          padding: 12,
+          background: "rgba(0,0,0,0.35)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background:
+              it.type === "tour"
+                ? "rgba(0,255,195,0.16)"
+                : it.type === "event"
+                ? "rgba(124,77,255,0.18)"
+                : "rgba(255,215,100,0.18)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </div>
+
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 12, opacity: 0.75 }}>
+            {it.created_at ? fmtDate(it.created_at) : ""}
+          </div>
+          <div
+            style={{
+              fontWeight: 950,
+              fontSize: 14,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {it.title}
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              opacity: 0.9,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              marginTop: 2,
+            }}
+          >
+            {it.subtitle}
+          </div>
+          {it.meta ? (
+            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 3 }}>
+              {it.meta}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       style={{
@@ -70,8 +393,8 @@ function MobileProfileView({
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      {/* COVER */}
-      <div style={{ position: "relative", height: 220 }}>
+      {/* COVER + AVATAR OVERLAY */}
+      <div style={{ position: "relative", height: 240 }}>
         {cover ? (
           <img
             src={cover}
@@ -95,102 +418,141 @@ function MobileProfileView({
             }}
           />
         )}
+
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.88))",
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.88))",
           }}
         />
+
+        {/* avatar ring centered */}
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: -56,
+            transform: "translateX(-50%)",
+            width: 124,
+            height: 124,
+            borderRadius: "50%",
+            padding: 4,
+            background: "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
+            boxShadow: "0 0 30px rgba(0,255,195,0.35)",
+          }}
+        >
+          <img
+            src={avatar}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: "50%",
+              objectFit: "cover",
+              objectPosition: "50% 35%", // malo ka čelu (bolje za portrete)
+              border: "3px solid rgba(0,0,0,0.75)",
+              background: "rgba(0,0,0,0.35)",
+            }}
+          />
+        </div>
       </div>
 
-      <div style={{ padding: 16, marginTop: -62 }}>
-        {/* AVATAR */}
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <div
-            style={{
-              width: 112,
-              height: 112,
-              margin: "24px auto 0",
-              borderRadius: "50%",
-              padding: 4,
-              background: "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
-              boxShadow: "0 0 26px rgba(0,255,195,0.35)",
-            }}
-          >
-            <img
-              src={avatar}
-              alt=""
-              style={{
-                width: "100%",
-                height: "100%",
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: "3px solid rgba(0,0,0,0.75)",
-              }}
-            />
-          </div>
-        </div>
-
+      {/* CONTENT */}
+      <div style={{ padding: 14, paddingTop: 74, maxWidth: 720, margin: "0 auto" }}>
         {/* NAME + META */}
-        <div style={{ textAlign: "center", marginTop: 10 }}>
-          <div style={{ fontSize: 24, fontWeight: 950 }}>
-            {profile.full_name || profile.username || "Explorer"}
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1.05 }}>
+            {safeName}
           </div>
-          <div style={{ opacity: 0.78, fontSize: 13, marginTop: 4 }}>
-            📍 {profile.city || "City"}, {profile.country || "Country"}
+
+          <div style={{ opacity: 0.78, fontSize: 13, marginTop: 6 }}>
+            📍 {safeCity}, {safeCountry}
           </div>
 
           <div
             style={{
               marginTop: 10,
-              display: "inline-flex",
+              display: "flex",
               gap: 10,
+              justifyContent: "center",
               flexWrap: "wrap",
               alignItems: "center",
-              justifyContent: "center",
             }}
           >
-            <span
-              style={{
-                fontSize: 12,
-                padding: "7px 12px",
-                borderRadius: 999,
-                background: "rgba(0,0,0,0.35)",
-                border: "1px solid rgba(255,255,255,0.14)",
-              }}
-            >
+            <span style={pill}>
               🧬 Level <b>{level}</b> • {levelName}
             </span>
-            <span
+
+            <span style={pill}>🧠 XP <b>{xp}</b></span>
+
+            {badgeText ? <span style={pill}>🏅 {badgeText}</span> : null}
+          </div>
+
+          {badges?.length ? (
+            <div
               style={{
-                fontSize: 12,
-                padding: "7px 12px",
-                borderRadius: 999,
-                background: "rgba(0,0,0,0.35)",
-                border: "1px solid rgba(255,255,255,0.14)",
+                marginTop: 10,
+                display: "flex",
+                gap: 8,
+                justifyContent: "center",
+                flexWrap: "wrap",
               }}
             >
-              🧠 XP <b>{xp}</b>
-            </span>
-            {isFriend && <FriendBadge />}
-          </div>
+              {badges.slice(0, 6).map((b) => (
+                <span
+                  key={b.t}
+                  title={b.tip}
+                  style={{
+                    fontSize: 12,
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background: "rgba(0,0,0,0.35)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    opacity: 0.95,
+                  }}
+                >
+                  {b.t}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {isFriend ? (
+            <div style={{ marginTop: 10 }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: "5px 12px",
+                  borderRadius: 999,
+                  background:
+                    "linear-gradient(135deg, #00ffc3, #00b4ff, #7c4dff)",
+                  color: "#02130d",
+                  fontWeight: 950,
+                  border: "1px solid rgba(255,255,255,0.20)",
+                  letterSpacing: "0.06em",
+                  boxShadow: "0 0 18px rgba(0,255,195,0.35)",
+                }}
+              >
+                🤝 FRIEND
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* BIO */}
         <div
           style={{
             marginTop: 14,
-            background: "rgba(0,0,0,0.40)",
-            borderRadius: 18,
+            ...glass,
             padding: 14,
             lineHeight: 1.6,
             fontSize: 14,
             opacity: 0.92,
-            border: "1px solid rgba(255,255,255,0.10)",
           }}
         >
-          {profile.bio || "No description yet. This explorer prefers actions over words."}
+          {profile?.bio || "No description yet. This explorer prefers actions over words."}
         </div>
 
         {/* STATS */}
@@ -202,71 +564,38 @@ function MobileProfileView({
             gap: 10,
           }}
         >
-          {[
-            { label: "Tours", value: toursCount },
-            { label: "Followers", value: followersCount },
-            { label: "Following", value: followingCount },
-            { label: "Rating", value: avgRating || "N/A" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                borderRadius: 14,
-                padding: 12,
-                textAlign: "center",
-                border: "1px solid rgba(255,255,255,0.10)",
-              }}
-            >
-              <div style={{ fontSize: 18, fontWeight: 950 }}>{s.value}</div>
-              <div style={{ fontSize: 11, opacity: 0.75 }}>{s.label}</div>
-            </div>
-          ))}
+          <Stat label="Tours" value={toursCount} onClick={() => navigate?.(`/profile/${profile.id}?tab=tours`)} />
+          <Stat label="Events" value={eventsCount} onClick={() => navigate?.(`/profile/${profile.id}?tab=events`)} />
+          <Stat label="Followers" value={followersCount} />
+          <Stat label="Rating" value={avgRating || "N/A"} />
         </div>
 
         {/* CTA */}
         <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
           {isOwnProfile ? (
-            <button
-              onClick={goEdit}
-              style={{
-                width: "100%",
-                padding: "14px 0",
-                borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.22)",
-                background: "rgba(0,0,0,0.35)",
-                fontWeight: 950,
-                color: "white",
-              }}
-            >
-              Edit profile
-            </button>
+            <>
+              <button onClick={goEdit} style={btnGhost}>
+                Edit profile
+              </button>
+              <button onClick={() => navigate?.("/my-tours")} style={btnGhost}>
+                🎒 Manage tours
+              </button>
+            </>
           ) : (
-            <button
-              onClick={toggleFollow}
-              disabled={followBusy}
-              style={{
-                width: "100%",
-                padding: "14px 0",
-                borderRadius: 999,
-                border: "none",
-                fontWeight: 950,
-                fontSize: 15,
-                background: isFollowing
-                  ? "rgba(255,255,255,0.14)"
-                  : "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
-                color: isFollowing ? "white" : "#02130d",
-                boxShadow: "0 0 30px rgba(0,255,195,0.35)",
-                opacity: followBusy ? 0.75 : 1,
-              }}
-            >
+            <button onClick={toggleFollow} disabled={followBusy} style={btnPrimary}>
               {isFollowing ? "Following ✓" : "Follow"}
             </button>
           )}
+
+          {isFriend && !isOwnProfile ? (
+            <button onClick={() => navigate?.(`/chat/${profile.id}`)} style={btnGhost}>
+              💬 Chat
+            </button>
+          ) : null}
         </div>
 
         {/* SOCIAL LINKS */}
-        {(profile.instagram_url || profile.tiktok_url || profile.youtube_url) && (
+        {(profile?.instagram_url || profile?.tiktok_url || profile?.youtube_url) && (
           <div
             style={{
               marginTop: 16,
@@ -278,11 +607,7 @@ function MobileProfileView({
           >
             {profile.instagram_url && (
               <a
-                href={
-                  profile.instagram_url.startsWith("http")
-                    ? profile.instagram_url
-                    : `https://instagram.com/${profile.instagram_url.replace("@", "")}`
-                }
+                href={openExternal(profile.instagram_url, "instagram")}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -301,11 +626,7 @@ function MobileProfileView({
             )}
             {profile.tiktok_url && (
               <a
-                href={
-                  profile.tiktok_url.startsWith("http")
-                    ? profile.tiktok_url
-                    : `https://www.tiktok.com/@${profile.tiktok_url.replace("@", "")}`
-                }
+                href={openExternal(profile.tiktok_url, "tiktok")}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -324,11 +645,7 @@ function MobileProfileView({
             )}
             {profile.youtube_url && (
               <a
-                href={
-                  profile.youtube_url.startsWith("http")
-                    ? profile.youtube_url
-                    : `https://youtube.com/@${profile.youtube_url.replace("@", "")}`
-                }
+                href={openExternal(profile.youtube_url, "youtube")}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -347,6 +664,73 @@ function MobileProfileView({
             )}
           </div>
         )}
+
+        {/* TOURS */}
+        <div style={{ marginTop: 18, ...card }}>
+          <div style={sectionTitle}>Tours</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 18, fontWeight: 950 }}>Created tours</div>
+            <div style={pill}>🗺️ {tours.length}</div>
+          </div>
+
+          {tours.length === 0 ? (
+            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>No tours created yet.</div>
+          ) : (
+            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+              {tours.slice(0, 3).map((t) => (
+                <TourCard key={t.id} t={t} />
+              ))}
+              {tours.length > 3 ? (
+                <button style={btnGhost} onClick={() => navigate?.(`/profile/${profile.id}?tab=tours`)}>
+                  View all tours →
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        {/* EVENTS */}
+        <div style={{ marginTop: 14, ...card }}>
+          <div style={sectionTitle}>Events</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 18, fontWeight: 950 }}>Upcoming events</div>
+            <div style={pill}>🎟️ {events.length}</div>
+          </div>
+
+          {events.length === 0 ? (
+            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>No events yet.</div>
+          ) : (
+            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+              {events.slice(0, 3).map((e) => (
+                <EventCard key={e.id} e={e} />
+              ))}
+              {events.length > 3 ? (
+                <button style={btnGhost} onClick={() => navigate?.(`/profile/${profile.id}?tab=events`)}>
+                  View all events →
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        {/* TIMELINE */}
+        <div style={{ marginTop: 14, ...card, marginBottom: 28 }}>
+          <div style={sectionTitle}>Timeline</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 18, fontWeight: 950 }}>Recent activity</div>
+            <div style={pill}>🕒 {timeline.length}</div>
+          </div>
+
+          {timeline.length === 0 ? (
+            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>No activity yet.</div>
+          ) : (
+            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+              {timeline.slice(0, 6).map((it, idx) => (
+                <TimelineRow key={idx} it={it} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -891,27 +1275,34 @@ export default function Profile() {
 
   // ================= MOBILE OVERRIDE =================
   if (isSmall) {
-    return (
-      <MobileProfileView
-        profile={profile}
-        cover={cover}
-        avatar={avatar}
-        xp={xp}
-        level={level}
-        levelName={levelName}
-        followersCount={followersCount}
-        followingCount={followingCount}
-        toursCount={tours.length}
-        avgRating={avgRating ? avgRating.toFixed(1) : null}
-        isOwnProfile={isOwnProfile}
-        isFollowing={isFollowing}
-        isFriend={isFriend}
-        followBusy={followBusy}
-        toggleFollow={toggleFollow}
-        goEdit={() => navigate("/edit-profile")}
-      />
-    );
-  }
+  return (
+    <MobileProfileView
+      profile={profile}
+      cover={cover}
+      avatar={avatar}
+      xp={xp}
+      level={level}
+      levelName={levelName}
+      badgeText={badgeText}
+      badges={badges}
+      followersCount={followersCount}
+      followingCount={followingCount}
+      toursCount={tours.length}
+      eventsCount={events.length}
+      avgRating={avgRating ? avgRating.toFixed(1) : null}
+      isOwnProfile={isOwnProfile}
+      isFollowing={isFollowing}
+      isFriend={isFriend}
+      followBusy={followBusy}
+      toggleFollow={toggleFollow}
+      goEdit={() => navigate("/edit-profile")}
+      tours={tours}
+      events={events}
+      timeline={timeline}
+      navigate={navigate}
+    />
+  );
+}
 
   // ================= DESKTOP UI =================
   const actionBar = (
@@ -949,7 +1340,7 @@ export default function Profile() {
   );
 
   const heroCard = (
-    <div style={{ ...glass, overflow: "hidden", position: "relative", padding: 0 }}>
+    <div style={{ ...glass, overflow: "visible", position: "relative", padding: 0 }}>
       {/* cover */}
       <div style={{ position: "relative", height: 340 }}>
         {cover ? (
