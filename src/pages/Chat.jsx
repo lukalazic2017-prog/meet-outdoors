@@ -187,9 +187,9 @@ export default function Chat() {
   const creatorId = tour?.creator_id;
 
   const sendMessage = useCallback(async () => {
-    if (!text.trim() || !user || !tourId || notFound) return;
-
     const msgText = text.trim();
+    if (!msgText || !user || !tourId || notFound) return;
+
     setText("");
 
     const { error } = await supabase.from("tour_messages").insert([
@@ -199,23 +199,27 @@ export default function Chat() {
         message: msgText,
       },
     ]);
-    // notify tour creator
-if (tour?.creator_id && tour.creator_id !== user.id) {
-  await supabase.from("notifications").insert({
-    user_id: tour.creator_id,
-    title: "New chat message",
-    body: "Someone sent a message in your tour chat.",
-    type: "tour_chat",
-    seen: false,
-    is_read: false,
-    link: `/tour/${tourId}`
-  });
-}
 
     if (error) {
       console.log("SEND MESSAGE ERROR:", error);
       setText(msgText);
       return;
+    }
+
+    if (creatorId && creatorId !== user.id) {
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: creatorId,
+        title: "New chat message",
+        body: "Someone sent a message in your tour chat.",
+        type: "tour_chat",
+        seen: false,
+        is_read: false,
+        link: `/tour/${tourId}`,
+      });
+
+      if (notifError) {
+        console.log("SEND NOTIFICATION ERROR:", notifError);
+      }
     }
 
     if (textareaRef.current) {
