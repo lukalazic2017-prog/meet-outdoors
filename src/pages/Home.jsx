@@ -546,7 +546,7 @@ export default function Home() {
 
           <div style={styles.subtitle}>
             Join curated hiking, camping, rafting and city escape tours with real people — not
-            fake profiles. Pick your activity, grab your backpack and meet outdoors.
+            fake profiles. Pick your activity, grab your backpack and meet outdoors. We\re waiting!
           </div>
 
           <div style={styles.heroMetaRow}>
@@ -670,7 +670,7 @@ export default function Home() {
                 </div>
               </div>
               <div style={styles.seeAll} onClick={() => navigate("/tours?sort=popular")}>
-                Seee popular tours →
+                See popular tours →
               </div>
             </div>
 
