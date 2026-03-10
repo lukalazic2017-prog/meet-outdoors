@@ -546,7 +546,7 @@ export default function Home() {
 
           <div style={styles.subtitle}>
             Join curated hiking, camping, rafting and city escape tours with real people — not
-            fake profiles. Pick your activity, grab your backpack and meet outdoors. We\re waiting!
+            fake profiles. Pick your activity, grab your backpack and meet outdoors. See you !
           </div>
 
           <div style={styles.heroMetaRow}>
