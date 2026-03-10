@@ -670,7 +670,7 @@ export default function Home() {
                 </div>
               </div>
               <div style={styles.seeAll} onClick={() => navigate("/tours?sort=popular")}>
-                See popular tours →
+                Seee popular tours →
               </div>
             </div>
 
