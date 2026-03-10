@@ -9,7 +9,7 @@ export default function ProfileRatingBox({ ratedUserId, user }) {
 
   useEffect(() => {
     loadMyRating();
-  }, [ratedUserId, user]);
+  }, [ratedUserId, user, loadMyRating]);
 
   async function loadMyRating() {
 
