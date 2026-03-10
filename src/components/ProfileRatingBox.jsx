@@ -1,18 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 
 export default function ProfileRatingBox({ ratedUserId, user }) {
-
   const [selected, setSelected] = useState(0);
   const [hover, setHover] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadMyRating();
-  }, [ratedUserId, user, loadMyRating]);
-
-  async function loadMyRating() {
-
+  const loadMyRating = useCallback(async () => {
     if (!user || !ratedUserId) return;
 
     const { data } = await supabase
@@ -25,10 +19,13 @@ export default function ProfileRatingBox({ ratedUserId, user }) {
     if (data) {
       setSelected(data.rating || 0);
     }
-  }
+  }, [user, ratedUserId]);
+
+  useEffect(() => {
+    loadMyRating();
+  }, [loadMyRating]);
 
   async function handleRate(value) {
-
     if (!user || user.id === ratedUserId) return;
 
     setSelected(value);
@@ -40,10 +37,10 @@ export default function ProfileRatingBox({ ratedUserId, user }) {
         {
           rater_id: user.id,
           rated_user_id: ratedUserId,
-          rating: value
+          rating: value,
         },
         {
-          onConflict: "rater_id,rated_user_id"
+          onConflict: "rater_id,rated_user_id",
         }
       );
 
@@ -83,26 +80,23 @@ export default function ProfileRatingBox({ ratedUserId, user }) {
         background: "rgba(255,255,255,0.03)",
         border: "1px solid rgba(255,255,255,0.08)",
         backdropFilter: "blur(10px)",
-        width: "fit-content"
+        width: "fit-content",
       }}
     >
-
       <div
         style={{
           fontSize: 11,
           letterSpacing: "0.12em",
           textTransform: "uppercase",
           color: "rgba(255,255,255,0.55)",
-          fontWeight: 700
+          fontWeight: 700,
         }}
       >
         Rate organizer
       </div>
 
       <div style={{ display: "flex", gap: 6 }}>
-
-        {[1,2,3,4,5].map((star) => {
-
+        {[1, 2, 3, 4, 5].map((star) => {
           const activeStar = star <= active;
 
           return (
@@ -119,18 +113,14 @@ export default function ProfileRatingBox({ ratedUserId, user }) {
                 cursor: "pointer",
                 fontSize: 20,
                 padding: 0,
-                color: activeStar
-                  ? "#ffd36b"
-                  : "rgba(255,255,255,0.25)",
-                transition: "all 0.15s ease"
+                color: activeStar ? "#ffd36b" : "rgba(255,255,255,0.25)",
+                transition: "all 0.15s ease",
               }}
             >
               ★
             </button>
           );
-
         })}
-
       </div>
 
       {active > 0 && (
@@ -139,13 +129,12 @@ export default function ProfileRatingBox({ ratedUserId, user }) {
             fontSize: 11,
             fontWeight: 600,
             color: "#ffd36b",
-            letterSpacing: "0.04em"
+            letterSpacing: "0.04em",
           }}
         >
           {badge}
         </div>
       )}
-
     </div>
   );
 }
