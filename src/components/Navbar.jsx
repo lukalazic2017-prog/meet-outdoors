@@ -171,7 +171,7 @@ export default function Navbar() {
       if (!mounted) return;
 
       if (profile?.avatar_url) {
-        setAvatarUrl(profile.avatar_url + `?t=${Date.now()}`);
+        setAvatarUrl(`${profile.avatar_url}?t=${Date.now()}`);
       } else {
         setAvatarUrl(null);
       }
@@ -228,7 +228,9 @@ export default function Navbar() {
         )
         .subscribe();
 
-      cleanup = () => supabase.removeChannel(channel);
+      cleanup = () => {
+        supabase.removeChannel(channel);
+      };
     }
 
     connectRealtime();
@@ -292,11 +294,15 @@ export default function Navbar() {
             x.id === n.id ? { ...x, read: true, is_read: true } : x
           )
         );
+
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
 
       setNotificationsOpen(false);
-      if (n.link) navigate(n.link);
+
+      if (n.link) {
+        navigate(n.link);
+      }
     } catch (err) {
       console.log("notification click error:", err);
     }
@@ -1028,25 +1034,25 @@ export default function Navbar() {
               </button>
 
               {searchOpen && (
-  <div
-    style={{
-      ...dropdownBase,
-      ...(isMobile
-        ? {
-            position: "fixed",
-            top: 84,
-            left: 12,
-            right: 12,
-            width: "auto",
-            maxWidth: "none",
-          }
-        : {
-            right: 0,
-            width: 360,
-            maxWidth: "92vw",
-          }),
-    }}
-  >
+                <div
+                  style={{
+                    ...dropdownBase,
+                    ...(isMobile
+                      ? {
+                          position: "fixed",
+                          top: 84,
+                          left: 12,
+                          right: 12,
+                          width: "auto",
+                          maxWidth: "none",
+                        }
+                      : {
+                          right: 0,
+                          width: 360,
+                          maxWidth: "92vw",
+                        }),
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
@@ -1329,27 +1335,27 @@ export default function Navbar() {
                 </button>
 
                 {notificationsOpen && (
-  <div
-    style={{
-      ...dropdownBase,
-      ...(isMobile
-        ? {
-            position: "fixed",
-            top: 84,
-            left: 12,
-            right: 12,
-            width: "auto",
-            maxWidth: "none",
-            padding: 14,
-          }
-        : {
-            right: 0,
-            width: 360,
-            maxWidth: "92vw",
-            padding: 14,
-          }),
-    }}
-  >
+                  <div
+                    style={{
+                      ...dropdownBase,
+                      ...(isMobile
+                        ? {
+                            position: "fixed",
+                            top: 84,
+                            left: 12,
+                            right: 12,
+                            width: "auto",
+                            maxWidth: "none",
+                            padding: 14,
+                          }
+                        : {
+                            right: 0,
+                            width: 360,
+                            maxWidth: "92vw",
+                            padding: 14,
+                          }),
+                    }}
+                  >
                     <div
                       style={{
                         display: "flex",
@@ -1410,13 +1416,9 @@ export default function Navbar() {
                       <div style={{ maxHeight: 380, overflowY: "auto" }}>
                         {notifications.map((n) => (
                           <div
-  key={n.id}
-  onClick={() => {
-    if (n.link) navigate(n.link);
-    setNotificationsOpen(false);
-  }}
-  style={{
-    cursor: "pointer",
+                            key={n.id}
+                            onClick={() => openNotification(n)}
+                            style={{
                               background:
                                 "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.03))",
                               padding: "12px 12px",
@@ -1615,7 +1617,7 @@ export default function Navbar() {
 
                       <button
                         onClick={() => {
-                          navigate(`/edit-profile`);
+                          navigate("/edit-profile");
                           setUserMenuOpen(false);
                         }}
                         style={userMenuItem}
@@ -1649,16 +1651,10 @@ export default function Navbar() {
             ) : (
               !isMobile && (
                 <>
-                  <button
-                    onClick={() => navigate("/login")}
-                    style={authBtn}
-                  >
+                  <button onClick={() => navigate("/login")} style={authBtn}>
                     Login
                   </button>
-                  <button
-                    onClick={() => navigate("/register")}
-                    style={authPrimaryBtn}
-                  >
+                  <button onClick={() => navigate("/register")} style={authPrimaryBtn}>
                     Join now
                   </button>
                 </>
@@ -1805,11 +1801,7 @@ export default function Navbar() {
               paddingBottom: 10,
             }}
           >
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              style={mobileLink}
-            >
+            <Link to="/" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
               🏠 Home
             </Link>
 

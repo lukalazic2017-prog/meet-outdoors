@@ -184,6 +184,8 @@ export default function Chat() {
     };
   }, [loadTour, loadMessages, subscribeToMessages]);
 
+  const creatorId = tour?.creator_id;
+
   const sendMessage = useCallback(async () => {
     if (!text.trim() || !user || !tourId || notFound) return;
 
@@ -206,7 +208,7 @@ if (tour?.creator_id && tour.creator_id !== user.id) {
     type: "tour_chat",
     seen: false,
     is_read: false,
-    link: /tour/`${tourId}`
+    link: `/tour/${tourId}`
   });
 }
 
@@ -221,7 +223,7 @@ if (tour?.creator_id && tour.creator_id !== user.id) {
     }
 
     setTimeout(() => scrollToBottom(true), 40);
-  }, [text, user, tourId, notFound, scrollToBottom]);
+  }, [text, user, tourId, notFound, scrollToBottom, creatorId]);
 
   const onKeyDown = useCallback(
     (e) => {
