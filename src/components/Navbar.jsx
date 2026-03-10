@@ -1,5 +1,5 @@
 // src/components/Navbar.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -182,6 +182,8 @@ export default function Navbar() {
         .eq("user_id", currentUser.id)
         .order("created_at", { ascending: false });
 
+      if (!mounted) return;
+
       const safeNotes = notes || [];
       setNotifications(safeNotes);
       setUnreadCount(safeNotes.filter((n) => !(n.read || n.is_read)).length);
@@ -240,6 +242,7 @@ export default function Navbar() {
         window.innerWidth < 900 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       );
     };
+
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -299,7 +302,7 @@ export default function Navbar() {
     }
   };
 
-  const buildFriendsSet = async () => {
+  const buildFriendsSet = useCallback(async () => {
     if (!user) {
       setFriendsSet(new Set());
       return;
@@ -330,7 +333,7 @@ export default function Navbar() {
     setFriendsSet(
       new Set((theyFollowMe || []).map((r) => r.follower_id).filter(Boolean))
     );
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -368,7 +371,11 @@ export default function Navbar() {
       setActivitiesOpen(false);
       setToursMenuOpen(false);
       setEventsMenuOpen(false);
+    }
+  }, [searchOpen]);
 
+  useEffect(() => {
+    if (searchOpen) {
       buildFriendsSet();
       setTimeout(() => searchInputRef.current?.focus?.(), 60);
     } else {
@@ -376,7 +383,7 @@ export default function Navbar() {
       setSearchResults([]);
       setSearchCursor(-1);
     }
-  }, [searchOpen]);
+  }, [searchOpen, buildFriendsSet]);
 
   useEffect(() => {
     const onDown = (e) => {
