@@ -161,7 +161,7 @@ export default function Chat() {
     };
   }, [loadTour, loadMessages, subscribeToMessages]);
 
-  async function sendMessage() {
+  const sendMessage = useCallback(async () => {
     if (!text.trim() || !user || !tourId || notFound) return;
 
     const msgText = text.trim();
@@ -182,7 +182,7 @@ export default function Chat() {
     }
 
     setTimeout(() => scrollToBottom(true), 40);
-  }
+  }, [text, user, tourId, notFound, scrollToBottom]);
 
   const onKeyDown = useCallback(
     (e) => {
@@ -191,7 +191,7 @@ export default function Chat() {
         sendMessage();
       }
     },
-    [text, user, tourId, notFound]
+    [sendMessage]
   );
 
   const ui = useMemo(
