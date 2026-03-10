@@ -1,8 +1,9 @@
- // src/pages/Profile.jsx
+// src/pages/Profile.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-
+import ProfileRatingSummary from "../components/ProfileRatingSummary";
+import ProfileRatingBox from "../components/ProfileRatingBox";
 
 /* ================= FRIEND BADGE ================= */
 const FriendBadge = () => (
@@ -24,7 +25,7 @@ const FriendBadge = () => (
   </span>
 );
 
-/* ================= SMALL SCREEN HOOK ================= */
+/* ================= HELPERS ================= */
 function useIsSmall(breakpoint = 900) {
   const [isSmall, setIsSmall] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -40,8 +41,38 @@ function useIsSmall(breakpoint = 900) {
   return isSmall;
 }
 
+function openExternalUrl(url, type) {
+  if (!url) return "#";
+  if (url.startsWith("http")) return url;
+
+  const clean = url.replace("@", "").trim();
+
+  if (type === "instagram") return `https://instagram.com/${clean}`;
+  if (type === "tiktok") return `https://www.tiktok.com/@${clean}`;
+  if (type === "youtube") return `https://youtube.com/@${clean}`;
+
+  return url;
+}
+
+function formatDate(d) {
+  if (!d) return "";
+  try {
+    return new Date(d).toLocaleDateString();
+  } catch {
+    return "";
+  }
+}
+
+function formatDateTime(d) {
+  if (!d) return "";
+  try {
+    return new Date(d).toLocaleString();
+  } catch {
+    return "";
+  }
+}
+
 /* ================= MOBILE PROFILE VIEW ================= */
-/* ================= MOBILE PROFILE VIEW (FULL) ================= */
 function MobileProfileView({
   profile,
   cover,
@@ -51,48 +82,25 @@ function MobileProfileView({
   levelName,
   badgeText,
   badges,
-
   followersCount,
-  followingCount,
   toursCount,
   eventsCount,
   avgRating,
-
   isOwnProfile,
   isFollowing,
   isFriend,
   followBusy,
   toggleFollow,
   goEdit,
-
   tours = [],
   events = [],
   timeline = [],
   navigate,
+  authUser,
 }) {
   const safeName = profile?.full_name || profile?.username || "Explorer";
   const safeCity = profile?.city || "City";
   const safeCountry = profile?.country || "Country";
-
-  const openExternal = (url, type) => {
-    if (!url) return "#";
-    if (url.startsWith("http")) return url;
-
-    const clean = url.replace("@", "").trim();
-    if (type === "instagram") return `https://instagram.com/${clean}`;
-    if (type === "tiktok") return `https://www.tiktok.com/@${clean}`;
-    if (type === "youtube") return `https://youtube.com/@${clean}`;
-    return url;
-  };
-
-  const fmtDate = (d) => {
-    if (!d) return "";
-    try {
-      return new Date(d).toLocaleDateString();
-    } catch {
-      return "";
-    }
-  };
 
   const glass = {
     background: "rgba(255,255,255,0.06)",
@@ -297,7 +305,7 @@ function MobileProfileView({
             opacity: 0.9,
           }}
         >
-          <span>🗓 {e.start_date ? fmtDate(e.start_date) : "Date TBA"}</span>
+          <span>🗓 {e.start_date ? formatDate(e.start_date) : "Date TBA"}</span>
           <span>→ Open</span>
         </div>
       </div>
@@ -346,7 +354,7 @@ function MobileProfileView({
 
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 12, opacity: 0.75 }}>
-            {it.created_at ? fmtDate(it.created_at) : ""}
+            {it.created_at ? formatDate(it.created_at) : ""}
           </div>
           <div
             style={{
@@ -393,7 +401,6 @@ function MobileProfileView({
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      {/* COVER + AVATAR OVERLAY */}
       <div style={{ position: "relative", height: 240 }}>
         {cover ? (
           <img
@@ -428,7 +435,6 @@ function MobileProfileView({
           }}
         />
 
-        {/* avatar ring centered */}
         <div
           style={{
             position: "absolute",
@@ -451,7 +457,7 @@ function MobileProfileView({
               height: "100%",
               borderRadius: "50%",
               objectFit: "cover",
-              objectPosition: "50% 35%", // malo ka čelu (bolje za portrete)
+              objectPosition: "50% 35%",
               border: "3px solid rgba(0,0,0,0.75)",
               background: "rgba(0,0,0,0.35)",
             }}
@@ -459,12 +465,39 @@ function MobileProfileView({
         </div>
       </div>
 
-      {/* CONTENT */}
       <div style={{ padding: 14, paddingTop: 74, maxWidth: 720, margin: "0 auto" }}>
-        {/* NAME + META */}
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1.05 }}>
-            {safeName}
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1.05 }}>
+              {safeName}
+            </div>
+
+            <ProfileRatingSummary profileId={profile.id} />
+
+            {profile?.is_verified_creator && (
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  background: "rgba(0,255,176,0.14)",
+                  border: "1px solid rgba(0,255,176,0.35)",
+                  color: "#9cffd8",
+                  fontWeight: 900,
+                  letterSpacing: "0.05em",
+                }}
+              >
+                ✔ VERIFIED ORGANIZER
+              </span>
+            )}
           </div>
 
           <div style={{ opacity: 0.78, fontSize: 13, marginTop: 6 }}>
@@ -485,7 +518,9 @@ function MobileProfileView({
               🧬 Level <b>{level}</b> • {levelName}
             </span>
 
-            <span style={pill}>🧠 XP <b>{xp}</b></span>
+            <span style={pill}>
+              🧠 XP <b>{xp}</b>
+            </span>
 
             {badgeText ? <span style={pill}>🏅 {badgeText}</span> : null}
           </div>
@@ -541,7 +576,6 @@ function MobileProfileView({
           ) : null}
         </div>
 
-        {/* BIO */}
         <div
           style={{
             marginTop: 14,
@@ -552,10 +586,14 @@ function MobileProfileView({
             opacity: 0.92,
           }}
         >
-          {profile?.bio || "No description yet. This explorer prefers actions over words."}
+          {profile?.bio ||
+            "No description yet. This explorer prefers actions over words."}
         </div>
 
-        {/* STATS */}
+        <div style={{ marginTop: 14 }}>
+          <ProfileRatingBox ratedUserId={profile.id} user={authUser} />
+        </div>
+
         <div
           style={{
             marginTop: 14,
@@ -564,13 +602,20 @@ function MobileProfileView({
             gap: 10,
           }}
         >
-          <Stat label="Tours" value={toursCount} onClick={() => navigate?.(`/profile/${profile.id}?tab=tours`)} />
-          <Stat label="Events" value={eventsCount} onClick={() => navigate?.(`/profile/${profile.id}?tab=events`)} />
+          <Stat
+            label="Tours"
+            value={toursCount}
+            onClick={() => navigate?.(`/profile/${profile.id}?tab=tours`)}
+          />
+          <Stat
+            label="Events"
+            value={eventsCount}
+            onClick={() => navigate?.(`/profile/${profile.id}?tab=events`)}
+          />
           <Stat label="Followers" value={followersCount} />
           <Stat label="Rating" value={avgRating || "N/A"} />
         </div>
 
-        {/* CTA */}
         <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
           {isOwnProfile ? (
             <>
@@ -588,13 +633,12 @@ function MobileProfileView({
           )}
 
           {isFriend && !isOwnProfile ? (
-            <button onClick={() => navigate?.(`/chat/${profile.id}`)} style={btnGhost}>
+            {/*button onClick={() => navigate?.(`/chat/${profile.id}`)} style={btnGhost}>
               💬 Chat
-            </button>
+            </button> */}
           ) : null}
         </div>
 
-        {/* SOCIAL LINKS */}
         {(profile?.instagram_url || profile?.tiktok_url || profile?.youtube_url) && (
           <div
             style={{
@@ -607,7 +651,7 @@ function MobileProfileView({
           >
             {profile.instagram_url && (
               <a
-                href={openExternal(profile.instagram_url, "instagram")}
+                href={openExternalUrl(profile.instagram_url, "instagram")}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -626,7 +670,7 @@ function MobileProfileView({
             )}
             {profile.tiktok_url && (
               <a
-                href={openExternal(profile.tiktok_url, "tiktok")}
+                href={openExternalUrl(profile.tiktok_url, "tiktok")}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -645,7 +689,7 @@ function MobileProfileView({
             )}
             {profile.youtube_url && (
               <a
-                href={openExternal(profile.youtube_url, "youtube")}
+                href={openExternalUrl(profile.youtube_url, "youtube")}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -665,23 +709,34 @@ function MobileProfileView({
           </div>
         )}
 
-        {/* TOURS */}
         <div style={{ marginTop: 18, ...card }}>
           <div style={sectionTitle}>Tours</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
             <div style={{ fontSize: 18, fontWeight: 950 }}>Created tours</div>
             <div style={pill}>🗺️ {tours.length}</div>
           </div>
 
           {tours.length === 0 ? (
-            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>No tours created yet.</div>
+            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
+              No tours created yet.
+            </div>
           ) : (
             <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
               {tours.slice(0, 3).map((t) => (
                 <TourCard key={t.id} t={t} />
               ))}
               {tours.length > 3 ? (
-                <button style={btnGhost} onClick={() => navigate?.(`/profile/${profile.id}?tab=tours`)}>
+                <button
+                  style={btnGhost}
+                  onClick={() => navigate?.(`/profile/${profile.id}?tab=tours`)}
+                >
                   View all tours →
                 </button>
               ) : null}
@@ -689,23 +744,34 @@ function MobileProfileView({
           )}
         </div>
 
-        {/* EVENTS */}
         <div style={{ marginTop: 14, ...card }}>
           <div style={sectionTitle}>Events</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
             <div style={{ fontSize: 18, fontWeight: 950 }}>Upcoming events</div>
             <div style={pill}>🎟️ {events.length}</div>
           </div>
 
           {events.length === 0 ? (
-            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>No events yet.</div>
+            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
+              No events yet.
+            </div>
           ) : (
             <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
               {events.slice(0, 3).map((e) => (
                 <EventCard key={e.id} e={e} />
               ))}
               {events.length > 3 ? (
-                <button style={btnGhost} onClick={() => navigate?.(`/profile/${profile.id}?tab=events`)}>
+                <button
+                  style={btnGhost}
+                  onClick={() => navigate?.(`/profile/${profile.id}?tab=events`)}
+                >
                   View all events →
                 </button>
               ) : null}
@@ -713,16 +779,24 @@ function MobileProfileView({
           )}
         </div>
 
-        {/* TIMELINE */}
         <div style={{ marginTop: 14, ...card, marginBottom: 28 }}>
           <div style={sectionTitle}>Timeline</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
             <div style={{ fontSize: 18, fontWeight: 950 }}>Recent activity</div>
             <div style={pill}>🕒 {timeline.length}</div>
           </div>
 
           {timeline.length === 0 ? (
-            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>No activity yet.</div>
+            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
+              No activity yet.
+            </div>
           ) : (
             <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
               {timeline.slice(0, 6).map((it, idx) => (
@@ -739,6 +813,7 @@ function MobileProfileView({
 export default function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const isSmall = useIsSmall(900);
 
   const [authUser, setAuthUser] = useState(null);
@@ -761,32 +836,34 @@ export default function Profile() {
 
   const [avgRating, setAvgRating] = useState(null);
   const [ratingsCount, setRatingsCount] = useState(0);
-  const [myRating, setMyRating] = useState(null);
-  const [ratingBusy, setRatingBusy] = useState(false);
 
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
 
-  const [activeTab, setActiveTab] = useState("overview");
+  const getInitialTab = () => {
+    const tab = new URLSearchParams(location.search).get("tab");
+    const allowed = ["overview", "tours", "events", "friends", "timeline"];
+    return allowed.includes(tab) ? tab : "overview";
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
 
   const isOwnProfile = authUser && authUser.id === id;
 
-  // ================= AUTH =================
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setAuthUser(data?.user || null));
   }, []);
 
-  // ================= HELPERS =================
-  const fmtDate = (d) => {
-    if (!d) return "";
-    try {
-      return new Date(d).toLocaleString();
-    } catch {
-      return "";
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get("tab");
+    const allowed = ["overview", "tours", "events", "friends", "timeline"];
+    if (tab && allowed.includes(tab)) {
+      setActiveTab(tab);
+    } else {
+      setActiveTab("overview");
     }
-  };
+  }, [location.search]);
 
-  // ================= LOAD ALL =================
   async function loadAll() {
     if (!id) return;
     setLoading(true);
@@ -795,51 +872,50 @@ export default function Profile() {
     const me = auth?.user || null;
     setAuthUser(me);
 
-    // PROFILE
     const { data: prof, error: profErr } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", id)
       .single();
+
     if (profErr) console.log("PROFILE ERR", profErr);
     setProfile(prof || null);
 
-    // TOURS
     const { data: toursData, error: toursErr } = await supabase
       .from("tours")
       .select("*")
       .eq("creator_id", id)
       .order("created_at", { ascending: false });
+
     if (toursErr) console.log("TOURS ERR", toursErr);
     setTours(toursData || []);
 
-    // EVENTS
     const { data: eventsData, error: eventsErr } = await supabase
       .from("events")
       .select("*")
       .eq("creator_id", id)
       .order("start_date", { ascending: true })
       .limit(12);
+
     if (eventsErr) console.log("EVENTS ERR", eventsErr);
     setEvents(eventsData || []);
 
-    // FOLLOWERS COUNT
     const { count: followersCnt, error: followersCntErr } = await supabase
       .from("profile_follows")
       .select("*", { count: "exact", head: true })
       .eq("following_id", id);
+
     if (followersCntErr) console.log("FOLLOWERS COUNT ERR", followersCntErr);
     setFollowersCount(followersCnt || 0);
 
-    // FOLLOWING COUNT
     const { count: followingCnt, error: followingCntErr } = await supabase
       .from("profile_follows")
       .select("*", { count: "exact", head: true })
       .eq("follower_id", id);
+
     if (followingCntErr) console.log("FOLLOWING COUNT ERR", followingCntErr);
     setFollowingCount(followingCnt || 0);
 
-    // DO I FOLLOW?
     if (me && me.id !== id) {
       const { data: row, error: rowErr } = await supabase
         .from("profile_follows")
@@ -847,14 +923,15 @@ export default function Profile() {
         .eq("follower_id", me.id)
         .eq("following_id", id)
         .maybeSingle();
+
       if (rowErr) console.log("FOLLOW CHECK ERR", rowErr);
       setIsFollowing(!!row);
     } else {
       setIsFollowing(false);
     }
 
-    // FRIEND CHECK (mutual follow) — računamo u istom loadAll (bez starih state-ova)
     let friendNow = false;
+
     if (me && me.id !== id) {
       const { data: a } = await supabase
         .from("profile_follows")
@@ -876,7 +953,6 @@ export default function Profile() {
       setIsFriend(false);
     }
 
-    // FOLLOWERS LIST (2-step safe)
     const { data: folIdsRows, error: folIdsErr } = await supabase
       .from("profile_follows")
       .select("follower_id, created_at")
@@ -886,7 +962,9 @@ export default function Profile() {
 
     if (folIdsErr) console.log("FOLLOWERS IDS ERR", folIdsErr);
 
-    const followerIds = (folIdsRows || []).map((r) => r.follower_id).filter(Boolean);
+    const followerIds = (folIdsRows || [])
+      .map((r) => r.follower_id)
+      .filter(Boolean);
 
     if (followerIds.length === 0) {
       setFollowersList([]);
@@ -903,14 +981,15 @@ export default function Profile() {
       setFollowersList(ordered);
     }
 
-    // FRIENDS LIST (private)
     const canSeeFriendsNow = (me && me.id === id) || friendNow;
+
     if (canSeeFriendsNow) {
       const { data: followingRows, error: fr1Err } = await supabase
         .from("profile_follows")
         .select("following_id")
         .eq("follower_id", id)
         .limit(800);
+
       if (fr1Err) console.log("FRIENDS following ERR", fr1Err);
 
       const { data: followersRows2, error: fr2Err } = await supabase
@@ -918,9 +997,13 @@ export default function Profile() {
         .select("follower_id")
         .eq("following_id", id)
         .limit(800);
+
       if (fr2Err) console.log("FRIENDS followers ERR", fr2Err);
 
-      const followingIds = new Set((followingRows || []).map((r) => r.following_id).filter(Boolean));
+      const followingIds = new Set(
+        (followingRows || []).map((r) => r.following_id).filter(Boolean)
+      );
+
       const mutualIds = (followersRows2 || [])
         .map((r) => r.follower_id)
         .filter((x) => x && followingIds.has(x));
@@ -932,6 +1015,7 @@ export default function Profile() {
           .from("profiles")
           .select("id, full_name, username, avatar_url, country, city")
           .in("id", mutualIds);
+
         if (mpErr) console.log("FRIENDS PROFILES ERR", mpErr);
 
         const m = new Map((mutualProfiles || []).map((p) => [p.id, p]));
@@ -942,11 +1026,11 @@ export default function Profile() {
       setFriendsList([]);
     }
 
-    // RATINGS (AVG + COUNT)
     const { data: ratings, error: rErr } = await supabase
       .from("profile_ratings")
       .select("rating, created_at")
       .eq("rated_user_id", id);
+
     if (rErr) console.log("RATINGS ERR", rErr);
 
     if (ratings && ratings.length > 0) {
@@ -958,21 +1042,6 @@ export default function Profile() {
       setRatingsCount(0);
     }
 
-    // MY RATING
-    if (me && me.id !== id) {
-      const { data: my, error: myErr } = await supabase
-        .from("profile_ratings")
-        .select("rating")
-        .eq("rater_id", me.id)
-        .eq("rated_user_id", id)
-        .maybeSingle();
-      if (myErr) console.log("MY RATING ERR", myErr);
-      setMyRating(my?.rating || null);
-    } else {
-      setMyRating(null);
-    }
-
-    // TIMELINE (tours + events + rating)
     const items = [];
 
     (toursData || []).forEach((t) => {
@@ -1019,10 +1088,9 @@ export default function Profile() {
 
   useEffect(() => {
     loadAll();
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ================= ACTIONS =================
   async function toggleFollow(e) {
     e?.preventDefault?.();
     e?.stopPropagation?.();
@@ -1040,104 +1108,86 @@ export default function Profile() {
           .delete()
           .eq("follower_id", authUser.id)
           .eq("following_id", id);
+
         if (error) console.log("UNFOLLOW ERR", error);
       } else {
         const { error } = await supabase.from("profile_follows").insert({
           follower_id: authUser.id,
           following_id: id,
         });
+
         if (error) console.log("FOLLOW ERR", error);
       }
+
       await loadAll();
     } finally {
       setFollowBusy(false);
     }
   }
 
-  async function rate(value) {
-    if (!authUser) return navigate("/login");
-    if (isOwnProfile) return;
-    if (ratingBusy) return;
+  const { level, levelName, theme, xp, nextCap, progress, badgeText, badges } =
+    useMemo(() => {
+      const totalXp =
+        (tours.length || 0) * 120 +
+        (events.length || 0) * 80 +
+        (followersCount || 0) * 40 +
+        (avgRating ? avgRating * 60 : 0) +
+        (isFriend ? 200 : 0);
 
-    setRatingBusy(true);
-    try {
-      const { error } = await supabase.from("profile_ratings").upsert(
-        { rater_id: authUser.id, rated_user_id: id, rating: value },
-        { onConflict: "rater_id,rated_user_id" }
-      );
-      if (error) console.log("RATE ERR", error);
+      let lvl = 1;
+      if (totalXp >= 250) lvl = 2;
+      if (totalXp >= 550) lvl = 3;
+      if (totalXp >= 950) lvl = 4;
+      if (totalXp >= 1500) lvl = 5;
 
-      setMyRating(value);
-      await loadAll();
-    } finally {
-      setRatingBusy(false);
-    }
-  }
+      const names = {
+        1: "Trail Rookie",
+        2: "Forest Explorer",
+        3: "Pathfinder",
+        4: "Summit Alpha",
+        5: "Wilderness Legend",
+      };
 
-  // ================= XP / LEVEL / BADGES =================
-  const { level, levelName, theme, xp, nextCap, progress, badgeText, badges } = useMemo(() => {
-    const totalXp =
-      (tours.length || 0) * 120 +
-      (events.length || 0) * 80 +
-      (followersCount || 0) * 40 +
-      (avgRating ? avgRating * 60 : 0) +
-      (isFriend ? 200 : 0);
+      const caps = { 1: 250, 2: 550, 3: 950, 4: 1500, 5: 2200 };
+      const prev = lvl === 1 ? 0 : caps[lvl - 1];
+      const cap = caps[lvl];
+      const prog = Math.max(0, Math.min(1, (totalXp - prev) / (cap - prev)));
 
-    let lvl = 1;
-    if (totalXp >= 250) lvl = 2;
-    if (totalXp >= 550) lvl = 3;
-    if (totalXp >= 950) lvl = 4;
-    if (totalXp >= 1500) lvl = 5;
+      const themes = {
+        1: { a: "#00ffc3", b: "#00b4ff", c: "#7c4dff" },
+        2: { a: "#00ffb0", b: "#00d1ff", c: "#ffffff" },
+        3: { a: "#b184ff", b: "#00ffc3", c: "#00b4ff" },
+        4: { a: "#ffe26b", b: "#ff9b6b", c: "#00ffc3" },
+        5: { a: "#ff4dd8", b: "#00ffc3", c: "#00b4ff" },
+      };
 
-    const names = {
-      1: "Trail Rookie",
-      2: "Forest Explorer",
-      3: "Pathfinder",
-      4: "Summit Alpha",
-      5: "Wilderness Legend",
-    };
+      const badge = {
+        1: "🌱 Just getting started",
+        2: "🌲 Growing explorer",
+        3: "🧭 Pathfinder energy",
+        4: "⛰️ Summit grinder",
+        5: "🏆 Absolute legend",
+      }[lvl];
 
-    const caps = { 1: 250, 2: 550, 3: 950, 4: 1500, 5: 2200 };
-    const prev = lvl === 1 ? 0 : caps[lvl - 1];
-    const cap = caps[lvl];
-    const prog = Math.max(0, Math.min(1, (totalXp - prev) / (cap - prev)));
+      const b = [];
+      if ((tours.length || 0) >= 1) b.push({ t: "🧭 Explorer", tip: "Created at least 1 tour" });
+      if ((events.length || 0) >= 1) b.push({ t: "🏕️ Host", tip: "Created at least 1 event" });
+      if (followersCount >= 10) b.push({ t: "🔥 Popular", tip: "10+ followers" });
+      if (lvl >= 4) b.push({ t: "💠 Elite", tip: "Level 4+" });
+      if (lvl >= 5) b.push({ t: "🏆 Legend", tip: "Level 5" });
 
-    const themes = {
-      1: { a: "#00ffc3", b: "#00b4ff", c: "#7c4dff" },
-      2: { a: "#00ffb0", b: "#00d1ff", c: "#ffffff" },
-      3: { a: "#b184ff", b: "#00ffc3", c: "#00b4ff" },
-      4: { a: "#ffe26b", b: "#ff9b6b", c: "#00ffc3" },
-      5: { a: "#ff4dd8", b: "#00ffc3", c: "#00b4ff" },
-    };
+      return {
+        level: lvl,
+        levelName: names[lvl],
+        theme: themes[lvl] || themes[1],
+        xp: Math.round(totalXp),
+        nextCap: cap,
+        progress: prog,
+        badgeText: badge,
+        badges: b,
+      };
+    }, [tours.length, events.length, followersCount, avgRating, isFriend]);
 
-    const badge = {
-      1: "🌱 Just getting started",
-      2: "🌲 Growing explorer",
-      3: "🧭 Pathfinder energy",
-      4: "⛰️ Summit grinder",
-      5: "🏆 Absolute legend",
-    }[lvl];
-
-    const b = [];
-    if ((tours.length || 0) >= 1) b.push({ t: "🧭 Explorer", tip: "Created at least 1 tour" });
-    if ((events.length || 0) >= 1) b.push({ t: "🏕️ Host", tip: "Created at least 1 event" });
-    if (followersCount >= 10) b.push({ t: "🔥 Popular", tip: "10+ followers" });
-    if (lvl >= 4) b.push({ t: "💠 Elite", tip: "Level 4+" });
-    if (lvl >= 5) b.push({ t: "🏆 Legend", tip: "Level 5" });
-
-    return {
-      level: lvl,
-      levelName: names[lvl],
-      theme: themes[lvl] || themes[1],
-      xp: Math.round(totalXp),
-      nextCap: cap,
-      progress: prog,
-      badgeText: badge,
-      badges: b,
-    };
-  }, [tours.length, events.length, followersCount, avgRating, isFriend]);
-
-  // ================= UI STYLES =================
   const page = {
     minHeight: "100vh",
     color: "#eafff7",
@@ -1223,7 +1273,9 @@ export default function Profile() {
     ...btnGhost,
     padding: "10px 14px",
     borderRadius: 999,
-    background: active ? `linear-gradient(135deg, ${theme.a}, ${theme.b}, ${theme.c})` : "rgba(0,0,0,0.35)",
+    background: active
+      ? `linear-gradient(135deg, ${theme.a}, ${theme.b}, ${theme.c})`
+      : "rgba(0,0,0,0.35)",
     color: active ? "#03120c" : "white",
     border: "1px solid rgba(255,255,255,0.14)",
     boxShadow: active ? "0 10px 30px rgba(0,255,195,0.18)" : "none",
@@ -1234,9 +1286,9 @@ export default function Profile() {
     gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1.1fr)",
     gap: 18,
   };
+
   const gridResponsive = isSmall ? { ...grid, gridTemplateColumns: "1fr" } : grid;
 
-  // ================= RENDER LOADING =================
   if (loading || !profile) {
     return (
       <div style={page}>
@@ -1259,7 +1311,6 @@ export default function Profile() {
     );
   }
 
-  // ================= ASSETS (AVATAR + COVER) =================
   const avatar = profile.avatar_url || "https://i.pravatar.cc/300?img=12";
   const cover =
     profile.cover_url ||
@@ -1271,40 +1322,46 @@ export default function Profile() {
 
   const canSeeFriends = isOwnProfile || isFriend;
 
-  // ================= MOBILE OVERRIDE =================
   if (isSmall) {
-  return (
-    <MobileProfileView
-      profile={profile}
-      cover={cover}
-      avatar={avatar}
-      xp={xp}
-      level={level}
-      levelName={levelName}
-      badgeText={badgeText}
-      badges={badges}
-      followersCount={followersCount}
-      followingCount={followingCount}
-      toursCount={tours.length}
-      eventsCount={events.length}
-      avgRating={avgRating ? avgRating.toFixed(1) : null}
-      isOwnProfile={isOwnProfile}
-      isFollowing={isFollowing}
-      isFriend={isFriend}
-      followBusy={followBusy}
-      toggleFollow={toggleFollow}
-      goEdit={() => navigate("/edit-profile")}
-      tours={tours}
-      events={events}
-      timeline={timeline}
-      navigate={navigate}
-    />
-  );
-}
+    return (
+      <MobileProfileView
+        profile={profile}
+        cover={cover}
+        avatar={avatar}
+        xp={xp}
+        level={level}
+        levelName={levelName}
+        badgeText={badgeText}
+        badges={badges}
+        followersCount={followersCount}
+        toursCount={tours.length}
+        eventsCount={events.length}
+        avgRating={avgRating ? avgRating.toFixed(1) : null}
+        isOwnProfile={isOwnProfile}
+        isFollowing={isFollowing}
+        isFriend={isFriend}
+        followBusy={followBusy}
+        toggleFollow={toggleFollow}
+        goEdit={() => navigate("/edit-profile")}
+        tours={tours}
+        events={events}
+        timeline={timeline}
+        navigate={navigate}
+        authUser={authUser}
+      />
+    );
+  }
 
-  // ================= DESKTOP UI =================
   const actionBar = (
-    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        alignItems: "center",
+        flexWrap: "wrap",
+        justifyContent: "flex-end",
+      }}
+    >
       {!isOwnProfile ? (
         <>
           <button
@@ -1339,20 +1396,18 @@ export default function Profile() {
 
   const heroCard = (
     <div style={{ ...glass, overflow: "visible", position: "relative", padding: 0 }}>
-      {/* cover */}
       <div style={{ position: "relative", height: 340 }}>
         {cover ? (
           <img
-            src={cover}
-            alt="cover"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              filter: "saturate(1.18) contrast(1.06) brightness(0.92)",
-              transform: "scale(1.03)",
-            }}
-          />
+  src={cover}
+  alt="cover"
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    filter: "saturate(1.1) contrast(1.05) brightness(1.02)"
+  }}
+/>
         ) : (
           <div
             style={{
@@ -1370,7 +1425,8 @@ export default function Profile() {
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.92) 92%)",
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.92) 92%)",
           }}
         />
         <div
@@ -1386,12 +1442,17 @@ export default function Profile() {
         />
       </div>
 
-      {/* hero content */}
       <div style={{ padding: 18, marginTop: -92, position: "relative" }}>
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap" }}>
-          {/* LEFT */}
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+          }}
+        >
           <div style={{ display: "flex", gap: 14, alignItems: "flex-end" }}>
-            {/* avatar ring */}
             <div
               style={{
                 width: 126,
@@ -1399,7 +1460,8 @@ export default function Profile() {
                 borderRadius: "50%",
                 padding: 4,
                 background: `conic-gradient(from 210deg, ${theme.a}, ${theme.b}, ${theme.c}, ${theme.a})`,
-                boxShadow: "0 0 44px rgba(0,255,195,0.35), 0 0 90px rgba(124,77,255,0.18)",
+                boxShadow:
+                  "0 0 44px rgba(0,255,195,0.35), 0 0 90px rgba(124,77,255,0.18)",
               }}
             >
               <img
@@ -1416,7 +1478,15 @@ export default function Profile() {
             </div>
 
             <div style={{ paddingBottom: 6, maxWidth: 640 }}>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  marginBottom: 10,
+                }}
+              >
                 <div style={pill}>
                   🧬 Level <b style={{ color: "white" }}>{level}</b>
                   <span style={{ opacity: 0.6 }}>•</span>
@@ -1430,27 +1500,69 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ fontSize: 36, fontWeight: 950, lineHeight: 1.03 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                <div style={{ fontSize: 36, fontWeight: 950 }}>
                   {profile.full_name || profile.username || "Explorer"}
                 </div>
+
+                <ProfileRatingSummary profileId={profile.id} />
+
+                {profile?.is_verified_creator && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      background: "rgba(0,255,176,0.14)",
+                      border: "1px solid rgba(0,255,176,0.35)",
+                      color: "#9cffd8",
+                      fontWeight: 900,
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    ✔ VERIFIED ORGANIZER
+                  </span>
+                )}
+
                 {isFriend && <FriendBadge />}
               </div>
 
-              <div style={{ marginTop: 8, fontSize: 13, opacity: 0.82, lineHeight: 1.6 }}>
-                {profile.bio || "No description yet. This explorer prefers actions over words."}
+              <div
+                style={{
+                  marginTop: 8,
+                  fontSize: 13,
+                  opacity: 0.82,
+                  lineHeight: 1.6,
+                }}
+              >
+                {profile.bio ||
+                  "No description yet. This explorer prefers actions over words."}
               </div>
 
-              {/* SOCIAL LINKS */}
+              <div style={{ marginTop: 14, maxWidth: 640 }}>
+                <ProfileRatingBox ratedUserId={profile.id} user={authUser} />
+              </div>
+
               {(profile.instagram_url || profile.tiktok_url || profile.youtube_url) && (
-                <div style={{ marginTop: 14, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <div
+                  style={{
+                    marginTop: 14,
+                    display: "flex",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
                   {profile.instagram_url && (
                     <a
-                      href={
-                        profile.instagram_url.startsWith("http")
-                          ? profile.instagram_url
-                          : `https://instagram.com/${profile.instagram_url}`
-                      }
+                      href={openExternalUrl(profile.instagram_url, "instagram")}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -1462,7 +1574,8 @@ export default function Profile() {
                         fontSize: 12,
                         fontWeight: 950,
                         letterSpacing: "0.05em",
-                        background: "linear-gradient(135deg, rgba(225,48,108,0.35), rgba(255,220,128,0.25))",
+                        background:
+                          "linear-gradient(135deg, rgba(225,48,108,0.35), rgba(255,220,128,0.25))",
                         border: "1px solid rgba(225,48,108,0.45)",
                         color: "#fff0f7",
                         textDecoration: "none",
@@ -1475,11 +1588,7 @@ export default function Profile() {
 
                   {profile.tiktok_url && (
                     <a
-                      href={
-                        profile.tiktok_url.startsWith("http")
-                          ? profile.tiktok_url
-                          : `https://www.tiktok.com/@${profile.tiktok_url.replace("@", "")}`
-                      }
+                      href={openExternalUrl(profile.tiktok_url, "tiktok")}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -1496,7 +1605,8 @@ export default function Profile() {
                         border: "1px solid rgba(255,255,255,0.25)",
                         color: "#ffffff",
                         textDecoration: "none",
-                        boxShadow: "0 0 28px rgba(255,0,80,0.35), 0 0 28px rgba(0,255,255,0.25)",
+                        boxShadow:
+                          "0 0 28px rgba(255,0,80,0.35), 0 0 28px rgba(0,255,255,0.25)",
                       }}
                     >
                       🎵 TikTok
@@ -1505,11 +1615,7 @@ export default function Profile() {
 
                   {profile.youtube_url && (
                     <a
-                      href={
-                        profile.youtube_url.startsWith("http")
-                          ? profile.youtube_url
-                          : `https://youtube.com/@${profile.youtube_url.replace("@", "")}`
-                      }
+                      href={openExternalUrl(profile.youtube_url, "youtube")}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -1521,7 +1627,8 @@ export default function Profile() {
                         fontSize: 12,
                         fontWeight: 950,
                         letterSpacing: "0.05em",
-                        background: "linear-gradient(135deg, rgba(255,0,0,0.35), rgba(255,80,80,0.20))",
+                        background:
+                          "linear-gradient(135deg, rgba(255,0,0,0.35), rgba(255,80,80,0.20))",
                         border: "1px solid rgba(255,0,0,0.55)",
                         color: "#ffeaea",
                         textDecoration: "none",
@@ -1534,9 +1641,15 @@ export default function Profile() {
                 </div>
               )}
 
-              {/* extra badges */}
               {badges.length > 0 && (
-                <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    marginTop: 10,
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
                   {badges.map((b) => (
                     <span
                       key={b.t}
@@ -1556,9 +1669,16 @@ export default function Profile() {
                 </div>
               )}
 
-              {/* XP bar */}
               <div style={{ marginTop: 12, maxWidth: 640 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.78, marginBottom: 6 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 11,
+                    opacity: 0.78,
+                    marginBottom: 6,
+                  }}
+                >
                   <span>XP</span>
                   <span>
                     {xp} / {nextCap}
@@ -1587,17 +1707,42 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* RIGHT actions */}
           {actionBar}
         </div>
 
-        {/* stats strip */}
-        <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+        <div
+          style={{
+            marginTop: 18,
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 10,
+          }}
+        >
           {[
-            { label: "Tours", value: tours.length, icon: "🗺️", click: () => setActiveTab("tours") },
-            { label: "Followers", value: followersCount, icon: "👥", click: () => setShowFollowers(true) },
-            { label: "Following", value: followingCount, icon: "🧷", click: () => setActiveTab("overview") },
-            { label: "Rating", value: avgRating ? avgRating.toFixed(1) : "N/A", icon: "⭐", click: () => setActiveTab("overview") },
+            {
+              label: "Tours",
+              value: tours.length,
+              icon: "🗺️",
+              click: () => setActiveTab("tours"),
+            },
+            {
+              label: "Followers",
+              value: followersCount,
+              icon: "👥",
+              click: () => setShowFollowers(true),
+            },
+            {
+              label: "Following",
+              value: followingCount,
+              icon: "🧷",
+              click: () => setActiveTab("overview"),
+            },
+            {
+              label: "Rating",
+              value: avgRating ? avgRating.toFixed(1) : "N/A",
+              icon: "⭐",
+              click: () => setActiveTab("overview"),
+            },
           ].map((s) => (
             <div
               key={s.label}
@@ -1622,7 +1767,8 @@ export default function Profile() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  background: "linear-gradient(135deg, rgba(0,255,195,0.14), rgba(124,77,255,0.14))",
+                  background:
+                    "linear-gradient(135deg, rgba(0,255,195,0.14), rgba(124,77,255,0.14))",
                   border: "1px solid rgba(255,255,255,0.10)",
                 }}
               >
@@ -1630,7 +1776,9 @@ export default function Profile() {
               </div>
               <div>
                 <div style={{ fontSize: 11, opacity: 0.75 }}>{s.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 950, lineHeight: 1.1 }}>{s.value}</div>
+                <div style={{ fontSize: 20, fontWeight: 950, lineHeight: 1.1 }}>
+                  {s.value}
+                </div>
               </div>
             </div>
           ))}
@@ -1642,13 +1790,22 @@ export default function Profile() {
   const tabs = (
     <div style={tabsWrap}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button style={tabBtn(activeTab === "overview")} onClick={() => setActiveTab("overview")}>
+        <button
+          style={tabBtn(activeTab === "overview")}
+          onClick={() => setActiveTab("overview")}
+        >
           Overview
         </button>
-        <button style={tabBtn(activeTab === "tours")} onClick={() => setActiveTab("tours")}>
+        <button
+          style={tabBtn(activeTab === "tours")}
+          onClick={() => setActiveTab("tours")}
+        >
           Tours
         </button>
-        <button style={tabBtn(activeTab === "events")} onClick={() => setActiveTab("events")}>
+        <button
+          style={tabBtn(activeTab === "events")}
+          onClick={() => setActiveTab("events")}
+        >
           Events
         </button>
 
@@ -1662,12 +1819,23 @@ export default function Profile() {
           Friends {canSeeFriends ? "" : "🔒"}
         </button>
 
-        <button style={tabBtn(activeTab === "timeline")} onClick={() => setActiveTab("timeline")}>
+        <button
+          style={tabBtn(activeTab === "timeline")}
+          onClick={() => setActiveTab("timeline")}
+        >
           Timeline
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+          justifyContent: "flex-end",
+        }}
+      >
         <div style={pill}>
           🧠 XP: <b style={{ color: "white" }}>{xp}</b>
         </div>
@@ -1678,12 +1846,16 @@ export default function Profile() {
     </div>
   );
 
-  // ================= OVERVIEW GRID =================
   const OverviewGrid = (
     <div style={gridResponsive}>
-      {/* LEFT: Timeline */}
       <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <div>
             <div style={sectionTitle}>Timeline</div>
             <div style={{ fontSize: 18, fontWeight: 950 }}>Recent activity</div>
@@ -1692,7 +1864,9 @@ export default function Profile() {
         </div>
 
         {timeline.length === 0 ? (
-          <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No activity yet.</div>
+          <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
+            No activity yet.
+          </div>
         ) : (
           <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
             {timeline.map((it, i) => (
@@ -1716,14 +1890,24 @@ export default function Profile() {
                       borderRadius: 14,
                       overflow: "hidden",
                       border: "1px solid rgba(255,255,255,0.10)",
-                      cursor: it.type === "tour" || it.type === "event" ? "pointer" : "default",
+                      cursor:
+                        it.type === "tour" || it.type === "event" ? "pointer" : "default",
                     }}
                     onClick={() => {
                       if (it.type === "tour" && it.id) navigate(`/tour/${it.id}`);
                       if (it.type === "event" && it.id) navigate(`/event/${it.id}`);
                     }}
                   >
-                    <img src={it.cover} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(1.15)" }} />
+                    <img
+                      src={it.cover}
+                      alt=""
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        filter: "saturate(1.15)",
+                      }}
+                    />
                   </div>
                 ) : null}
 
@@ -1750,7 +1934,9 @@ export default function Profile() {
                   </div>
 
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, opacity: 0.75 }}>{fmtDate(it.created_at)}</div>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>
+                      {formatDateTime(it.created_at)}
+                    </div>
                     <div style={{ fontWeight: 950, fontSize: 14 }}>{it.title}</div>
                     <div style={{ fontSize: 14, opacity: 0.95, marginTop: 2 }}>{it.subtitle}</div>
                     <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{it.meta}</div>
@@ -1771,13 +1957,19 @@ export default function Profile() {
         )}
       </div>
 
-      {/* RIGHT: Rating + Quick cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        {/* Rating */}
         <div style={card}>
           <div style={sectionTitle}>Rating</div>
 
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
             <div>
               <div style={{ fontSize: 36, fontWeight: 950, lineHeight: 1 }}>
                 {avgRating ? avgRating.toFixed(1) : "N/A"}
@@ -1795,33 +1987,15 @@ export default function Profile() {
 
           {!isOwnProfile && (
             <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Your rating:</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <span
-                    key={s}
-                    onClick={() => rate(s)}
-                    style={{
-                      cursor: ratingBusy ? "default" : "pointer",
-                      fontSize: 32,
-                      color: s <= (myRating || 0) ? "#ffd36b" : "rgba(255,255,255,0.28)",
-                      textShadow: s <= (myRating || 0) ? "0 0 14px rgba(255,211,107,0.45)" : "none",
-                      userSelect: "none",
-                      opacity: ratingBusy ? 0.7 : 1,
-                    }}
-                  >
-                    ★
-                  </span>
-                ))}
-                {ratingBusy && <span style={{ fontSize: 12, opacity: 0.7, marginLeft: 8 }}>Saving…</span>}
-              </div>
+              <ProfileRatingBox ratedUserId={profile.id} user={authUser} />
             </div>
           )}
         </div>
 
-        {/* Quick: Tours */}
         <div style={card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
             <div>
               <div style={sectionTitle}>Tours</div>
               <div style={{ fontSize: 18, fontWeight: 950 }}>Created tours</div>
@@ -1830,11 +2004,22 @@ export default function Profile() {
           </div>
 
           {tours.length === 0 ? (
-            <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No tours created yet.</div>
+            <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
+              No tours created yet.
+            </div>
           ) : (
-            <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
+            <div
+              style={{
+                marginTop: 14,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+                gap: 12,
+              }}
+            >
               {tours.slice(0, 8).map((t) => {
-                const img = t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+                const img =
+                  t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+
                 return (
                   <div
                     key={t.id}
@@ -1872,7 +2057,14 @@ export default function Profile() {
                           }}
                         />
                       )}
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.85))" }} />
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.85))",
+                        }}
+                      />
                       <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
                         <div style={{ fontWeight: 950, fontSize: 13 }}>{t.title}</div>
                         <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
@@ -1882,9 +2074,20 @@ export default function Profile() {
                       </div>
                     </div>
 
-                    <div style={{ padding: 10, display: "flex", justifyContent: "space-between", gap: 8 }}>
-                      <div style={{ fontSize: 11, opacity: 0.72 }}>{t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}</div>
-                      <div style={{ fontSize: 11, opacity: 0.9 }}>{t.price ? `💶 ${t.price}€` : "Free"}</div>
+                    <div
+                      style={{
+                        padding: 10,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ fontSize: 11, opacity: 0.72 }}>
+                        {t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}
+                      </div>
+                      <div style={{ fontSize: 11, opacity: 0.9 }}>
+                        {t.price ? `💶 ${t.price}€` : "Free"}
+                      </div>
                     </div>
                   </div>
                 );
@@ -1892,7 +2095,10 @@ export default function Profile() {
             </div>
           )}
 
-          <button style={{ ...btnGhost, marginTop: 14, width: "100%" }} onClick={() => setActiveTab("tours")}>
+          <button
+            style={{ ...btnGhost, marginTop: 14, width: "100%" }}
+            onClick={() => setActiveTab("tours")}
+          >
             View tours →
           </button>
         </div>
@@ -1900,18 +2106,28 @@ export default function Profile() {
     </div>
   );
 
-  // ================= TABS CONTENT =================
   const ToursTab = (
     <div style={card}>
       <div style={sectionTitle}>Tours</div>
       <div style={{ fontSize: 20, fontWeight: 950 }}>All created tours</div>
 
       {tours.length === 0 ? (
-        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No tours created yet.</div>
+        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
+          No tours created yet.
+        </div>
       ) : (
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: 12,
+          }}
+        >
           {tours.map((t) => {
-            const img = t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+            const img =
+              t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+
             return (
               <div
                 key={t.id}
@@ -1927,7 +2143,16 @@ export default function Profile() {
               >
                 <div style={{ position: "relative", height: 150 }}>
                   {img ? (
-                    <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(1.15) contrast(1.05) brightness(0.92)" }} />
+                    <img
+                      src={img}
+                      alt=""
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        filter: "saturate(1.15) contrast(1.05) brightness(0.92)",
+                      }}
+                    />
                   ) : (
                     <div
                       style={{
@@ -1940,7 +2165,14 @@ export default function Profile() {
                       }}
                     />
                   )}
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.88))" }} />
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.88))",
+                    }}
+                  />
                   <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
                     <div style={{ fontWeight: 950, fontSize: 14 }}>{t.title}</div>
                     <div style={{ fontSize: 12, opacity: 0.78, marginTop: 3 }}>
@@ -1950,7 +2182,16 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div style={{ padding: 10, display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, opacity: 0.9 }}>
+                <div
+                  style={{
+                    padding: 10,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    fontSize: 12,
+                    opacity: 0.9,
+                  }}
+                >
                   <span>{t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}</span>
                   <span>{t.price ? `💶 ${t.price}€` : "Free"}</span>
                 </div>
@@ -1968,9 +2209,18 @@ export default function Profile() {
       <div style={{ fontSize: 20, fontWeight: 950 }}>Upcoming adventures</div>
 
       {events.length === 0 ? (
-        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No events created yet.</div>
+        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
+          No events created yet.
+        </div>
       ) : (
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: 12,
+          }}
+        >
           {events.map((e) => {
             const c = e.cover_url || "";
             return (
@@ -1988,7 +2238,16 @@ export default function Profile() {
               >
                 <div style={{ position: "relative", height: 150 }}>
                   {c ? (
-                    <img src={c} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(1.15) contrast(1.05)" }} />
+                    <img
+                      src={c}
+                      alt=""
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        filter: "saturate(1.15) contrast(1.05)",
+                      }}
+                    />
                   ) : (
                     <div
                       style={{
@@ -2001,7 +2260,14 @@ export default function Profile() {
                       }}
                     />
                   )}
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.90))" }} />
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.90))",
+                    }}
+                  />
                   <div style={{ position: "absolute", bottom: 10, left: 10, right: 10 }}>
                     <div style={{ fontWeight: 950, fontSize: 14 }}>{e.title}</div>
                     <div style={{ fontSize: 12, opacity: 0.82, marginTop: 2 }}>
@@ -2011,8 +2277,16 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div style={{ padding: 10, display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.9 }}>
-                  <span>🗓️ {e.start_date ? new Date(e.start_date).toLocaleDateString() : "Date TBA"}</span>
+                <div
+                  style={{
+                    padding: 10,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 12,
+                    opacity: 0.9,
+                  }}
+                >
+                  <span>🗓️ {e.start_date ? formatDate(e.start_date) : "Date TBA"}</span>
                   <span>→ Open</span>
                 </div>
               </div>
@@ -2029,7 +2303,9 @@ export default function Profile() {
       <div style={{ fontSize: 20, fontWeight: 950 }}>Everything this explorer did</div>
 
       {timeline.length === 0 ? (
-        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No activity yet.</div>
+        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
+          No activity yet.
+        </div>
       ) : (
         <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
           {timeline.map((it, i) => (
@@ -2067,15 +2343,26 @@ export default function Profile() {
               </div>
 
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>{fmtDate(it.created_at)}</div>
-                <div style={{ fontWeight: 950, fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <div style={{ fontSize: 12, opacity: 0.75 }}>{formatDateTime(it.created_at)}</div>
+                <div
+                  style={{
+                    fontWeight: 950,
+                    fontSize: 15,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
                   {it.title} — {it.subtitle}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>{it.meta}</div>
               </div>
 
               {(it.type === "tour" || it.type === "event") && it.id ? (
-                <button style={{ ...btnGhost, padding: "8px 12px", fontSize: 12 }} onClick={() => navigate(`/${it.type}/${it.id}`)}>
+                <button
+                  style={{ ...btnGhost, padding: "8px 12px", fontSize: 12 }}
+                  onClick={() => navigate(`/${it.type}/${it.id}`)}
+                >
                   Open →
                 </button>
               ) : null}
@@ -2089,7 +2376,15 @@ export default function Profile() {
   const FriendsTab = (
     <div style={card}>
       <div style={sectionTitle}>Friends</div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
         <div style={{ fontSize: 20, fontWeight: 950 }}>Mutual follows</div>
         {!canSeeFriends && <div style={pill}>🔒 Private</div>}
       </div>
@@ -2101,7 +2396,14 @@ export default function Profile() {
       ) : friendsList.length === 0 ? (
         <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No friends yet.</div>
       ) : (
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: 10,
+          }}
+        >
           {friendsList.map((u) => (
             <div
               key={u.id}
@@ -2123,7 +2425,17 @@ export default function Profile() {
                 style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover" }}
               />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", gap: 8, alignItems: "center" }}>
+                <div
+                  style={{
+                    fontWeight: 950,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                  }}
+                >
                   {u.full_name || u.username || "Explorer"} <FriendBadge />
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.75 }}>
@@ -2137,7 +2449,6 @@ export default function Profile() {
     </div>
   );
 
-  // ================= RETURN =================
   return (
     <div style={page}>
       <div style={wrap}>
@@ -2150,7 +2461,6 @@ export default function Profile() {
         {activeTab === "timeline" && TimelineTab}
         {activeTab === "friends" && FriendsTab}
 
-        {/* FOLLOWERS MODAL */}
         {showFollowers && (
           <div
             onClick={() => setShowFollowers(false)}
@@ -2175,7 +2485,14 @@ export default function Profile() {
                 padding: 16,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 10,
+                }}
+              >
                 <div>
                   <div style={sectionTitle}>Followers</div>
                   <div style={{ fontSize: 18, fontWeight: 950 }}>{followersCount} people</div>
@@ -2188,7 +2505,14 @@ export default function Profile() {
               {followersList.length === 0 ? (
                 <div style={{ opacity: 0.75, padding: 10 }}>No followers yet.</div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10, marginTop: 10 }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+                    gap: 10,
+                    marginTop: 10,
+                  }}
+                >
                   {followersList.map((u) => (
                     <div
                       key={u.id}
@@ -2213,7 +2537,14 @@ export default function Profile() {
                         style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover" }}
                       />
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div
+                          style={{
+                            fontWeight: 950,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
                           {u.full_name || u.username || "Explorer"}
                         </div>
                         <div style={{ fontSize: 12, opacity: 0.75 }}>
@@ -2228,7 +2559,6 @@ export default function Profile() {
           </div>
         )}
 
-        {/* FRIENDS PRIVATE LOCK MODAL */}
         {showFriends && !canSeeFriends && (
           <div
             onClick={() => setShowFriends(false)}
@@ -2253,9 +2583,7 @@ export default function Profile() {
             >
               <div style={sectionTitle}>Friends</div>
 
-              <div style={{ fontSize: 20, fontWeight: 950 }}>
-                🔒 Private list
-              </div>
+              <div style={{ fontSize: 20, fontWeight: 950 }}>🔒 Private list</div>
 
               <div
                 style={{
@@ -2265,8 +2593,8 @@ export default function Profile() {
                   lineHeight: 1.6,
                 }}
               >
-                Friends list is private.  
-                <b> Only friends</b> can see it.  
+                Friends list is private.
+                <b> Only friends</b> can see it.
                 Follow each other to unlock.
               </div>
 
@@ -2278,19 +2606,12 @@ export default function Profile() {
                   marginTop: 14,
                 }}
               >
-                <button
-                  style={btnGhost}
-                  onClick={() => setShowFriends(false)}
-                >
+                <button style={btnGhost} onClick={() => setShowFriends(false)}>
                   Close
                 </button>
 
                 {!isOwnProfile && (
-                  <button
-                    style={btnPrimary}
-                    onClick={toggleFollow}
-                    disabled={followBusy}
-                  >
+                  <button style={btnPrimary} onClick={toggleFollow} disabled={followBusy}>
                     {isFollowing ? "Following ✓" : "Follow"}
                   </button>
                 )}

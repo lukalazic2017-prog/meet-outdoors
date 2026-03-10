@@ -68,23 +68,44 @@ export default function CreateTour() {
 
   // --- STATE ---
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
-  const isVerifiedCreator = user?.is_verified_creator;
+const [user, setUser] = useState(null);
+const [profile, setProfile] = useState(null);
+const [errorMsg, setErrorMsg] = useState("");
+const [successMsg, setSuccessMsg] = useState("");
+
+const isVerifiedCreator =
+  profile?.is_verified === true ||
+  profile?.is_verified_creator === true ||
+  profile?.creator_status === "approved";
 
   // ------------ LOAD AUTH USER ------------
-  useEffect(() => {
-    async function loadUser() {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user || null);
-      if (!data.user) {
-        // po želji redirect na login
-        // navigate("/login");
-      }
+ useEffect(() => {
+  async function loadUserAndProfile() {
+    const { data } = await supabase.auth.getUser();
+    const authUser = data.user || null;
+
+    setUser(authUser);
+
+    if (!authUser) {
+      return;
     }
-    loadUser();
-  }, []);
+
+    const { data: profileData, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .single();
+
+    if (error) {
+      console.log("PROFILE LOAD ERROR:", error);
+      return;
+    }
+
+    setProfile(profileData);
+  }
+
+  loadUserAndProfile();
+}, []);
 
   // ------------ ACTIVITIES & COUNTRIES ------------
   const activitiesList = [

@@ -1,5 +1,5 @@
 // src/pages/Notifications.jsx
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -7,346 +7,336 @@ export default function Notifications() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
-  const [items, setItems] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState("");
 
-  // UČITAVANJE USERA + NOTIFIKACIJA
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setErrorMsg("");
+  const loadNotifications = useCallback(async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const me = auth?.user || null;
+    setUser(me);
 
-      const { data: auth } = await supabase.auth.getUser();
-      const currentUser = auth?.user || null;
-
-      if (!currentUser) {
-        setUser(null);
-        setItems([]);
-        setLoading(false);
-        return;
-      }
-
-      setUser(currentUser);
-
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", currentUser.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) {
-        console.error("Notifications load error:", error);
-        setErrorMsg("Could not load notifications.");
-      } else {
-        setItems(data || []);
-      }
-
+    if (!me) {
+      setNotifications([]);
       setLoading(false);
+      return;
     }
 
-    load();
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", me.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.log("LOAD NOTIFICATIONS ERROR", error);
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
+
+    setNotifications(data || []);
+    setLoading(false);
   }, []);
 
-  // REALTIME – sluša INSERT na notifications
   useEffect(() => {
-    if (!user) return;
+    let channel;
 
-    const channel = supabase
-      .channel("notifications_user_" + user.id)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications" },
-        (payload) => {
-          const notif = payload.new;
-          // samo ako je za ovog usera
-          if (notif.user_id === user.id) {
-            setItems((prev) => [notif, ...prev]);
+    const init = async () => {
+      await loadNotifications();
+
+      const { data: auth } = await supabase.auth.getUser();
+      const me = auth?.user || null;
+
+      if (!me) return;
+
+      channel = supabase
+        .channel(`notifications_${me.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${me.id}`,
+          },
+          async () => {
+            await loadNotifications();
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe((status) => {
+          console.log("NOTIFICATIONS SUBSCRIBE STATUS:", status);
+        });
+    };
+
+    init();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
+  }, [loadNotifications]);
+
+  const markAsRead = useCallback(async (id) => {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("id", id);
+
+    if (error) {
+      console.log("MARK AS READ ERROR", error);
+      return;
+    }
+
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+    );
+  }, []);
+
+  const markAllAsRead = useCallback(async () => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+
+    if (error) {
+      console.log("MARK ALL READ ERROR", error);
+      return;
+    }
+
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }, [user]);
 
-  // Označi sve kao pročitano
-  async function markAllRead() {
-    if (!user) return;
+  const deleteNotification = useCallback(async (id) => {
+    const { error } = await supabase.from("notifications").delete().eq("id", id);
 
-    // lokalno
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-
-    // baza
-    await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", user.id)
-      .eq("read", false);
-  }
-
-  // klik na jednu notifikaciju
-  async function openNotification(n) {
-    if (!user) return;
-
-    // lokalno mark read
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === n.id ? { ...item, read: true } : item
-      )
-    );
-
-    // u bazi mark read
-    await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("id", n.id)
-      .eq("user_id", user.id);
-
-    if (n.link) {
-      navigate(n.link);
+    if (error) {
+      console.log("DELETE NOTIFICATION ERROR", error);
+      return;
     }
-  }
 
-  const pageStyle = {
-    minHeight: "100vh",
-    padding: "24px 16px 40px",
-    background:
-      "radial-gradient(circle at top, #050c10 0%, #020308 45%, #000000 100%)",
-    color: "#ffffff",
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    boxSizing: "border-box",
-  };
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
 
-  const containerStyle = {
-    maxWidth: 920,
-    margin: "0 auto",
-  };
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.is_read).length,
+    [notifications]
+  );
 
-  const headerRow = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 18,
-  };
+  const fmtDate = useCallback((d) => {
+    try {
+      return new Date(d).toLocaleString();
+    } catch {
+      return "";
+    }
+  }, []);
 
-  const titleStyle = {
-    fontSize: 26,
-    fontWeight: 800,
-  };
-
-  const markAllBtn = {
-    padding: "8px 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(0,0,0,0.7)",
-    color: "#ffffff",
-    fontSize: 12,
-    cursor: "pointer",
-  };
-
-  const listStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-    marginTop: 10,
-  };
-
-  const itemStyle = (read) => ({
-    padding: "10px 14px",
-    borderRadius: 14,
-    background: read
-      ? "rgba(255,255,255,0.04)"
-      : "linear-gradient(135deg, rgba(0,255,160,0.12), rgba(0,0,0,0.9))",
-    border: read
-      ? "1px solid rgba(255,255,255,0.06)"
-      : "1px solid rgba(0,255,160,0.6)",
-    cursor: "pointer",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 10,
-  });
-
-  const textCol = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-  };
-
-  const titleText = {
-    fontSize: 14,
-    fontWeight: 600,
-  };
-
-  const bodyText = {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.85)",
-  };
-
-  const metaCol = {
-    textAlign: "right",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.7)",
-    minWidth: 120,
+  const styles = {
+    page: {
+      minHeight: "100vh",
+      padding: "18px 14px 40px",
+      background:
+        "radial-gradient(circle at top, #062c22 0%, #02060b 45%, #000 100%)",
+      color: "#fff",
+      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      boxSizing: "border-box",
+    },
+    shell: {
+      width: "100%",
+      maxWidth: 980,
+      margin: "0 auto",
+    },
+    header: {
+      padding: "16px 18px",
+      borderRadius: 20,
+      marginBottom: 14,
+      background:
+        "linear-gradient(135deg, rgba(0,0,0,0.92), rgba(0,255,160,0.14))",
+      border: "1px solid rgba(0,255,160,0.28)",
+      boxShadow: "0 20px 40px rgba(0,0,0,0.9)",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 12,
+      flexWrap: "wrap",
+    },
+    backBtn: {
+      padding: "8px 12px",
+      borderRadius: 999,
+      border: "1px solid rgba(255,255,255,0.14)",
+      background: "rgba(255,255,255,0.06)",
+      color: "white",
+      cursor: "pointer",
+      fontWeight: 700,
+      marginBottom: 8,
+    },
+    badge: {
+      fontSize: 12,
+      padding: "7px 12px",
+      borderRadius: 999,
+      background: "rgba(0,255,160,0.15)",
+      border: "1px solid rgba(0,255,160,0.5)",
+      color: "#baffea",
+      fontWeight: 800,
+    },
+    actions: {
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+      marginBottom: 14,
+    },
+    actionBtn: {
+      padding: "10px 14px",
+      borderRadius: 999,
+      border: "1px solid rgba(255,255,255,0.16)",
+      background: "rgba(255,255,255,0.06)",
+      color: "#fff",
+      cursor: "pointer",
+      fontWeight: 700,
+    },
+    list: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 12,
+    },
+    card: (isRead) => ({
+      padding: "14px 16px",
+      borderRadius: 18,
+      background: isRead
+        ? "rgba(255,255,255,0.05)"
+        : "linear-gradient(135deg, rgba(0,255,160,0.14), rgba(255,255,255,0.06))",
+      border: isRead
+        ? "1px solid rgba(255,255,255,0.10)"
+        : "1px solid rgba(0,255,160,0.26)",
+      boxShadow: "0 14px 34px rgba(0,0,0,0.7)",
+      display: "flex",
+      justifyContent: "space-between",
+      gap: 14,
+      alignItems: "flex-start",
+      flexWrap: "wrap",
+    }),
+    cardLeft: {
+      flex: 1,
+      minWidth: 220,
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: 800,
+      marginBottom: 5,
+      lineHeight: 1.45,
+    },
+    meta: {
+      fontSize: 12,
+      opacity: 0.7,
+    },
+    cardActions: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap",
+    },
+    miniBtn: {
+      padding: "8px 12px",
+      borderRadius: 999,
+      border: "1px solid rgba(255,255,255,0.16)",
+      background: "rgba(0,0,0,0.45)",
+      color: "#fff",
+      cursor: "pointer",
+      fontSize: 12,
+      fontWeight: 700,
+    },
+    empty: {
+      textAlign: "center",
+      padding: "36px 16px",
+      opacity: 0.72,
+      borderRadius: 18,
+      background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.08)",
+    },
   };
 
   if (loading) {
-    return (
-      <div style={pageStyle}>
-        <div style={containerStyle}>
-          <div
-            style={{
-              minHeight: "60vh",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-            }}
-          >
-            Loading notifications...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div style={pageStyle}>
-        <div style={containerStyle}>
-          <div
-            style={{
-              minHeight: "60vh",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 14,
-              opacity: 0.8,
-            }}
-          >
-            Please log in to see your notifications.
-          </div>
-        </div>
-      </div>
-    );
+    return <div style={{ padding: 20, color: "white" }}>Loading notifications…</div>;
   }
 
   return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        <div style={headerRow}>
+    <div style={styles.page}>
+      <div style={styles.shell}>
+        <div style={styles.header}>
           <div>
+            <button style={styles.backBtn} onClick={() => navigate(-1)}>
+              ← Back
+            </button>
             <div
               style={{
                 fontSize: 11,
-                letterSpacing: "0.12em",
+                letterSpacing: "0.14em",
+                opacity: 0.7,
                 textTransform: "uppercase",
-                opacity: 0.8,
-                marginBottom: 4,
               }}
             >
+              Activity
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.15 }}>
               🔔 Notifications
             </div>
-            <h1 style={titleStyle}>What&apos;s new for you</h1>
           </div>
 
-          {items.length > 0 && (
-            <button style={markAllBtn} onClick={markAllRead}>
-              Mark all as read
-            </button>
-          )}
+          <div style={styles.badge}>
+            Unread: <strong>{unreadCount}</strong>
+          </div>
         </div>
 
-        {errorMsg && (
-          <div
-            style={{
-              marginBottom: 12,
-              padding: "8px 10px",
-              borderRadius: 10,
-              background: "rgba(255,60,80,0.2)",
-              border: "1px solid rgba(255,60,80,0.6)",
-              fontSize: 13,
-            }}
-          >
-            {errorMsg}
-          </div>
-        )}
+        <div style={styles.actions}>
+          <button style={styles.actionBtn} onClick={markAllAsRead}>
+            Mark all as read
+          </button>
+        </div>
 
-        {items.length === 0 ? (
-          <div
-            style={{
-              marginTop: 40,
-              textAlign: "center",
-              fontSize: 14,
-              opacity: 0.7,
-            }}
-          >
-            You don&apos;t have any notifications yet.
-          </div>
-        ) : (
-          <div style={listStyle}>
-            {items.map((n) => {
-              const title =
-                n.title ||
-                (n.message && "Notification") ||
-                "Notification";
-              const text = n.body || n.message || "";
-              const date = n.created_at
-                ? new Date(n.created_at).toLocaleString()
-                : "";
-
-              return (
-                <div
-                  key={n.id}
-                  style={itemStyle(n.read)}
-                  onClick={() => openNotification(n)}
-                >
-                  <div style={textCol}>
-                    <div style={titleText}>
-                      {!n.read && (
-                        <span
-                          style={{
-                            display: "inline-block",
-                            width: 8,
-                            height: 8,
-                            borderRadius: "50%",
-                            background: "#00ffb0",
-                            marginRight: 6,
-                          }}
-                        />
-                      )}
-                      {title}
-                    </div>
-                    {text && <div style={bodyText}>{text}</div>}
-                    {n.link && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          marginTop: 4,
-                          color: "rgba(0,255,160,0.85)",
-                        }}
-                      >
-                        Tap to open
-                      </div>
-                    )}
-                  </div>
-                  <div style={metaCol}>
-                    <div>{date}</div>
-                    {n.read && (
-                      <div style={{ marginTop: 4, opacity: 0.8 }}>
-                        Read
-                      </div>
-                    )}
-                  </div>
+        <div style={styles.list}>
+          {notifications.length === 0 ? (
+            <div style={styles.empty}>No notifications yet.</div>
+          ) : (
+            notifications.map((n) => (
+              <div key={n.id} style={styles.card(n.is_read)}>
+                <div style={styles.cardLeft}>
+                  <div style={styles.title}>{n.message || "Notification"}</div>
+                  <div style={styles.meta}>{fmtDate(n.created_at)}</div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+
+                <div style={styles.cardActions}>
+                  {!n.is_read && (
+                    <button
+                      style={styles.miniBtn}
+                      onClick={() => markAsRead(n.id)}
+                    >
+                      Mark read
+                    </button>
+                  )}
+
+                  {n.link && (
+                    <button
+                      style={styles.miniBtn}
+                      onClick={() => {
+                        if (!n.is_read) markAsRead(n.id);
+                        navigate(n.link);
+                      }}
+                    >
+                      Open
+                    </button>
+                  )}
+
+                  <button
+                    style={styles.miniBtn}
+                    onClick={() => deleteNotification(n.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

@@ -33,6 +33,8 @@ import Event from "./pages/Event";
 import EventDetails from "./pages/EventDetails";
 import Events from "./pages/Events";
 import SavedTours from "./pages/SavedTours";
+import ApplyCreator from "./pages/ApplyCreator";
+import AdminCreatorRequests from "./pages/AdminCreatorRequests";
 
 
 
@@ -78,6 +80,8 @@ function App() {
           <Route path ="/events" element={<Events />} />
           <Route path ="/event/:id" element={<EventDetails />} />
           <Route path="/saved-tours" element={<SavedTours />} />
+          <Route path="/apply-creator" element={<ApplyCreator />} />
+<Route path="/admin/creator-requests" element={<AdminCreatorRequests />} />
           
           {/* AUTH */}
           <Route path="/login" element={<Login />} />

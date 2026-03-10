@@ -16,11 +16,8 @@ export default function TourDetails() {
   const [currentImage, setCurrentImage] = useState(0);
   const [participantsList, setParticipantsList] = useState([]);
   const [countdown, setCountdown] = useState("");
-
-  // ✅ NEW: creator profile
   const [creatorProfile, setCreatorProfile] = useState(null);
 
-  // ================= HELPERS =================
   function formatDate(date) {
     if (!date) return "";
     return new Date(date).toLocaleDateString("en-GB", {
@@ -48,7 +45,6 @@ export default function TourDetails() {
     return `${minutes}m`;
   }
 
-  // ================= COUNTDOWN =================
   useEffect(() => {
     if (!tour?.application_deadline) return;
 
@@ -61,7 +57,6 @@ export default function TourDetails() {
     return () => clearInterval(interval);
   }, [tour?.application_deadline]);
 
-  // ================= LOAD =================
   useEffect(() => {
     loadTour();
     // eslint-disable-next-line
@@ -81,17 +76,42 @@ export default function TourDetails() {
           filter: `tour_id=eq.${id}`,
         },
         async () => {
-          const { data: people } = await supabase
+          const { data: people, error: peopleError } = await supabase
             .from("tour_registrations")
-            .select(`user_id, profiles:profiles ( full_name, avatar_url )`)
-            .eq("tour_id", id);
+            .select(`
+              user_id,
+              joined_at,
+              status,
+              profiles:profiles (
+                full_name,
+                avatar_url,
+                is_verified_creator
+              )
+            `)
+            .eq("tour_id", id)
+            .eq("status", "joined")
+            .order("joined_at", { ascending: true });
 
-          setParticipantsList(people || []);
+          if (peopleError) {
+            console.log("REALTIME PEOPLE ERROR", peopleError);
+            return;
+          }
 
-          const { count } = await supabase
+          const safePeople = people || [];
+          setParticipantsList(safePeople);
+
+          if (user) {
+            const joinedNow = safePeople.some((p) => p.user_id === user.id);
+            setIsJoined(joinedNow);
+          }
+
+          const { count, error: countError } = await supabase
             .from("tour_registrations")
             .select("*", { count: "exact", head: true })
-            .eq("tour_id", id);
+            .eq("tour_id", id)
+            .eq("status", "joined");
+
+          if (countError) console.log("REALTIME COUNT ERROR", countError);
 
           setTour((prev) =>
             prev ? { ...prev, participants: count ?? 0 } : prev
@@ -101,7 +121,7 @@ export default function TourDetails() {
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, [id]);
+  }, [id, user]);
 
   async function loadTour() {
     setLoading(true);
@@ -110,64 +130,87 @@ export default function TourDetails() {
     const currentUser = auth?.user || null;
     setUser(currentUser);
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("tours")
       .select("*")
       .eq("id", id)
       .single();
 
+    if (error) {
+      console.log("LOAD TOUR ERROR", error);
+      setLoading(false);
+      return;
+    }
+
     if (data) {
-      const { count } = await supabase
+      const { count, error: countError } = await supabase
         .from("tour_registrations")
         .select("*", { count: "exact", head: true })
-        .eq("tour_id", id);
+        .eq("tour_id", id)
+        .eq("status", "joined");
+
+      if (countError) console.log("COUNT ERROR", countError);
 
       setTour({ ...data, participants: count ?? 0 });
 
-      const { data: people } = await supabase
+      const { data: people, error: peopleError } = await supabase
         .from("tour_registrations")
-        .select(`user_id, profiles:profiles ( full_name, avatar_url )`)
-        .eq("tour_id", id);
+        .select(`
+          user_id,
+          joined_at,
+          status,
+          profiles:profiles (
+            full_name,
+            avatar_url,
+            is_verified_creator
+          )
+        `)
+        .eq("tour_id", id)
+        .eq("status", "joined")
+        .order("joined_at", { ascending: true });
 
-      setParticipantsList(people || []);
+      if (peopleError) console.log("PEOPLE LOAD ERROR", peopleError);
 
-      // ✅ NEW: load creator profile (organizer)
+      const safePeople = people || [];
+      setParticipantsList(safePeople);
+
       if (data?.creator_id) {
-        const { data: cp } = await supabase
+        const { data: cp, error: cpError } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, home_base")
+          .select("id, full_name, avatar_url, home_base, is_verified_creator")
           .eq("id", data.creator_id)
           .maybeSingle();
+
+        if (cpError) console.log("CREATOR PROFILE ERROR", cpError);
+
         setCreatorProfile(cp || null);
       } else {
         setCreatorProfile(null);
       }
 
       if (currentUser) {
-        const { data: reg } = await supabase
-          .from("tour_registrations")
-          .select("*")
-          .eq("tour_id", id)
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
+        const joinedNow = safePeople.some((p) => p.user_id === currentUser.id);
+        setIsJoined(joinedNow);
 
-        setIsJoined(!!reg);
-
-        const { data: saved } = await supabase
+        const { data: saved, error: savedError } = await supabase
           .from("saved_tours")
           .select("id")
           .eq("tour_id", id)
           .eq("user_id", currentUser.id)
           .maybeSingle();
 
+        if (savedError) console.log("SAVED TOUR ERROR", savedError);
+
         setIsSaved(!!saved);
+      } else {
+        setIsJoined(false);
+        setIsSaved(false);
       }
     }
 
     setLoading(false);
   }
 
-  // ================= ACTIONS =================
   async function joinTour() {
     if (!user) return navigate("/login");
 
@@ -178,40 +221,83 @@ export default function TourDetails() {
       return alert("Applications are closed.");
     }
 
-    await supabase.from("tour_registrations").insert([
-      { tour_id: id, user_id: user.id },
-    ]);
+    const fullNow =
+      (tour?.participants || 0) >=
+      (tour?.max_people || Number.MAX_SAFE_INTEGER);
 
-    loadTour();
+    if (fullNow) {
+      return alert("This tour is full.");
+    }
+
+    const { error } = await supabase
+      .from("tour_registrations")
+      .upsert(
+        [
+          {
+            tour_id: id,
+            user_id: user.id,
+            status: "joined",
+            joined_at: new Date().toISOString(),
+          },
+        ],
+        { onConflict: "tour_id,user_id" }
+      );
+
+    if (error) {
+      console.log("JOIN TOUR ERROR", error);
+      alert("Could not join the tour. Please try again.");
+      return;
+    }
+
+    setIsJoined(true);
+    await loadTour();
   }
 
   async function leaveTour() {
     if (!user) return navigate("/login");
 
-    await supabase
+    const { error } = await supabase
       .from("tour_registrations")
       .delete()
       .eq("tour_id", id)
       .eq("user_id", user.id);
 
+    if (error) {
+      console.log("LEAVE TOUR ERROR", error);
+      alert("Could not leave the tour. Please try again.");
+      return;
+    }
+
     setIsJoined(false);
-    loadTour();
+    await loadTour();
   }
 
   async function toggleSave() {
     if (!user) return navigate("/login");
 
     if (isSaved) {
-      await supabase
+      const { error } = await supabase
         .from("saved_tours")
         .delete()
         .eq("tour_id", id)
         .eq("user_id", user.id);
+
+      if (error) {
+        console.log("UNSAVE ERROR", error);
+        return;
+      }
+
       setIsSaved(false);
     } else {
-      await supabase.from("saved_tours").insert([
-        { tour_id: id, user_id: user.id },
-      ]);
+      const { error } = await supabase
+        .from("saved_tours")
+        .insert([{ tour_id: id, user_id: user.id }]);
+
+      if (error) {
+        console.log("SAVE ERROR", error);
+        return;
+      }
+
       setIsSaved(true);
     }
   }
@@ -225,7 +311,6 @@ export default function TourDetails() {
     navigate("/tours");
   }
 
-  // ================= UI =================
   if (loading || !tour) {
     return <div style={{ color: "white" }}>Loading tour...</div>;
   }
@@ -235,7 +320,6 @@ export default function TourDetails() {
     (tour.participants || 0) >= (tour.max_people || Number.MAX_SAFE_INTEGER);
   const gallery = Array.isArray(tour.image_urls) ? tour.image_urls : [];
 
-  // ===== STILOVI =====
   const pageWrapper = {
     minHeight: "100vh",
     padding: "24px 16px 50px",
@@ -363,7 +447,6 @@ export default function TourDetails() {
   return (
     <div style={pageWrapper}>
       <div style={container}>
-        {/* HERO / COVER */}
         <div style={headerCard}>
           <div style={{ position: "relative", height: 260, overflow: "hidden" }}>
             <img
@@ -382,7 +465,6 @@ export default function TourDetails() {
             />
             <div style={coverOverlay} />
 
-            {/* tekst na coveru */}
             <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
               <div
                 style={{
@@ -415,7 +497,13 @@ export default function TourDetails() {
                 {tour.title}
               </h1>
 
-              <div style={{ fontSize: 13, color: "rgba(230,255,240,0.78)", maxWidth: 520 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "rgba(230,255,240,0.78)",
+                  maxWidth: 520,
+                }}
+              >
                 {tour.location_name && (
                   <>
                     📍 {tour.location_name}
@@ -427,15 +515,11 @@ export default function TourDetails() {
           </div>
         </div>
 
-        {/* GLAVNI LAYOUT */}
         <div style={layoutResponsive}>
-          {/* LEFT: opis + slike + mapa */}
           <div style={card}>
-            {/* OVERVIEW */}
             <div style={{ marginBottom: 14 }}>
               <div style={sectionTitle}>Overview</div>
 
-              {/* ✅ NEW: ORGANIZER (creator) */}
               {creatorProfile && (
                 <div style={{ marginBottom: 10 }}>
                   <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>
@@ -469,12 +553,68 @@ export default function TourDetails() {
                         }}
                       />
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {creatorProfile.full_name || creatorProfile.username || "Organizer"}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            fontWeight: 800,
+                            fontSize: 13,
+                          }}
+                        >
+                          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+  <span>{creatorProfile?.full_name || "Organizer"}</span>
+
+  {creatorProfile?.is_verified_creator && (
+    <span
+      style={{
+        fontSize:10,
+        padding:"3px 8px",
+        borderRadius:999,
+        background:"rgba(0,255,176,0.14)",
+        border:"1px solid rgba(0,255,176,0.35)",
+        color:"#9cffd8",
+        fontWeight:900,
+        letterSpacing:"0.06em",
+        textTransform:"uppercase"
+      }}
+    >
+      Verified Organizer
+    </span>
+  )}
+
+</div>
+
+                          {creatorProfile.is_verified_creator && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                padding: "3px 8px",
+                                borderRadius: 999,
+                                background: "rgba(0,255,176,0.14)",
+                                border: "1px solid rgba(0,255,176,0.35)",
+                                color: "#9cffd8",
+                                fontWeight: 900,
+                                letterSpacing: "0.06em",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              Verified Organizer
+                            </span>
+                          )}
                         </div>
-                        <div style={{ fontSize: 11, opacity: 0.7, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {creatorProfile.home_base ||
-                            [creatorProfile.city, creatorProfile.country].filter(Boolean).join(", ")}
+
+                        <div
+                          style={{
+                            fontSize: 11,
+                            opacity: 0.7,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {creatorProfile.home_base || "Organizer profile"}
                         </div>
                       </div>
                     </div>
@@ -488,10 +628,12 @@ export default function TourDetails() {
                   💶 {tour.price ? `${tour.price} € per person` : "Free tour"}
                 </div>
                 <div style={pill}>
-                  👥 {tour.participants}/{tour.max_people} participants
+                  👥 {tour.participants || 0}/{tour.max_people} participants
                   {isFull && <span style={{ color: "#ff8080", marginLeft: 6 }}>(Full)</span>}
                 </div>
-                {tour.is_legal_entity && <div style={pill}>🏢 Organized by a legal entity</div>}
+                {tour.is_legal_entity && (
+                  <div style={pill}>🏢 Organized by a legal entity</div>
+                )}
               </div>
             </div>
 
@@ -512,8 +654,7 @@ export default function TourDetails() {
               </div>
             )}
 
-            {/* OPIS */}
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 18, marginTop: 16 }}>
               <div style={sectionTitle}>Description</div>
               <p
                 style={{
@@ -527,7 +668,6 @@ export default function TourDetails() {
               </p>
             </div>
 
-            {/* GALERIJA */}
             {gallery.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={sectionTitle}>Gallery</div>
@@ -607,50 +747,49 @@ export default function TourDetails() {
                 </div>
               </div>
             )}
-            {/* VIDEO */}
-{tour.video_url && (
-  <div style={{ marginBottom: 22 }}>
-    <div style={sectionTitle}>Video</div>
 
-    <div
-      style={{
-        borderRadius: 18,
-        overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.12)",
-        background: "rgba(0,0,0,0.75)",
-        boxShadow: "0 18px 50px rgba(0,0,0,0.85)",
-      }}
-    >
-      <video
-        src={tour.video_url}
-        controls
-        playsInline
-        preload="metadata"
-        style={{
-          width: "100%",
-          height: 260,
-          objectFit: "cover",
-          backgroundColor: "black",
-        }}
-      />
-    </div>
+            {tour.video_url && (
+              <div style={{ marginBottom: 22 }}>
+                <div style={sectionTitle}>Video</div>
 
-    <div
-      style={{
-        marginTop: 8,
-        fontSize: 11,
-        opacity: 0.7,
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-      }}
-    >
-      🎬 Tour video preview
-    </div>
-  </div>
-)}
+                <div
+                  style={{
+                    borderRadius: 18,
+                    overflow: "hidden",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(0,0,0,0.75)",
+                    boxShadow: "0 18px 50px rgba(0,0,0,0.85)",
+                  }}
+                >
+                  <video
+                    src={tour.video_url}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    style={{
+                      width: "100%",
+                      height: 260,
+                      objectFit: "cover",
+                      backgroundColor: "black",
+                    }}
+                  />
+                </div>
 
-            {/* MAPA */}
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 11,
+                    opacity: 0.7,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  🎬 Tour video preview
+                </div>
+              </div>
+            )}
+
             <div>
               <div style={sectionTitle}>Location on map</div>
               {tour.latitude && tour.longitude ? (
@@ -678,7 +817,6 @@ export default function TourDetails() {
             </div>
           </div>
 
-          {/* RIGHT: akcije + rezime */}
           <div style={card}>
             <div style={{ marginBottom: 16 }}>
               <div style={sectionTitle}>Your options</div>
@@ -739,14 +877,12 @@ export default function TourDetails() {
               )}
             </div>
 
-            {/* QUICK SUMMARY */}
             <div>
               <div style={sectionTitle}>Quick summary</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <div style={pill}>🏷️ {tour.title || "Tour title"}</div>
                 <div style={pill}>🧭 {tour.activity || "Activity not set"}</div>
 
-                {/* ✅ NEW: organizer in quick summary */}
                 {creatorProfile && (
                   <div style={pill}>
                     👤 Organizer:{" "}
@@ -754,9 +890,13 @@ export default function TourDetails() {
                       to={`/profile/${creatorProfile.id}`}
                       style={{ color: "#00ffb0", textDecoration: "none", fontWeight: 700 }}
                     >
-                      {creatorProfile.full_name ||  "Organizer"}
+                      {creatorProfile.full_name || "Organizer"}
                     </Link>
                   </div>
+                )}
+
+                {creatorProfile?.is_verified_creator && (
+                  <div style={pill}>✅ Verified creator</div>
                 )}
 
                 <div style={pill}>
@@ -765,7 +905,9 @@ export default function TourDetails() {
                     ? `${tour.location_name}${tour.country ? ", " + tour.country : ""}`
                     : "Location not set"}
                 </div>
-                <div style={pill}>👥 {tour.participants}/{tour.max_people} participants</div>
+                <div style={pill}>
+                  👥 {tour.participants || 0}/{tour.max_people} participants
+                </div>
                 <div style={pill}>💶 {tour.price ? `${tour.price} €` : "Free"}</div>
                 <div style={pill}>🕒 {tour.date_start} → {tour.date_end}</div>
               </div>
@@ -774,7 +916,6 @@ export default function TourDetails() {
                 Tip: use the group chat to coordinate meeting points, gear and timing so everyone arrives relaxed and ready.
               </div>
 
-              {/* PARTICIPANTS */}
               <div style={{ marginTop: 14 }}>
                 <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 6 }}>
                   Participants
@@ -842,7 +983,6 @@ export default function TourDetails() {
                   </div>
                 )}
               </div>
-
             </div>
           </div>
         </div>
