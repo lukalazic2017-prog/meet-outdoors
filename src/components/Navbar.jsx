@@ -15,7 +15,8 @@ const FriendBadge = () => (
       fontWeight: 950,
       letterSpacing: "0.12em",
       textTransform: "uppercase",
-      boxShadow: "0 10px 26px rgba(0,255,195,0.22), 0 0 16px rgba(0,255,195,0.38)",
+      boxShadow:
+        "0 10px 26px rgba(0,255,195,0.22), 0 0 16px rgba(0,255,195,0.38)",
       border: "1px solid rgba(255,255,255,0.16)",
       whiteSpace: "nowrap",
       flexShrink: 0,
@@ -33,7 +34,7 @@ export default function Navbar() {
   const [avatarUrl, setAvatarUrl] = useState(null);
 
   const [isMobile, setIsMobile] = useState(
-    window.innerWidth < 900 || /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    window.innerWidth < 900 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   );
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -41,14 +42,12 @@ export default function Navbar() {
   const [activitiesOpen, setActivitiesOpen] = useState(false);
   const [toursMenuOpen, setToursMenuOpen] = useState(false);
   const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
-
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  /* ================= 🔍 SEARCH (IZBOR 2: full_name + home_base) ================= */
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -92,24 +91,41 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path;
 
   const linkStyle = (path) => ({
-    color: isActive(path) ? "#00ffb0" : "rgba(255,255,255,0.78)",
-    fontWeight: isActive(path) ? 800 : 600,
+    color: isActive(path) ? "#ffffff" : "rgba(255,255,255,0.78)",
+    fontWeight: isActive(path) ? 800 : 650,
     fontSize: 15,
     textDecoration: "none",
-    padding: "8px 14px",
+    padding: "10px 14px",
     borderRadius: 999,
-    background: isActive(path) ? "rgba(0,255,160,0.14)" : "transparent",
-    boxShadow: isActive(path) ? "0 0 18px rgba(0,255,160,0.18)" : "none",
+    background: isActive(path)
+      ? "linear-gradient(135deg, rgba(0,255,176,0.18), rgba(64,170,255,0.14))"
+      : "transparent",
+    border: isActive(path)
+      ? "1px solid rgba(0,255,176,0.20)"
+      : "1px solid transparent",
+    boxShadow: isActive(path)
+      ? "0 0 18px rgba(0,255,160,0.12)"
+      : "none",
     transition: "all 0.18s ease",
     whiteSpace: "nowrap",
   });
 
   const neonRing = {
     boxShadow:
-      "0 0 0 1px rgba(0,255,184,0.16), 0 18px 45px rgba(0,0,0,0.9), 0 0 40px rgba(0,255,184,0.12)",
+      "0 0 0 1px rgba(0,255,184,0.16), 0 18px 45px rgba(0,0,0,0.9), 0 0 40px rgba(0,255,184,0.10)",
   };
 
   const bestDisplayName = (p) => (p?.full_name || "Explorer").trim();
+
+  const notificationIcon = (type) => {
+    if (type === "creator_approved") return "✅";
+    if (type === "creator_rejected") return "❌";
+    if (type === "tour_joined") return "🎉";
+    if (type === "new_message") return "💬";
+    if (type === "new_follower") return "👤";
+    if (type === "new_rating") return "⭐";
+    return "🔔";
+  };
 
   const goToActivity = (name) => {
     setActivitiesOpen(false);
@@ -128,7 +144,6 @@ export default function Navbar() {
     setEventsMenuOpen(false);
   };
 
-  /* ================= AUTH + AVATAR + NOTIFICATIONS ================= */
   useEffect(() => {
     let mounted = true;
 
@@ -147,7 +162,6 @@ export default function Navbar() {
         return;
       }
 
-      // avatar
       const { data: profile } = await supabase
         .from("profiles")
         .select("avatar_url")
@@ -162,7 +176,6 @@ export default function Navbar() {
         setAvatarUrl(null);
       }
 
-      // notifications
       const { data: notes } = await supabase
         .from("notifications")
         .select("*")
@@ -171,7 +184,7 @@ export default function Navbar() {
 
       const safeNotes = notes || [];
       setNotifications(safeNotes);
-      setUnreadCount(safeNotes.filter((n) => !n.read).length);
+      setUnreadCount(safeNotes.filter((n) => !(n.read || n.is_read)).length);
     }
 
     loadEverything();
@@ -186,7 +199,6 @@ export default function Navbar() {
     };
   }, []);
 
-  /* ================= REALTIME NOTIFICATIONS ================= */
   useEffect(() => {
     let cleanup = null;
 
@@ -207,7 +219,9 @@ export default function Navbar() {
           },
           (payload) => {
             setNotifications((prev) => [payload.new, ...prev]);
-            if (!payload.new.read) setUnreadCount((prev) => prev + 1);
+            if (!(payload.new.read || payload.new.is_read)) {
+              setUnreadCount((prev) => prev + 1);
+            }
           }
         )
         .subscribe();
@@ -220,18 +234,16 @@ export default function Navbar() {
     return () => cleanup?.();
   }, []);
 
-  /* ================= RESPONSIVE ================= */
   useEffect(() => {
     const onResize = () => {
       setIsMobile(
-        window.innerWidth < 900 || /iPhone|iPad|iPod/i.test(navigator.userAgent)
+        window.innerWidth < 900 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       );
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  /* ================= LOGOUT ================= */
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -242,17 +254,18 @@ export default function Navbar() {
     navigate("/login");
   };
 
-  /* ================= NOTIFICATIONS HELPERS ================= */
   const markAllAsRead = async () => {
     if (!user || unreadCount === 0) return;
 
     await supabase
       .from("notifications")
-      .update({ read: true })
+      .update({ read: true, is_read: true })
       .eq("user_id", user.id)
-      .eq("read", false);
+      .or("read.eq.false,is_read.eq.false");
 
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read: true, is_read: true }))
+    );
     setUnreadCount(0);
   };
 
@@ -263,7 +276,29 @@ export default function Navbar() {
     setUnreadCount(0);
   };
 
-  /* ================= FRIENDS SET (badge) ================= */
+  const openNotification = async (n) => {
+    try {
+      if (!(n.read || n.is_read)) {
+        await supabase
+          .from("notifications")
+          .update({ read: true, is_read: true })
+          .eq("id", n.id);
+
+        setNotifications((prev) =>
+          prev.map((x) =>
+            x.id === n.id ? { ...x, read: true, is_read: true } : x
+          )
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+
+      setNotificationsOpen(false);
+      if (n.link) navigate(n.link);
+    } catch (err) {
+      console.log("notification click error:", err);
+    }
+  };
+
   const buildFriendsSet = async () => {
     if (!user) {
       setFriendsSet(new Set());
@@ -276,7 +311,10 @@ export default function Navbar() {
       .eq("follower_id", user.id)
       .limit(500);
 
-    const followingIds = (iFollow || []).map((r) => r.following_id).filter(Boolean);
+    const followingIds = (iFollow || [])
+      .map((r) => r.following_id)
+      .filter(Boolean);
+
     if (!followingIds.length) {
       setFriendsSet(new Set());
       return;
@@ -289,10 +327,11 @@ export default function Navbar() {
       .in("follower_id", followingIds)
       .limit(500);
 
-    setFriendsSet(new Set((theyFollowMe || []).map((r) => r.follower_id).filter(Boolean)));
+    setFriendsSet(
+      new Set((theyFollowMe || []).map((r) => r.follower_id).filter(Boolean))
+    );
   };
 
-  /* ================= SEARCH EFFECT (IZBOR 2) ================= */
   useEffect(() => {
     if (!searchOpen) return;
 
@@ -313,20 +352,15 @@ export default function Navbar() {
         .or(`full_name.ilike.%${q}%,home_base.ilike.%${q}%`)
         .limit(10);
 
-      // (ostavljam log za debug, ako ti smeta obrisi)
-      // console.log("SEARCH DATA:", data);
-      // console.log("SEARCH ERROR:", error);
-
       const rows = data || [];
       setSearchResults(rows);
       setSearchCursor(rows.length ? 0 : -1);
       setSearchLoading(false);
-    }, 300);
+    }, 260);
 
     return () => clearTimeout(t);
   }, [searchQuery, searchOpen]);
 
-  /* ================= SEARCH OPEN/CLOSE ================= */
   useEffect(() => {
     if (searchOpen) {
       setNotificationsOpen(false);
@@ -342,15 +376,13 @@ export default function Navbar() {
       setSearchResults([]);
       setSearchCursor(-1);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchOpen]);
 
-  /* ================= OUTSIDE CLICK CLOSE (SVE) ================= */
   useEffect(() => {
     const onDown = (e) => {
       const t = e.target;
 
-      if (mobileMenuOpen) return; // mobile overlay ima svoj close
+      if (mobileMenuOpen) return;
 
       const inSearch = searchWrapRef.current?.contains(t);
       const inNotes = notificationsWrapRef.current?.contains(t);
@@ -369,13 +401,13 @@ export default function Navbar() {
 
     document.addEventListener("mousedown", onDown);
     document.addEventListener("touchstart", onDown);
+
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("touchstart", onDown);
     };
   }, [mobileMenuOpen]);
 
-  /* ================= SEARCH KEYBOARD ================= */
   const onSearchKeyDown = (e) => {
     if (!searchOpen) return;
 
@@ -408,30 +440,31 @@ export default function Navbar() {
     }
   };
 
-  /* ================= STYLES ================= */
   const iconBtn = {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 15,
     background:
-      "linear-gradient(135deg, rgba(0,255,184,0.16), rgba(88,170,255,0.10))",
-    border: "1px solid rgba(0,255,184,0.22)",
+      "linear-gradient(135deg, rgba(0,255,184,0.14), rgba(88,170,255,0.10))",
+    border: "1px solid rgba(255,255,255,0.12)",
     cursor: "pointer",
     fontSize: 18,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     color: "white",
-    boxShadow: "0 0 18px rgba(0,255,184,0.14), 0 10px 28px rgba(0,0,0,0.75)",
+    boxShadow:
+      "0 0 18px rgba(0,255,184,0.12), 0 10px 28px rgba(0,0,0,0.75)",
     transition: "transform .14s ease, filter .14s ease",
     WebkitTapHighlightColor: "transparent",
+    position: "relative",
   };
 
   const dropdownBase = {
     position: "absolute",
-    top: 46,
-    borderRadius: 18,
-    padding: 12,
+    top: 52,
+    borderRadius: 22,
+    padding: 14,
     background:
       "radial-gradient(120% 120% at 10% 0%, rgba(0,255,184,0.14), transparent 45%)," +
       "radial-gradient(120% 120% at 90% 0%, rgba(88,170,255,0.12), transparent 48%)," +
@@ -445,15 +478,16 @@ export default function Navbar() {
 
   const userMenuItem = {
     width: "100%",
-    padding: "10px 10px",
-    borderRadius: 12,
+    padding: "11px 12px",
+    borderRadius: 14,
     border: "1px solid rgba(255,255,255,0.10)",
     textAlign: "left",
     background: "rgba(255,255,255,0.03)",
-    color: "rgba(255,255,255,0.92)",
+    color: "rgba(255,255,255,0.94)",
     fontSize: 13,
     cursor: "pointer",
     marginBottom: 8,
+    fontWeight: 700,
   };
 
   const userMenuDanger = {
@@ -465,25 +499,26 @@ export default function Navbar() {
   };
 
   const mobileLink = {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 850,
     color: "white",
     textDecoration: "none",
     padding: "14px 14px",
-    borderRadius: 16,
+    borderRadius: 18,
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
   };
 
   const mobileButton = {
     padding: "14px 14px",
-    borderRadius: 16,
+    borderRadius: 18,
     border: "1px solid rgba(255,255,255,0.12)",
     background: "rgba(255,255,255,0.06)",
     color: "white",
-    fontSize: 16,
+    fontSize: 15,
     textAlign: "left",
     cursor: "pointer",
+    fontWeight: 700,
   };
 
   const mobileDanger = {
@@ -491,6 +526,26 @@ export default function Navbar() {
     borderColor: "rgba(255,100,100,0.35)",
     background: "rgba(255,80,80,0.12)",
     color: "#ff9a9a",
+  };
+
+  const authBtn = {
+    padding: "10px 16px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.05)",
+    color: "white",
+    fontWeight: 800,
+    fontSize: 13,
+    cursor: "pointer",
+    boxShadow: "0 10px 26px rgba(0,0,0,0.55)",
+    whiteSpace: "nowrap",
+  };
+
+  const authPrimaryBtn = {
+    ...authBtn,
+    background: "linear-gradient(120deg, #00ffb8, #35ffc9, #00c28a)",
+    color: "#012216",
+    border: "none",
   };
 
   return (
@@ -504,12 +559,11 @@ export default function Navbar() {
           zIndex: 999,
           background:
             "linear-gradient(90deg, rgba(4,20,12,0.95), rgba(3,18,16,0.96))",
-          backdropFilter: "blur(16px)",
+          backdropFilter: "blur(18px)",
           borderBottom: "1px solid rgba(255,255,255,0.07)",
           boxShadow: "0 12px 30px rgba(0,0,0,0.7)",
         }}
       >
-        {/* ambient glow */}
         <div
           style={{
             position: "absolute",
@@ -525,7 +579,7 @@ export default function Navbar() {
         <nav
           style={{
             width: "100%",
-            maxWidth: 1400,
+            maxWidth: 1440,
             margin: "0 auto",
             padding: "10px 18px",
             boxSizing: "border-box",
@@ -537,7 +591,6 @@ export default function Navbar() {
             zIndex: 5,
           }}
         >
-          {/* BRAND */}
           <div
             onClick={() => {
               closeAllMenus();
@@ -554,8 +607,8 @@ export default function Navbar() {
           >
             <div
               style={{
-                width: 42,
-                height: 42,
+                width: 44,
+                height: 44,
                 borderRadius: 16,
                 background:
                   "radial-gradient(circle at 30% 20%, #00ffb8 0, #009a61 45%, #013222 100%)",
@@ -600,14 +653,12 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* DESKTOP LINKS */}
           {!isMobile && (
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <Link to="/" style={linkStyle("/")}>
                 Home
               </Link>
 
-              {/* ACTIVITIES */}
               <div
                 ref={activitiesWrapRef}
                 style={{ position: "relative", display: "flex", alignItems: "center", gap: 4 }}
@@ -646,10 +697,10 @@ export default function Navbar() {
                   <div
                     style={{
                       position: "absolute",
-                      top: 44,
+                      top: 48,
                       left: 0,
-                      minWidth: 340,
-                      borderRadius: 18,
+                      minWidth: 360,
+                      borderRadius: 20,
                       padding: 14,
                       background:
                         "radial-gradient(circle at top, rgba(4,40,24,0.98), rgba(2,16,10,0.98))",
@@ -684,7 +735,7 @@ export default function Navbar() {
                           onClick={() => goToActivity(item)}
                           style={{
                             borderRadius: 999,
-                            padding: "8px 10px",
+                            padding: "9px 10px",
                             background:
                               "linear-gradient(120deg, rgba(0,0,0,0.6), rgba(0,60,40,0.9))",
                             color: "white",
@@ -692,6 +743,7 @@ export default function Navbar() {
                             cursor: "pointer",
                             fontSize: 13,
                             textAlign: "left",
+                            fontWeight: 700,
                           }}
                         >
                           {item}
@@ -702,7 +754,6 @@ export default function Navbar() {
                 )}
               </div>
 
-              {/* TOURS */}
               <div
                 ref={toursWrapRef}
                 style={{ position: "relative", display: "flex", alignItems: "center", gap: 4 }}
@@ -741,15 +792,15 @@ export default function Navbar() {
                   <div
                     style={{
                       position: "absolute",
-                      top: 44,
+                      top: 48,
                       left: 0,
                       padding: 12,
-                      borderRadius: 18,
+                      borderRadius: 20,
                       background:
                         "radial-gradient(circle at top, rgba(1,25,18,0.98), rgba(0,10,8,0.98))",
                       boxShadow:
                         "0 18px 45px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,255,176,0.2)",
-                      minWidth: 240,
+                      minWidth: 250,
                       zIndex: 1200,
                       backdropFilter: "blur(20px)",
                     }}
@@ -774,7 +825,7 @@ export default function Navbar() {
                       style={{
                         width: "100%",
                         borderRadius: 999,
-                        padding: "9px 12px",
+                        padding: "10px 12px",
                         border: "1px solid rgba(0,255,176,0.16)",
                         background:
                           "linear-gradient(120deg, rgba(0,0,0,0.7), rgba(0,50,40,0.9))",
@@ -783,6 +834,7 @@ export default function Navbar() {
                         cursor: "pointer",
                         marginBottom: 8,
                         textAlign: "left",
+                        fontWeight: 700,
                       }}
                     >
                       All tours
@@ -796,7 +848,7 @@ export default function Navbar() {
                       style={{
                         width: "100%",
                         borderRadius: 999,
-                        padding: "10px 12px",
+                        padding: "11px 12px",
                         border: "none",
                         background:
                           "linear-gradient(120deg, #00ffb8, #35ffc9, #00c28a)",
@@ -829,6 +881,7 @@ export default function Navbar() {
                         borderRadius: 14,
                         background: "rgba(255,255,255,0.03)",
                         border: "1px solid rgba(255,255,255,0.06)",
+                        fontWeight: 700,
                       }}
                     >
                       ❤️ Saved tours
@@ -837,7 +890,6 @@ export default function Navbar() {
                 )}
               </div>
 
-              {/* EVENTS */}
               <div
                 ref={eventsWrapRef}
                 style={{ position: "relative", display: "flex", alignItems: "center", gap: 4 }}
@@ -876,15 +928,15 @@ export default function Navbar() {
                   <div
                     style={{
                       position: "absolute",
-                      top: 44,
+                      top: 48,
                       left: 0,
                       padding: 12,
-                      borderRadius: 18,
+                      borderRadius: 20,
                       background:
                         "radial-gradient(circle at top, rgba(12,22,40,0.98), rgba(2,6,15,0.98))",
                       boxShadow:
                         "0 18px 45px rgba(0,0,0,0.9), 0 0 0 1px rgba(88,170,255,0.2)",
-                      minWidth: 240,
+                      minWidth: 250,
                       zIndex: 1200,
                       backdropFilter: "blur(20px)",
                     }}
@@ -909,7 +961,7 @@ export default function Navbar() {
                       style={{
                         width: "100%",
                         borderRadius: 999,
-                        padding: "9px 12px",
+                        padding: "10px 12px",
                         border: "1px solid rgba(120,180,255,0.25)",
                         background:
                           "linear-gradient(120deg, rgba(0,0,0,0.7), rgba(5,25,55,0.9))",
@@ -918,6 +970,7 @@ export default function Navbar() {
                         cursor: "pointer",
                         marginBottom: 8,
                         textAlign: "left",
+                        fontWeight: 700,
                       }}
                     >
                       All events
@@ -931,7 +984,7 @@ export default function Navbar() {
                       style={{
                         width: "100%",
                         borderRadius: 999,
-                        padding: "10px 12px",
+                        padding: "11px 12px",
                         border: "none",
                         background:
                           "linear-gradient(120deg, #5bb3ff, #9ad0ff, #4f8cff)",
@@ -956,14 +1009,10 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* RIGHT SECTION */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            {/* SEARCH (lupa pored zvonca) */}
             <div ref={searchWrapRef} style={{ position: "relative" }}>
               <button
-                onClick={() => {
-                  setSearchOpen((p) => !p);
-                }}
+                onClick={() => setSearchOpen((p) => !p)}
                 title="Search profiles"
                 style={iconBtn}
                 onMouseDown={(e) => e.preventDefault()}
@@ -976,25 +1025,24 @@ export default function Navbar() {
                   style={{
                     ...dropdownBase,
                     right: 0,
-                    width: 300,
+                    width: 360,
                     maxWidth: "92vw",
                   }}
                 >
-                  {/* header */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      marginBottom: 10,
+                      marginBottom: 12,
                       gap: 10,
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div
                         style={{
-                          width: 34,
-                          height: 34,
+                          width: 36,
+                          height: 36,
                           borderRadius: 14,
                           background:
                             "linear-gradient(135deg, rgba(0,255,184,0.22), rgba(88,170,255,0.16))",
@@ -1042,30 +1090,30 @@ export default function Navbar() {
                     </button>
                   </div>
 
-                  {/* input */}
                   <div style={{ position: "relative" }}>
                     <input
                       ref={searchInputRef}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={onSearchKeyDown}
-                      placeholder="Type name / home base…"
+                      placeholder="Type name / home base..."
                       style={{
                         width: "100%",
-                        padding: "12px 14px 12px 42px",
+                        padding: "13px 14px 13px 44px",
                         borderRadius: 999,
                         border: "1px solid rgba(0,255,184,0.26)",
                         background:
                           "linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.35))",
                         color: "white",
                         outline: "none",
-                        boxShadow: "0 0 0 1px rgba(0,255,184,0.08), 0 14px 34px rgba(0,0,0,0.6)",
+                        boxShadow:
+                          "0 0 0 1px rgba(0,255,184,0.08), 0 14px 34px rgba(0,0,0,0.6)",
                       }}
                     />
                     <div
                       style={{
                         position: "absolute",
-                        left: 14,
+                        left: 15,
                         top: "50%",
                         transform: "translateY(-50%)",
                         opacity: 0.75,
@@ -1076,19 +1124,20 @@ export default function Navbar() {
                     </div>
                   </div>
 
-                  {/* results */}
                   <div style={{ marginTop: 12, maxHeight: 360, overflowY: "auto" }}>
                     {searchLoading && (
                       <div style={{ padding: 10, color: "rgba(255,255,255,0.75)" }}>
-                        Searching…
+                        Searching...
                       </div>
                     )}
 
-                    {!searchLoading && searchQuery.trim().length > 0 && searchResults.length === 0 && (
-                      <div style={{ padding: 10, color: "rgba(255,255,255,0.6)" }}>
-                        No profiles found.
-                      </div>
-                    )}
+                    {!searchLoading &&
+                      searchQuery.trim().length > 0 &&
+                      searchResults.length === 0 && (
+                        <div style={{ padding: 10, color: "rgba(255,255,255,0.6)" }}>
+                          No profiles found.
+                        </div>
+                      )}
 
                     {!searchLoading &&
                       searchResults.map((p, idx) => {
@@ -1130,8 +1179,8 @@ export default function Navbar() {
                           >
                             <div
                               style={{
-                                width: 44,
-                                height: 44,
+                                width: 46,
+                                height: 46,
                                 borderRadius: 18,
                                 padding: 2,
                                 background:
@@ -1185,7 +1234,7 @@ export default function Navbar() {
                                       textOverflow: "ellipsis",
                                     }}
                                   >
-                                    {meta}
+                                    {meta || "Explorer"}
                                   </div>
                                 </div>
                                 {isMutualFriend && <FriendBadge />}
@@ -1215,7 +1264,6 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* NOTIFICATION BELL */}
             {user && (
               <div ref={notificationsWrapRef} style={{ position: "relative" }}>
                 <button
@@ -1231,9 +1279,6 @@ export default function Navbar() {
                   }}
                   style={{
                     ...iconBtn,
-                    width: 40,
-                    height: 40,
-                    borderRadius: 14,
                     background: "rgba(0,0,0,0.35)",
                     border: "1px solid rgba(255,255,255,0.16)",
                   }}
@@ -1244,18 +1289,20 @@ export default function Navbar() {
                     <span
                       style={{
                         position: "absolute",
-                        top: -4,
+                        top: -5,
                         right: -4,
-                        background: "#ff3333",
+                        background: "linear-gradient(135deg, #ff3b5f, #ff6b6b)",
                         color: "white",
-                        width: 18,
-                        height: 18,
+                        minWidth: 19,
+                        height: 19,
+                        padding: "0 5px",
                         borderRadius: "50%",
                         fontSize: 11,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        boxShadow: "0 0 10px rgba(255,0,0,0.65)",
+                        boxShadow: "0 0 12px rgba(255,0,80,0.65)",
+                        fontWeight: 900,
                       }}
                     >
                       {unreadCount}
@@ -1268,9 +1315,9 @@ export default function Navbar() {
                     style={{
                       ...dropdownBase,
                       right: 0,
-                      width: 320,
+                      width: 360,
                       maxWidth: "92vw",
-                      padding: 12,
+                      padding: 14,
                     }}
                   >
                     <div
@@ -1279,11 +1326,23 @@ export default function Navbar() {
                         justifyContent: "space-between",
                         alignItems: "center",
                         color: "white",
-                        marginBottom: 10,
+                        marginBottom: 12,
+                        gap: 10,
                       }}
                     >
-                      <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>
-                        Notifications
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: 15 }}>
+                          Notifications
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "rgba(255,255,255,0.6)",
+                            marginTop: 2,
+                          }}
+                        >
+                          Updates from your profile, tours and creator actions
+                        </div>
                       </div>
 
                       {notifications.length > 0 && (
@@ -1303,174 +1362,275 @@ export default function Navbar() {
                       )}
                     </div>
 
-                    {notifications.length === 0 && (
-                      <div style={{ color: "rgba(255,255,255,0.72)", padding: 8 }}>
+                    {notifications.length === 0 ? (
+                      <div
+                        style={{
+                          padding: "18px 14px",
+                          borderRadius: 16,
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.06)",
+                          color: "rgba(255,255,255,0.68)",
+                          fontSize: 13,
+                          textAlign: "center",
+                        }}
+                      >
                         You're all caught up 🌿
                       </div>
-                    )}
+                    ) : (
+                      <div style={{ maxHeight: 380, overflowY: "auto" }}>
+                        {notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            onClick={() => openNotification(n)}
+                            style={{
+                              background:
+                                "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.03))",
+                              padding: "12px 12px",
+                              borderRadius: 16,
+                              marginBottom: 10,
+                              color: "white",
+                              fontSize: 13,
+                              border: "1px solid rgba(255,255,255,0.07)",
+                              cursor: n.link ? "pointer" : "default",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: 10,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  minWidth: 34,
+                                  borderRadius: 12,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  background: "rgba(0,255,170,0.10)",
+                                  border: "1px solid rgba(0,255,170,0.18)",
+                                  fontSize: 16,
+                                }}
+                              >
+                                {notificationIcon(n.type)}
+                              </div>
 
-                    <div style={{ maxHeight: 360, overflowY: "auto" }}>
-                      {notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          style={{
-                            background: "rgba(255,255,255,0.04)",
-                            padding: 10,
-                            borderRadius: 14,
-                            marginBottom: 8,
-                            color: "white",
-                            fontSize: 13,
-                            border: "1px solid rgba(255,255,255,0.06)",
-                          }}
-                        >
-                          <div style={{ fontWeight: 750 }}>{n.message}</div>
-                          <div style={{ opacity: 0.65, fontSize: 11, marginTop: 6 }}>
-                            {new Date(n.created_at).toLocaleString()}
-                            {n.read && (
-                              <span style={{ opacity: 0.6 }}> — read</span>
-                            )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontWeight: 800,
+                                    fontSize: 13,
+                                    lineHeight: 1.3,
+                                    marginBottom: 4,
+                                    color: "white",
+                                  }}
+                                >
+                                  {n.title || "Notification"}
+                                </div>
+
+                                <div
+                                  style={{
+                                    opacity: 0.82,
+                                    fontSize: 12,
+                                    lineHeight: 1.45,
+                                    color: "rgba(255,255,255,0.82)",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {n.body || n.message || "No details available."}
+                                </div>
+
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: 10,
+                                    marginTop: 8,
+                                    flexWrap: "wrap",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      opacity: 0.55,
+                                      fontSize: 11,
+                                    }}
+                                  >
+                                    {new Date(n.created_at).toLocaleString()}
+                                  </div>
+
+                                  {(n.read || n.is_read) && (
+                                    <div
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        padding: "4px 8px",
+                                        borderRadius: 999,
+                                        background: "rgba(255,255,255,0.06)",
+                                        border: "1px solid rgba(255,255,255,0.10)",
+                                        color: "rgba(255,255,255,0.72)",
+                                        letterSpacing: "0.04em",
+                                        textTransform: "uppercase",
+                                      }}
+                                    >
+                                      Read
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
-            {/* AVATAR */}
-            {user && (
-              <div ref={userWrapRef} style={{ position: "relative" }}>
-                <div
-                  onClick={() => {
-                    setUserMenuOpen((p) => !p);
-                    setNotificationsOpen(false);
-                    setSearchOpen(false);
-                    setActivitiesOpen(false);
-                    setToursMenuOpen(false);
-                    setEventsMenuOpen(false);
-                  }}
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 999,
-                    border: "2px solid rgba(0,255,176,0.9)",
-                    overflow: "hidden",
-                    cursor: "pointer",
-                    position: "relative",
-                    boxShadow: "0 0 14px rgba(0,255,160,0.45)",
-                    flexShrink: 0,
-                  }}
-                  title="Account"
-                >
-                  {/* online dot */}
-                  <span
-                    style={{
-                      position: "absolute",
-                      bottom: -1,
-                      right: -1,
-                      width: 12,
-                      height: 12,
-                      borderRadius: "50%",
-                      background: "#00ff80",
-                      border: "2px solid #04140c",
-                      boxShadow: "0 0 10px rgba(0,255,128,0.9)",
-                      zIndex: 2,
-                    }}
-                  />
-                  <img
-                    src={avatarUrl || "https://i.pravatar.cc/300"}
-                    alt="avatar"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                </div>
-
-                {userMenuOpen && (
+            {user ? (
+              <>
+                <div ref={userWrapRef} style={{ position: "relative" }}>
                   <div
-                    style={{
-                      ...dropdownBase,
-                      right: 0,
-                      width: 240,
-                      maxWidth: "92vw",
-                      padding: 12,
+                    onClick={() => {
+                      setUserMenuOpen((p) => !p);
+                      setNotificationsOpen(false);
+                      setSearchOpen(false);
+                      setActivitiesOpen(false);
+                      setToursMenuOpen(false);
+                      setEventsMenuOpen(false);
                     }}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 999,
+                      border: "2px solid rgba(0,255,176,0.9)",
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      position: "relative",
+                      boxShadow: "0 0 14px rgba(0,255,160,0.45)",
+                      flexShrink: 0,
+                    }}
+                    title="Account"
                   >
+                    <span
+                      style={{
+                        position: "absolute",
+                        bottom: -1,
+                        right: -1,
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        background: "#00ff80",
+                        border: "2px solid #04140c",
+                        boxShadow: "0 0 10px rgba(0,255,128,0.9)",
+                        zIndex: 2,
+                      }}
+                    />
+                    <img
+                      src={avatarUrl || "https://i.pravatar.cc/300"}
+                      alt="avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
+
+                  {userMenuOpen && (
                     <div
                       style={{
-                        padding: "6px 8px 12px",
-                        borderBottom: "1px solid rgba(255,255,255,0.07)",
-                        marginBottom: 10,
+                        ...dropdownBase,
+                        right: 0,
+                        width: 250,
+                        maxWidth: "92vw",
+                        padding: 12,
                       }}
                     >
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: 800 }}>
-                        {user.email}
+                      <div
+                        style={{
+                          padding: "6px 8px 12px",
+                          borderBottom: "1px solid rgba(255,255,255,0.07)",
+                          marginBottom: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "rgba(255,255,255,0.84)",
+                            fontWeight: 800,
+                          }}
+                        >
+                          {user.email}
+                        </div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
+                          Signed in
+                        </div>
                       </div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
-                        Signed in
-                      </div>
+
+                      <button
+                        onClick={() => {
+                          navigate(`/profile/${user.id}`);
+                          setUserMenuOpen(false);
+                        }}
+                        style={userMenuItem}
+                      >
+                        Profile
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate(`/edit-profile`);
+                          setUserMenuOpen(false);
+                        }}
+                        style={userMenuItem}
+                      >
+                        Edit profile
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/settings");
+                          setUserMenuOpen(false);
+                        }}
+                        style={userMenuItem}
+                      >
+                        Settings
+                      </button>
+
+                      <button onClick={logout} style={userMenuDanger}>
+                        Logout
+                      </button>
                     </div>
+                  )}
+                </div>
 
-                    <button
-                      onClick={() => {
-                        navigate(`/profile/${user.id}`);
-                        setUserMenuOpen(false);
-                      }}
-                      style={userMenuItem}
-                    >
-                      Profile
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        navigate(`/edit-profile`);
-                        setUserMenuOpen(false);
-                      }}
-                      style={userMenuItem}
-                    >
-                      Edit profile
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        navigate("/settings");
-                        setUserMenuOpen(false);
-                      }}
-                      style={userMenuItem}
-                    >
-                      Settings
-                    </button>
-
-                    <button onClick={logout} style={userMenuDanger}>
-                      Logout
-                    </button>
-                  </div>
+                {!isMobile && (
+                  <button onClick={logout} style={authBtn}>
+                    Logout
+                  </button>
                 )}
-              </div>
+              </>
+            ) : (
+              !isMobile && (
+                <>
+                  <button
+                    onClick={() => navigate("/login")}
+                    style={authBtn}
+                  >
+                    Login
+                  </button>
+                  <button
+                    onClick={() => navigate("/register")}
+                    style={authPrimaryBtn}
+                  >
+                    Join now
+                  </button>
+                </>
+              )
             )}
 
-            {/* DESKTOP LOGOUT BUTTON */}
-            {user && !isMobile && (
-              <button
-                onClick={logout}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 999,
-                  background:
-                    "radial-gradient(circle at 0% 0%, rgba(255,255,255,0.2), rgba(0,0,0,0.7))",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: 900,
-                  fontSize: 13,
-                  boxShadow: "0 10px 26px rgba(0,0,0,0.55)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Logout
-              </button>
-            )}
-
-            {/* MOBILE MENU BUTTON (iOS safe) */}
             {isMobile && (
               <button
                 onClick={() => {
@@ -1502,10 +1662,8 @@ export default function Navbar() {
         </nav>
       </header>
 
-      {/* spacer */}
-      <div style={{ height: 74 }} />
+      <div style={{ height: 78 }} />
 
-      {/* MOBILE MENU OVERLAY (BRUTAL, iOS+Android) */}
       {isMobile && mobileMenuOpen && (
         <div
           style={{
@@ -1519,7 +1677,6 @@ export default function Navbar() {
             paddingBottom: "calc(18px + env(safe-area-inset-bottom))",
           }}
         >
-          {/* top bar */}
           <div
             style={{
               display: "flex",
@@ -1551,7 +1708,6 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* quick actions row */}
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             <button
               onClick={() => {
@@ -1569,7 +1725,7 @@ export default function Navbar() {
               🔎 Search
             </button>
 
-            {user && (
+            {user ? (
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
@@ -1585,12 +1741,26 @@ export default function Navbar() {
                   border: "1px solid rgba(255,255,255,0.14)",
                 }}
               >
-                🔔 Alerts {unreadCount > 0 ? (`${unreadCount}`) : ""}
+                🔔 Alerts {unreadCount > 0 ? `${unreadCount}` : ""}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate("/login");
+                }}
+                style={{
+                  ...iconBtn,
+                  flex: 1,
+                  height: 46,
+                  borderRadius: 16,
+                }}
+              >
+                🔐 Login
               </button>
             )}
           </div>
 
-          {/* menu content */}
           <div
             style={{
               display: "flex",
@@ -1625,7 +1795,6 @@ export default function Navbar() {
               🧩 Activities
             </Link>
 
-            {/* Tours block */}
             <div
               style={{
                 padding: 14,
@@ -1677,7 +1846,6 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Events block */}
             <div
               style={{
                 padding: 14,
@@ -1719,7 +1887,6 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* quick activities chips */}
             <div
               style={{
                 padding: 14,
@@ -1759,8 +1926,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* account */}
-            {user && (
+            {user ? (
               <div
                 style={{
                   padding: 14,
@@ -1804,11 +1970,49 @@ export default function Navbar() {
                     Settings
                   </button>
 
-                  <button
-                    onClick={logout}
-                    style={mobileDanger}
-                  >
+                  <button onClick={logout} style={mobileDanger}>
                     Logout
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 18,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              >
+                <div style={{ color: "white", fontWeight: 950, marginBottom: 10 }}>
+                  🔐 Account
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate("/login");
+                    }}
+                    style={mobileButton}
+                  >
+                    Login
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate("/register");
+                    }}
+                    style={{
+                      ...mobileButton,
+                      background: "linear-gradient(120deg, #00ffb8, #35ffc9, #00c28a)",
+                      color: "#012216",
+                      fontWeight: 950,
+                      border: "none",
+                    }}
+                  >
+                    Join now
                   </button>
                 </div>
               </div>

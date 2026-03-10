@@ -1,14 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
+const ADMIN_PASSWORD = "17012024";
+
 export default function AdminCreatorRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
 
+  const [adminPass, setAdminPass] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+  const [passError, setPassError] = useState("");
+
   useEffect(() => {
-    loadRequests();
-  }, []);
+    if (unlocked) {
+      loadRequests();
+    }
+  }, [unlocked]);
 
   async function loadRequests() {
     setLoading(true);
@@ -65,7 +73,8 @@ export default function AdminCreatorRequests() {
     const { error: notifError } = await supabase.from("notifications").insert({
       user_id: application.user_id,
       title: "Creator request approved",
-      body: "Congratulations! Your creator application has been approved. You can now create tours.",
+      body:
+        "Congratulations! Your creator application has been approved. You can now create tours.",
       type: "creator_approved",
       seen: false,
       is_read: false,
@@ -258,6 +267,126 @@ export default function AdminCreatorRequests() {
     fontSize: 12,
   };
 
+  if (!unlocked) {
+    return (
+      <div style={pageStyle}>
+        <div
+          style={{
+            maxWidth: 460,
+            margin: "80px auto 0",
+            background: "rgba(0,0,0,0.42)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 22,
+            padding: 24,
+            boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            backdropFilter: "blur(14px)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+              color: "rgba(210,255,230,0.72)",
+              marginBottom: 8,
+              fontWeight: 800,
+            }}
+          >
+            Protected admin area
+          </div>
+
+          <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 8 }}>
+            Admin Access
+          </div>
+
+          <div
+            style={{
+              color: "rgba(255,255,255,0.72)",
+              fontSize: 14,
+              lineHeight: 1.5,
+              marginBottom: 18,
+            }}
+          >
+            Enter the temporary admin password to open creator requests.
+          </div>
+
+          <input
+            type="password"
+            value={adminPass}
+            onChange={(e) => {
+              setAdminPass(e.target.value);
+              setPassError("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (adminPass === ADMIN_PASSWORD) {
+                  setUnlocked(true);
+                  setPassError("");
+                } else {
+                  setPassError("Wrong password.");
+                }
+              }
+            }}
+            placeholder="Enter admin password"
+            style={{
+              width: "100%",
+              padding: "14px 16px",
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.14)",
+              background: "rgba(255,255,255,0.04)",
+              color: "white",
+              fontSize: 14,
+              outline: "none",
+              boxSizing: "border-box",
+              marginBottom: 12,
+            }}
+          />
+
+          {passError && (
+            <div
+              style={{
+                marginBottom: 12,
+                fontSize: 13,
+                color: "#ffb3bf",
+                background: "rgba(255,80,100,0.10)",
+                border: "1px solid rgba(255,80,100,0.22)",
+                borderRadius: 12,
+                padding: "10px 12px",
+              }}
+            >
+              {passError}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (adminPass === ADMIN_PASSWORD) {
+                setUnlocked(true);
+                setPassError("");
+              } else {
+                setPassError("Wrong password.");
+              }
+            }}
+            style={{
+              width: "100%",
+              padding: "13px 16px",
+              borderRadius: 999,
+              border: "none",
+              background: "linear-gradient(135deg, #00ffb0, #00c97a)",
+              color: "#032014",
+              fontWeight: 900,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            Enter admin panel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={pageStyle}>
       <div style={wrapStyle}>
@@ -331,7 +460,9 @@ export default function AdminCreatorRequests() {
 
                 <div style={{ marginBottom: 14 }}>
                   <div style={sectionTitleStyle}>Experience</div>
-                  <div style={rowStyle}>{app.experience_text || "No experience provided."}</div>
+                  <div style={rowStyle}>
+                    {app.experience_text || "No experience provided."}
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: 14 }}>
@@ -395,7 +526,9 @@ export default function AdminCreatorRequests() {
                     {!app.instagram_url &&
                       !app.website_url &&
                       !app.tiktok_url &&
-                      !app.youtube_url && <div style={mutedStyle}>No links provided.</div>}
+                      !app.youtube_url && (
+                        <div style={mutedStyle}>No links provided.</div>
+                      )}
                   </div>
                 </div>
 

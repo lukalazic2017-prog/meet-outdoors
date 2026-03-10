@@ -495,7 +495,7 @@ function MobileProfileView({
                   letterSpacing: "0.05em",
                 }}
               >
-                ✔ VERIFIED ORGANIZER
+                ✔ MeetOutdoors Verified
               </span>
             )}
           </div>
@@ -1527,7 +1527,7 @@ export default function Profile() {
                       letterSpacing: "0.05em",
                     }}
                   >
-                    ✔ VERIFIED ORGANIZER
+                    ✔ MeetOutdoors Verified
                   </span>
                 )}
 
