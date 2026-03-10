@@ -1028,14 +1028,25 @@ export default function Navbar() {
               </button>
 
               {searchOpen && (
-                <div
-                  style={{
-                    ...dropdownBase,
-                    right: 0,
-                    width: 360,
-                    maxWidth: "92vw",
-                  }}
-                >
+  <div
+    style={{
+      ...dropdownBase,
+      ...(isMobile
+        ? {
+            position: "fixed",
+            top: 84,
+            left: 12,
+            right: 12,
+            width: "auto",
+            maxWidth: "none",
+          }
+        : {
+            right: 0,
+            width: 360,
+            maxWidth: "92vw",
+          }),
+    }}
+  >
                   <div
                     style={{
                       display: "flex",
@@ -1318,15 +1329,27 @@ export default function Navbar() {
                 </button>
 
                 {notificationsOpen && (
-                  <div
-                    style={{
-                      ...dropdownBase,
-                      right: 0,
-                      width: 360,
-                      maxWidth: "92vw",
-                      padding: 14,
-                    }}
-                  >
+  <div
+    style={{
+      ...dropdownBase,
+      ...(isMobile
+        ? {
+            position: "fixed",
+            top: 84,
+            left: 12,
+            right: 12,
+            width: "auto",
+            maxWidth: "none",
+            padding: 14,
+          }
+        : {
+            right: 0,
+            width: 360,
+            maxWidth: "92vw",
+            padding: 14,
+          }),
+    }}
+  >
                     <div
                       style={{
                         display: "flex",
@@ -1387,9 +1410,13 @@ export default function Navbar() {
                       <div style={{ maxHeight: 380, overflowY: "auto" }}>
                         {notifications.map((n) => (
                           <div
-                            key={n.id}
-                            onClick={() => openNotification(n)}
-                            style={{
+  key={n.id}
+  onClick={() => {
+    if (n.link) navigate(n.link);
+    setNotificationsOpen(false);
+  }}
+  style={{
+    cursor: "pointer",
                               background:
                                 "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.03))",
                               padding: "12px 12px",

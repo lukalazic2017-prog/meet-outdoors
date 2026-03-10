@@ -197,6 +197,18 @@ export default function Chat() {
         message: msgText,
       },
     ]);
+    // notify tour creator
+if (tour?.creator_id && tour.creator_id !== user.id) {
+  await supabase.from("notifications").insert({
+    user_id: tour.creator_id,
+    title: "New chat message",
+    body: "Someone sent a message in your tour chat.",
+    type: "tour_chat",
+    seen: false,
+    is_read: false,
+    link: /tour/`${tourId}`
+  });
+}
 
     if (error) {
       console.log("SEND MESSAGE ERROR:", error);

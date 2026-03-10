@@ -47,6 +47,17 @@ export default function ProfileRatingBox({ ratedUserId, user }) {
     if (error) {
       console.log("rating error:", error);
     }
+    if (!error && ratedUserId !== user.id) {
+  await supabase.from("notifications").insert({
+    user_id: ratedUserId,
+    title: "New rating received",
+    body: "Someone rated your organizer profile.",
+    type: "rating",
+    seen: false,
+    is_read: false,
+    link: `/profile/${ratedUserId}`
+  });
+}
 
     setLoading(false);
   }
