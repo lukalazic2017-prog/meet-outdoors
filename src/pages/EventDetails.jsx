@@ -1006,30 +1006,40 @@ export default function EventDetails() {
               </div>
 
               <div style={styles.infoBox}>
-                <div style={styles.infoLabel}>Organizer</div>
-                <div style={styles.infoValue}>
-                  {event.organizer_name || "Host not specified"}
-                </div>
+  <div style={styles.infoLabel}>Organizer</div>
 
-                {event.website_url && (
-                  <a
-                    href={event.website_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      display: "inline-block",
-                      marginTop: 8,
-                      fontSize: 12,
-                      fontWeight: 900,
-                      color: "#1f3423",
-                      textDecoration: "underline",
-                    }}
-                  >
-                    Visit event website
-                  </a>
-                )}
-              </div>
-            </div>
+  <div
+    onClick={() => {
+      if (event.creator_id) navigate(`/profile/${event.creator_id}`);
+    }}
+    style={{
+      ...styles.infoValue,
+      cursor: event.creator_id ? "pointer" : "default",
+      textDecoration: event.creator_id ? "underline" : "none",
+    }}
+  >
+    {event.organizer_name || "Host not specified"}
+  </div>
+
+  {event.website_url && (
+    <a
+      href={event.website_url}
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        display: "inline-block",
+        marginTop: 8,
+        fontSize: 12,
+        fontWeight: 900,
+        color: "#1f3423",
+        textDecoration: "underline",
+      }}
+    >
+      Visit event website
+    </a>
+  )}
+</div>
+</div>
 
             {/* ATTENDEES */}
             <div style={styles.attendeesWrap}>
@@ -1060,7 +1070,16 @@ export default function EventDetails() {
                     const isYou = user && row.user_id === user.id;
 
                     return (
-                      <div key={row.id} style={styles.attendeeRow}>
+                      <div
+  key={row.id}
+  style={{
+    ...styles.attendeeRow,
+    cursor: row.user_id ? "pointer" : "default",
+  }}
+  onClick={() => {
+    if (row.user_id) navigate(`/profile/${row.user_id}`);
+  }}
+>
                         {p?.avatar_url ? (
                           <img
                             src={p.avatar_url}

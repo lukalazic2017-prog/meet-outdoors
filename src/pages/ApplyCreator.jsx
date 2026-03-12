@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+
 
 export default function ApplyCreator() {
   const [user, setUser] = useState(null);
@@ -43,9 +42,18 @@ export default function ApplyCreator() {
   const [pageLoading, setPageLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 820 : false
+  );
 
   useEffect(() => {
     loadUserAndApplication();
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 820);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   async function loadUserAndApplication() {
@@ -256,8 +264,9 @@ export default function ApplyCreator() {
         .eq("id", user.id);
 
       if (profileError) {
-  console.log("PROFILE UPDATE ERROR:", profileError);
+        console.log("PROFILE UPDATE ERROR:", profileError);
       }
+
       setSuccess(true);
       await loadUserAndApplication();
     } catch (err) {
@@ -270,103 +279,163 @@ export default function ApplyCreator() {
 
   const pageStyle = {
     minHeight: "100vh",
-    padding: "28px 16px 60px",
+    padding: isMobile ? "16px 12px 40px" : "28px 16px 70px",
     background:
-      "radial-gradient(circle at top, #062a1d 0%, #030b08 55%, #020605 100%)",
+      "radial-gradient(1000px 480px at 0% 0%, rgba(0,255,170,0.10), transparent 55%), radial-gradient(900px 420px at 100% 0%, rgba(0,180,255,0.10), transparent 55%), linear-gradient(180deg, #041812 0%, #020907 45%, #010403 100%)",
     color: "#ffffff",
     boxSizing: "border-box",
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   };
 
   const wrapStyle = {
-    maxWidth: 860,
+    maxWidth: 1100,
     margin: "0 auto",
   };
 
-  const cardStyle = {
-    background: "rgba(0,0,0,0.42)",
+  const glassCard = {
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 24,
+    boxShadow: "0 20px 60px rgba(0,0,0,0.42)",
+    backdropFilter: "blur(18px)",
+  };
+
+  const heroStyle = {
+    ...glassCard,
+    padding: isMobile ? 18 : 26,
+    marginBottom: 18,
+    overflow: "hidden",
+    position: "relative",
+  };
+
+  const formCardStyle = {
+    ...glassCard,
+    padding: isMobile ? 14 : 22,
+  };
+
+  const sectionCard = {
+    borderRadius: 20,
+    padding: isMobile ? 14 : 16,
+    background: "rgba(255,255,255,0.035)",
     border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 18,
-    padding: 18,
-    boxShadow: "0 16px 40px rgba(0,0,0,0.45)",
-    backdropFilter: "blur(12px)",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.20)",
+    marginBottom: 16,
   };
 
   const inputStyle = {
     width: "100%",
-    padding: "10px 12px",
-    borderRadius: 10,
+    padding: "13px 14px",
+    borderRadius: 14,
     border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(0,0,0,0.55)",
+    background: "rgba(0,0,0,0.32)",
     color: "#ffffff",
     fontSize: 14,
     outline: "none",
     boxSizing: "border-box",
+    transition: "0.2s ease",
+  };
+
+  const textareaStyle = {
+    ...inputStyle,
+    minHeight: 100,
+    resize: "vertical",
   };
 
   const labelStyle = {
     fontSize: 13,
-    marginBottom: 6,
-    color: "rgba(255,255,255,0.84)",
+    marginBottom: 7,
+    color: "rgba(255,255,255,0.88)",
+    fontWeight: 700,
   };
 
   const sectionTitleStyle = {
-    fontSize: 14,
-    fontWeight: 700,
-    marginBottom: 10,
+    fontSize: 13,
+    fontWeight: 900,
+    marginBottom: 14,
     textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    color: "rgba(210,255,230,0.85)",
+    letterSpacing: "0.12em",
+    color: "rgba(190,255,225,0.86)",
   };
 
   const hintStyle = {
     fontSize: 11,
-    color: "rgba(255,255,255,0.55)",
-    marginTop: 4,
+    color: "rgba(255,255,255,0.58)",
+    marginTop: 6,
+    lineHeight: 1.45,
   };
 
   const errorStyle = {
-    marginTop: 12,
+    marginTop: 14,
     fontSize: 13,
-    padding: "10px 12px",
-    borderRadius: 12,
-    background: "rgba(255,60,80,0.16)",
-    border: "1px solid rgba(255,90,110,0.7)",
+    padding: "12px 14px",
+    borderRadius: 14,
+    background: "rgba(255,60,80,0.12)",
+    border: "1px solid rgba(255,90,110,0.45)",
     color: "#ffd3d8",
-    lineHeight: 1.45,
+    lineHeight: 1.5,
+    fontWeight: 700,
   };
 
   const successStyle = {
-    marginTop: 12,
+    marginTop: 14,
     fontSize: 13,
-    padding: "10px 12px",
-    borderRadius: 12,
-    background: "rgba(0,255,150,0.1)",
-    border: "1px solid rgba(0,255,150,0.45)",
-    color: "#c9ffe8",
-    lineHeight: 1.45,
+    padding: "12px 14px",
+    borderRadius: 14,
+    background: "rgba(0,255,150,0.10)",
+    border: "1px solid rgba(0,255,150,0.32)",
+    color: "#d9fff0",
+    lineHeight: 1.5,
+    fontWeight: 700,
   };
 
   const submitBtnStyle = {
     marginTop: 18,
     width: "100%",
-    padding: "12px 14px",
+    padding: "15px 16px",
     borderRadius: 999,
     border: "none",
     background:
-      "linear-gradient(135deg, #00ffb0 0%, #00cf7c 40%, #02a45d 100%)",
-    color: "#02140b",
+      "linear-gradient(135deg, #00ffb0 0%, #00d68b 38%, #00b8ff 100%)",
+    color: "#03140d",
     fontSize: 15,
-    fontWeight: 800,
-    letterSpacing: "0.05em",
+    fontWeight: 900,
+    letterSpacing: "0.06em",
     cursor: "pointer",
-    boxShadow: "0 14px 40px rgba(0,255,165,0.35)",
+    boxShadow: "0 18px 45px rgba(0,255,165,0.24)",
+  };
+
+  const grid2 = {
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+    gap: 12,
+  };
+
+  const fileBox = {
+    padding: 14,
+    borderRadius: 16,
+    background: "rgba(255,255,255,0.035)",
+    border: "1px solid rgba(255,255,255,0.08)",
+  };
+
+  const miniBadge = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "8px 12px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    fontSize: 12,
+    fontWeight: 800,
+    color: "rgba(255,255,255,0.88)",
+    whiteSpace: "nowrap",
   };
 
   if (pageLoading) {
     return (
       <div style={pageStyle}>
         <div style={wrapStyle}>
-          <div style={cardStyle}>Loading application form...</div>
+          <div style={{ ...glassCard, padding: 22 }}>Loading application form...</div>
         </div>
       </div>
     );
@@ -376,7 +445,7 @@ export default function ApplyCreator() {
     return (
       <div style={pageStyle}>
         <div style={wrapStyle}>
-          <div style={cardStyle}>
+          <div style={{ ...glassCard, padding: 22 }}>
             You must be logged in to apply as a creator.
           </div>
         </div>
@@ -387,34 +456,74 @@ export default function ApplyCreator() {
   return (
     <div style={pageStyle}>
       <div style={wrapStyle}>
-        <div style={{ ...cardStyle, marginBottom: 18 }}>
+        <div style={heroStyle}>
           <div
             style={{
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "rgba(210,255,230,0.72)",
-              marginBottom: 6,
-              fontWeight: 800,
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(circle at top right, rgba(0,255,170,0.12), transparent 28%), radial-gradient(circle at bottom left, rgba(0,180,255,0.08), transparent 25%)",
+              pointerEvents: "none",
             }}
-          >
-            Creator Verification
-          </div>
+          />
 
-          <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
-            Apply to become a verified creator
-          </div>
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div
+              style={{
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "0.14em",
+                color: "rgba(210,255,230,0.75)",
+                marginBottom: 8,
+                fontWeight: 900,
+              }}
+            >
+              MeetOutdoors • Creator Verification
+            </div>
 
-          <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
-            Send your public info, experience, and documents for review.
+            <div
+              style={{
+                fontSize: isMobile ? 30 : 42,
+                fontWeight: 950,
+                lineHeight: 1.03,
+                marginBottom: 10,
+              }}
+            >
+              Apply to become a verified creator
+            </div>
+
+            <div
+              style={{
+                color: "rgba(255,255,255,0.74)",
+                fontSize: isMobile ? 14 : 15,
+                lineHeight: 1.7,
+                maxWidth: 760,
+              }}
+            >
+              Share your public profile, experience, safety information and supporting
+              documents. Once submitted, your application will be reviewed by the admin team.
+            </div>
+
+            <div
+              style={{
+                marginTop: 16,
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={miniBadge}>✅ Manual review</div>
+              <div style={miniBadge}>🛡️ Verification process</div>
+              <div style={miniBadge}>📄 Secure document submission</div>
+            </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={cardStyle}>
-          <div style={{ marginBottom: 18 }}>
+        <form onSubmit={handleSubmit} style={formCardStyle}>
+          <div style={sectionCard}>
             <div style={sectionTitleStyle}>Basic Info</div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={grid2}>
               <div>
                 <div style={labelStyle}>Full name *</div>
                 <input
@@ -422,7 +531,7 @@ export default function ApplyCreator() {
                   name="full_name"
                   value={form.full_name}
                   onChange={handleChange}
-                  placeholder="Full name"
+                  placeholder="Enter your full name"
                 />
               </div>
 
@@ -433,7 +542,7 @@ export default function ApplyCreator() {
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="Email"
+                  placeholder="Enter your email"
                 />
               </div>
 
@@ -444,7 +553,7 @@ export default function ApplyCreator() {
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
-                  placeholder="Phone"
+                  placeholder="Enter your phone number"
                 />
               </div>
 
@@ -488,10 +597,10 @@ export default function ApplyCreator() {
             </div>
           </div>
 
-          <div style={{ marginBottom: 18 }}>
+          <div style={sectionCard}>
             <div style={sectionTitleStyle}>Creator Profile</div>
 
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               <div style={labelStyle}>Brand name</div>
               <input
                 style={inputStyle}
@@ -502,25 +611,25 @@ export default function ApplyCreator() {
               />
             </div>
 
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               <div style={labelStyle}>Bio</div>
               <textarea
-                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+                style={textareaStyle}
                 name="bio"
                 value={form.bio}
                 onChange={handleChange}
-                placeholder="Tell us about yourself"
+                placeholder="Tell us who you are, what kind of creator you are, and what people can expect from you"
               />
             </div>
 
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               <div style={labelStyle}>Experience</div>
               <textarea
-                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+                style={textareaStyle}
                 name="experience_text"
                 value={form.experience_text}
                 onChange={handleChange}
-                placeholder="Describe your experience organizing tours"
+                placeholder="Describe your experience with events, guiding people, tours, adventure or outdoor organization"
               />
             </div>
 
@@ -531,142 +640,222 @@ export default function ApplyCreator() {
                 name="activities_raw"
                 value={form.activities_raw}
                 onChange={handleChange}
-                placeholder="Hiking, Cycling, Fishing..."
+                placeholder="Hiking, Cycling, Fishing, Kayaking..."
               />
               <div style={hintStyle}>Separate activities with commas.</div>
             </div>
           </div>
 
-          <div style={{ marginBottom: 18 }}>
-            <div style={sectionTitleStyle}>Links</div>
+          <div style={sectionCard}>
+            <div style={sectionTitleStyle}>Links & Social Presence</div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <input
-                style={inputStyle}
-                name="instagram_url"
-                value={form.instagram_url}
-                onChange={handleChange}
-                placeholder="Instagram URL"
-              />
-              <input
-                style={inputStyle}
-                name="website_url"
-                value={form.website_url}
-                onChange={handleChange}
-                placeholder="Website URL"
-              />
-              <input
-                style={inputStyle}
-                name="tiktok_url"
-                value={form.tiktok_url}
-                onChange={handleChange}
-                placeholder="TikTok URL"
-              />
-              <input
-                style={inputStyle}
-                name="youtube_url"
-                value={form.youtube_url}
-                onChange={handleChange}
-                placeholder="YouTube URL"
-              />
+            <div style={grid2}>
+              <div>
+                <div style={labelStyle}>Instagram URL</div>
+                <input
+                  style={inputStyle}
+                  name="instagram_url"
+                  value={form.instagram_url}
+                  onChange={handleChange}
+                  placeholder="Instagram URL"
+                />
+              </div>
+
+              <div>
+                <div style={labelStyle}>Website URL</div>
+                <input
+                  style={inputStyle}
+                  name="website_url"
+                  value={form.website_url}
+                  onChange={handleChange}
+                  placeholder="Website URL"
+                />
+              </div>
+
+              <div>
+                <div style={labelStyle}>TikTok URL</div>
+                <input
+                  style={inputStyle}
+                  name="tiktok_url"
+                  value={form.tiktok_url}
+                  onChange={handleChange}
+                  placeholder="TikTok URL"
+                />
+              </div>
+
+              <div>
+                <div style={labelStyle}>YouTube URL</div>
+                <input
+                  style={inputStyle}
+                  name="youtube_url"
+                  value={form.youtube_url}
+                  onChange={handleChange}
+                  placeholder="YouTube URL"
+                />
+              </div>
             </div>
           </div>
 
-          <div style={{ marginBottom: 18 }}>
-            <div style={sectionTitleStyle}>Safety</div>
+          <div style={sectionCard}>
+            <div style={sectionTitleStyle}>Safety & Responsibility</div>
 
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               <div style={labelStyle}>Safety notes</div>
               <textarea
-                style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+                style={{ ...textareaStyle, minHeight: 90 }}
                 name="safety_notes"
                 value={form.safety_notes}
                 onChange={handleChange}
-                placeholder="First aid, mountain safety, weather handling..."
+                placeholder="Mention first aid, route planning, weather awareness, participant safety, emergency actions..."
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <input
-                style={inputStyle}
-                name="emergency_contact_name"
-                value={form.emergency_contact_name}
-                onChange={handleChange}
-                placeholder="Emergency contact name"
-              />
-              <input
-                style={inputStyle}
-                name="emergency_contact_phone"
-                value={form.emergency_contact_phone}
-                onChange={handleChange}
-                placeholder="Emergency contact phone"
-              />
+            <div style={grid2}>
+              <div>
+                <div style={labelStyle}>Emergency contact name</div>
+                <input
+                  style={inputStyle}
+                  name="emergency_contact_name"
+                  value={form.emergency_contact_name}
+                  onChange={handleChange}
+                  placeholder="Emergency contact name"
+                />
+              </div>
+
+              <div>
+                <div style={labelStyle}>Emergency contact phone</div>
+                <input
+                  style={inputStyle}
+                  name="emergency_contact_phone"
+                  value={form.emergency_contact_phone}
+                  onChange={handleChange}
+                  placeholder="Emergency contact phone"
+                />
+              </div>
             </div>
 
-            <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
-              <label style={{ fontSize: 13 }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 14,
+                marginTop: 14,
+                flexWrap: "wrap",
+              }}
+            >
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  fontSize: 13,
+                  padding: "10px 12px",
+                  borderRadius: 14,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
                 <input
                   type="checkbox"
                   name="has_first_aid"
                   checked={form.has_first_aid}
                   onChange={handleChange}
-                  style={{ marginRight: 8 }}
                 />
                 Has first aid knowledge
               </label>
 
-              <label style={{ fontSize: 13 }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  fontSize: 13,
+                  padding: "10px 12px",
+                  borderRadius: 14,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
                 <input
                   type="checkbox"
                   name="has_insurance"
                   checked={form.has_insurance}
                   onChange={handleChange}
-                  style={{ marginRight: 8 }}
                 />
                 Has insurance
               </label>
             </div>
           </div>
 
-          <div style={{ marginBottom: 18 }}>
+          <div style={sectionCard}>
             <div style={sectionTitleStyle}>Documents</div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
+            <div style={grid2}>
+              <div style={fileBox}>
                 <div style={labelStyle}>ID document</div>
-                <input type="file" onChange={(e) => setIdDoc(e.target.files?.[0] || null)} />
+                <input
+                  type="file"
+                  onChange={(e) => setIdDoc(e.target.files?.[0] || null)}
+                />
                 {existingFiles.id_document_url && (
-                  <div style={hintStyle}>Existing file already uploaded</div>
+                  <div style={hintStyle}>Existing file already uploaded.</div>
                 )}
               </div>
 
-              <div>
+              <div style={fileBox}>
                 <div style={labelStyle}>Selfie with document</div>
-                <input type="file" onChange={(e) => setSelfieDoc(e.target.files?.[0] || null)} />
+                <input
+                  type="file"
+                  onChange={(e) => setSelfieDoc(e.target.files?.[0] || null)}
+                />
                 {existingFiles.selfie_document_url && (
-                  <div style={hintStyle}>Existing file already uploaded</div>
+                  <div style={hintStyle}>Existing file already uploaded.</div>
                 )}
               </div>
 
-              <div>
+              <div style={fileBox}>
                 <div style={labelStyle}>Company document</div>
-                <input type="file" onChange={(e) => setCompanyDoc(e.target.files?.[0] || null)} />
+                <input
+                  type="file"
+                  onChange={(e) => setCompanyDoc(e.target.files?.[0] || null)}
+                />
                 {existingFiles.company_document_url && (
-                  <div style={hintStyle}>Existing file already uploaded</div>
+                  <div style={hintStyle}>Existing file already uploaded.</div>
                 )}
               </div>
 
-              <div>
+              <div style={fileBox}>
                 <div style={labelStyle}>License document</div>
-                <input type="file" onChange={(e) => setLicenseDoc(e.target.files?.[0] || null)} />
+                <input
+                  type="file"
+                  onChange={(e) => setLicenseDoc(e.target.files?.[0] || null)}
+                />
                 {existingFiles.license_document_url && (
-                  <div style={hintStyle}>Existing file already uploaded</div>
+                  <div style={hintStyle}>Existing file already uploaded.</div>
                 )}
               </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: "14px 16px",
+                borderRadius: 16,
+                background:
+                  "linear-gradient(135deg, rgba(0,255,170,0.08), rgba(0,180,255,0.06))",
+                border: "1px solid rgba(120,255,220,0.16)",
+                color: "rgba(235,255,248,0.88)",
+                fontSize: 13,
+                lineHeight: 1.6,
+              }}
+            >
+              🔒 Your submitted information and documents are handled with care and used only
+              for verification and safety review. Sensitive data stays protected and is not
+              publicly displayed on your creator profile.
             </div>
           </div>
 
           {errorMsg && <div style={errorStyle}>{errorMsg}</div>}
+
           {success && (
             <div style={successStyle}>
               Application sent successfully. Your creator request is now under review.

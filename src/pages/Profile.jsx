@@ -1,4 +1,5 @@
 // src/pages/Profile.jsx
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
@@ -6,6 +7,7 @@ import ProfileRatingSummary from "../components/ProfileRatingSummary";
 import ProfileRatingBox from "../components/ProfileRatingBox";
 
 /* ================= FRIEND BADGE ================= */
+
 const FriendBadge = () => (
   <span
     style={{
@@ -26,6 +28,7 @@ const FriendBadge = () => (
 );
 
 /* ================= HELPERS ================= */
+
 function useIsSmall(breakpoint = 900) {
   const [isSmall, setIsSmall] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -73,6 +76,7 @@ function formatDateTime(d) {
 }
 
 /* ================= MOBILE PROFILE VIEW ================= */
+
 function MobileProfileView({
   profile,
   cover,
@@ -93,6 +97,7 @@ function MobileProfileView({
   toggleFollow,
   goEdit,
   tours = [],
+  joinedTours = [],
   events = [],
   timeline = [],
   navigate,
@@ -178,9 +183,7 @@ function MobileProfileView({
 
   const TourCard = ({ t }) => {
     const img =
-      t.cover_url ||
-      (Array.isArray(t.image_urls) ? t.image_urls[0] : null) ||
-      "";
+      t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
 
     return (
       <div
@@ -314,6 +317,7 @@ function MobileProfileView({
 
   const TimelineRow = ({ it }) => {
     const icon = it.type === "tour" ? "🗺️" : it.type === "event" ? "🎟️" : "⭐";
+
     return (
       <div
         onClick={() => {
@@ -554,7 +558,7 @@ function MobileProfileView({
             </div>
           ) : null}
 
-          {isFriend ? (
+          {Boolean(isFriend) && (
             <div style={{ marginTop: 10 }}>
               <span
                 style={{
@@ -573,7 +577,7 @@ function MobileProfileView({
                 🤝 FRIEND
               </span>
             </div>
-          ) : null}
+          )}
         </div>
 
         <div
@@ -586,8 +590,7 @@ function MobileProfileView({
             opacity: 0.92,
           }}
         >
-          {profile?.bio ||
-            "No description yet. This explorer prefers actions over words."}
+          {profile?.bio || "No description yet. This explorer prefers actions over words."}
         </div>
 
         <div style={{ marginTop: 14 }}>
@@ -631,8 +634,7 @@ function MobileProfileView({
               {isFollowing ? "Following ✓" : "Follow"}
             </button>
           )}
-
-          /</div>
+        </div>
 
         {(profile?.instagram_url || profile?.tiktok_url || profile?.youtube_url) && (
           <div
@@ -740,6 +742,33 @@ function MobileProfileView({
         </div>
 
         <div style={{ marginTop: 14, ...card }}>
+          <div style={sectionTitle}>Joined tours</div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 950 }}>Tours joined</div>
+            <div style={pill}>🤝 {joinedTours.length}</div>
+          </div>
+
+          {joinedTours.length === 0 ? (
+            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
+              No joined tours yet.
+            </div>
+          ) : (
+            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+              {joinedTours.slice(0, 3).map((t) => (
+                <TourCard key={t.id} t={t} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginTop: 14, ...card }}>
           <div style={sectionTitle}>Events</div>
           <div
             style={{
@@ -814,24 +843,19 @@ export default function Profile() {
   const [authUser, setAuthUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [tours, setTours] = useState([]);
+  const [joinedTours, setJoinedTours] = useState([]);
   const [events, setEvents] = useState([]);
   const [timeline, setTimeline] = useState([]);
-
   const [followersList, setFollowersList] = useState([]);
   const [friendsList, setFriendsList] = useState([]);
-
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
-
   const [avgRating, setAvgRating] = useState(null);
   const [ratingsCount, setRatingsCount] = useState(0);
-
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
 
@@ -842,7 +866,6 @@ export default function Profile() {
   };
 
   const [activeTab, setActiveTab] = useState(getInitialTab);
-
   const isOwnProfile = authUser && authUser.id === id;
 
   useEffect(() => {
@@ -884,6 +907,24 @@ export default function Profile() {
 
     if (toursErr) console.log("TOURS ERR", toursErr);
     setTours(toursData || []);
+
+    const { data: joinedRows, error: joinedErr } = await supabase
+      .from("tour_participants")
+      .select(
+        `
+        tour_id,
+        tours (*)
+      `
+      )
+      .eq("user_id", id);
+
+    if (joinedErr) {
+      console.log("JOINED TOURS ERR", joinedErr);
+      setJoinedTours([]);
+    } else {
+      const joined = (joinedRows || []).map((row) => row.tours).filter(Boolean);
+      setJoinedTours(joined);
+    }
 
     const { data: eventsData, error: eventsErr } = await supabase
       .from("events")
@@ -957,9 +998,7 @@ export default function Profile() {
 
     if (folIdsErr) console.log("FOLLOWERS IDS ERR", folIdsErr);
 
-    const followerIds = (folIdsRows || [])
-      .map((r) => r.follower_id)
-      .filter(Boolean);
+    const followerIds = (folIdsRows || []).map((r) => r.follower_id).filter(Boolean);
 
     if (followerIds.length === 0) {
       setFollowersList([]);
@@ -1339,6 +1378,7 @@ export default function Profile() {
         toggleFollow={toggleFollow}
         goEdit={() => navigate("/edit-profile")}
         tours={tours}
+        joinedTours={joinedTours}
         events={events}
         timeline={timeline}
         navigate={navigate}
@@ -1368,12 +1408,6 @@ export default function Profile() {
             {isFollowing ? "Following ✓" : "Follow"}
           </button>
 
-          {isFriend && (
-            <button style={btnGhost} onClick={() => navigate(`/chat/${id}`)}>
-              💬 Chat
-            </button>
-          )}
-
           {isFriend && <FriendBadge />}
         </>
       ) : (
@@ -1394,15 +1428,15 @@ export default function Profile() {
       <div style={{ position: "relative", height: 340 }}>
         {cover ? (
           <img
-  src={cover}
-  alt="cover"
-  style={{
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    filter: "saturate(1.1) contrast(1.05) brightness(1.02)"
-  }}
-/>
+            src={cover}
+            alt="cover"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: "saturate(1.1) contrast(1.05) brightness(1.02)",
+            }}
+          />
         ) : (
           <div
             style={{
@@ -1537,8 +1571,7 @@ export default function Profile() {
                   lineHeight: 1.6,
                 }}
               >
-                {profile.bio ||
-                  "No description yet. This explorer prefers actions over words."}
+                {profile.bio || "No description yet. This explorer prefers actions over words."}
               </div>
 
               <div style={{ marginTop: 14, maxWidth: 640 }}>
@@ -1785,25 +1818,15 @@ export default function Profile() {
   const tabs = (
     <div style={tabsWrap}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button
-          style={tabBtn(activeTab === "overview")}
-          onClick={() => setActiveTab("overview")}
-        >
+        <button style={tabBtn(activeTab === "overview")} onClick={() => setActiveTab("overview")}>
           Overview
         </button>
-        <button
-          style={tabBtn(activeTab === "tours")}
-          onClick={() => setActiveTab("tours")}
-        >
+        <button style={tabBtn(activeTab === "tours")} onClick={() => setActiveTab("tours")}>
           Tours
         </button>
-        <button
-          style={tabBtn(activeTab === "events")}
-          onClick={() => setActiveTab("events")}
-        >
+        <button style={tabBtn(activeTab === "events")} onClick={() => setActiveTab("events")}>
           Events
         </button>
-
         <button
           style={tabBtn(activeTab === "friends")}
           onClick={() => {
@@ -1813,11 +1836,7 @@ export default function Profile() {
         >
           Friends {canSeeFriends ? "" : "🔒"}
         </button>
-
-        <button
-          style={tabBtn(activeTab === "timeline")}
-          onClick={() => setActiveTab("timeline")}
-        >
+        <button style={tabBtn(activeTab === "timeline")} onClick={() => setActiveTab("timeline")}>
           Timeline
         </button>
       </div>
@@ -1933,7 +1952,9 @@ export default function Profile() {
                       {formatDateTime(it.created_at)}
                     </div>
                     <div style={{ fontWeight: 950, fontSize: 14 }}>{it.title}</div>
-                    <div style={{ fontSize: 14, opacity: 0.95, marginTop: 2 }}>{it.subtitle}</div>
+                    <div style={{ fontSize: 14, opacity: 0.95, marginTop: 2 }}>
+                      {it.subtitle}
+                    </div>
                     <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{it.meta}</div>
 
                     {(it.type === "tour" || it.type === "event") && it.id && (
@@ -2096,6 +2117,110 @@ export default function Profile() {
           >
             View tours →
           </button>
+        </div>
+
+        <div style={card}>
+          <div
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
+            <div>
+              <div style={sectionTitle}>Joined tours</div>
+              <div style={{ fontSize: 18, fontWeight: 950 }}>Tours joined</div>
+            </div>
+            <div style={pill}>🤝 {joinedTours.length}</div>
+          </div>
+
+          {joinedTours.length === 0 ? (
+            <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
+              No joined tours yet.
+            </div>
+          ) : (
+            <div
+              style={{
+                marginTop: 14,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+                gap: 12,
+              }}
+            >
+              {joinedTours.slice(0, 4).map((t) => {
+                const img =
+                  t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => navigate(`/tour/${t.id}`)}
+                    style={{
+                      cursor: "pointer",
+                      borderRadius: 18,
+                      overflow: "hidden",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "rgba(0,0,0,0.35)",
+                      boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
+                    }}
+                  >
+                    <div style={{ position: "relative", height: 122 }}>
+                      {img ? (
+                        <img
+                          src={img}
+                          alt=""
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            filter: "saturate(1.15) contrast(1.05) brightness(0.92)",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            background:
+                              "radial-gradient(300px 140px at 20% 25%, rgba(0,255,195,0.20), transparent 60%)," +
+                              "radial-gradient(320px 160px at 80% 25%, rgba(124,77,255,0.18), transparent 65%)," +
+                              "linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.92))",
+                          }}
+                        />
+                      )}
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.85))",
+                        }}
+                      />
+                      <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
+                        <div style={{ fontWeight: 950, fontSize: 13 }}>{t.title}</div>
+                        <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
+                          {t.location_name || "Unknown place"}
+                          {t.country ? `, ${t.country}` : ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: 10,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ fontSize: 11, opacity: 0.72 }}>
+                        {t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}
+                      </div>
+                      <div style={{ fontSize: 11, opacity: 0.9 }}>
+                        {t.price ? `💶 ${t.price}€` : "Free"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

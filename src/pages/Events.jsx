@@ -61,96 +61,215 @@ export default function Events() {
   });
 
   const countries = [
-    "All countries","Serbia","Bosnia & Herzegovina","Croatia","Montenegro",
-    "North Macedonia","Albania","Greece","Italy","France","Germany",
-    "Austria","Switzerland","USA",
+    "All countries",
+    "Serbia",
+    "Bosnia & Herzegovina",
+    "Croatia",
+    "Montenegro",
+    "North Macedonia",
+    "Albania",
+    "Greece",
+    "Italy",
+    "France",
+    "Germany",
+    "Austria",
+    "Switzerland",
+    "USA",
   ];
 
   const categories = [
-    "All categories","Meetup","Festival","Workshop","Hiking Day",
-    "Climbing Event","Bike Gathering","Community Event",
+    "All categories",
+    "Meetup",
+    "Festival",
+    "Workshop",
+    "Hiking Day",
+    "Climbing Event",
+    "Bike Gathering",
+    "Community Event",
+    "Charity Event",
   ];
 
   return (
     <div style={styles.page}>
-      {/* HEADER */}
-      <div style={styles.hero}>
-        <h1 style={styles.title}>🔥 Outdoor Events</h1>
-        <p style={styles.subtitle}>
-          Real gatherings · Real people · Real adventures
-        </p>
+      <div style={styles.bgGlow1} />
+      <div style={styles.bgGlow2} />
+      <div style={styles.bgGrid} />
 
-        {/* FILTERS */}
-        <div style={styles.filters}>
-          <Filter
-            value={countryFilter}
-            open={showCountryList}
-            setOpen={setShowCountryList}
-            closeOther={setShowCategoryList}
-            list={countries}
-            onSelect={setCountryFilter}
-          />
-          <Filter
-            value={categoryFilter}
-            open={showCategoryList}
-            setOpen={setShowCategoryList}
-            closeOther={setShowCountryList}
-            list={categories}
-            onSelect={setCategoryFilter}
-          />
-        </div>
-      </div>
+      <div style={styles.container}>
+        {/* HERO */}
+        <div style={styles.hero}>
+          <div style={styles.heroBadge}>⚡ LIVE OUTDOOR ENERGY</div>
 
-      {/* GRID */}
-      <div style={styles.grid}>
-        {!loading &&
-          filteredEvents.map((evt) => (
-            <div
-              key={evt.id}
-              style={styles.card}
-              onClick={() => navigate(`/event/${evt.id}`)}
-            >
-              {/* IMAGE */}
-              <div style={styles.imageWrap}>
-                <img
-                  src={evt.cover_url || DEFAULT_COVER}
-                  alt=""
-                  style={styles.image}
-                />
-                <div style={styles.imageOverlay} />
-                <div style={styles.categoryTag}>#{evt.category}</div>
-              </div>
+          <h1 style={styles.title}>Outdoor Events</h1>
 
-              {/* CONTENT */}
-              <div style={styles.cardBody}>
-                <div style={styles.cardTitle}>{evt.title}</div>
-                <div style={styles.location}>
-                  📍 {evt.city || evt.country}
-                </div>
+          <p style={styles.subtitle}>
+            Real gatherings. Wild places. Good people. Find the next brutal
+            adventure and jump in.
+          </p>
 
-                {/* ATTENDEES */}
-                <div style={styles.attendees}>
-                  <div style={styles.avatars}>
-                    {(evt.attendees || []).slice(0, 5).map(
-                      (a, i) =>
-                        a?.avatar_url && (
-                          <img
-                            key={i}
-                            src={a.avatar_url}
-                            alt=""
-                            style={styles.avatar}
-                          />
-                        )
-                    )}
-                  </div>
-
-                  <div style={styles.count}>
-                    👥 {evt.attendees_count || 0}
-                  </div>
-                </div>
-              </div>
+          <div style={styles.heroStats}>
+            <div style={styles.heroStatCard}>
+              <div style={styles.heroStatNumber}>{filteredEvents.length}</div>
+              <div style={styles.heroStatLabel}>Visible events</div>
             </div>
-          ))}
+
+            <div style={styles.heroStatCard}>
+              <div style={styles.heroStatNumber}>{events.length}</div>
+              <div style={styles.heroStatLabel}>Total loaded</div>
+            </div>
+
+            <div style={styles.heroStatCard}>
+              <div style={styles.heroStatNumber}>
+                {events.reduce((sum, e) => sum + (e.attendees_count || 0), 0)}
+              </div>
+              <div style={styles.heroStatLabel}>People joining</div>
+            </div>
+          </div>
+
+          {/* FILTERS */}
+          <div style={styles.filtersWrap}>
+            <Filter
+              label="Country"
+              value={countryFilter}
+              open={showCountryList}
+              setOpen={setShowCountryList}
+              closeOther={setShowCategoryList}
+              list={countries}
+              onSelect={setCountryFilter}
+            />
+            <Filter
+              label="Category"
+              value={categoryFilter}
+              open={showCategoryList}
+              setOpen={setShowCategoryList}
+              closeOther={setShowCountryList}
+              list={categories}
+              onSelect={setCategoryFilter}
+            />
+          </div>
+        </div>
+
+        {/* TOP ROW */}
+        <div style={styles.topRow}>
+          <div>
+            <div style={styles.sectionEyebrow}>DISCOVER</div>
+            <div style={styles.sectionTitle}>Brutal upcoming events</div>
+          </div>
+
+          <div style={styles.resultsPill}>
+            <span style={styles.resultsDot} />
+            {loading ? "Loading events..." : `${filteredEvents.length} shown`}
+          </div>
+        </div>
+
+        {/* GRID */}
+        <div style={styles.grid}>
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={styles.skeletonCard}>
+                  <div style={styles.skeletonImage} />
+                  <div style={styles.skeletonBody}>
+                    <div style={styles.skeletonLineLg} />
+                    <div style={styles.skeletonLineSm} />
+                    <div style={styles.skeletonLineXs} />
+                  </div>
+                </div>
+              ))
+            : filteredEvents.map((evt) => {
+                const attendees = evt.attendees || [];
+                const visibleAvatars = attendees.filter((a) => a?.avatar_url).slice(0, 5);
+
+                return (
+                  <div
+                    key={evt.id}
+                    style={styles.card}
+                    onClick={() => navigate(`/event/${evt.id}`)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-8px) scale(1.01)";
+                      e.currentTarget.style.boxShadow =
+                        "0 40px 120px rgba(0,0,0,0.72), 0 0 0 1px rgba(0,255,195,0.18) inset";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0) scale(1)";
+                      e.currentTarget.style.boxShadow =
+                        "0 28px 80px rgba(0,0,0,0.55)";
+                    }}
+                  >
+                    <div style={styles.imageWrap}>
+                      <img
+                        src={evt.cover_url || DEFAULT_COVER}
+                        alt={evt.title || "Event cover"}
+                        style={styles.image}
+                      />
+
+                      <div style={styles.imageOverlay} />
+                      <div style={styles.imageNoise} />
+
+                      <div style={styles.topBadges}>
+                        <div style={styles.categoryTag}>#{evt.category || "Event"}</div>
+                        <div style={styles.livePill}>● LIVE</div>
+                      </div>
+
+                      <div style={styles.imageBottom}>
+                        <div style={styles.locationChip}>
+                          📍 {evt.city || evt.country || "Unknown location"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={styles.cardBody}>
+                      <div style={styles.cardTitle}>{evt.title}</div>
+
+                      <div style={styles.metaRow}>
+                        <div style={styles.metaPill}>
+                          🌍 {evt.country || "Country TBA"}
+                        </div>
+                        <div style={styles.metaPill}>
+                          👥 {evt.attendees_count || 0} going
+                        </div>
+                      </div>
+
+                      <div style={styles.divider} />
+
+                      <div style={styles.bottomRow}>
+                        <div style={styles.attendees}>
+                          <div style={styles.avatars}>
+                            {visibleAvatars.length > 0 ? (
+                              visibleAvatars.map((a, i) => (
+                                <img
+                                  key={i}
+                                  src={a.avatar_url}
+                                  alt=""
+                                  style={{
+                                    ...styles.avatar,
+                                    marginLeft: i === 0 ? 0 : -10,
+                                    zIndex: 10 - i,
+                                  }}
+                                />
+                              ))
+                            ) : (
+                              <div style={styles.emptyAvatars}>No attendees yet</div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={styles.openBtn}>Open event →</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+        </div>
+
+        {!loading && filteredEvents.length === 0 && (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>🌌</div>
+            <div style={styles.emptyTitle}>No events for these filters</div>
+            <div style={styles.emptyText}>
+              Change country or category and load another adventure.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -159,9 +278,11 @@ export default function Events() {
 /* -------------------------------- */
 /* FILTER COMPONENT */
 /* -------------------------------- */
-function Filter({ value, open, setOpen, closeOther, list, onSelect }) {
+function Filter({ label, value, open, setOpen, closeOther, list, onSelect }) {
   return (
-    <div style={{ position: "relative" }}>
+    <div style={styles.filterShell}>
+      <div style={styles.filterLabel}>{label}</div>
+
       <div
         style={styles.filterBox}
         onClick={() => {
@@ -169,20 +290,27 @@ function Filter({ value, open, setOpen, closeOther, list, onSelect }) {
           closeOther(false);
         }}
       >
-        {value} ▾
+        <span style={styles.filterValue}>{value}</span>
+        <span style={styles.filterArrow}>{open ? "▴" : "▾"}</span>
       </div>
+
       {open && (
         <div style={styles.dropdown}>
           {list.map((v) => (
             <div
               key={v}
-              style={styles.dropdownItem}
+              style={{
+                ...styles.dropdownItem,
+                background: value === v ? "rgba(0,255,190,0.12)" : "transparent",
+                color: value === v ? "#cffff0" : "#eafff5",
+              }}
               onClick={() => {
                 onSelect(v);
                 setOpen(false);
               }}
             >
-              {v}
+              <span>{v}</span>
+              {value === v && <span>✓</span>}
             </div>
           ))}
         </div>
@@ -192,89 +320,293 @@ function Filter({ value, open, setOpen, closeOther, list, onSelect }) {
 }
 
 /* -------------------------------- */
-/* STYLES – BRUTAL MODE */
+/* STYLES – BRUTAL PREMIUM UI */
 /* -------------------------------- */
 const styles = {
   page: {
+    position: "relative",
     minHeight: "100vh",
-    padding: "50px 28px",
+    overflow: "hidden",
     background:
-      "radial-gradient(circle at top, #04140f 0%, #02060b 45%, #000 100%)",
+      "radial-gradient(circle at top, #081b16 0%, #04100d 28%, #02060b 58%, #000000 100%)",
     color: "#eafff5",
+    padding: "36px 18px 60px",
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+  },
+
+  container: {
+    position: "relative",
+    zIndex: 2,
+    maxWidth: 1400,
+    margin: "0 auto",
+  },
+
+  bgGlow1: {
+    position: "absolute",
+    top: -180,
+    left: -160,
+    width: 520,
+    height: 520,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(0,255,190,0.16), transparent 68%)",
+    filter: "blur(30px)",
+    pointerEvents: "none",
+  },
+
+  bgGlow2: {
+    position: "absolute",
+    top: 40,
+    right: -140,
+    width: 500,
+    height: 500,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(124,77,255,0.16), transparent 68%)",
+    filter: "blur(40px)",
+    pointerEvents: "none",
+  },
+
+  bgGrid: {
+    position: "absolute",
+    inset: 0,
+    backgroundImage:
+      "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+    backgroundSize: "36px 36px",
+    maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
+    pointerEvents: "none",
   },
 
   hero: {
-    marginBottom: 40,
+    position: "relative",
+    padding: "32px 24px 26px",
+    borderRadius: 34,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background:
+      "linear-gradient(145deg, rgba(10,24,19,0.88), rgba(3,10,8,0.92))",
+    boxShadow:
+      "0 30px 120px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)",
+    overflow: "visible",
+    marginBottom: 28,
+  },
+
+  heroBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "8px 14px",
+    borderRadius: 999,
+    border: "1px solid rgba(0,255,190,0.28)",
+    background: "rgba(0,255,190,0.08)",
+    boxShadow: "0 0 24px rgba(0,255,190,0.12)",
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    color: "#b8fff0",
   },
 
   title: {
-    fontSize: 38,
-    fontWeight: 900,
-    letterSpacing: "-0.02em",
+    marginTop: 18,
+    fontSize: "clamp(34px, 6vw, 64px)",
+    lineHeight: 0.96,
+    fontWeight: 1000,
+    letterSpacing: "-0.04em",
+    color: "#f4fff9",
+    textShadow: "0 6px 28px rgba(0,255,190,0.12)",
   },
 
   subtitle: {
-    marginTop: 6,
-    opacity: 0.75,
-    fontSize: 15,
+    marginTop: 14,
+    maxWidth: 760,
+    color: "rgba(234,255,245,0.72)",
+    fontSize: 16,
+    lineHeight: 1.7,
+    fontWeight: 500,
   },
 
-  filters: {
-    display: "flex",
-    gap: 14,
+  heroStats: {
     marginTop: 24,
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+    gap: 14,
+  },
+
+  heroStatCard: {
+    borderRadius: 22,
+    padding: "16px 18px",
+    border: "1px solid rgba(255,255,255,0.08)",
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+    backdropFilter: "blur(10px)",
+  },
+
+  heroStatNumber: {
+    fontSize: 28,
+    fontWeight: 1000,
+    color: "#ffffff",
+    lineHeight: 1,
+  },
+
+  heroStatLabel: {
+    marginTop: 6,
+    fontSize: 12,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: "rgba(234,255,245,0.62)",
+    fontWeight: 800,
+  },
+
+  filtersWrap: {
+    marginTop: 26,
+    display: "flex",
     flexWrap: "wrap",
+    gap: 16,
+  },
+
+  filterShell: {
+    position: "relative",
+    minWidth: 220,
+  },
+
+  filterLabel: {
+    marginBottom: 8,
+    fontSize: 11,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    color: "rgba(234,255,245,0.58)",
+    fontWeight: 900,
   },
 
   filterBox: {
-    padding: "10px 18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    minHeight: 52,
+    padding: "0 18px",
     borderRadius: 999,
-    border: "1px solid rgba(0,255,190,0.6)",
+    border: "1px solid rgba(0,255,190,0.28)",
     background:
-      "linear-gradient(135deg, rgba(0,0,0,0.85), rgba(0,255,190,0.12))",
+      "linear-gradient(135deg, rgba(0,0,0,0.78), rgba(0,255,190,0.10))",
     cursor: "pointer",
-    fontWeight: 700,
-    boxShadow: "0 0 18px rgba(0,255,190,0.25)",
+    fontWeight: 800,
+    color: "#f3fff9",
+    boxShadow:
+      "0 0 22px rgba(0,255,190,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
+    backdropFilter: "blur(12px)",
+  },
+
+  filterValue: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
+  filterArrow: {
+    color: "#9effea",
+    fontSize: 14,
+    flexShrink: 0,
   },
 
   dropdown: {
     position: "absolute",
-    top: 50,
+    top: 76,
     left: 0,
     right: 0,
-    background: "rgba(3,12,9,0.98)",
-    borderRadius: 18,
-    border: "1px solid rgba(0,255,190,0.4)",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.9)",
+    maxHeight: 320,
+    overflowY: "auto",
+    borderRadius: 22,
+    background: "rgba(4,16,12,0.97)",
+    border: "1px solid rgba(0,255,190,0.22)",
+    boxShadow:
+      "0 24px 80px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.03) inset",
     zIndex: 1000,
+    padding: 8,
+    backdropFilter: "blur(14px)",
   },
 
   dropdownItem: {
-    padding: "12px 16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "12px 14px",
+    borderRadius: 14,
     cursor: "pointer",
     fontSize: 14,
+    fontWeight: 700,
+    transition: "background 0.2s ease",
+  },
+
+  topRow: {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 18,
+    flexWrap: "wrap",
+    marginBottom: 22,
+    paddingInline: 4,
+  },
+
+  sectionEyebrow: {
+    fontSize: 11,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "rgba(234,255,245,0.55)",
+    fontWeight: 900,
+  },
+
+  sectionTitle: {
+    marginTop: 8,
+    fontSize: "clamp(22px, 3vw, 34px)",
+    fontWeight: 1000,
+    letterSpacing: "-0.03em",
+    color: "#f3fff9",
+  },
+
+  resultsPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 16px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    color: "rgba(234,255,245,0.84)",
+    fontWeight: 800,
+    fontSize: 13,
+    boxShadow: "0 10px 28px rgba(0,0,0,0.28)",
+  },
+
+  resultsDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    background: "#00ffbe",
+    boxShadow: "0 0 16px rgba(0,255,190,0.9)",
   },
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px,1fr))",
-    gap: 26,
+    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+    gap: 24,
   },
 
   card: {
-    borderRadius: 26,
+    position: "relative",
     overflow: "hidden",
+    borderRadius: 30,
     cursor: "pointer",
     background:
-      "linear-gradient(145deg, rgba(5,25,20,0.95), rgba(2,10,8,0.95))",
-    border: "1px solid rgba(0,255,190,0.25)",
-    boxShadow: "0 30px 80px rgba(0,0,0,0.9)",
+      "linear-gradient(145deg, rgba(8,26,21,0.96), rgba(2,9,7,0.96))",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 28px 80px rgba(0,0,0,0.55)",
     transition: "transform 0.35s ease, box-shadow 0.35s ease",
   },
 
   imageWrap: {
     position: "relative",
-    height: 200,
+    height: 240,
     overflow: "hidden",
   },
 
@@ -282,66 +614,243 @@ const styles = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    transform: "scale(1.05)",
+    transform: "scale(1.06)",
+    display: "block",
+    filter: "saturate(1.08) contrast(1.04)",
   },
 
   imageOverlay: {
     position: "absolute",
     inset: 0,
     background:
-      "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.2))",
+      "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.08) 100%)",
+  },
+
+  imageNoise: {
+    position: "absolute",
+    inset: 0,
+    background:
+      "radial-gradient(circle at 20% 20%, rgba(0,255,190,0.18), transparent 30%), radial-gradient(circle at 80% 10%, rgba(124,77,255,0.18), transparent 32%)",
+    mixBlendMode: "screen",
+  },
+
+  topBadges: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    right: 16,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    flexWrap: "wrap",
   },
 
   categoryTag: {
-    position: "absolute",
-    top: 14,
-    left: 14,
-    padding: "5px 12px",
+    padding: "7px 13px",
     borderRadius: 999,
-    background: "rgba(0,255,190,0.18)",
-    border: "1px solid rgba(0,255,190,0.6)",
+    background: "rgba(0,255,190,0.14)",
+    border: "1px solid rgba(0,255,190,0.34)",
+    color: "#ccfff3",
     fontSize: 11,
-    fontWeight: 800,
+    fontWeight: 900,
     letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    backdropFilter: "blur(12px)",
+  },
+
+  livePill: {
+    padding: "7px 12px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.16)",
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: "0.08em",
+    backdropFilter: "blur(10px)",
+  },
+
+  imageBottom: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 16,
+    display: "flex",
+    justifyContent: "flex-start",
+  },
+
+  locationChip: {
+    padding: "8px 14px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.10)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    color: "#f5fff9",
+    fontSize: 12,
+    fontWeight: 800,
+    backdropFilter: "blur(12px)",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.28)",
   },
 
   cardBody: {
-    padding: 18,
+    padding: 20,
   },
 
   cardTitle: {
-    fontSize: 17,
-    fontWeight: 800,
-    marginBottom: 6,
+    fontSize: 22,
+    fontWeight: 1000,
+    letterSpacing: "-0.03em",
+    color: "#ffffff",
+    lineHeight: 1.08,
   },
 
-  location: {
-    fontSize: 13,
-    opacity: 0.8,
+  metaRow: {
+    marginTop: 14,
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+
+  metaPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "8px 12px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    color: "rgba(234,255,245,0.82)",
+    fontSize: 12,
+    fontWeight: 800,
+  },
+
+  divider: {
+    marginTop: 16,
+    marginBottom: 16,
+    height: 1,
+    background:
+      "linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)",
+  },
+
+  bottomRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+    flexWrap: "wrap",
   },
 
   attendees: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 14,
+    minHeight: 34,
   },
 
   avatars: {
     display: "flex",
+    alignItems: "center",
   },
 
   avatar: {
-    width: 30,
-    height: 30,
+    width: 34,
+    height: 34,
     borderRadius: "50%",
     objectFit: "cover",
-    border: "2px solid #00ffbe",
-    marginLeft: -10,
+    border: "2px solid rgba(0,255,190,0.78)",
+    boxShadow: "0 0 16px rgba(0,255,190,0.22)",
   },
 
-  count: {
-    fontSize: 13,
+  emptyAvatars: {
+    fontSize: 12,
+    color: "rgba(234,255,245,0.52)",
     fontWeight: 700,
+  },
+
+  openBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "10px 14px",
+    borderRadius: 999,
+    background:
+      "linear-gradient(135deg, rgba(0,255,190,0.16), rgba(124,77,255,0.14))",
+    border: "1px solid rgba(255,255,255,0.10)",
+    color: "#f5fff9",
+    fontWeight: 900,
+    fontSize: 12,
+    letterSpacing: "0.04em",
+    whiteSpace: "nowrap",
+  },
+
+  skeletonCard: {
+    overflow: "hidden",
+    borderRadius: 30,
+    background:
+      "linear-gradient(145deg, rgba(8,26,21,0.96), rgba(2,9,7,0.96))",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 28px 80px rgba(0,0,0,0.42)",
+  },
+
+  skeletonImage: {
+    height: 240,
+    background:
+      "linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
+  },
+
+  skeletonBody: {
+    padding: 20,
+  },
+
+  skeletonLineLg: {
+    height: 24,
+    width: "76%",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.08)",
+  },
+
+  skeletonLineSm: {
+    marginTop: 12,
+    height: 14,
+    width: "48%",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.06)",
+  },
+
+  skeletonLineXs: {
+    marginTop: 18,
+    height: 34,
+    width: "100%",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.05)",
+  },
+
+  emptyState: {
+    marginTop: 20,
+    padding: "44px 20px",
+    borderRadius: 30,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background:
+      "linear-gradient(145deg, rgba(7,20,16,0.92), rgba(2,8,6,0.96))",
+    boxShadow: "0 28px 80px rgba(0,0,0,0.46)",
+    textAlign: "center",
+  },
+
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 14,
+  },
+
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 1000,
+    color: "#ffffff",
+    letterSpacing: "-0.03em",
+  },
+
+  emptyText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "rgba(234,255,245,0.62)",
+    lineHeight: 1.7,
   },
 };
