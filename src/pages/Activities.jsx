@@ -1,32 +1,43 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const activities = [
-    { name: "Hiking", img: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aGlraW5nfGVufDB8fDB8fHww" },
-    { name: "Cycling", img: "https://images.unsplash.com/photo-1534146789009-76ed5060ec70?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y3ljbGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
-    { name: "Paragliding", img: "https://images.unsplash.com/photo-1719949122509-74d0a1d08b44?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFyYWdsaWRpbmd8ZW58MHx8MHx8fDA%3D" },
-    { name: "Parasailing", img: "https://images.unsplash.com/photo-1560419656-c2fe828696af?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8cGFyYXNhaWxpbmd8ZW58MHx8MHx8fDA%3D" },
-    { name: "Running / Marathon", img: "https://images.unsplash.com/photo-1547483238-f400e65ccd56?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fHJ1bm5pbmd8ZW58MHx8MHx8fDA%3D" },
-    { name: "Pilgrimage", img: "https://images.unsplash.com/photo-1616244013240-227ec9abfefb?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8aG9seXxlbnwwfHwwfHx8MA%3D%3D" },
-    { name: "Horse Riding", img: "https://images.unsplash.com/photo-1589400867230-3491ceee2934?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTV8fGhvcnNlJTIwcmlkaW5nfGVufDB8fDB8fHww" },
-    { name: "Fishing", img: "https://images.unsplash.com/photo-1493787039806-2edcbe808750?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGZpc2hpbmd8ZW58MHx8MHx8fDA%3D" },
-    { name: "Rafting", img: "https://images.unsplash.com/photo-1642933196504-62107dac9258?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cmFmdGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
-    { name: "Quad Riding", img: "https://plus.unsplash.com/premium_photo-1698670081064-4b3103e04ba6?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTd8fHF1YWR8ZW58MHx8MHx8fDA%3D" },
-    { name: "Skiing & Snowboarding", img: "https://images.unsplash.com/photo-1614358606268-aa86853578b4?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fHNraWlzJTIwYW5kJTIwc25vd2JvYXJkcyUyMGVxdWlwbW1lbnR8ZW58MHx8MHx8fDA%3D" },
-    { name: "Water Skiing", img: "https://images.unsplash.com/photo-1627319706385-dfde6ea09e4e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fHdhdGVyJTIwc2tpaW5nfGVufDB8fDB8fHww" },
-    { name: "Skydiving", img: "https://images.unsplash.com/photo-1630879937467-4afa290b1a6b?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8c2t5ZGl2aW5nfGVufDB8fDB8fHww" },
-    { name: "Bungee Jumping", img: "https://images.unsplash.com/photo-1559677624-3c956f10d431?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YnVuZ2VlJTIwanVtcGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
-    { name: "Camping", img: "https://images.unsplash.com/photo-1571863533956-01c88e79957e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGNhbXBpbmd8ZW58MHx8MHx8fDA%3D" },
-    { name: "Diving", img: "https://images.unsplash.com/photo-1682687981922-7b55dbb30892?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGRpdmluZ3xlbnwwfHwwfHx8MA%3D%3D" },
-    { name: "Snorkeling", img: "https://images.unsplash.com/photo-1658298208155-ab71765747a1?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8c25vcmtlbGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
-    { name: "Boat Rides", img: "https://images.unsplash.com/photo-1633892224063-8ef7ff14508f?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGJvYXQlMjByaWRlc3xlbnwwfHwwfHx8MA%3D%3D" },
-  ];
+  { name: "Hiking", img: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aGlraW5nfGVufDB8fDB8fHww" },
+  { name: "Cycling", img: "https://images.unsplash.com/photo-1534146789009-76ed5060ec70?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y3ljbGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
+  { name: "Paragliding", img: "https://images.unsplash.com/photo-1719949122509-74d0a1d08b44?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFyYWdsaWRpbmd8ZW58MHx8MHx8fDA%3D" },
+  { name: "Parasailing", img: "https://images.unsplash.com/photo-1560419656-c2fe828696af?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8cGFyYXNhaWxpbmd8ZW58MHx8MHx8fDA%3D" },
+  { name: "Running / Marathon", img: "https://images.unsplash.com/photo-1547483238-f400e65ccd56?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fHJ1bm5pbmd8ZW58MHx8MHx8fDA%3D" },
+  { name: "Pilgrimage", img: "https://images.unsplash.com/photo-1616244013240-227ec9abfefb?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8aG9seXxlbnwwfHwwfHx8MA%3D%3D" },
+  { name: "Horse Riding", img: "https://images.unsplash.com/photo-1589400867230-3491ceee2934?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTV8fGhvcnNlJTIwcmlkaW5nfGVufDB8fDB8fHww" },
+  { name: "Fishing", img: "https://images.unsplash.com/photo-1493787039806-2edcbe808750?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGZpc2hpbmd8ZW58MHx8MHx8fDA%3D" },
+  { name: "Rafting", img: "https://images.unsplash.com/photo-1642933196504-62107dac9258?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cmFmdGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
+  { name: "Quad Riding", img: "https://plus.unsplash.com/premium_photo-1698670081064-4b3103e04ba6?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTd8fHF1YWR8ZW58MHx8MHx8fDA%3D" },
+  { name: "Skiing & Snowboarding", img: "https://images.unsplash.com/photo-1614358606268-aa86853578b4?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fHNraWlzJTIwYW5kJTIwc25vd2JvYXJkcyUyMGVxdWlwbW1lbnR8ZW58MHx8MHx8fDA%3D" },
+  { name: "Water Skiing", img: "https://images.unsplash.com/photo-1627319706385-dfde6ea09e4e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fHdhdGVyJTIwc2tpaW5nfGVufDB8fDB8fHww" },
+  { name: "Skydiving", img: "https://images.unsplash.com/photo-1630879937467-4afa290b1a6b?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8c2t5ZGl2aW5nfGVufDB8fDB8fHww" },
+  { name: "Bungee Jumping", img: "https://images.unsplash.com/photo-1559677624-3c956f10d431?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YnVuZ2VlJTIwanVtcGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
+  { name: "Camping", img: "https://images.unsplash.com/photo-1571863533956-01c88e79957e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGNhbXBpbmd8ZW58MHx8MHx8fDA%3D" },
+  { name: "Diving", img: "https://images.unsplash.com/photo-1682687981922-7b55dbb30892?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGRpdmluZ3xlbnwwfHwwfHx8MA%3D%3D" },
+  { name: "Snorkeling", img: "https://images.unsplash.com/photo-1658298208155-ab71765747a1?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8c25vcmtlbGluZ3xlbnwwfHwwfHx8MA%3D%3D" },
+  { name: "Boat Rides", img: "https://images.unsplash.com/photo-1633892224063-8ef7ff14508f?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGJvYXQlMjByaWRlc3xlbnwwfHwwfHx8MA%3D%3D" },
+];
 
 export default function Activities() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [activeChip, setActiveChip] = useState("All");
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
 
+  useEffect(() => {
+    const onResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const chips = ["All", "Popular", "Air", "Water", "Mountain", "Calm", "Extreme"];
 
@@ -58,27 +69,34 @@ export default function Activities() {
     return activities.filter((a) => picks.includes(a.name));
   }, []);
 
-  // ====== STYLES ======
   const page = {
     width: "100%",
     minHeight: "100vh",
-    padding: "18px 16px 60px",
+    padding: isMobile ? "14px 12px 46px" : "18px 16px 60px",
     background:
       "radial-gradient(1200px 500px at 20% -10%, rgba(0,255,176,0.22), rgba(0,0,0,0) 60%)," +
       "radial-gradient(900px 420px at 100% 20%, rgba(0,185,255,0.18), rgba(0,0,0,0) 55%)," +
       "linear-gradient(to bottom, #03140f, #020c08, #000000)",
     color: "#eafff7",
     boxSizing: "border-box",
+    overflowX: "hidden",
   };
 
-  const max = { maxWidth: 1150, margin: "0 auto" };
+  const max = {
+    maxWidth: 1150,
+    margin: "0 auto",
+    width: "100%",
+    boxSizing: "border-box",
+    overflowX: "hidden",
+  };
 
   const hero = {
     position: "relative",
-    borderRadius: 24,
+    borderRadius: isMobile ? 22 : 24,
     overflow: "hidden",
-    height: 260,
-    marginBottom: 18,
+    minHeight: isMobile ? 320 : 260,
+    height: isMobile ? "auto" : 260,
+    marginBottom: isMobile ? 14 : 18,
     border: "1px solid rgba(255,255,255,0.08)",
     boxShadow: "0 30px 90px rgba(0,0,0,0.75)",
   };
@@ -108,88 +126,99 @@ export default function Activities() {
     right: 16,
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
     gap: 10,
+    flexWrap: isMobile ? "wrap" : "nowrap",
   };
 
   const badge = {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    padding: "7px 12px",
+    padding: isMobile ? "6px 10px" : "7px 12px",
     borderRadius: 999,
     background: "rgba(0,0,0,0.55)",
     border: "1px solid rgba(255,255,255,0.14)",
     backdropFilter: "blur(14px)",
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
     color: "rgba(210,255,230,0.92)",
+    maxWidth: "100%",
+    boxSizing: "border-box",
   };
 
   const heroTitleWrap = {
     position: "absolute",
-    left: 18,
-    right: 18,
-    bottom: 18,
+    left: isMobile ? 16 : 18,
+    right: isMobile ? 16 : 18,
+    bottom: isMobile ? 16 : 18,
   };
 
   const heroTitle = {
     margin: 0,
-    fontSize: 38,
+    fontSize: isMobile ? 34 : 38,
     fontWeight: 900,
-    lineHeight: 1.05,
+    lineHeight: isMobile ? 1.03 : 1.05,
     color: "white",
     textShadow: "0 10px 40px rgba(0,0,0,0.85)",
+    wordBreak: "break-word",
   };
 
   const heroSub = {
     marginTop: 10,
     maxWidth: 680,
-    fontSize: 14,
+    fontSize: isMobile ? 13 : 14,
     lineHeight: 1.5,
     color: "rgba(230,255,240,0.78)",
   };
 
   const glassRow = {
     display: "grid",
-    gridTemplateColumns: "1.3fr 0.7fr",
+    gridTemplateColumns: isMobile ? "1fr" : "1.3fr 0.7fr",
     gap: 14,
     margin: "18px 0 16px",
+    width: "100%",
   };
 
   const inputWrap = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "12px 14px",
+    padding: isMobile ? "12px 12px" : "12px 14px",
     borderRadius: 18,
     border: "1px solid rgba(255,255,255,0.10)",
     background: "rgba(255,255,255,0.08)",
     boxShadow: "0 18px 60px rgba(0,0,0,0.55)",
     backdropFilter: "blur(18px)",
+    width: "100%",
+    boxSizing: "border-box",
+    minWidth: 0,
   };
 
   const input = {
     width: "100%",
+    minWidth: 0,
     border: "none",
     outline: "none",
     background: "transparent",
     color: "white",
-    fontSize: 16,
+    fontSize: isMobile ? 15 : 16,
   };
 
   const metaBox = {
-    padding: "12px 14px",
+    padding: isMobile ? "12px 14px" : "12px 14px",
     borderRadius: 18,
     border: "1px solid rgba(255,255,255,0.10)",
     background:
       "linear-gradient(135deg, rgba(0,255,176,0.10), rgba(255,255,255,0.06))",
     boxShadow: "0 18px 60px rgba(0,0,0,0.55)",
     backdropFilter: "blur(18px)",
+    width: "100%",
+    boxSizing: "border-box",
   };
 
-  const metaBig = { fontSize: 18, fontWeight: 900, color: "white" };
+  const metaBig = { fontSize: isMobile ? 16 : 18, fontWeight: 900, color: "white" };
   const metaSmall = { marginTop: 4, fontSize: 12, opacity: 0.75 };
 
   const chipRow = {
@@ -200,7 +229,7 @@ export default function Activities() {
   };
 
   const chip = (active) => ({
-    padding: "8px 12px",
+    padding: isMobile ? "8px 12px" : "8px 12px",
     borderRadius: 999,
     border: `1px solid ${active ? "rgba(0,255,176,0.55)" : "rgba(255,255,255,0.14)"}`,
     background: active ? "rgba(0,255,176,0.10)" : "rgba(0,0,0,0.45)",
@@ -216,9 +245,10 @@ export default function Activities() {
 
   const sectionHead = {
     display: "flex",
-    alignItems: "flex-end",
+    alignItems: isMobile ? "flex-start" : "flex-end",
     justifyContent: "space-between",
     gap: 12,
+    flexDirection: isMobile ? "column" : "row",
     margin: "18px 0 10px",
   };
 
@@ -237,20 +267,27 @@ export default function Activities() {
 
   const featuredGrid = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+    gridTemplateColumns: isMobile
+      ? "1fr"
+      : "repeat(auto-fit, minmax(260px, 1fr))",
     gap: 14,
     marginBottom: 16,
+    width: "100%",
   };
 
   const grid = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+    gridTemplateColumns: isMobile
+      ? "1fr"
+      : "repeat(auto-fill, minmax(260px, 1fr))",
     gap: 16,
+    width: "100%",
   };
 
   const card = {
     position: "relative",
-    height: 210,
+    height: isMobile ? 220 : 210,
+    width: "100%",
     borderRadius: 22,
     overflow: "hidden",
     cursor: "pointer",
@@ -258,6 +295,7 @@ export default function Activities() {
     boxShadow: "0 20px 70px rgba(0,0,0,0.65)",
     transition: "transform 160ms ease, box-shadow 160ms ease",
     background: "rgba(0,0,0,0.35)",
+    boxSizing: "border-box",
   };
 
   const cardImg = {
@@ -294,6 +332,8 @@ export default function Activities() {
     textTransform: "uppercase",
     color: "rgba(220,255,240,0.92)",
     backdropFilter: "blur(14px)",
+    maxWidth: "calc(100% - 24px)",
+    boxSizing: "border-box",
   };
 
   const cardBottom = {
@@ -305,10 +345,11 @@ export default function Activities() {
 
   const cardTitle = {
     margin: 0,
-    fontSize: 20,
+    fontSize: isMobile ? 19 : 20,
     fontWeight: 900,
     color: "white",
     textShadow: "0 8px 24px rgba(0,0,0,0.85)",
+    wordBreak: "break-word",
   };
 
   const cardSub = {
@@ -351,17 +392,21 @@ export default function Activities() {
         onClick={() => openActivity(a.name)}
         style={card}
         onMouseEnter={(e) => {
+          if (isMobile) return;
           e.currentTarget.style.transform = "translateY(-4px)";
           e.currentTarget.style.boxShadow = "0 26px 90px rgba(0,0,0,0.75)";
         }}
         onMouseLeave={(e) => {
+          if (isMobile) return;
           e.currentTarget.style.transform = "translateY(0px)";
           e.currentTarget.style.boxShadow = "0 20px 70px rgba(0,0,0,0.65)";
         }}
         onMouseDown={(e) => {
+          if (isMobile) return;
           e.currentTarget.style.transform = "translateY(-1px) scale(0.99)";
         }}
         onMouseUp={(e) => {
+          if (isMobile) return;
           e.currentTarget.style.transform = "translateY(-4px)";
         }}
       >
@@ -392,7 +437,6 @@ export default function Activities() {
   return (
     <div style={page}>
       <div style={max}>
-        {/* HERO */}
         <div style={hero}>
           <img
             style={heroImg}
@@ -419,10 +463,9 @@ export default function Activities() {
           </div>
         </div>
 
-        {/* SEARCH + META */}
         <div style={glassRow}>
           <div style={inputWrap}>
-            <div style={{ opacity: 0.9 }}>🔎</div>
+            <div style={{ opacity: 0.9, flexShrink: 0 }}>🔎</div>
             <input
               style={input}
               placeholder="Search activities… (e.g. Hiking, Rafting, Skydiving)"
@@ -439,6 +482,8 @@ export default function Activities() {
                   background: "rgba(0,0,0,0.45)",
                   cursor: "pointer",
                   fontSize: 12,
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
                 }}
               >
                 Clear
@@ -455,7 +500,6 @@ export default function Activities() {
           </div>
         </div>
 
-        {/* CHIPS */}
         <div style={chipRow}>
           {chips.map((c) => (
             <div
@@ -468,18 +512,17 @@ export default function Activities() {
           ))}
         </div>
 
-        {/* FEATURED */}
         <div style={sectionHead}>
           <h3 style={sectionTitle}>Featured picks</h3>
           <div style={sectionHint}>Hand-picked cinematic experiences</div>
         </div>
+
         <div style={featuredGrid}>
           {featured.map((a) => (
             <Card key={a.name} a={a} featured />
           ))}
         </div>
 
-        {/* ALL */}
         <div style={sectionHead}>
           <h3 style={sectionTitle}>All activities</h3>
           <div style={sectionHint}>

@@ -632,12 +632,7 @@ function MobileProfileView({
             </button>
           )}
 
-          {isFriend && !isOwnProfile ? (
-            {/*button onClick={() => navigate?.(`/chat/${profile.id}`)} style={btnGhost}>
-              💬 Chat
-            </button> */}
-          ) : null}
-        </div>
+          /</div>
 
         {(profile?.instagram_url || profile?.tiktok_url || profile?.youtube_url) && (
           <div
