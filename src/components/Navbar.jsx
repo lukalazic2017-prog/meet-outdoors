@@ -89,6 +89,7 @@ export default function Navbar() {
   );
 
   const isActive = (path) => location.pathname === path;
+  const startsWithActive = (path) => location.pathname.startsWith(path);
 
   const linkStyle = (path) => ({
     color: isActive(path) ? "#ffffff" : "rgba(255,255,255,0.78)",
@@ -511,17 +512,6 @@ export default function Navbar() {
     marginBottom: 0,
   };
 
-  const mobileLink = {
-    fontSize: 17,
-    fontWeight: 850,
-    color: "white",
-    textDecoration: "none",
-    padding: "14px 14px",
-    borderRadius: 18,
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.10)",
-  };
-
   const mobileButton = {
     padding: "14px 14px",
     borderRadius: 18,
@@ -561,6 +551,31 @@ export default function Navbar() {
     border: "none",
   };
 
+  const mobileNavItem = (active) => ({
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    padding: "8px 4px 10px",
+    borderRadius: 18,
+    border: active
+      ? "1px solid rgba(0,255,184,0.24)"
+      : "1px solid transparent",
+    background: active
+      ? "linear-gradient(135deg, rgba(0,255,184,0.14), rgba(88,170,255,0.10))"
+      : "transparent",
+    color: active ? "#ffffff" : "rgba(255,255,255,0.72)",
+    fontWeight: active ? 900 : 700,
+    fontSize: 11,
+    cursor: "pointer",
+    position: "relative",
+    transition: "all .16s ease",
+    WebkitTapHighlightColor: "transparent",
+  });
+
   return (
     <>
       <header
@@ -594,7 +609,7 @@ export default function Navbar() {
             width: "100%",
             maxWidth: 1440,
             margin: "0 auto",
-            padding: "10px 18px",
+            padding: isMobile ? "10px 14px" : "10px 18px",
             boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
@@ -613,16 +628,17 @@ export default function Navbar() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 12,
+              gap: isMobile ? 10 : 12,
               cursor: "pointer",
               minWidth: 0,
+              flex: isMobile ? 1 : "unset",
             }}
           >
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
+                width: isMobile ? 40 : 44,
+                height: isMobile ? 40 : 44,
+                borderRadius: isMobile ? 14 : 16,
                 background:
                   "radial-gradient(circle at 30% 20%, #00ffb8 0, #009a61 45%, #013222 100%)",
                 display: "flex",
@@ -632,15 +648,15 @@ export default function Navbar() {
                 flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 24 }}>🏔️</span>
+              <span style={{ fontSize: isMobile ? 21 : 24 }}>🏔️</span>
             </div>
 
             <div style={{ minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 18,
+                  fontSize: isMobile ? 15 : 18,
                   fontWeight: 900,
-                  letterSpacing: 1.1,
+                  letterSpacing: isMobile ? 0.6 : 1.1,
                   textTransform: "uppercase",
                   color: "#ffffff",
                   whiteSpace: "nowrap",
@@ -1040,11 +1056,12 @@ export default function Navbar() {
                     ...(isMobile
                       ? {
                           position: "fixed",
-                          top: 84,
-                          left: 12,
-                          right: 12,
+                          top: 76,
+                          left: 10,
+                          right: 10,
                           width: "auto",
                           maxWidth: "none",
+                          zIndex: 6000,
                         }
                       : {
                           right: 0,
@@ -1268,22 +1285,6 @@ export default function Navbar() {
                         );
                       })}
                   </div>
-
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontSize: 11,
-                      color: "rgba(255,255,255,0.62)",
-                      paddingTop: 10,
-                      borderTop: "1px solid rgba(255,255,255,0.07)",
-                    }}
-                  >
-                    <span>↑ ↓ to navigate • Enter to open</span>
-                    <span style={{ color: "rgba(0,255,184,0.9)" }}>Search ON</span>
-                  </div>
                 </div>
               )}
             </div>
@@ -1341,12 +1342,13 @@ export default function Navbar() {
                       ...(isMobile
                         ? {
                             position: "fixed",
-                            top: 84,
-                            left: 12,
-                            right: 12,
+                            top: 76,
+                            left: 10,
+                            right: 10,
                             width: "auto",
                             maxWidth: "none",
                             padding: 14,
+                            zIndex: 6000,
                           }
                         : {
                             right: 0,
@@ -1574,7 +1576,7 @@ export default function Navbar() {
                     />
                   </div>
 
-                  {userMenuOpen && (
+                  {userMenuOpen && !isMobile && (
                     <div
                       style={{
                         ...dropdownBase,
@@ -1666,7 +1668,8 @@ export default function Navbar() {
                 onClick={() => {
                   const next = !mobileMenuOpen;
                   setMobileMenuOpen(next);
-                  closeAllMenus();
+                  setSearchOpen(false);
+                  setNotificationsOpen(false);
                 }}
                 style={{
                   width: 42,
@@ -1692,7 +1695,7 @@ export default function Navbar() {
         </nav>
       </header>
 
-      <div style={{ height: 78 }} />
+      <div style={{ height: isMobile ? 70 : 78 }} />
 
       {isMobile && mobileMenuOpen && (
         <div
@@ -1702,349 +1705,432 @@ export default function Navbar() {
             zIndex: 5000,
             background: "rgba(0,0,0,0.92)",
             backdropFilter: "blur(18px)",
-            padding: "18px 16px",
-            paddingTop: "calc(18px + env(safe-area-inset-top))",
-            paddingBottom: "calc(18px + env(safe-area-inset-bottom))",
+            padding: "16px 14px 110px",
+            paddingTop: "calc(16px + env(safe-area-inset-top))",
           }}
         >
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              marginBottom: 14,
+              maxWidth: 520,
+              margin: "0 auto",
+              height: "100%",
+              overflowY: "auto",
+              borderRadius: 28,
+              background:
+                "radial-gradient(120% 120% at 0% 0%, rgba(0,255,184,0.12), transparent 38%)," +
+                "radial-gradient(120% 120% at 100% 0%, rgba(88,170,255,0.10), transparent 40%)," +
+                "linear-gradient(180deg, rgba(8,20,18,0.98), rgba(2,8,10,0.98))",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.65)",
+              padding: 16,
+              boxSizing: "border-box",
             }}
           >
-            <div style={{ color: "white", fontWeight: 950, letterSpacing: 0.6 }}>
-              MENU
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    color: "white",
+                    fontWeight: 1000,
+                    fontSize: 28,
+                    lineHeight: 1.05,
+                  }}
+                >
+                  Navigation
+                </div>
+                <div
+                  style={{
+                    color: "rgba(255,255,255,0.58)",
+                    fontSize: 13,
+                    marginTop: 4,
+                  }}
+                >
+                  Fast access to everything important
+                </div>
+              </div>
+
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 18,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "white",
+                  fontSize: 22,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+                aria-label="Close menu"
+              >
+                ✕
+              </button>
             </div>
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                border: "1px solid rgba(255,255,255,0.16)",
-                background: "rgba(255,255,255,0.06)",
-                color: "white",
-                fontSize: 20,
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-              }}
-              aria-label="Close menu"
-            >
-              ✕
-            </button>
-          </div>
 
-          <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setSearchOpen(true);
-                setTimeout(() => searchInputRef.current?.focus?.(), 80);
-              }}
+            <div
               style={{
-                ...iconBtn,
-                flex: 1,
-                height: 46,
-                borderRadius: 16,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginBottom: 18,
               }}
             >
-              🔎 Search
-            </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setSearchOpen(true);
+                  setTimeout(() => searchInputRef.current?.focus?.(), 80);
+                }}
+                style={{
+                  ...mobileButton,
+                  borderRadius: 20,
+                  textAlign: "center",
+                  fontSize: 17,
+                  fontWeight: 900,
+                  padding: "18px 12px",
+                  background:
+                    "linear-gradient(135deg, rgba(0,255,184,0.10), rgba(88,170,255,0.08))",
+                }}
+              >
+                🔎 Search
+              </button>
 
-            {user ? (
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
                   setNotificationsOpen(true);
-                  markAllAsRead();
+                  if (user) markAllAsRead();
                 }}
                 style={{
-                  ...iconBtn,
-                  flex: 1,
-                  height: 46,
-                  borderRadius: 16,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.14)",
+                  ...mobileButton,
+                  borderRadius: 20,
+                  textAlign: "center",
+                  fontSize: 17,
+                  fontWeight: 900,
+                  padding: "18px 12px",
+                  background:
+                    "linear-gradient(135deg, rgba(255,180,0,0.10), rgba(255,80,80,0.08))",
                 }}
               >
-                🔔 Alerts {unreadCount > 0 ? `${unreadCount}` : ""}
+                🔔 Alerts
               </button>
-            ) : (
+            </div>
+
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.62)",
+                marginBottom: 10,
+                paddingLeft: 4,
+              }}
+            >
+              Main
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  navigate("/login");
+                  navigate("/tours");
                 }}
                 style={{
-                  ...iconBtn,
-                  flex: 1,
-                  height: 46,
-                  borderRadius: 16,
+                  ...mobileButton,
+                  borderRadius: 22,
+                  padding: "18px 16px",
+                  fontSize: 18,
+                  fontWeight: 950,
                 }}
               >
-                🔐 Login
+                🧭 Tours
               </button>
-            )}
+
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate("/events");
+                }}
+                style={{
+                  ...mobileButton,
+                  borderRadius: 22,
+                  padding: "18px 16px",
+                  fontSize: 18,
+                  fontWeight: 950,
+                }}
+              >
+                🎟 Events
+              </button>
+
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 22,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              >
+                <div style={{ color: "white", fontWeight: 950, marginBottom: 12, fontSize: 18 }}>
+                  ⚡ Quick activities
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: 10,
+                  }}
+                >
+                  {activityItems.slice(0, 8).map((a) => (
+                    <button
+                      key={a}
+                      onClick={() => goToActivity(a)}
+                      style={{
+                        padding: "12px 12px",
+                        borderRadius: 999,
+                        border: "1px solid rgba(0,255,176,0.18)",
+                        background: "rgba(0,0,0,0.35)",
+                        color: "white",
+                        cursor: "pointer",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 22,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              >
+                <div style={{ color: "white", fontWeight: 950, marginBottom: 12, fontSize: 18 }}>
+                  👤 Account
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {user ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate(`/profile/${user.id}`);
+                        }}
+                        style={mobileButton}
+                      >
+                        My profile
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("/edit-profile");
+                        }}
+                        style={mobileButton}
+                      >
+                        Edit profile
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("/settings");
+                        }}
+                        style={mobileButton}
+                      >
+                        Settings
+                      </button>
+
+                      <button onClick={logout} style={mobileDanger}>
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("/login");
+                        }}
+                        style={mobileButton}
+                      >
+                        Login
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("/register");
+                        }}
+                        style={{
+                          ...mobileButton,
+                          background: "linear-gradient(120deg, #00ffb8, #35ffc9, #00c28a)",
+                          color: "#012216",
+                          fontWeight: 950,
+                          border: "none",
+                        }}
+                      >
+                        Join now
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+      )}
+
+      {isMobile && (
+        <>
+          <div style={{ height: 88 }} />
 
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-              overflowY: "auto",
-              maxHeight: "calc(100vh - 120px)",
-              paddingBottom: 10,
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 4500,
+              padding: "0 10px calc(10px + env(safe-area-inset-bottom))",
+              pointerEvents: "none",
             }}
           >
-            <Link to="/" onClick={() => setMobileMenuOpen(false)} style={mobileLink}>
-              🏠 Home
-            </Link>
-
-            <Link
-              to="/timeline"
-              onClick={() => setMobileMenuOpen(false)}
-              style={mobileLink}
-            >
-              🧵 Timeline
-            </Link>
-
-            <Link
-              to="/activities"
-              onClick={() => setMobileMenuOpen(false)}
-              style={mobileLink}
-            >
-              🧩 Activities
-            </Link>
-
             <div
               style={{
-                padding: 14,
-                borderRadius: 18,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.10)",
+                maxWidth: 560,
+                margin: "0 auto",
+                pointerEvents: "auto",
+                position: "relative",
+                borderRadius: 28,
+                background:
+                  "linear-gradient(180deg, rgba(5,18,15,0.96), rgba(2,9,8,0.98))",
+                border: "1px solid rgba(255,255,255,0.08)",
+                boxShadow:
+                  "0 24px 70px rgba(0,0,0,0.72), 0 0 0 1px rgba(0,255,184,0.05)",
+                backdropFilter: "blur(18px)",
+                padding: "10px 10px 12px",
               }}
             >
-              <div style={{ color: "white", fontWeight: 950, marginBottom: 10 }}>
-                🧭 Tours
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    navigate("/tours");
-                  }}
-                  style={mobileButton}
-                >
-                  All tours
-                </button>
-
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    navigate("/create-tour");
-                  }}
+              <div
+                style={{
+                  position: "absolute",
+                  top: -18,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: 74,
+                  height: 74,
+                  borderRadius: "50%",
+                  background:
+                    "linear-gradient(135deg, #00ffb8 0%, #00d9ff 55%, #7c4dff 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow:
+                    "0 16px 40px rgba(0,255,184,0.30), 0 0 24px rgba(0,217,255,0.20)",
+                  border: "4px solid rgba(3,12,10,0.95)",
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (!user) {
+                    navigate("/login");
+                    return;
+                  }
+                  navigate("/create-tour");
+                }}
+              >
+                <div
                   style={{
-                    ...mobileButton,
-                    background: "linear-gradient(120deg, #00ffb8, #35ffc9, #00c28a)",
-                    color: "#012216",
-                    fontWeight: 950,
-                    border: "none",
+                    fontSize: 28,
+                    fontWeight: 1000,
+                    color: "#031a12",
+                    lineHeight: 1,
+                    marginTop: -2,
                   }}
                 >
-                  + Create tour
-                </button>
-
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    navigate("/saved-tours");
-                  }}
-                  style={mobileButton}
-                >
-                  ❤️ Saved tours
-                </button>
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: 14,
-                borderRadius: 18,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.10)",
-              }}
-            >
-              <div style={{ color: "white", fontWeight: 950, marginBottom: 10 }}>
-                🎟️ Events
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    navigate("/events");
-                  }}
-                  style={mobileButton}
-                >
-                  All events
-                </button>
-
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    navigate("/create-event");
-                  }}
-                  style={{
-                    ...mobileButton,
-                    background: "linear-gradient(120deg, #5bb3ff, #9ad0ff, #4f8cff)",
-                    color: "#021326",
-                    fontWeight: 950,
-                    border: "none",
-                  }}
-                >
-                  + Create event
-                </button>
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: 14,
-                borderRadius: 18,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.10)",
-              }}
-            >
-              <div style={{ color: "white", fontWeight: 950, marginBottom: 10 }}>
-                ⚡ Quick activities
+                  +
+                </div>
               </div>
 
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: 10,
+                  gridTemplateColumns: "1fr 1fr 84px 1fr 1fr",
+                  alignItems: "end",
+                  gap: 6,
+                  minHeight: 62,
                 }}
               >
-                {activityItems.slice(0, 8).map((a) => (
-                  <button
-                    key={a}
-                    onClick={() => goToActivity(a)}
-                    style={{
-                      padding: "12px 12px",
-                      borderRadius: 999,
-                      border: "1px solid rgba(0,255,176,0.18)",
-                      background: "rgba(0,0,0,0.35)",
-                      color: "white",
-                      cursor: "pointer",
-                      fontWeight: 800,
-                    }}
-                  >
-                    {a}
-                  </button>
-                ))}
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/");
+                  }}
+                  style={mobileNavItem(isActive("/"))}
+                >
+                  <div style={{ fontSize: 20 }}>🏠</div>
+                  <div>Home</div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/tours");
+                  }}
+                  style={mobileNavItem(startsWithActive("/tours"))}
+                >
+                  <div style={{ fontSize: 20 }}>🧭</div>
+                  <div>Tours</div>
+                </button>
+
+                <div />
+
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/events");
+                  }}
+                  style={mobileNavItem(startsWithActive("/events"))}
+                >
+                  <div style={{ fontSize: 20 }}>🎟</div>
+                  <div>Events</div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (user) navigate(`/profile/${user.id}`);
+                    else navigate("/login");
+                  }}
+                  style={mobileNavItem(
+                    startsWithActive("/profile") || startsWithActive("/edit-profile")
+                  )}
+                >
+                  <div style={{ fontSize: 20 }}>
+                    {user ? "👤" : "🔐"}
+                  </div>
+                  <div>{user ? "Profile" : "Login"}</div>
+                </button>
               </div>
             </div>
-
-            {user ? (
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 18,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.10)",
-                }}
-              >
-                <div style={{ color: "white", fontWeight: 950, marginBottom: 10 }}>
-                  👤 Account
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      navigate(`/profile/${user.id}`);
-                    }}
-                    style={mobileButton}
-                  >
-                    My profile
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      navigate("/edit-profile");
-                    }}
-                    style={mobileButton}
-                  >
-                    Edit profile
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      navigate("/settings");
-                    }}
-                    style={mobileButton}
-                  >
-                    Settings
-                  </button>
-
-                  <button onClick={logout} style={mobileDanger}>
-                    Logout
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 18,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.10)",
-                }}
-              >
-                <div style={{ color: "white", fontWeight: 950, marginBottom: 10 }}>
-                  🔐 Account
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      navigate("/login");
-                    }}
-                    style={mobileButton}
-                  >
-                    Login
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      navigate("/register");
-                    }}
-                    style={{
-                      ...mobileButton,
-                      background: "linear-gradient(120deg, #00ffb8, #35ffc9, #00c28a)",
-                      color: "#012216",
-                      fontWeight: 950,
-                      border: "none",
-                    }}
-                  >
-                    Join now
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
-        </div>
+        </>
       )}
     </>
   );
