@@ -128,7 +128,7 @@ export default function CreateEvent() {
   const buildDateTime = (date, time) => {
     if (!date) return null;
     const safeTime = time || "00:00";
-    const d = new `Date(${date}T${safeTime}:00)`;
+    const d = new Date(`${date}T${safeTime}:00`);
     return isNaN(d.getTime()) ? null : d.toISOString();
   };
 
