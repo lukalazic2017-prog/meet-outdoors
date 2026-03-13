@@ -42,11 +42,15 @@ export default function AdminPanel() {
 
     setUser(auth.user);
 
-    const { data: prof } = await supabase
+    const { data: prof, error: profError } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", auth.user.id)
       .single();
+
+    if (profError) {
+      console.log("LOAD ADMIN PROFILE ERROR:", profError);
+    }
 
     setProfile(prof || null);
 
@@ -84,25 +88,7 @@ export default function AdminPanel() {
   async function loadApplications() {
     const { data, error } = await supabase
       .from("creator_applications")
-      .select(`
-        id,
-        user_id,
-        full_name,
-        bio,
-        experience,
-        status,
-        created_at,
-        reviewed_at,
-        profiles:user_id (
-          email,
-          avatar_url,
-          city,
-          country,
-          is_verified,
-          is_verified_creator,
-          creator_status
-        )
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -111,14 +97,49 @@ export default function AdminPanel() {
       return;
     }
 
-    setApplications(data || []);
+    const apps = data || [];
+    const userIds = [...new Set(apps.map((a) => a.user_id).filter(Boolean))];
+
+    let profilesMap = {};
+
+    if (userIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          email,
+          avatar_url,
+          city,
+          country,
+          is_verified,
+          is_verified_creator,
+          creator_status,
+          full_name
+        `)
+        .in("id", userIds);
+
+      if (profilesError) {
+        console.log("LOAD PROFILES FOR APPLICATIONS ERROR:", profilesError);
+      } else {
+        profilesMap = Object.fromEntries(
+          (profilesData || []).map((p) => [p.id, p])
+        );
+      }
+    }
+
+    const merged = apps.map((app) => ({
+      ...app,
+      profiles: profilesMap[app.user_id] || null,
+    }));
+
+    setApplications(merged);
   }
 
   async function updateProfileForStatus(userId, status) {
     if (!userId) return;
 
     if (status === "APPROVED") {
-      await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({
           creator_status: "approved",
@@ -126,11 +147,13 @@ export default function AdminPanel() {
           is_verified_creator: true,
         })
         .eq("id", userId);
+
+      if (error) console.log("PROFILE UPDATE APPROVED ERROR:", error);
       return;
     }
 
     if (status === "REJECTED") {
-      await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({
           creator_status: "rejected",
@@ -138,11 +161,13 @@ export default function AdminPanel() {
           is_verified_creator: false,
         })
         .eq("id", userId);
+
+      if (error) console.log("PROFILE UPDATE REJECTED ERROR:", error);
       return;
     }
 
     if (status === "PENDING") {
-      await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({
           creator_status: "pending",
@@ -150,6 +175,8 @@ export default function AdminPanel() {
           is_verified_creator: false,
         })
         .eq("id", userId);
+
+      if (error) console.log("PROFILE UPDATE PENDING ERROR:", error);
     }
   }
 
@@ -162,6 +189,7 @@ export default function AdminPanel() {
       .update({
         status: "APPROVED",
         reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id || null,
       })
       .eq("id", app.id);
 
@@ -185,6 +213,7 @@ export default function AdminPanel() {
       .update({
         status: "REJECTED",
         reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id || null,
       })
       .eq("id", app.id);
 
@@ -208,6 +237,7 @@ export default function AdminPanel() {
       .update({
         status: "REJECTED",
         reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id || null,
       })
       .eq("id", app.id);
 
@@ -231,6 +261,7 @@ export default function AdminPanel() {
       .update({
         status: "PENDING",
         reviewed_at: null,
+        reviewed_by: null,
       })
       .eq("id", app.id);
 
@@ -251,11 +282,13 @@ export default function AdminPanel() {
 
     return applications.filter((app) => {
       const fullName = (app?.full_name || "").toLowerCase();
-      const mail = (app?.profiles?.email || "").toLowerCase();
+      const mail = (app?.email || app?.profiles?.email || "").toLowerCase();
       const bio = (app?.bio || "").toLowerCase();
-      const exp = (app?.experience || "").toLowerCase();
-      const city = (app?.profiles?.city || "").toLowerCase();
-      const country = (app?.profiles?.country || "").toLowerCase();
+      const exp = (app?.experience_text || "").toLowerCase();
+      const city = (app?.city || app?.profiles?.city || "").toLowerCase();
+      const country = (app?.country || app?.profiles?.country || "").toLowerCase();
+      const phone = (app?.phone || "").toLowerCase();
+      const brand = (app?.brand_name || "").toLowerCase();
 
       return (
         fullName.includes(q) ||
@@ -263,23 +296,34 @@ export default function AdminPanel() {
         bio.includes(q) ||
         exp.includes(q) ||
         city.includes(q) ||
-        country.includes(q)
+        country.includes(q) ||
+        phone.includes(q) ||
+        brand.includes(q)
       );
     });
   }, [applications, search]);
 
   const pendingApps = useMemo(
-    () => filteredApplications.filter((a) => (a.status || "PENDING") === "PENDING"),
+    () =>
+      filteredApplications.filter(
+        (a) => !a.status || String(a.status).toUpperCase() === "PENDING"
+      ),
     [filteredApplications]
   );
 
   const approvedApps = useMemo(
-    () => filteredApplications.filter((a) => a.status === "APPROVED"),
+    () =>
+      filteredApplications.filter(
+        (a) => String(a.status || "").toUpperCase() === "APPROVED"
+      ),
     [filteredApplications]
   );
 
   const rejectedApps = useMemo(
-    () => filteredApplications.filter((a) => a.status === "REJECTED"),
+    () =>
+      filteredApplications.filter(
+        (a) => String(a.status || "").toUpperCase() === "REJECTED"
+      ),
     [filteredApplications]
   );
 
@@ -579,6 +623,7 @@ export default function AdminPanel() {
       marginTop: 4,
       fontSize: 11,
       color: "rgba(255,255,255,0.58)",
+      lineHeight: 1.4,
     },
     sectionLabel: {
       fontSize: 10,
@@ -599,6 +644,25 @@ export default function AdminPanel() {
       color: "rgba(255,255,255,0.88)",
       whiteSpace: "pre-wrap",
       wordBreak: "break-word",
+    },
+    linkGrid: {
+      marginTop: 10,
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    docLink: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "8px 10px",
+      borderRadius: 999,
+      border: "1px solid rgba(255,255,255,0.14)",
+      background: "rgba(255,255,255,0.04)",
+      color: "#fff",
+      textDecoration: "none",
+      fontSize: 11,
+      fontWeight: 800,
     },
     actionRow: {
       display: "grid",
@@ -728,10 +792,24 @@ export default function AdminPanel() {
   function ApplicationCard({ app, columnType }) {
     const currentBusy = busyId === app.id;
     const avatarUrl = app?.profiles?.avatar_url || "";
-    const emailValue = app?.profiles?.email || "No email";
-    const cityCountry = [app?.profiles?.city, app?.profiles?.country]
-      .filter(Boolean)
-      .join(", ");
+    const emailValue = app?.email || app?.profiles?.email || "No email";
+    const cityValue = app?.city || app?.profiles?.city;
+    const countryValue = app?.country || app?.profiles?.country;
+    const cityCountry = [cityValue, countryValue].filter(Boolean).join(", ");
+
+    const links = [
+      app?.instagram_url && { label: "Instagram", href: app.instagram_url },
+      app?.website_url && { label: "Website", href: app.website_url },
+      app?.tiktok_url && { label: "TikTok", href: app.tiktok_url },
+      app?.youtube_url && { label: "YouTube", href: app.youtube_url },
+    ].filter(Boolean);
+
+    const docs = [
+      app?.id_document_url && { label: "ID Document", href: app.id_document_url },
+      app?.selfie_document_url && { label: "Selfie + ID", href: app.selfie_document_url },
+      app?.company_document_url && { label: "Company Doc", href: app.company_document_url },
+      app?.license_document_url && { label: "License", href: app.license_document_url },
+    ].filter(Boolean);
 
     return (
       <div style={styles.appCard}>
@@ -748,6 +826,9 @@ export default function AdminPanel() {
             <div style={styles.miniMeta}>
               {cityCountry || "Location not set"} • Created: {formatDateTime(app.created_at)}
             </div>
+            <div style={styles.miniMeta}>
+              Type: {app.creator_type || "—"} • Brand: {app.brand_name || "—"}
+            </div>
           </div>
         </div>
 
@@ -758,8 +839,75 @@ export default function AdminPanel() {
 
         <div>
           <div style={{ ...styles.sectionLabel, marginTop: 10 }}>Experience</div>
-          <div style={styles.bioBox}>{app.experience || "No experience provided."}</div>
+          <div style={styles.bioBox}>
+            {app.experience_text || "No experience provided."}
+          </div>
         </div>
+
+        {Array.isArray(app.activities) && app.activities.length > 0 ? (
+          <div>
+            <div style={{ ...styles.sectionLabel, marginTop: 10 }}>Activities</div>
+            <div style={styles.bioBox}>{app.activities.join(", ")}</div>
+          </div>
+        ) : null}
+
+        {(app.phone ||
+          app.emergency_contact_name ||
+          app.emergency_contact_phone ||
+          app.has_first_aid !== null ||
+          app.has_insurance !== null) && (
+          <div>
+            <div style={{ ...styles.sectionLabel, marginTop: 10 }}>Safety / Contact</div>
+            <div style={styles.bioBox}>
+              <div>Phone: {app.phone || "—"}</div>
+              <div>Emergency name: {app.emergency_contact_name || "—"}</div>
+              <div>Emergency phone: {app.emergency_contact_phone || "—"}</div>
+              <div>First aid: {app.has_first_aid ? "Yes" : "No"}</div>
+              <div>Insurance: {app.has_insurance ? "Yes" : "No"}</div>
+              <div style={{ marginTop: 6 }}>
+                Safety notes: {app.safety_notes || "—"}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {links.length > 0 ? (
+          <div>
+            <div style={{ ...styles.sectionLabel, marginTop: 10 }}>Links</div>
+            <div style={styles.linkGrid}>
+              {links.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.docLink}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {docs.length > 0 ? (
+          <div>
+            <div style={{ ...styles.sectionLabel, marginTop: 10 }}>Documents</div>
+            <div style={styles.linkGrid}>
+              {docs.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.docLink}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div style={{ marginTop: 10, fontSize: 12, color: "rgba(255,255,255,0.70)" }}>
           Reviewed: {formatDateTime(app.reviewed_at)}

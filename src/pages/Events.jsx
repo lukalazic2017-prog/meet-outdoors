@@ -12,14 +12,17 @@ export default function Events() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // FILTERS
   const [countryFilter, setCountryFilter] = useState("All countries");
   const [categoryFilter, setCategoryFilter] = useState("All categories");
 
   const [showCountryList, setShowCountryList] = useState(false);
   const [showCategoryList, setShowCategoryList] = useState(false);
+  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
 
-  // LOAD EVENTS
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
   async function loadEvents() {
     setLoading(true);
 
@@ -36,7 +39,12 @@ export default function Events() {
     loadEvents();
   }, []);
 
-  // REALTIME
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   useEffect(() => {
     const channel = supabase
       .channel("events-realtime")
@@ -89,15 +97,76 @@ export default function Events() {
     "Charity Event",
   ];
 
+  const activeFilterCount =
+    (countryFilter !== "All countries" ? 1 : 0) +
+    (categoryFilter !== "All categories" ? 1 : 0);
+
+  const totalPeopleJoining = events.reduce(
+    (sum, e) => sum + (e.attendees_count || 0),
+    0
+  );
+
+  const filterContent = (
+    <div style={styles.filtersWrap}>
+      <Filter
+        label="Country"
+        value={countryFilter}
+        open={showCountryList}
+        setOpen={setShowCountryList}
+        closeOther={setShowCategoryList}
+        list={countries}
+        onSelect={setCountryFilter}
+        isMobile={isMobile}
+      />
+
+      <Filter
+        label="Category"
+        value={categoryFilter}
+        open={showCategoryList}
+        setOpen={setShowCategoryList}
+        closeOther={setShowCountryList}
+        list={categories}
+        onSelect={setCategoryFilter}
+        isMobile={isMobile}
+      />
+
+      {isMobile && (
+        <div style={styles.mobileFilterActions}>
+          <button
+            type="button"
+            style={styles.mobileFilterGhost}
+            onClick={() => {
+              setCountryFilter("All countries");
+              setCategoryFilter("All categories");
+            }}
+          >
+            Reset
+          </button>
+
+          <button
+            type="button"
+            style={styles.mobileFilterPrimary}
+            onClick={() => setShowFiltersMobile(false)}
+          >
+            Apply filters
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div style={styles.page}>
       <div style={styles.bgGlow1} />
       <div style={styles.bgGlow2} />
+      <div style={styles.bgGlow3} />
       <div style={styles.bgGrid} />
 
       <div style={styles.container}>
-        {/* HERO */}
         <div style={styles.hero}>
+          <div style={styles.heroGlow} />
+          <div style={styles.heroGlow2} />
+
           <div style={styles.heroBadge}>⚡ LIVE OUTDOOR ENERGY</div>
 
           <h1 style={styles.title}>Outdoor Events</h1>
@@ -119,50 +188,84 @@ export default function Events() {
             </div>
 
             <div style={styles.heroStatCard}>
-              <div style={styles.heroStatNumber}>
-                {events.reduce((sum, e) => sum + (e.attendees_count || 0), 0)}
-              </div>
+              <div style={styles.heroStatNumber}>{totalPeopleJoining}</div>
               <div style={styles.heroStatLabel}>People joining</div>
             </div>
           </div>
 
-          {/* FILTERS */}
-          <div style={styles.filtersWrap}>
-            <Filter
-              label="Country"
-              value={countryFilter}
-              open={showCountryList}
-              setOpen={setShowCountryList}
-              closeOther={setShowCategoryList}
-              list={countries}
-              onSelect={setCountryFilter}
-            />
-            <Filter
-              label="Category"
-              value={categoryFilter}
-              open={showCategoryList}
-              setOpen={setShowCategoryList}
-              closeOther={setShowCountryList}
-              list={categories}
-              onSelect={setCategoryFilter}
-            />
-          </div>
+          {!isMobile && filterContent}
         </div>
 
-        {/* TOP ROW */}
+        {isMobile && (
+          <>
+            <div style={styles.mobileToolbar}>
+              <button
+                type="button"
+                style={styles.mobileToolbarBtn}
+                onClick={() => setShowFiltersMobile(true)}
+              >
+                ⚙️ Filters
+                {activeFilterCount > 0 && (
+                  <span style={styles.mobileToolbarCount}>
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              <div style={styles.mobileResultsChip}>
+                🔍 {loading ? "Loading..." : `${filteredEvents.length} shown`}
+              </div>
+            </div>
+
+            <div
+              style={{
+                ...styles.filterOverlay,
+                display: showFiltersMobile ? "block" : "none",
+              }}
+              onClick={() => setShowFiltersMobile(false)}
+            />
+
+            <div
+              style={{
+                ...styles.filterDrawer,
+                transform: showFiltersMobile
+                  ? "translateY(0)"
+                  : "translateY(105%)",
+              }}
+            >
+              <div style={styles.filterDrawerHandle} />
+
+              <div style={styles.filterDrawerHead}>
+                <div style={styles.filterDrawerTitle}>Filters</div>
+
+                <button
+                  type="button"
+                  style={styles.filterDrawerClose}
+                  onClick={() => setShowFiltersMobile(false)}
+                >
+                  Close
+                </button>
+              </div>
+
+              {filterContent}
+            </div>
+          </>
+        )}
+
         <div style={styles.topRow}>
           <div>
             <div style={styles.sectionEyebrow}>DISCOVER</div>
             <div style={styles.sectionTitle}>Brutal upcoming events</div>
           </div>
 
-          <div style={styles.resultsPill}>
-            <span style={styles.resultsDot} />
-            {loading ? "Loading events..." : `${filteredEvents.length} shown`}
-          </div>
+          {!isMobile && (
+            <div style={styles.resultsPill}>
+              <span style={styles.resultsDot} />
+              {loading ? "Loading events..." : `${filteredEvents.length} shown`}
+            </div>
+          )}
         </div>
 
-        {/* GRID */}
         <div style={styles.grid}>
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
@@ -177,7 +280,9 @@ export default function Events() {
               ))
             : filteredEvents.map((evt) => {
                 const attendees = evt.attendees || [];
-                const visibleAvatars = attendees.filter((a) => a?.avatar_url).slice(0, 5);
+                const visibleAvatars = attendees
+                  .filter((a) => a?.avatar_url)
+                  .slice(0, 5);
 
                 return (
                   <div
@@ -185,11 +290,14 @@ export default function Events() {
                     style={styles.card}
                     onClick={() => navigate(`/event/${evt.id}`)}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-8px) scale(1.01)";
+                      if (isMobile) return;
+                      e.currentTarget.style.transform =
+                        "translateY(-8px) scale(1.01)";
                       e.currentTarget.style.boxShadow =
                         "0 40px 120px rgba(0,0,0,0.72), 0 0 0 1px rgba(0,255,195,0.18) inset";
                     }}
                     onMouseLeave={(e) => {
+                      if (isMobile) return;
                       e.currentTarget.style.transform = "translateY(0) scale(1)";
                       e.currentTarget.style.boxShadow =
                         "0 28px 80px rgba(0,0,0,0.55)";
@@ -206,7 +314,9 @@ export default function Events() {
                       <div style={styles.imageNoise} />
 
                       <div style={styles.topBadges}>
-                        <div style={styles.categoryTag}>#{evt.category || "Event"}</div>
+                        <div style={styles.categoryTag}>
+                          #{evt.category || "Event"}
+                        </div>
                         <div style={styles.livePill}>● LIVE</div>
                       </div>
 
@@ -248,7 +358,9 @@ export default function Events() {
                                 />
                               ))
                             ) : (
-                              <div style={styles.emptyAvatars}>No attendees yet</div>
+                              <div style={styles.emptyAvatars}>
+                                No attendees yet
+                              </div>
                             )}
                           </div>
                         </div>
@@ -270,15 +382,41 @@ export default function Events() {
             </div>
           </div>
         )}
+
+        {isMobile && (
+          <div style={styles.mobileStickyBar}>
+            <div style={styles.mobileStickyInfo}>
+              <div style={styles.mobileStickyTitle}>Explore events</div>
+              <div style={styles.mobileStickySub}>
+                {loading ? "Loading..." : `${filteredEvents.length} results`} ·{" "}
+                {categoryFilter}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              style={styles.mobileStickyBtn}
+              onClick={() => setShowFiltersMobile(true)}
+            >
+              Filters
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* -------------------------------- */
-/* FILTER COMPONENT */
-/* -------------------------------- */
-function Filter({ label, value, open, setOpen, closeOther, list, onSelect }) {
+function Filter({
+  label,
+  value,
+  open,
+  setOpen,
+  closeOther,
+  list,
+  onSelect,
+  isMobile,
+}) {
   return (
     <div style={styles.filterShell}>
       <div style={styles.filterLabel}>{label}</div>
@@ -295,7 +433,12 @@ function Filter({ label, value, open, setOpen, closeOther, list, onSelect }) {
       </div>
 
       {open && (
-        <div style={styles.dropdown}>
+        <div
+          style={{
+            ...styles.dropdown,
+            top: isMobile ? 70 : 76,
+          }}
+        >
           {list.map((v) => (
             <div
               key={v}
@@ -319,18 +462,15 @@ function Filter({ label, value, open, setOpen, closeOther, list, onSelect }) {
   );
 }
 
-/* -------------------------------- */
-/* STYLES – BRUTAL PREMIUM UI */
-/* -------------------------------- */
 const styles = {
   page: {
     position: "relative",
     minHeight: "100vh",
-    overflow: "hidden",
+    overflow: "visible",
     background:
       "radial-gradient(circle at top, #081b16 0%, #04100d 28%, #02060b 58%, #000000 100%)",
     color: "#eafff5",
-    padding: "36px 18px 60px",
+    padding: "0 0 110px",
     fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
 
@@ -339,6 +479,8 @@ const styles = {
     zIndex: 2,
     maxWidth: 1400,
     margin: "0 auto",
+    padding: "0 18px",
+    overflow: "visible",
   },
 
   bgGlow1: {
@@ -365,6 +507,18 @@ const styles = {
     pointerEvents: "none",
   },
 
+  bgGlow3: {
+    position: "absolute",
+    bottom: -160,
+    left: "20%",
+    width: 420,
+    height: 420,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(0,200,255,0.10), transparent 68%)",
+    filter: "blur(45px)",
+    pointerEvents: "none",
+  },
+
   bgGrid: {
     position: "absolute",
     inset: 0,
@@ -377,15 +531,40 @@ const styles = {
 
   hero: {
     position: "relative",
-    padding: "32px 24px 26px",
-    borderRadius: 34,
+    padding: "30px 24px 24px",
+    borderRadius: "0 0 34px 34px",
     border: "1px solid rgba(255,255,255,0.08)",
+    borderTop: "none",
     background:
-      "linear-gradient(145deg, rgba(10,24,19,0.88), rgba(3,10,8,0.92))",
+      "linear-gradient(145deg, rgba(10,24,19,0.92), rgba(3,10,8,0.96))",
     boxShadow:
-      "0 30px 120px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)",
+      "0 26px 80px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04)",
     overflow: "visible",
-    marginBottom: 28,
+    marginBottom: 24,
+  },
+
+  heroGlow: {
+    position: "absolute",
+    top: -120,
+    right: -100,
+    width: 260,
+    height: 260,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(0,255,190,0.14), transparent 68%)",
+    filter: "blur(24px)",
+    pointerEvents: "none",
+  },
+
+  heroGlow2: {
+    position: "absolute",
+    left: -90,
+    bottom: -110,
+    width: 240,
+    height: 240,
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(124,77,255,0.14), transparent 70%)",
+    filter: "blur(30px)",
+    pointerEvents: "none",
   },
 
   heroBadge: {
@@ -402,6 +581,8 @@ const styles = {
     letterSpacing: "0.14em",
     textTransform: "uppercase",
     color: "#b8fff0",
+    position: "relative",
+    zIndex: 2,
   },
 
   title: {
@@ -412,6 +593,8 @@ const styles = {
     letterSpacing: "-0.04em",
     color: "#f4fff9",
     textShadow: "0 6px 28px rgba(0,255,190,0.12)",
+    position: "relative",
+    zIndex: 2,
   },
 
   subtitle: {
@@ -421,6 +604,8 @@ const styles = {
     fontSize: 16,
     lineHeight: 1.7,
     fontWeight: 500,
+    position: "relative",
+    zIndex: 2,
   },
 
   heroStats: {
@@ -428,6 +613,8 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
     gap: 14,
+    position: "relative",
+    zIndex: 2,
   },
 
   heroStatCard: {
@@ -461,11 +648,14 @@ const styles = {
     display: "flex",
     flexWrap: "wrap",
     gap: 16,
+    width: "100%",
   },
 
   filterShell: {
     position: "relative",
     minWidth: 220,
+    flex: "1 1 220px",
+    zIndex: 30,
   },
 
   filterLabel: {
@@ -484,8 +674,8 @@ const styles = {
     gap: 12,
     minHeight: 52,
     padding: "0 18px",
-    borderRadius: 999,
-    border: "1px solid rgba(0,255,190,0.28)",
+    borderRadius: 18,
+    border: "1px solid rgba(0,255,190,0.22)",
     background:
       "linear-gradient(135deg, rgba(0,0,0,0.78), rgba(0,255,190,0.10))",
     cursor: "pointer",
@@ -510,7 +700,6 @@ const styles = {
 
   dropdown: {
     position: "absolute",
-    top: 76,
     left: 0,
     right: 0,
     maxHeight: 320,
@@ -520,7 +709,7 @@ const styles = {
     border: "1px solid rgba(0,255,190,0.22)",
     boxShadow:
       "0 24px 80px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.03) inset",
-    zIndex: 1000,
+    zIndex: 99999,
     padding: 8,
     backdropFilter: "blur(14px)",
   },
@@ -852,5 +1041,199 @@ const styles = {
     fontSize: 14,
     color: "rgba(234,255,245,0.62)",
     lineHeight: 1.7,
+  },
+
+  mobileToolbar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  mobileToolbarBtn: {
+    minHeight: 46,
+    padding: "0 16px",
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background:
+      "linear-gradient(145deg, rgba(7,22,17,0.96), rgba(3,11,8,0.96))",
+    color: "#f5fff9",
+    fontWeight: 900,
+    fontSize: 13,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    boxShadow: "0 14px 32px rgba(0,0,0,0.30)",
+    position: "relative",
+  },
+
+  mobileToolbarCount: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 999,
+    background: "#00ffbe",
+    color: "#042217",
+    fontSize: 11,
+    fontWeight: 900,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0 6px",
+  },
+
+  mobileResultsChip: {
+    minHeight: 46,
+    padding: "0 14px",
+    borderRadius: 16,
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    color: "rgba(234,255,245,0.88)",
+    fontWeight: 800,
+    fontSize: 12,
+    display: "inline-flex",
+    alignItems: "center",
+    whiteSpace: "nowrap",
+  },
+
+  filterOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.76)",
+    backdropFilter: "blur(8px)",
+    zIndex: 9998,
+  },
+
+  filterDrawer: {
+    position: "fixed",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    maxHeight: "88vh",
+    overflowY: "auto",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    background:
+      "linear-gradient(180deg, rgba(7,18,14,0.995), rgba(2,8,6,0.995))",
+    borderTop: "1px solid rgba(255,255,255,0.10)",
+    boxShadow: "0 -30px 80px rgba(0,0,0,0.55)",
+    zIndex: 9999,
+    padding: "14px 14px 28px",
+    transition: "transform 0.28s ease",
+  },
+
+  filterDrawerHandle: {
+    width: 56,
+    height: 5,
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.20)",
+    margin: "0 auto 14px",
+  },
+
+  filterDrawerHead: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 12,
+  },
+
+  filterDrawerTitle: {
+    fontSize: 19,
+    fontWeight: 1000,
+    color: "#fff",
+    letterSpacing: "-0.02em",
+  },
+
+  filterDrawerClose: {
+    minHeight: 40,
+    padding: "0 14px",
+    borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(255,255,255,0.05)",
+    color: "#fff",
+    fontWeight: 800,
+    fontSize: 12,
+  },
+
+  mobileFilterActions: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+    width: "100%",
+  },
+
+  mobileFilterGhost: {
+    minHeight: 48,
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(255,255,255,0.05)",
+    color: "#fff",
+    fontWeight: 900,
+    fontSize: 13,
+  },
+
+  mobileFilterPrimary: {
+    minHeight: 48,
+    borderRadius: 16,
+    border: "none",
+    background: "linear-gradient(135deg, #00ffbe, #52d6ff, #7c4dff)",
+    color: "#042217",
+    fontWeight: 1000,
+    fontSize: 13,
+    boxShadow: "0 14px 34px rgba(0,255,190,0.20)",
+  },
+
+  mobileStickyBar: {
+    position: "fixed",
+    left: 10,
+    right: 10,
+    bottom: 10,
+    zIndex: 9997,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "10px 12px",
+    borderRadius: 20,
+    background: "rgba(4,14,11,0.88)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    backdropFilter: "blur(18px)",
+    boxShadow: "0 22px 60px rgba(0,0,0,0.42)",
+  },
+
+  mobileStickyInfo: {
+    minWidth: 0,
+    flex: 1,
+  },
+
+  mobileStickyTitle: {
+    fontSize: 13,
+    fontWeight: 1000,
+    color: "#fff",
+    lineHeight: 1.1,
+  },
+
+  mobileStickySub: {
+    marginTop: 3,
+    fontSize: 11,
+    color: "rgba(234,255,245,0.72)",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+
+  mobileStickyBtn: {
+    minHeight: 44,
+    padding: "0 14px",
+    borderRadius: 14,
+    border: "none",
+    background: "linear-gradient(135deg, #00ffbe, #52d6ff, #7c4dff)",
+    color: "#042217",
+    fontWeight: 1000,
+    fontSize: 12,
+    boxShadow: "0 14px 34px rgba(0,255,190,0.20)",
+    whiteSpace: "nowrap",
   },
 };

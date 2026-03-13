@@ -103,9 +103,13 @@ function MobileProfileView({
   navigate,
   authUser,
 }) {
+  const [avatarZoom, setAvatarZoom] = useState(false);
+
   const safeName = profile?.full_name || profile?.username || "Explorer";
   const safeCity = profile?.city || "City";
   const safeCountry = profile?.country || "Country";
+  const safeBio =
+    profile?.bio || "No description yet. This explorer prefers actions over words.";
 
   const glass = {
     background: "rgba(255,255,255,0.06)",
@@ -129,7 +133,7 @@ function MobileProfileView({
 
   const btnPrimary = {
     width: "100%",
-    padding: "14px 0",
+    padding: "15px 0",
     borderRadius: 999,
     border: "none",
     fontWeight: 950,
@@ -139,13 +143,14 @@ function MobileProfileView({
       ? "rgba(255,255,255,0.14)"
       : "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
     color: isFollowing ? "white" : "#02130d",
-    boxShadow: "0 0 30px rgba(0,255,195,0.30)",
+    boxShadow:
+      "0 0 30px rgba(0,255,195,0.30), 0 16px 40px rgba(0,0,0,0.40)",
     opacity: followBusy ? 0.7 : 1,
   };
 
   const btnGhost = {
     width: "100%",
-    padding: "12px 0",
+    padding: "13px 0",
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,0.22)",
     background: "rgba(0,0,0,0.35)",
@@ -155,11 +160,12 @@ function MobileProfileView({
   };
 
   const sectionTitle = {
-    fontSize: 12,
-    letterSpacing: "0.14em",
+    fontSize: 11,
+    letterSpacing: "0.16em",
     textTransform: "uppercase",
     color: "rgba(230,255,245,0.75)",
     marginBottom: 10,
+    fontWeight: 900,
   };
 
   const card = { ...glass, padding: 14 };
@@ -169,15 +175,16 @@ function MobileProfileView({
       onClick={onClick}
       style={{
         background: "rgba(255,255,255,0.08)",
-        borderRadius: 16,
-        padding: 12,
+        borderRadius: 18,
+        padding: "14px 10px",
         textAlign: "center",
         border: "1px solid rgba(255,255,255,0.10)",
         cursor: onClick ? "pointer" : "default",
+        boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
       }}
     >
-      <div style={{ fontSize: 18, fontWeight: 950 }}>{value}</div>
-      <div style={{ fontSize: 11, opacity: 0.75 }}>{label}</div>
+      <div style={{ fontSize: 19, fontWeight: 950, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 11, opacity: 0.75, marginTop: 4 }}>{label}</div>
     </div>
   );
 
@@ -194,9 +201,10 @@ function MobileProfileView({
           overflow: "hidden",
           border: "1px solid rgba(255,255,255,0.12)",
           background: "rgba(0,0,0,0.35)",
+          boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
         }}
       >
-        <div style={{ position: "relative", height: 140 }}>
+        <div style={{ position: "relative", height: 150 }}>
           {img ? (
             <img
               src={img}
@@ -250,6 +258,7 @@ function MobileProfileView({
 
   const EventCard = ({ e }) => {
     const img = e.cover_url || "";
+
     return (
       <div
         onClick={() => navigate?.(`/event/${e.id}`)}
@@ -259,9 +268,10 @@ function MobileProfileView({
           overflow: "hidden",
           border: "1px solid rgba(255,255,255,0.12)",
           background: "rgba(0,0,0,0.35)",
+          boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
         }}
       >
-        <div style={{ position: "relative", height: 140 }}>
+        <div style={{ position: "relative", height: 150 }}>
           {img ? (
             <img
               src={img}
@@ -326,7 +336,7 @@ function MobileProfileView({
         }}
         style={{
           cursor: it.type === "rating" ? "default" : "pointer",
-          borderRadius: 16,
+          borderRadius: 18,
           padding: 12,
           background: "rgba(0,0,0,0.35)",
           border: "1px solid rgba(255,255,255,0.10)",
@@ -337,8 +347,8 @@ function MobileProfileView({
       >
         <div
           style={{
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             borderRadius: 16,
             display: "flex",
             alignItems: "center",
@@ -357,7 +367,7 @@ function MobileProfileView({
         </div>
 
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 12, opacity: 0.75 }}>
+          <div style={{ fontSize: 11, opacity: 0.72 }}>
             {it.created_at ? formatDate(it.created_at) : ""}
           </div>
           <div
@@ -367,6 +377,7 @@ function MobileProfileView({
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
+              marginTop: 2,
             }}
           >
             {it.title}
@@ -384,7 +395,7 @@ function MobileProfileView({
             {it.subtitle}
           </div>
           {it.meta ? (
-            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 3 }}>
+            <div style={{ fontSize: 12, opacity: 0.68, marginTop: 4 }}>
               {it.meta}
             </div>
           ) : null}
@@ -397,6 +408,7 @@ function MobileProfileView({
     <div
       style={{
         minHeight: "100vh",
+        paddingTop: 72,
         background:
           "radial-gradient(700px 320px at 20% 0%, rgba(0,255,195,0.22), transparent 60%)," +
           "radial-gradient(700px 320px at 80% 0%, rgba(124,77,255,0.18), transparent 60%)," +
@@ -405,7 +417,7 @@ function MobileProfileView({
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      <div style={{ position: "relative", height: 240 }}>
+      <div style={{ position: "relative", height: 220 }}>
         {cover ? (
           <img
             src={cover}
@@ -414,7 +426,7 @@ function MobileProfileView({
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              filter: "saturate(1.18) contrast(1.06) brightness(0.88)",
+              filter: "saturate(1.16) contrast(1.06) brightness(0.86)",
             }}
           />
         ) : (
@@ -435,7 +447,7 @@ function MobileProfileView({
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.88))",
+              "linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.92))",
           }}
         />
 
@@ -443,54 +455,80 @@ function MobileProfileView({
           style={{
             position: "absolute",
             left: "50%",
-            bottom: -56,
+            bottom: -58,
             transform: "translateX(-50%)",
-            width: 124,
-            height: 124,
+            width: 128,
+            height: 128,
             borderRadius: "50%",
             padding: 4,
             background: "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
-            boxShadow: "0 0 30px rgba(0,255,195,0.35)",
+            boxShadow:
+              "0 0 34px rgba(0,255,195,0.45), 0 0 90px rgba(0,180,255,0.18)",
           }}
         >
           <img
             src={avatar}
             alt=""
+            onClick={() => setAvatarZoom(true)}
             style={{
               width: "100%",
               height: "100%",
               borderRadius: "50%",
               objectFit: "cover",
               objectPosition: "50% 35%",
-              border: "3px solid rgba(0,0,0,0.75)",
+              border: "3px solid rgba(0,0,0,0.78)",
               background: "rgba(0,0,0,0.35)",
+              cursor: "pointer",
             }}
           />
         </div>
       </div>
 
-      <div style={{ padding: 14, paddingTop: 74, maxWidth: 720, margin: "0 auto" }}>
+      <div style={{ padding: 14, paddingTop: 72, maxWidth: 720, margin: "0 auto" }}>
         <div style={{ textAlign: "center" }}>
           <div
             style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "center",
+              fontSize: 31,
+              fontWeight: 950,
+              lineHeight: 1.05,
+              textShadow: "0 10px 30px rgba(0,0,0,0.55)",
             }}
           >
-            <div style={{ fontSize: 30, fontWeight: 950, lineHeight: 1.05 }}>
-              {safeName}
-            </div>
+            {safeName}
+          </div>
 
+          <div
+            style={{
+              marginTop: 8,
+              display: "flex",
+              gap: 8,
+              justifyContent: "center",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <ProfileRatingSummary profileId={profile.id} />
+
+            <span
+              style={{
+                fontSize: 13,
+                padding: "6px 12px",
+                borderRadius: 999,
+                background: "rgba(255,211,107,0.12)",
+                border: "1px solid rgba(255,211,107,0.30)",
+                color: "#ffd36b",
+                fontWeight: 900,
+                textShadow: "0 0 10px rgba(255,211,107,0.35)",
+              }}
+            >
+              ⭐ {avgRating || "New"} rating
+            </span>
 
             {profile?.is_verified_creator && (
               <span
                 style={{
                   fontSize: 11,
-                  padding: "4px 10px",
+                  padding: "5px 10px",
                   borderRadius: 999,
                   background: "rgba(0,255,176,0.14)",
                   border: "1px solid rgba(0,255,176,0.35)",
@@ -502,17 +540,36 @@ function MobileProfileView({
                 ✔ MeetOutdoors Verified
               </span>
             )}
+
+            {Boolean(isFriend) && (
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: "5px 12px",
+                  borderRadius: 999,
+                  background:
+                    "linear-gradient(135deg, #00ffc3, #00b4ff, #7c4dff)",
+                  color: "#02130d",
+                  fontWeight: 950,
+                  border: "1px solid rgba(255,255,255,0.20)",
+                  letterSpacing: "0.06em",
+                  boxShadow: "0 0 18px rgba(0,255,195,0.35)",
+                }}
+              >
+                🤝 FRIEND
+              </span>
+            )}
           </div>
 
-          <div style={{ opacity: 0.78, fontSize: 13, marginTop: 6 }}>
+          <div style={{ opacity: 0.8, fontSize: 13, marginTop: 8 }}>
             📍 {safeCity}, {safeCountry}
           </div>
 
           <div
             style={{
-              marginTop: 10,
+              marginTop: 12,
               display: "flex",
-              gap: 10,
+              gap: 8,
               justifyContent: "center",
               flexWrap: "wrap",
               alignItems: "center",
@@ -557,66 +614,19 @@ function MobileProfileView({
               ))}
             </div>
           ) : null}
-
-          {Boolean(isFriend) && (
-            <div style={{ marginTop: 10 }}>
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: "5px 12px",
-                  borderRadius: 999,
-                  background:
-                    "linear-gradient(135deg, #00ffc3, #00b4ff, #7c4dff)",
-                  color: "#02130d",
-                  fontWeight: 950,
-                  border: "1px solid rgba(255,255,255,0.20)",
-                  letterSpacing: "0.06em",
-                  boxShadow: "0 0 18px rgba(0,255,195,0.35)",
-                }}
-              >
-                🤝 FRIEND
-              </span>
-            </div>
-          )}
         </div>
 
         <div
           style={{
-            marginTop: 14,
+            marginTop: 16,
             ...glass,
             padding: 14,
             lineHeight: 1.6,
             fontSize: 14,
-            opacity: 0.92,
+            opacity: 0.94,
           }}
         >
-          {profile?.bio || "No description yet. This explorer prefers actions over words."}
-        </div>
-
-        <div style={{ marginTop: 14 }}>
-          <ProfileRatingBox ratedUserId={profile.id} user={authUser} />
-        </div>
-
-        <div
-          style={{
-            marginTop: 14,
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 10,
-          }}
-        >
-          <Stat
-            label="Tours"
-            value={toursCount}
-            onClick={() => navigate?.(`/profile/${profile.id}?tab=tours`)}
-          />
-          <Stat
-            label="Events"
-            value={eventsCount}
-            onClick={() => navigate?.(`/profile/${profile.id}?tab=events`)}
-          />
-          <Stat label="Followers" value={followersCount} />
-          <Stat label="Rating" value={avgRating || "N/A"} />
+          {safeBio}
         </div>
 
         <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
@@ -636,6 +646,32 @@ function MobileProfileView({
           )}
         </div>
 
+        <div style={{ marginTop: 14 }}>
+          <ProfileRatingBox ratedUserId={profile.id} user={authUser} />
+        </div>
+
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: 10,
+          }}
+        >
+          <Stat
+            label="Tours"
+            value={toursCount}
+            onClick={() => navigate?.(`/profile/${profile.id}?tab=tours`)}
+          />
+          <Stat
+            label="Events"
+            value={eventsCount}
+            onClick={() => navigate?.(`/profile/${profile.id}?tab=events`)}
+          />
+          <Stat label="Followers" value={followersCount} />
+          <Stat label="Rating" value={avgRating || "N/A"} />
+        </div>
+
         {(profile?.instagram_url || profile?.tiktok_url || profile?.youtube_url) && (
           <div
             style={{
@@ -652,7 +688,7 @@ function MobileProfileView({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  padding: "8px 14px",
+                  padding: "9px 14px",
                   borderRadius: 999,
                   background: "rgba(225,48,108,0.18)",
                   border: "1px solid rgba(225,48,108,0.35)",
@@ -671,7 +707,7 @@ function MobileProfileView({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  padding: "8px 14px",
+                  padding: "9px 14px",
                   borderRadius: 999,
                   background: "rgba(255,0,80,0.16)",
                   border: "1px solid rgba(255,255,255,0.18)",
@@ -690,7 +726,7 @@ function MobileProfileView({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  padding: "8px 14px",
+                  padding: "9px 14px",
                   borderRadius: 999,
                   background: "rgba(255,0,0,0.16)",
                   border: "1px solid rgba(255,0,0,0.35)",
@@ -830,6 +866,53 @@ function MobileProfileView({
           )}
         </div>
       </div>
+
+      {avatarZoom && (
+        <div
+          onClick={() => setAvatarZoom(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.96)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            backdropFilter: "blur(12px)",
+            padding: 18,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 430,
+              textAlign: "center",
+            }}
+          >
+            <img
+              src={avatar}
+              alt=""
+              style={{
+                width: "100%",
+                maxWidth: 430,
+                borderRadius: 26,
+                boxShadow: "0 40px 120px rgba(0,0,0,0.9)",
+                border: "1px solid rgba(255,255,255,0.14)",
+              }}
+            />
+            <div
+              style={{
+                marginTop: 14,
+                fontSize: 13,
+                opacity: 0.78,
+                color: "white",
+              }}
+            >
+              Tap anywhere to close
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

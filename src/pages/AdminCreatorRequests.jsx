@@ -30,6 +30,7 @@ export default function AdminCreatorRequests() {
       console.log("LOAD CREATOR REQUESTS ERROR:", error);
       setRequests([]);
     } else {
+      console.log("CREATOR REQUESTS DATA:", data);
       setRequests(data || []);
     }
 

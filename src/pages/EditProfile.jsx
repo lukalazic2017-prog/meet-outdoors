@@ -1,5 +1,5 @@
 // src/pages/EditProfile.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -9,7 +9,7 @@ export default function EditProfile() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
-  // TEXT POLJA
+  // TEXT
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [homeBase, setHomeBase] = useState("");
@@ -18,7 +18,7 @@ export default function EditProfile() {
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
 
-  // SLIKE
+  // FILES
   const [avatarFile, setAvatarFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -29,11 +29,20 @@ export default function EditProfile() {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 860 : false
+  );
 
-  // LAZY XP / LEVEL (za preview – ne menjamo u bazi)
+  // PREVIEW XP / LEVEL
   const [xp] = useState(120);
   const [level] = useState(1);
   const maxXp = 200;
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 860);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // -------- LOAD USER + PROFILE --------
   useEffect(() => {
@@ -45,46 +54,6 @@ export default function EditProfile() {
         data: { user },
         error: authErr,
       } = await supabase.auth.getUser();
-      // ===== AUTO CREATE PROFILE IF MISSING =====
-let { data: existing } = await supabase
-  .from("profiles")
-  .select("*")
-  .eq("id", user.id)
-  .maybeSingle();
-
-if (!existing) {
-  const { error: insertErr } = await supabase
-    .from("profiles")
-    .insert({
-      id: user.id,
-      full_name: user.email || "",
-      bio: "",
-      avatar_url: "",
-      cover_url: "",
-      home_base: "",
-      favorite_activity: "",
-      instagram_url: "",
-      tiktok_url: "",
-      youtube_url: "",
-    });
-
-  if (insertErr) console.error("Auto-profile error:", insertErr);
-
-  existing = {
-    id: user.id,
-    full_name: user.email || "",
-    bio: "",
-    avatar_url: "",
-    cover_url: "",
-    home_base: "",
-    favorite_activity: "",
-    instagram_url: "",
-    tiktok_url: "",
-    youtube_url: "",
-  };
-}
-
-setProfile(existing);
 
       if (authErr || !user) {
         setLoading(false);
@@ -94,30 +63,52 @@ setProfile(existing);
 
       setUser(user);
 
-      const { data, error } = await supabase
+      let { data: existing } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.error(error);
-        setErrorMsg("Could not load profile. Please try again.");
-        setLoading(false);
-        return;
+      if (!existing) {
+        const { error: insertErr } = await supabase.from("profiles").insert({
+          id: user.id,
+          full_name: user.email || "",
+          bio: "",
+          avatar_url: "",
+          cover_url: "",
+          home_base: "",
+          favorite_activity: "",
+          instagram_url: "",
+          tiktok_url: "",
+          youtube_url: "",
+        });
+
+        if (insertErr) console.error("Auto-profile error:", insertErr);
+
+        existing = {
+          id: user.id,
+          full_name: user.email || "",
+          bio: "",
+          avatar_url: "",
+          cover_url: "",
+          home_base: "",
+          favorite_activity: "",
+          instagram_url: "",
+          tiktok_url: "",
+          youtube_url: "",
+        };
       }
 
-      setProfile(data);
-
-      setFullName(data.full_name || "");
-      setBio(data.bio || "");
-      setHomeBase(data.home_base || "");
-      setFavoriteActivity(data.favorite_activity || "");
-      setInstagramUrl(data.instagram_url || "");
-      setTiktokUrl(data.tiktok_url || "");
-      setYoutubeUrl(data.youtube_url || "");
-      setAvatarPreview(data.avatar_url || null);
-      setCoverPreview(data.cover_url || null);
+      setProfile(existing);
+      setFullName(existing.full_name || "");
+      setBio(existing.bio || "");
+      setHomeBase(existing.home_base || "");
+      setFavoriteActivity(existing.favorite_activity || "");
+      setInstagramUrl(existing.instagram_url || "");
+      setTiktokUrl(existing.tiktok_url || "");
+      setYoutubeUrl(existing.youtube_url || "");
+      setAvatarPreview(existing.avatar_url || null);
+      setCoverPreview(existing.cover_url || null);
 
       setLoading(false);
     }
@@ -125,10 +116,25 @@ setProfile(existing);
     load();
   }, [navigate]);
 
+  // cleanup blob URLs
+  useEffect(() => {
+    return () => {
+      if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+      if (coverPreview?.startsWith("blob:")) URL.revokeObjectURL(coverPreview);
+    };
+  }, [avatarPreview, coverPreview]);
+
   // -------- FILE HANDLERS --------
   function onAvatarChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (avatarPreview?.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(avatarPreview);
+      } catch {}
+    }
+
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
   }
@@ -136,15 +142,41 @@ setProfile(existing);
   function onCoverChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (coverPreview?.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(coverPreview);
+      } catch {}
+    }
+
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
+  }
+
+  function removeAvatar() {
+    if (avatarPreview?.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(avatarPreview);
+      } catch {}
+    }
+    setAvatarFile(null);
+    setAvatarPreview(profile?.avatar_url || null);
+  }
+
+  function removeCover() {
+    if (coverPreview?.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(coverPreview);
+      } catch {}
+    }
+    setCoverFile(null);
+    setCoverPreview(profile?.cover_url || null);
   }
 
   // -------- VALIDATION --------
   function validate() {
     if (!fullName.trim()) return "Display name is required.";
-    if (fullName.trim().length < 2)
-      return "Display name is too short.";
+    if (fullName.trim().length < 2) return "Display name is too short.";
     if (bio.length > 500) return "Bio must be under 500 characters.";
     return null;
   }
@@ -166,10 +198,9 @@ setProfile(existing);
     setSaving(true);
 
     try {
-      let avatarUrl = avatarPreview || profile?.avatar_url || null;
-      let coverUrl = coverPreview || profile?.cover_url || null;
+      let avatarUrl = profile?.avatar_url || null;
+      let coverUrl = profile?.cover_url || null;
 
-      // AVATAR UPLOAD
       if (avatarFile) {
         const ext = avatarFile.name.split(".").pop();
         const fileName = `avatar-${user.id}-${Date.now()}.${ext}`;
@@ -186,7 +217,6 @@ setProfile(existing);
         avatarUrl = pub.publicUrl;
       }
 
-      // COVER UPLOAD
       if (coverFile) {
         const ext = coverFile.name.split(".").pop();
         const fileName = `cover-${user.id}-${Date.now()}.${ext}`;
@@ -203,11 +233,10 @@ setProfile(existing);
         coverUrl = pub.publicUrl;
       }
 
-      // UPDATE PROFILE
       const { error: updErr } = await supabase
         .from("profiles")
         .update({
-         full_name: fullName.trim(),
+          full_name: fullName.trim(),
           bio: bio.trim(),
           home_base: homeBase.trim(),
           favorite_activity: favoriteActivity.trim(),
@@ -221,9 +250,24 @@ setProfile(existing);
 
       if (updErr) throw updErr;
 
+      setProfile((prev) => ({
+        ...prev,
+        full_name: fullName.trim(),
+        bio: bio.trim(),
+        home_base: homeBase.trim(),
+        favorite_activity: favoriteActivity.trim(),
+        instagram_url: instagramUrl.trim(),
+        tiktok_url: tiktokUrl.trim(),
+        youtube_url: youtubeUrl.trim(),
+        avatar_url: avatarUrl,
+        cover_url: coverUrl,
+      }));
+
+      setAvatarFile(null);
+      setCoverFile(null);
+      setAvatarPreview(avatarUrl);
+      setCoverPreview(coverUrl);
       setSuccessMsg("Profile updated successfully 🌿");
-      // ako hoćeš odmah nazad na profil:
-      // setTimeout(() => navigate(/profile/${user.id}), 1200);
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || "Error updating profile. Please try again.");
@@ -232,198 +276,624 @@ setProfile(existing);
     }
   }
 
-  // -------- STILOVI --------
-  const pageStyle = {
-    minHeight: "100vh",
-    padding: "28px 16px 60px",
-    background:
-      "radial-gradient(circle at top, #062a1d 0%, #020a08 50%, #010304 100%)",
-    color: "#ffffff",
-    boxSizing: "border-box",
-  };
+  const progress = Math.min((xp / maxXp) * 100, 100);
 
-  const containerStyle = {
-    maxWidth: 1100,
-    margin: "0 auto",
-  };
+  const styles = useMemo(
+    () => ({
+      page: {
+        minHeight: "100vh",
+        padding: isMobile ? "0 0 34px" : "18px 16px 40px",
+        background:
+          "radial-gradient(900px 420px at 10% 0%, rgba(0,255,190,0.16), transparent 58%)," +
+          "radial-gradient(900px 420px at 90% 0%, rgba(0,170,255,0.14), transparent 58%)," +
+          "linear-gradient(180deg, #051812 0%, #020907 48%, #010304 100%)",
+        color: "#fff",
+        boxSizing: "border-box",
+        fontFamily:
+          "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      },
 
-  const headerStyle = {
-    marginBottom: 20,
-  };
+      shell: {
+        maxWidth: 1220,
+        margin: "0 auto",
+      },
 
-  const badgeStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "4px 11px",
-    borderRadius: 999,
-    border: "1px solid rgba(0,255,160,0.6)",
-    background:
-      "linear-gradient(120deg, rgba(0,0,0,0.85), rgba(0,255,160,0.12))",
-    fontSize: 11,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: "rgba(210,255,230,0.9)",
-  };
+      hero: {
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: isMobile ? "0 0 30px 30px" : 30,
+        border: isMobile ? "none" : "1px solid rgba(255,255,255,0.08)",
+        background:
+          "radial-gradient(120% 120% at 0% 0%, rgba(0,255,180,0.18), transparent 40%)," +
+          "radial-gradient(120% 120% at 100% 0%, rgba(0,140,255,0.16), transparent 40%)," +
+          "linear-gradient(180deg, rgba(7,22,18,0.98), rgba(2,10,8,0.98))",
+        boxShadow: isMobile
+          ? "0 22px 45px rgba(0,0,0,0.40)"
+          : "0 28px 80px rgba(0,0,0,0.70), 0 0 0 1px rgba(0,255,190,0.06)",
+        padding: isMobile ? "18px 14px 18px" : "22px 22px 20px",
+        marginBottom: isMobile ? 14 : 18,
+      },
 
-  const titleStyle = {
-    fontSize: 30,
-    fontWeight: 800,
-    margin: "10px 0 4px",
-  };
+      backRow: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        flexWrap: "wrap",
+        marginBottom: 14,
+      },
 
-  const subtitleStyle = {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-    maxWidth: 520,
-  };
+      backBtn: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "9px 14px",
+        borderRadius: 999,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(255,255,255,0.05)",
+        color: "#effff8",
+        fontSize: 12,
+        fontWeight: 800,
+        cursor: "pointer",
+        backdropFilter: "blur(12px)",
+      },
 
-  const layoutStyle = {
-    marginTop: 22,
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 2.1fr) minmax(0, 1.4fr)",
-    gap: 20,
-  };
+      heroGrid: {
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1.2fr 0.8fr",
+        gap: isMobile ? 16 : 18,
+        alignItems: "center",
+      },
 
-  const cardStyle = {
-    background: "rgba(0,0,0,0.55)",
-    borderRadius: 18,
-    padding: 18,
-    border: "1px solid rgba(255,255,255,0.06)",
-    boxShadow: "0 22px 60px rgba(0,0,0,0.85)",
-    backdropFilter: "blur(16px)",
-  };
+      heroLeft: {
+        minWidth: 0,
+      },
 
-  const labelStyle = {
-    fontSize: 13,
-    marginBottom: 4,
-    color: "rgba(255,255,255,0.9)",
-  };
+      badge: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 11px",
+        borderRadius: 999,
+        border: "1px solid rgba(0,255,160,0.30)",
+        background: "rgba(0,255,160,0.08)",
+        fontSize: 11,
+        fontWeight: 900,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        color: "rgba(210,255,230,0.92)",
+      },
 
-  const inputBase = {
-    width: "100%",
-    padding: "9px 11px",
-    borderRadius: 10,
-    border: "1px solid rgba(255,255,255,0.16)",
-    background: "rgba(0,0,0,0.55)",
-    color: "#ffffff",
-    fontSize: 14,
-    outline: "none",
-    boxSizing: "border-box",
-  };
+      title: {
+        fontSize: isMobile ? 30 : 38,
+        fontWeight: 1000,
+        lineHeight: 1.04,
+        letterSpacing: "-0.04em",
+        margin: "12px 0 8px",
+        color: "#f6fffb",
+      },
 
-  const textareaStyle = {
-    ...inputBase,
-    minHeight: 90,
-    resize: "vertical",
-  };
+      subtitle: {
+        fontSize: isMobile ? 13 : 14,
+        color: "rgba(235,255,245,0.74)",
+        lineHeight: 1.7,
+        maxWidth: 620,
+      },
 
-  const hintStyle = {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.55)",
-    marginTop: 4,
-  };
+      heroPills: {
+        display: "flex",
+        gap: 10,
+        flexWrap: "wrap",
+        marginTop: 14,
+      },
 
-  const sectionTitle = {
-    fontSize: 14,
-    fontWeight: 700,
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    color: "rgba(210,255,230,0.9)",
-  };
+      heroPill: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 12px",
+        borderRadius: 999,
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        color: "rgba(235,255,245,0.86)",
+        fontSize: 12,
+        fontWeight: 800,
+      },
 
-  const errorStyle = {
-    marginTop: 10,
-    fontSize: 13,
-    padding: "8px 10px",
-    borderRadius: 10,
-    background: "rgba(255,60,80,0.16)",
-    border: "1px solid rgba(255,90,110,0.7)",
-    color: "#ffd3d8",
-  };
+      heroPreview: {
+        position: "relative",
+        minHeight: isMobile ? 210 : 260,
+        borderRadius: 24,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+        background:
+          "linear-gradient(180deg, rgba(6,22,16,0.96), rgba(0,0,0,0.88))",
+      },
 
-  const successStyle = {
-    marginTop: 10,
-    fontSize: 13,
-    padding: "8px 10px",
-    borderRadius: 10,
-    background: "rgba(0,255,150,0.1)",
-    border: "1px solid rgba(0,255,150,0.6)",
-    color: "#c9ffe8",
-  };
+      heroCover: {
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        filter: "saturate(1.08) brightness(0.82)",
+      },
 
-  const submitBtn = {
-    marginTop: 16,
-    width: "100%",
-    padding: "11px 14px",
-    borderRadius: 999,
-    border: "none",
-    background:
-      "linear-gradient(135deg, #00ffb0 0%, #00cf7c 40%, #02a45d 100%)",
-    color: "#02140b",
-    fontSize: 15,
-    fontWeight: 800,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    cursor: "pointer",
-    boxShadow: "0 14px 40px rgba(0,255,165,0.45)",
-  };
+      heroOverlay: {
+        position: "absolute",
+        inset: 0,
+        background:
+          "radial-gradient(500px 220px at 15% 15%, rgba(0,255,190,0.18), transparent 55%)," +
+          "linear-gradient(180deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.88) 85%)",
+      },
 
-  const miniPill = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 11,
-    padding: "4px 9px",
-    borderRadius: 999,
-    background: "rgba(0,0,0,0.5)",
-    border: "1px solid rgba(255,255,255,0.16)",
-  };
+      previewContent: {
+        position: "absolute",
+        left: 16,
+        right: 16,
+        bottom: 14,
+      },
 
-  const isSmall =
-    typeof window !== "undefined" && window.innerWidth < 800;
-  const layoutResponsive = isSmall
-    ? { ...layoutStyle, gridTemplateColumns: "1fr" }
-    : layoutStyle;
+      previewAvatarWrap: {
+        width: isMobile ? 82 : 92,
+        height: isMobile ? 82 : 92,
+        borderRadius: "50%",
+        padding: 3,
+        marginBottom: 10,
+        background:
+          "linear-gradient(135deg, #00ffb0 0%, #00d9ff 55%, #7c4dff 100%)",
+        boxShadow: "0 0 26px rgba(0,255,190,0.32)",
+      },
+
+      previewAvatar: {
+        width: "100%",
+        height: "100%",
+        borderRadius: "50%",
+        objectFit: "cover",
+        border: "3px solid rgba(0,0,0,0.72)",
+        background: "#02100b",
+      },
+
+      previewName: {
+        fontSize: isMobile ? 22 : 24,
+        fontWeight: 1000,
+        color: "#fff",
+        lineHeight: 1.05,
+      },
+
+      previewBio: {
+        marginTop: 6,
+        fontSize: 12.5,
+        lineHeight: 1.6,
+        color: "rgba(240,255,247,0.82)",
+        maxWidth: 420,
+      },
+
+      progressWrap: {
+        marginTop: 14,
+        padding: "12px 12px 10px",
+        borderRadius: 18,
+        background: "rgba(0,0,0,0.35)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        backdropFilter: "blur(12px)",
+      },
+
+      progressTop: {
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 10,
+        fontSize: 11,
+        color: "rgba(240,255,247,0.75)",
+        marginBottom: 7,
+        fontWeight: 800,
+      },
+
+      progressBar: {
+        width: "100%",
+        height: 10,
+        borderRadius: 999,
+        background: "rgba(255,255,255,0.08)",
+        overflow: "hidden",
+      },
+
+      progressFill: {
+        width: `${progress}%`,
+        height: "100%",
+        borderRadius: 999,
+        background: "linear-gradient(90deg, #00ffb0, #00d9ff)",
+        boxShadow: "0 0 18px rgba(0,255,190,0.55)",
+      },
+
+      layout: {
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.35fr) minmax(0, 0.9fr)",
+        gap: 18,
+      },
+
+      card: {
+        background:
+          "linear-gradient(180deg, rgba(4,14,12,0.92), rgba(2,8,7,0.96))",
+        borderRadius: isMobile ? 22 : 26,
+        padding: isMobile ? 14 : 18,
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow:
+          "0 24px 70px rgba(0,0,0,0.62), inset 0 1px 0 rgba(255,255,255,0.03)",
+        backdropFilter: "blur(16px)",
+        overflow: "hidden",
+      },
+
+      section: {
+        marginBottom: 18,
+      },
+
+      sectionTitle: {
+        fontSize: 12,
+        fontWeight: 1000,
+        marginBottom: 12,
+        textTransform: "uppercase",
+        letterSpacing: "0.14em",
+        color: "rgba(210,255,230,0.88)",
+      },
+
+      fieldGrid2: {
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gap: 10,
+      },
+
+      label: {
+        fontSize: 12,
+        marginBottom: 5,
+        color: "rgba(255,255,255,0.88)",
+        fontWeight: 800,
+      },
+
+      input: {
+        width: "100%",
+        padding: "12px 13px",
+        borderRadius: 14,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(255,255,255,0.05)",
+        color: "#ffffff",
+        fontSize: 14,
+        outline: "none",
+        boxSizing: "border-box",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+      },
+
+      textarea: {
+        width: "100%",
+        minHeight: 110,
+        padding: "12px 13px",
+        borderRadius: 16,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(255,255,255,0.05)",
+        color: "#ffffff",
+        fontSize: 14,
+        outline: "none",
+        boxSizing: "border-box",
+        resize: "vertical",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+      },
+
+      hint: {
+        fontSize: 11,
+        color: "rgba(255,255,255,0.52)",
+        marginTop: 5,
+        lineHeight: 1.45,
+      },
+
+      uploadCard: {
+        borderRadius: 18,
+        border: "1px dashed rgba(255,255,255,0.20)",
+        padding: 14,
+        background:
+          "radial-gradient(circle at top left, rgba(0,255,160,0.14), rgba(0,0,0,0.78))",
+      },
+
+      uploadHeader: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 12,
+        flexWrap: "wrap",
+      },
+
+      uploadTitle: {
+        fontSize: 14,
+        fontWeight: 900,
+        color: "#f5fffa",
+      },
+
+      uploadActions: {
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap",
+      },
+
+      ghostBtn: {
+        padding: "8px 12px",
+        borderRadius: 999,
+        border: "1px solid rgba(255,255,255,0.16)",
+        background: "rgba(255,255,255,0.06)",
+        color: "#fff",
+        fontSize: 12,
+        fontWeight: 800,
+        cursor: "pointer",
+      },
+
+      uploadPreviewCover: {
+        width: "100%",
+        height: isMobile ? 130 : 150,
+        objectFit: "cover",
+        borderRadius: 14,
+        marginTop: 12,
+        border: "1px solid rgba(255,255,255,0.12)",
+      },
+
+      uploadPreviewAvatarWrap: {
+        width: 72,
+        height: 72,
+        borderRadius: "50%",
+        overflow: "hidden",
+        border: "2px solid rgba(0,255,160,0.82)",
+        boxShadow: "0 0 16px rgba(0,255,160,0.32)",
+        flexShrink: 0,
+      },
+
+      uploadPreviewAvatar: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+      },
+
+      msgError: {
+        marginTop: 10,
+        fontSize: 13,
+        padding: "10px 12px",
+        borderRadius: 14,
+        background: "rgba(255,60,80,0.14)",
+        border: "1px solid rgba(255,90,110,0.55)",
+        color: "#ffd3d8",
+      },
+
+      msgSuccess: {
+        marginTop: 10,
+        fontSize: 13,
+        padding: "10px 12px",
+        borderRadius: 14,
+        background: "rgba(0,255,150,0.10)",
+        border: "1px solid rgba(0,255,150,0.50)",
+        color: "#c9ffe8",
+      },
+
+      submitBtn: {
+        marginTop: 16,
+        width: "100%",
+        padding: "14px 16px",
+        borderRadius: 999,
+        border: "none",
+        background:
+          "linear-gradient(135deg, #00ffb0 0%, #00cf7c 42%, #02a45d 100%)",
+        color: "#02140b",
+        fontSize: 15,
+        fontWeight: 1000,
+        letterSpacing: "0.10em",
+        textTransform: "uppercase",
+        cursor: "pointer",
+        boxShadow: "0 16px 45px rgba(0,255,165,0.34)",
+      },
+
+      sideSticky: {
+        position: isMobile ? "relative" : "sticky",
+        top: 18,
+      },
+
+      sidePreviewCard: {
+        borderRadius: 24,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.08)",
+        background:
+          "linear-gradient(180deg, rgba(5,18,14,0.96), rgba(1,8,6,0.96))",
+        boxShadow: "0 24px 70px rgba(0,0,0,0.62)",
+        marginBottom: 14,
+      },
+
+      sideTopCover: {
+        position: "relative",
+        height: isMobile ? 170 : 190,
+        overflow: "hidden",
+      },
+
+      sideCoverImg: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        filter: "saturate(1.08) brightness(0.86)",
+      },
+
+      sideCoverOverlay: {
+        position: "absolute",
+        inset: 0,
+        background:
+          "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.92))",
+      },
+
+      sideAvatarWrap: {
+        position: "absolute",
+        left: "50%",
+        bottom: -42,
+        transform: "translateX(-50%)",
+        width: 88,
+        height: 88,
+        borderRadius: "50%",
+        padding: 3,
+        background:
+          "linear-gradient(135deg, #00ffb0 0%, #00d9ff 55%, #7c4dff 100%)",
+        boxShadow: "0 0 24px rgba(0,255,190,0.30)",
+      },
+
+      sideAvatar: {
+        width: "100%",
+        height: "100%",
+        borderRadius: "50%",
+        objectFit: "cover",
+        border: "3px solid rgba(0,0,0,0.76)",
+      },
+
+      sideBody: {
+        padding: "54px 16px 16px",
+        textAlign: "center",
+      },
+
+      sideName: {
+        fontSize: 22,
+        fontWeight: 1000,
+        lineHeight: 1.06,
+      },
+
+      sideBio: {
+        marginTop: 8,
+        fontSize: 13,
+        lineHeight: 1.65,
+        color: "rgba(240,255,247,0.76)",
+      },
+
+      sideMiniGrid: {
+        marginTop: 14,
+        display: "grid",
+        gap: 10,
+      },
+
+      miniBox: {
+        padding: "12px 12px",
+        borderRadius: 16,
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.08)",
+      },
+
+      miniLabel: {
+        fontSize: 11,
+        color: "rgba(240,255,247,0.56)",
+        textTransform: "uppercase",
+        letterSpacing: "0.10em",
+        fontWeight: 900,
+        marginBottom: 4,
+      },
+
+      miniValue: {
+        fontSize: 13,
+        color: "#fff",
+        fontWeight: 800,
+        wordBreak: "break-word",
+      },
+
+      socialRow: {
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 8,
+        marginTop: 14,
+        justifyContent: "center",
+      },
+
+      socialPill: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "7px 10px",
+        borderRadius: 999,
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        fontSize: 12,
+        fontWeight: 800,
+      },
+    }),
+    [isMobile, progress]
+  );
 
   if (loading) {
     return (
-      <div style={pageStyle}>
-        <div style={containerStyle}>
-          <p>Loading profile...</p>
+      <div style={styles.page}>
+        <div style={styles.shell}>
+          <div style={{ ...styles.card, textAlign: "center", padding: 28 }}>
+            Loading profile...
+          </div>
         </div>
       </div>
     );
   }
 
+  const safeAvatar =
+    avatarPreview || "https://i.pravatar.cc/300?img=12";
+  const safeCover = coverPreview || "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&auto=format&fit=crop&q=60";
+  const safeBio =
+    bio || "No bio yet — say something awesome about your outdoor side.";
+  const hasAnySocial = instagramUrl || tiktokUrl || youtubeUrl;
+
   return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        {/* HEADER */}
-        <div style={headerStyle}>
-          <div style={badgeStyle}>
-            ✏️ Edit profile · Level {level} Explorer
+    <div style={styles.page}>
+      <div style={styles.shell}>
+        <div style={styles.hero}>
+          <div style={styles.backRow}>
+            <button style={styles.backBtn} onClick={() => navigate(-1)}>
+              ← Back
+            </button>
           </div>
-          <h1 style={titleStyle}>Tune your outdoor identity.</h1>
-          <p style={subtitleStyle}>
-            Update your avatar, cover, description and social links so
-            people instantly feel who you are on the trail.
-          </p>
+
+          <div style={styles.heroGrid}>
+            <div style={styles.heroLeft}>
+              <div style={styles.badge}>✏️ Edit profile · Level {level}</div>
+              <h1 style={styles.title}>Tune your outdoor identity.</h1>
+              <p style={styles.subtitle}>
+                Sredi profil da izgleda premium, moćno i ozbiljno — ime, bio,
+                cover, avatar i društvene mreže da odmah ostaviš utisak.
+              </p>
+
+              <div style={styles.heroPills}>
+                <span style={styles.heroPill}>🧬 Level {level}</span>
+                <span style={styles.heroPill}>⚡ {xp} XP</span>
+                <span style={styles.heroPill}>🌿 Explorer mode</span>
+              </div>
+            </div>
+
+            <div style={styles.heroPreview}>
+              <img src={safeCover} alt="cover" style={styles.heroCover} />
+              <div style={styles.heroOverlay} />
+
+              <div style={styles.previewContent}>
+                <div style={styles.previewAvatarWrap}>
+                  <img src={safeAvatar} alt="avatar" style={styles.previewAvatar} />
+                </div>
+
+                <div style={styles.previewName}>{fullName || "Your name"}</div>
+                <div style={styles.previewBio}>{safeBio}</div>
+
+                <div style={styles.progressWrap}>
+                  <div style={styles.progressTop}>
+                    <span>Adventure level</span>
+                    <span>
+                      {xp} / {maxXp} XP
+                    </span>
+                  </div>
+                  <div style={styles.progressBar}>
+                    <div style={styles.progressFill} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* LAYOUT */}
-        <div style={layoutResponsive}>
-          {/* LEFT: FORM */}
-          <form style={cardStyle} onSubmit={handleSubmit}>
-            {/* BASIC INFO */}
-            <div style={{ marginBottom: 18 }}>
-              <div style={sectionTitle}>Basic info</div>
+        <div style={styles.layout}>
+          <form style={styles.card} onSubmit={handleSubmit}>
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Basic info</div>
 
               <div style={{ marginBottom: 10 }}>
-                <div style={labelStyle}>Display name *</div>
+                <div style={styles.label}>Display name *</div>
                 <input
-                  style={inputBase}
+                  style={styles.input}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Example: Luka"
@@ -431,39 +901,33 @@ setProfile(existing);
               </div>
 
               <div style={{ marginBottom: 10 }}>
-                <div style={labelStyle}>Short bio</div>
+                <div style={styles.label}>Short bio</div>
                 <textarea
-                  style={textareaStyle}
+                  style={styles.textarea}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tell people who you are in the outdoors..."
                 />
-                <div style={hintStyle}>
-                  {bio.length}/500 characters · keep it friendly and
-                  inspiring.
+                <div style={styles.hint}>
+                  {bio.length}/500 characters · neka bude kratko, jako i lično.
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                }}
-              >
+              <div style={styles.fieldGrid2}>
                 <div>
-                  <div style={labelStyle}>Home base</div>
+                  <div style={styles.label}>Home base</div>
                   <input
-                    style={inputBase}
+                    style={styles.input}
                     value={homeBase}
                     onChange={(e) => setHomeBase(e.target.value)}
                     placeholder="Example: Prokuplje, Serbia"
                   />
                 </div>
+
                 <div>
-                  <div style={labelStyle}>Favorite activity</div>
+                  <div style={styles.label}>Favorite activity</div>
                   <input
-                    style={inputBase}
+                    style={styles.input}
                     value={favoriteActivity}
                     onChange={(e) => setFavoriteActivity(e.target.value)}
                     placeholder="Example: Hiking & rafting"
@@ -472,24 +936,23 @@ setProfile(existing);
               </div>
             </div>
 
-            {/* SOCIAL LINKS */}
-            <div style={{ marginBottom: 18 }}>
-              <div style={sectionTitle}>Social links</div>
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Social links</div>
 
-              <div style={{ marginBottom: 8 }}>
-                <div style={labelStyle}>Instagram</div>
+              <div style={{ marginBottom: 10 }}>
+                <div style={styles.label}>Instagram</div>
                 <input
-                  style={inputBase}
+                  style={styles.input}
                   value={instagramUrl}
                   onChange={(e) => setInstagramUrl(e.target.value)}
                   placeholder="https://instagram.com/..."
                 />
               </div>
 
-              <div style={{ marginBottom: 8 }}>
-                <div style={labelStyle}>TikTok</div>
+              <div style={{ marginBottom: 10 }}>
+                <div style={styles.label}>TikTok</div>
                 <input
-                  style={inputBase}
+                  style={styles.input}
                   value={tiktokUrl}
                   onChange={(e) => setTiktokUrl(e.target.value)}
                   placeholder="https://www.tiktok.com/@..."
@@ -497,9 +960,9 @@ setProfile(existing);
               </div>
 
               <div>
-                <div style={labelStyle}>YouTube</div>
+                <div style={styles.label}>YouTube</div>
                 <input
-                  style={inputBase}
+                  style={styles.input}
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
                   placeholder="https://youtube.com/@..."
@@ -507,320 +970,146 @@ setProfile(existing);
               </div>
             </div>
 
-            {/* AVATAR & COVER */}
-            <div style={{ marginBottom: 18 }}>
-              <div style={sectionTitle}>Avatar & cover</div>
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Avatar</div>
 
-              {/* AVATAR */}
-              <div style={{ marginBottom: 14 }}>
-                <div style={labelStyle}>Avatar</div>
-                <label
-                  style={{
-                    borderRadius: 14,
-                    border: "1px dashed rgba(255,255,255,0.28)",
-                    padding: 12,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    background:
-                      "radial-gradient(circle at top left, rgba(0,255,160,0.2), rgba(0,0,0,0.9))",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, marginBottom: 2 }}>
-                      📷 Upload new avatar
-                    </div>
-                    <div style={hintStyle}>
-                      Square image works best. If you skip this, your
-                      current avatar stays.
-                    </div>
-                  </div>
-
-                  {avatarPreview && (
-                    <div
-                      style={{
-                        width: 52,
-                        height: 52,
-                        borderRadius: "50%",
-                        overflow: "hidden",
-                        border:
-                          "2px solid rgba(0,255,160,0.85)",
-                        boxShadow:
-                          "0 0 14px rgba(0,255,160,0.65)",
-                      }}
-                    >
+              <div style={styles.uploadCard}>
+                <div style={styles.uploadHeader}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={styles.uploadPreviewAvatarWrap}>
                       <img
-                        src={avatarPreview}
+                        src={safeAvatar}
                         alt="avatar preview"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
+                        style={styles.uploadPreviewAvatar}
                       />
                     </div>
-                  )}
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={onAvatarChange}
-                  />
-                </label>
-              </div>
-
-              {/* COVER */}
-              <div>
-                <div style={labelStyle}>Cover image</div>
-                <label
-                  style={{
-                    borderRadius: 14,
-                    border: "1px dashed rgba(255,255,255,0.28)",
-                    padding: 12,
-                    cursor: "pointer",
-                    display: "block",
-                    background:
-                      "radial-gradient(circle at top left, rgba(0,180,255,0.25), rgba(0,0,0,0.9))",
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 2 }}>
-                    🌄 Upload new cover
-                  </div>
-                  <div style={hintStyle}>
-                    Wide landscape works best. If you skip this, current
-                    cover stays.
+                    <div>
+                      <div style={styles.uploadTitle}>Upload new avatar</div>
+                      <div style={styles.hint}>
+                        Square image works best. Tvoj avatar mora brutalno da izgleda.
+                      </div>
+                    </div>
                   </div>
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={onCoverChange}
-                  />
-                </label>
+                  <div style={styles.uploadActions}>
+                    <label style={styles.ghostBtn}>
+                      Choose file
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={onAvatarChange}
+                      />
+                    </label>
 
-                {coverPreview && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border:
-                        "1px solid rgba(255,255,255,0.18)",
-                    }}
-                  >
-                    <img
-                      src={coverPreview}
-                      alt="cover preview"
-                      style={{
-                        width: "100%",
-                        height: 130,
-                        objectFit: "cover",
-                      }}
-                    />
+                    <button
+                      type="button"
+                      style={styles.ghostBtn}
+                      onClick={removeAvatar}
+                    >
+                      Reset
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
-            {/* ERRORS / SUCCESS */}
-            {errorMsg && <div style={errorStyle}>{errorMsg}</div>}
-            {successMsg && <div style={successStyle}>{successMsg}</div>}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Cover image</div>
 
-            {/* SUBMIT */}
-            <button type="submit" disabled={saving} style={submitBtn}>
+              <div style={styles.uploadCard}>
+                <div style={styles.uploadHeader}>
+                  <div>
+                    <div style={styles.uploadTitle}>Upload new cover</div>
+                    <div style={styles.hint}>
+                      Wide landscape works best. Cover daje prvi utisak.
+                    </div>
+                  </div>
+
+                  <div style={styles.uploadActions}>
+                    <label style={styles.ghostBtn}>
+                      Choose file
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={onCoverChange}
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      style={styles.ghostBtn}
+                      onClick={removeCover}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <img
+                  src={safeCover}
+                  alt="cover preview"
+                  style={styles.uploadPreviewCover}
+                />
+              </div>
+            </div>
+
+            {errorMsg && <div style={styles.msgError}>{errorMsg}</div>}
+            {successMsg && <div style={styles.msgSuccess}>{successMsg}</div>}
+
+            <button type="submit" disabled={saving} style={styles.submitBtn}>
               {saving ? "Saving..." : "Save changes"}
             </button>
           </form>
 
-          {/* RIGHT: LIVE PREVIEW */}
-          <div style={cardStyle}>
-            <div style={sectionTitle}>Live preview</div>
+          <div style={styles.sideSticky}>
+            <div style={styles.sidePreviewCard}>
+              <div style={styles.sideTopCover}>
+                <img src={safeCover} alt="cover" style={styles.sideCoverImg} />
+                <div style={styles.sideCoverOverlay} />
 
-            {/* COVER PREVIEW */}
-            <div
-              style={{
-                borderRadius: 18,
-                overflow: "hidden",
-                border: "1px solid rgba(255,255,255,0.12)",
-                marginBottom: 14,
-                position: "relative",
-                height: 160,
-                background:
-                  "linear-gradient(135deg,#052612,#02130b)",
-              }}
-            >
-              {coverPreview && (
-                <img
-                  src={coverPreview}
-                  alt="cover"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    filter: "saturate(1.1)",
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.9))",
-                }}
-              />
-
-              {/* AVATAR FLOAT */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  bottom: -40,
-                  transform: "translateX(-50%)",
-                }}
-              >
-                <div
-                  style={{
-                    width: 84,
-                    height: 84,
-                    borderRadius: "50%",
-                    overflow: "hidden",
-                    border:
-                      "3px solid rgba(0,255,200,0.9)",
-                    boxShadow:
-                      "0 0 25px rgba(0,255,170,0.8)",
-                  }}
-                >
-                  <img
-                    src={
-                      avatarPreview ||
-                      "https://i.pravatar.cc/300"
-                    }
-                    alt="avatar"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* TEXT ZONA */}
-            <div style={{ paddingTop: 42 }}>
-              <div
-                style={{
-                  textAlign: "center",
-                  marginBottom: 16,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 20,
-                    fontWeight: 800,
-                    marginBottom: 4,
-                  }}
-                >
-                  {fullName || "Your name"}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "rgba(255,255,255,0.7)",
-                    minHeight: 18,
-                  }}
-                >
-                  {bio || "No bio yet – say something awesome."}
+                <div style={styles.sideAvatarWrap}>
+                  <img src={safeAvatar} alt="avatar" style={styles.sideAvatar} />
                 </div>
               </div>
 
-              {/* XP / LEVEL */}
-              <div style={{ marginBottom: 14 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 11,
-                    marginBottom: 4,
-                    color: "rgba(255,255,255,0.7)",
-                  }}
-                >
-                  <span>Adventure level</span>
-                  <span>
-                    Level {level} · {xp} / {maxXp} XP
-                  </span>
-                </div>
-                <div
-                  style={{
-                    width: "100%",
-                    height: 8,
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.08)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${Math.min(
-                        (xp / maxXp) * 100,
-                        100
-                      )}%`,
-                      height: "100%",
-                      background:
-                        "linear-gradient(90deg,#00ffb0,#00e0ff)",
-                      boxShadow:
-                        "0 0 16px rgba(0,255,180,0.8)",
-                    }}
-                  />
-                </div>
-              </div>
+              <div style={styles.sideBody}>
+                <div style={styles.sideName}>{fullName || "Your name"}</div>
+                <div style={styles.sideBio}>{safeBio}</div>
 
-              {/* MINI INFO */}
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 8,
-                  marginBottom: 12,
-                }}
-              >
-                <div style={miniPill}>
-                  🏠 {homeBase || "No home base set"}
-                </div>
-                <div style={miniPill}>
-                  🧭{" "}
-                  {favoriteActivity || "No favorite activity yet"}
-                </div>
-              </div>
-
-              {/* SOCIAL ICONS */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  marginTop: 6,
-                  flexWrap: "wrap",
-                }}
-              >
-                {instagramUrl && (
-                  <div style={miniPill}>📸 Instagram linked</div>
-                )}
-                {tiktokUrl && (
-                  <div style={miniPill}>🎵 TikTok linked</div>
-                )}
-                {youtubeUrl && (
-                  <div style={miniPill}>▶ YouTube linked</div>
-                )}
-                {!instagramUrl && !tiktokUrl && !youtubeUrl && (
-                  <div style={hintStyle}>
-                    Add at least one social link so people can
-                    connect with you after the tour.
+                <div style={styles.sideMiniGrid}>
+                  <div style={styles.miniBox}>
+                    <div style={styles.miniLabel}>Home base</div>
+                    <div style={styles.miniValue}>
+                      {homeBase || "No home base set"}
+                    </div>
                   </div>
-                )}
+
+                  <div style={styles.miniBox}>
+                    <div style={styles.miniLabel}>Favorite activity</div>
+                    <div style={styles.miniValue}>
+                      {favoriteActivity || "No favorite activity yet"}
+                    </div>
+                  </div>
+
+                  <div style={styles.miniBox}>
+                    <div style={styles.miniLabel}>Level progress</div>
+                    <div style={styles.miniValue}>
+                      Level {level} · {xp}/{maxXp} XP
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.socialRow}>
+                  {instagramUrl && <div style={styles.socialPill}>📸 Instagram linked</div>}
+                  {tiktokUrl && <div style={styles.socialPill}>🎵 TikTok linked</div>}
+                  {youtubeUrl && <div style={styles.socialPill}>▶ YouTube linked</div>}
+                  {!hasAnySocial && (
+                    <div style={styles.socialPill}>🌐 Add socials for stronger profile</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

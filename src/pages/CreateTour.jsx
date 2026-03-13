@@ -3,12 +3,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
-/* Leaflet imports */
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-/* Fix default marker icons */
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -17,9 +15,12 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-/* Component for selecting location */
-function LocationMarker({ onSelect }) {
-  const [position, setPosition] = useState(null);
+function LocationMarker({ onSelect, selectedPosition }) {
+  const [position, setPosition] = useState(selectedPosition || null);
+
+  useEffect(() => {
+    if (selectedPosition) setPosition(selectedPosition);
+  }, [selectedPosition]);
 
   useMapEvents({
     click(e) {
@@ -34,30 +35,24 @@ function LocationMarker({ onSelect }) {
 export default function CreateTour() {
   const navigate = useNavigate();
 
-  // --- BASIC INFO ---
   const [title, setTitle] = useState("");
   const [activity, setActivity] = useState("");
   const [country, setCountry] = useState("");
   const [locationName, setLocationName] = useState("");
   const [description, setDescription] = useState("");
 
-  // --- DATE / PRICE ---
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [price, setPrice] = useState("");
   const [maxPeople, setMaxPeople] = useState("");
 
-  // --- APPLICATION DEADLINE ---
   const [applicationDeadline, setApplicationDeadline] = useState("");
 
-  // --- LEGAL ENTITY ---
   const [isLegalEntity, setIsLegalEntity] = useState(false);
 
-  // --- MAP LOCATION ---
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
 
-  // --- FILES ---
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [galleryFiles, setGalleryFiles] = useState([]);
@@ -66,48 +61,52 @@ export default function CreateTour() {
   const [videoFile, setVideoFile] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
 
-  // --- STATE ---
   const [loading, setLoading] = useState(false);
-const [user, setUser] = useState(null);
-const [profile, setProfile] = useState(null);
-const [errorMsg, setErrorMsg] = useState("");
-const [successMsg, setSuccessMsg] = useState("");
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-const isVerifiedCreator =
-  profile?.is_verified === true ||
-  profile?.is_verified_creator === true ||
-  profile?.creator_status === "approved";
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 860 : false
+  );
 
-  // ------------ LOAD AUTH USER ------------
- useEffect(() => {
-  async function loadUserAndProfile() {
-    const { data } = await supabase.auth.getUser();
-    const authUser = data.user || null;
+  const isVerifiedCreator =
+    profile?.is_verified === true ||
+    profile?.is_verified_creator === true ||
+    profile?.creator_status === "approved";
 
-    setUser(authUser);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 860);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
-    if (!authUser) {
-      return;
+  useEffect(() => {
+    async function loadUserAndProfile() {
+      const { data } = await supabase.auth.getUser();
+      const authUser = data.user || null;
+      setUser(authUser);
+
+      if (!authUser) return;
+
+      const { data: profileData, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authUser.id)
+        .single();
+
+      if (error) {
+        console.log("PROFILE LOAD ERROR:", error);
+        return;
+      }
+
+      setProfile(profileData);
     }
 
-    const { data: profileData, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", authUser.id)
-      .single();
+    loadUserAndProfile();
+  }, []);
 
-    if (error) {
-      console.log("PROFILE LOAD ERROR:", error);
-      return;
-    }
-
-    setProfile(profileData);
-  }
-
-  loadUserAndProfile();
-}, []);
-
-  // ------------ ACTIVITIES & COUNTRIES ------------
   const activitiesList = [
     "Hiking",
     "Cycling",
@@ -156,7 +155,6 @@ const isVerifiedCreator =
     "Other",
   ];
 
-  // ------------ FILE HANDLERS ------------
   function handleCoverChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -214,7 +212,6 @@ const isVerifiedCreator =
     setVideoPreview(URL.createObjectURL(file));
   }
 
-  // ------------ DODATO: BRISANJE SLIKA/VIDEA ------------
   function removeCover() {
     if (coverPreview) {
       try {
@@ -260,7 +257,6 @@ const isVerifiedCreator =
     setVideoPreview(null);
   }
 
-  // ------------ VALIDATION ------------
   function validate() {
     if (!title.trim()) return "Tour title is required.";
     if (!activity.trim()) return "Please select an activity.";
@@ -279,7 +275,6 @@ const isVerifiedCreator =
     return null;
   }
 
-  // ------------ SUBMIT ------------
   async function handleSubmit(e) {
     e.preventDefault();
     setErrorMsg("");
@@ -299,7 +294,6 @@ const isVerifiedCreator =
     setLoading(true);
 
     try {
-      // 1) Upload cover image
       let coverUrl = null;
       if (coverFile) {
         const ext = coverFile.name.split(".").pop();
@@ -317,7 +311,6 @@ const isVerifiedCreator =
         coverUrl = publicUrlData.publicUrl;
       }
 
-      // 2) Upload gallery images
       const galleryUrls = [];
       for (const file of galleryFiles) {
         const ext = file.name.split(".").pop();
@@ -338,7 +331,6 @@ const isVerifiedCreator =
         galleryUrls.push(publicUrlData.publicUrl);
       }
 
-      // 3) Upload video (optional)
       let videoUrl = null;
       if (videoFile) {
         const ext = videoFile.name.split(".").pop();
@@ -356,12 +348,10 @@ const isVerifiedCreator =
         videoUrl = publicVideoUrlData.publicUrl;
       }
 
-      // 4) Application deadline as ISO
       const deadlineISO = applicationDeadline
         ? new Date(applicationDeadline).toISOString()
         : null;
 
-      // 5) Insert into DB
       const { error: insertError } = await supabase.from("tours").insert([
         {
           title,
@@ -387,7 +377,6 @@ const isVerifiedCreator =
       ]);
 
       if (insertError) {
-        // ❌ RLS blok (nije verifikovan creator)
         if (insertError.code === "42501") {
           setErrorMsg(
             "⛔ You must be a verified creator to publish tours. Apply for verification."
@@ -396,7 +385,6 @@ const isVerifiedCreator =
           return;
         }
 
-        // ❌ ostale greške
         setErrorMsg(insertError.message);
         setLoading(false);
         return;
@@ -412,88 +400,197 @@ const isVerifiedCreator =
     }
   }
 
-  // ------------ STYLES ------------
+  const selectedPosition =
+    latitude && longitude ? [latitude, longitude] : null;
+
+  const showVerifiedBanner =
+    !!errorMsg &&
+    (errorMsg.includes("verified creator") || errorMsg.startsWith("⛔"));
+
   const pageWrapperStyle = {
     minHeight: "100vh",
-    padding: "30px 16px 60px",
+    padding: isMobile ? "0 0 98px" : "0 0 70px",
     background:
-      "radial-gradient(circle at top, #062a1d 0%, #030b08 55%, #020605 100%)",
+      "radial-gradient(1000px 420px at 8% -6%, rgba(0,255,170,0.18), transparent 60%)," +
+      "radial-gradient(920px 400px at 100% 8%, rgba(0,185,255,0.14), transparent 60%)," +
+      "radial-gradient(900px 360px at 50% 100%, rgba(124,77,255,0.10), transparent 58%)," +
+      "linear-gradient(180deg, #071e16 0%, #030b08 48%, #010404 100%)",
     color: "#ffffff",
     boxSizing: "border-box",
+    overflowX: "hidden",
+    fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   };
 
   const containerStyle = {
-    maxWidth: "1100px",
+    maxWidth: "1280px",
     margin: "0 auto",
+    padding: isMobile ? "0 12px" : "0 16px",
     boxSizing: "border-box",
   };
 
-  const headerStyle = { marginBottom: 18 };
+  const heroStyle = {
+    position: "relative",
+    minHeight: isMobile ? 330 : 260,
+    borderRadius: isMobile ? "0 0 28px 28px" : "0 0 30px 30px",
+    overflow: "hidden",
+    marginBottom: 18,
+    boxShadow: "0 30px 100px rgba(0,0,0,0.62)",
+    border: isMobile ? "none" : "1px solid rgba(255,255,255,0.08)",
+    borderTop: "none",
+    background:
+      "radial-gradient(700px 260px at 12% 0%, rgba(0,255,170,0.18), transparent 60%)," +
+      "radial-gradient(700px 300px at 88% 0%, rgba(0,185,255,0.12), transparent 60%)," +
+      "linear-gradient(180deg, rgba(8,30,22,0.96), rgba(2,10,7,0.98))",
+  };
 
-  const badgeStyle = {
+  const heroOverlayStyle = {
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.72) 72%, rgba(0,0,0,0.88))",
+  };
+
+  const heroGlowStyle = {
+    position: "absolute",
+    inset: 0,
+    background:
+      "radial-gradient(700px 260px at 12% 0%, rgba(0,255,170,0.16), transparent 50%)," +
+      "radial-gradient(520px 220px at 90% 10%, rgba(124,77,255,0.14), transparent 55%)",
+    pointerEvents: "none",
+  };
+
+  const heroInnerStyle = {
+    position: "relative",
+    zIndex: 2,
+    padding: isMobile ? "18px 16px 20px" : "22px 24px 24px",
+  };
+
+  const heroTopRowStyle = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: isMobile ? "flex-start" : "center",
+    gap: 10,
+    flexWrap: "wrap",
+  };
+
+  const heroBadgeStyle = {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    padding: "4px 10px",
-    borderRadius: "999px",
-    border: "1px solid rgba(0,255,160,0.4)",
-    background: "rgba(0,0,0,0.25)",
+    padding: "7px 12px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.08)",
+    backdropFilter: "blur(14px)",
+    color: "rgba(220,255,240,0.92)",
     fontSize: 11,
-    letterSpacing: "0.08em",
+    fontWeight: 900,
+    letterSpacing: "0.12em",
     textTransform: "uppercase",
-    color: "rgba(200,255,220,0.85)",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.20)",
   };
 
-  const titleStyle = {
-    fontSize: 32,
-    fontWeight: 800,
-    margin: "10px 0 6px",
+  const heroTitleStyle = {
+    margin: isMobile ? "24px 0 8px" : "28px 0 8px",
+    fontSize: isMobile ? 34 : 52,
+    lineHeight: isMobile ? 1 : 0.95,
+    fontWeight: 1000,
+    letterSpacing: "-0.05em",
+    maxWidth: "820px",
+    textShadow: "0 14px 34px rgba(0,0,0,0.52)",
   };
 
-  const subtitleStyle = {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-    maxWidth: 520,
+  const heroSubtitleStyle = {
+    fontSize: isMobile ? 13 : 15,
+    lineHeight: 1.65,
+    maxWidth: "760px",
+    color: "rgba(230,255,242,0.78)",
+  };
+
+  const heroStatsStyle = {
+    marginTop: 16,
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0, 1fr))",
+    gap: 10,
+  };
+
+  const heroStatStyle = {
+    padding: isMobile ? "12px 12px" : "14px 14px",
+    borderRadius: 18,
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    backdropFilter: "blur(16px)",
+    boxShadow: "0 14px 34px rgba(0,0,0,0.22)",
   };
 
   const layoutStyle = {
-    marginTop: 24,
+    marginTop: 12,
     display: "grid",
-    gridTemplateColumns: "minmax(0, 2.1fr) minmax(0, 1.3fr)",
+    gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.7fr) minmax(360px, 0.95fr)",
     gap: 20,
+    alignItems: "start",
   };
 
   const cardStyle = {
-    background: "rgba(0,0,0,0.45)",
-    borderRadius: 18,
-    padding: 18,
-    boxShadow: "0 22px 60px rgba(0,0,0,0.7)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    backdropFilter: "blur(16px)",
+    background:
+      "linear-gradient(145deg, rgba(8,18,14,0.72), rgba(4,10,8,0.68))",
+    borderRadius: isMobile ? 22 : 24,
+    padding: isMobile ? 14 : 18,
+    boxShadow: "0 22px 70px rgba(0,0,0,0.60)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    backdropFilter: "blur(18px)",
+    overflow: "hidden",
+  };
+
+  const rightStackStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 18,
+    position: isMobile ? "static" : "sticky",
+    top: 16,
+  };
+
+  const sectionTitleStyle = {
+    fontSize: 12,
+    fontWeight: 900,
+    marginBottom: 12,
+    textTransform: "uppercase",
+    letterSpacing: "0.12em",
+    color: "rgba(210,255,230,0.88)",
+  };
+
+  const sectionBlockStyle = {
+    marginBottom: 18,
+    paddingBottom: 18,
+    borderBottom: "1px solid rgba(255,255,255,0.07)",
   };
 
   const labelStyle = {
-    fontSize: 13,
-    marginBottom: 4,
-    color: "rgba(255,255,255,0.85)",
+    fontSize: 12,
+    marginBottom: 6,
+    color: "rgba(255,255,255,0.86)",
+    fontWeight: 700,
   };
 
   const inputBaseStyle = {
     width: "100%",
-    padding: "9px 11px",
-    borderRadius: 10,
+    padding: isMobile ? "12px 12px" : "11px 12px",
+    borderRadius: 14,
     border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(0,0,0,0.55)",
+    background: "rgba(0,0,0,0.42)",
     color: "#ffffff",
     fontSize: 14,
+    fontWeight: 600,
     outline: "none",
     boxSizing: "border-box",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
   };
 
   const textareaStyle = {
     ...inputBaseStyle,
-    minHeight: 90,
+    minHeight: isMobile ? 120 : 110,
     resize: "vertical",
+    lineHeight: 1.55,
   };
 
   const selectStyle = {
@@ -503,90 +600,51 @@ const isVerifiedCreator =
     MozAppearance: "none",
     backgroundImage:
       "linear-gradient(45deg, transparent 50%, #00ffb0 60%), linear-gradient(135deg, #00ffb0 40%, transparent 50%)",
-    backgroundPosition: "calc(100% - 18px) 14px, calc(100% - 10px) 14px",
+    backgroundPosition: "calc(100% - 18px) 17px, calc(100% - 10px) 17px",
     backgroundSize: "8px 8px, 8px 8px",
     backgroundRepeat: "no-repeat",
   };
 
   const hintTextStyle = {
     fontSize: 11,
-    color: "rgba(255,255,255,0.55)",
-    marginTop: 4,
+    color: "rgba(255,255,255,0.58)",
+    marginTop: 5,
+    lineHeight: 1.5,
   };
 
-  const sectionTitleStyle = {
-    fontSize: 14,
-    fontWeight: 700,
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    color: "rgba(210,255,230,0.85)",
+  const row2Style = {
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+    gap: 10,
   };
 
-  const mapContainerOuterStyle = {
-    marginTop: 12,
+  const uploadBoxStyle = {
+    borderRadius: 18,
+    border: "1px dashed rgba(255,255,255,0.22)",
+    padding: isMobile ? 14 : 16,
+    cursor: "pointer",
+    display: "block",
+    background:
+      "radial-gradient(circle at top left, rgba(0,255,160,0.16), rgba(0,0,0,0.88))",
+    boxShadow: "0 14px 40px rgba(0,0,0,0.30)",
+  };
+
+  const previewFrameStyle = {
     borderRadius: 16,
     overflow: "hidden",
-    border: "1px solid rgba(0,255,160,0.22)",
-    boxShadow: "0 16px 40px rgba(0,0,0,0.85)",
-  };
-
-  const errorStyle = {
-    marginTop: 10,
-    fontSize: 13,
-    padding: "10px 12px",
-    borderRadius: 12,
-    background: "rgba(255,60,80,0.16)",
-    border: "1px solid rgba(255,90,110,0.7)",
-    color: "#ffd3d8",
-    lineHeight: 1.45,
-  };
-
-  const successStyle = {
-    marginTop: 10,
-    fontSize: 13,
-    padding: "8px 10px",
-    borderRadius: 10,
-    background: "rgba(0,255,150,0.1)",
-    border: "1px solid rgba(0,255,150,0.6)",
-    color: "#c9ffe8",
-  };
-
-  const submitBtnStyle = {
-    marginTop: 14,
-    width: "100%",
-    padding: "11px 14px",
-    borderRadius: 999,
-    border: "none",
-    background:
-      "linear-gradient(135deg, #00ffb0 0%, #00cf7c 40%, #02a45d 100%)",
-    color: "#02140b",
-    fontSize: 15,
-    fontWeight: 800,
-    letterSpacing: "0.05em",
-    textTransform: "uppercase",
-    cursor: "pointer",
-    boxShadow: "0 14px 40px rgba(0,255,165,0.35)",
-  };
-
-  const miniPillStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 11,
-    padding: "4px 9px",
-    borderRadius: 999,
-    background: "rgba(0,0,0,0.5)",
     border: "1px solid rgba(255,255,255,0.16)",
+    boxShadow: "0 18px 40px rgba(0,0,0,0.40)",
+    background: "rgba(0,0,0,0.35)",
   };
 
   const removeBtnStyle = {
-    padding: "7px 10px",
+    padding: "8px 11px",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.18)",
-    background: "rgba(0,0,0,0.55)",
-    color: "rgba(255,255,255,0.9)",
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "rgba(0,0,0,0.50)",
+    color: "rgba(255,255,255,0.92)",
     fontSize: 12,
+    fontWeight: 700,
     cursor: "pointer",
   };
 
@@ -597,20 +655,69 @@ const isVerifiedCreator =
     width: 28,
     height: 28,
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.22)",
-    background: "rgba(0,0,0,0.6)",
+    border: "1px solid rgba(255,255,255,0.20)",
+    background: "rgba(0,0,0,0.62)",
     color: "white",
     cursor: "pointer",
     display: "grid",
     placeItems: "center",
     fontSize: 14,
     lineHeight: 1,
+    zIndex: 2,
   };
 
-  // ✅ DODATO (UI): klikabilan link kad je verified error
-  const showVerifiedBanner =
-    !!errorMsg &&
-    (errorMsg.includes("verified creator") || errorMsg.startsWith("⛔"));
+  const errorStyle = {
+    marginTop: 12,
+    fontSize: 13,
+    padding: "12px 13px",
+    borderRadius: 14,
+    background: "rgba(255,60,80,0.14)",
+    border: "1px solid rgba(255,90,110,0.52)",
+    color: "#ffd8de",
+    lineHeight: 1.5,
+  };
+
+  const successStyle = {
+    marginTop: 12,
+    fontSize: 13,
+    padding: "12px 13px",
+    borderRadius: 14,
+    background: "rgba(0,255,150,0.10)",
+    border: "1px solid rgba(0,255,150,0.40)",
+    color: "#c9ffe8",
+    lineHeight: 1.5,
+  };
+
+  const submitBtnStyle = {
+    marginTop: 14,
+    width: "100%",
+    padding: isMobile ? "15px 14px" : "13px 14px",
+    borderRadius: 999,
+    border: "none",
+    background:
+      "linear-gradient(135deg, #00ffb0 0%, #00cf7c 42%, #02a45d 100%)",
+    color: "#02140b",
+    fontSize: 15,
+    fontWeight: 900,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    cursor: "pointer",
+    boxShadow: "0 16px 40px rgba(0,255,165,0.28)",
+  };
+
+  const miniPillStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    fontSize: 12,
+    padding: "7px 10px",
+    borderRadius: 999,
+    background: "rgba(0,0,0,0.42)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    color: "rgba(240,255,246,0.90)",
+    fontWeight: 700,
+    flexWrap: "wrap",
+  };
 
   const applyInlineLinkStyle = {
     textDecoration: "underline",
@@ -619,37 +726,71 @@ const isVerifiedCreator =
     color: "#fff",
   };
 
-  const isSmallScreen =
-    typeof window !== "undefined" && window.innerWidth < 800;
-  const responsiveLayoutStyle = isSmallScreen
-    ? { ...layoutStyle, gridTemplateColumns: "1fr" }
-    : layoutStyle;
+  const mapContainerOuterStyle = {
+    marginTop: 4,
+    borderRadius: 18,
+    overflow: "hidden",
+    border: "1px solid rgba(0,255,160,0.22)",
+    boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
+  };
 
-  // --------------------------------------------------------
-  // ------------------------- UI ---------------------------
-  // --------------------------------------------------------
+  const statCardSmallStyle = {
+    padding: "12px 12px",
+    borderRadius: 18,
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 16px 36px rgba(0,0,0,0.24)",
+  };
+
   return (
     <div style={pageWrapperStyle}>
       <div style={containerStyle}>
-        {/* HEADER */}
-        <div style={headerStyle}>
-          <div style={badgeStyle}>🗺️ Create a new tour</div>
-          <h1 style={titleStyle}>Share your next outdoor experience.</h1>
-          <p style={subtitleStyle}>
-            Describe your tour, upload photos and a video, choose the exact
-            location on the map, and let people join your adventure.
-          </p>
+        <div style={heroStyle}>
+          <div style={heroOverlayStyle} />
+          <div style={heroGlowStyle} />
+          <div style={heroInnerStyle}>
+            <div style={heroTopRowStyle}>
+              <div style={heroBadgeStyle}>🗺️ Create a new tour</div>
+              <div style={heroBadgeStyle}>
+                {isVerifiedCreator ? "✅ Verified creator" : "🔒 Verification required"}
+              </div>
+            </div>
+
+            <h1 style={heroTitleStyle}>Create a tour that people instantly want to join.</h1>
+
+            <p style={heroSubtitleStyle}>
+              Add a powerful title, clean visuals, precise map point, honest tour
+              details and a polished preview. This page is built to feel like a real app,
+              especially on mobile.
+            </p>
+
+            <div style={heroStatsStyle}>
+              <div style={heroStatStyle}>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>1</div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>Cover image required</div>
+              </div>
+              <div style={heroStatStyle}>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>6</div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>Gallery photos max</div>
+              </div>
+              <div style={heroStatStyle}>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>1</div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>Exact map point</div>
+              </div>
+              <div style={heroStatStyle}>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>LIVE</div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>Preview updates instantly</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* LAYOUT */}
-        <div style={responsiveLayoutStyle}>
-          {/* LEFT FORM */}
+        <div style={layoutStyle}>
           <form style={cardStyle} onSubmit={handleSubmit}>
-            {/* BASIC INFO */}
-            <div style={{ marginBottom: 18 }}>
+            <div style={sectionBlockStyle}>
               <div style={sectionTitleStyle}>Basic information</div>
 
-              <div style={{ marginBottom: 10 }}>
+              <div style={{ marginBottom: 12 }}>
                 <div style={labelStyle}>Tour title *</div>
                 <input
                   style={inputBaseStyle}
@@ -659,13 +800,7 @@ const isVerifiedCreator =
                 />
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.4fr 1.4fr",
-                  gap: 10,
-                }}
-              >
+              <div style={row2Style}>
                 <div>
                   <div style={labelStyle}>Activity *</div>
                   <select
@@ -699,7 +834,7 @@ const isVerifiedCreator =
                 </div>
               </div>
 
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 12 }}>
                 <div style={labelStyle}>Location name *</div>
                 <input
                   style={inputBaseStyle}
@@ -708,23 +843,15 @@ const isVerifiedCreator =
                   onChange={(e) => setLocationName(e.target.value)}
                 />
                 <div style={hintTextStyle}>
-                  People will see this name on the tour card.
+                  This is what people will notice first on cards and tour details.
                 </div>
               </div>
             </div>
 
-            {/* DATE & PRICE */}
-            <div style={{ marginBottom: 18 }}>
+            <div style={sectionBlockStyle}>
               <div style={sectionTitleStyle}>Schedule & pricing</div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                  marginBottom: 10,
-                }}
-              >
+              <div style={{ ...row2Style, marginBottom: 12 }}>
                 <div>
                   <div style={labelStyle}>Start date *</div>
                   <input
@@ -746,14 +873,7 @@ const isVerifiedCreator =
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                  marginBottom: 10,
-                }}
-              >
+              <div style={{ ...row2Style, marginBottom: 12 }}>
                 <div>
                   <div style={labelStyle}>Price (€) *</div>
                   <input
@@ -788,32 +908,34 @@ const isVerifiedCreator =
                   onChange={(e) => setApplicationDeadline(e.target.value)}
                 />
                 <div style={hintTextStyle}>
-                  After this date, people will no longer be able to apply. The
-                  tour will automatically disappear from public lists.
+                  After this deadline, users can no longer apply and the tour will disappear from public lists.
                 </div>
               </div>
             </div>
 
-            {/* DESCRIPTION */}
-            <div style={{ marginBottom: 18 }}>
+            <div style={sectionBlockStyle}>
               <div style={sectionTitleStyle}>Description</div>
               <textarea
                 style={textareaStyle}
-                placeholder="Describe your tour in detail..."
+                placeholder="Describe route, difficulty, equipment, atmosphere, food, transport, weather and what makes this tour special..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 
-            {/* LEGAL ENTITY */}
-            <div style={{ marginBottom: 18 }}>
+            <div style={sectionBlockStyle}>
+              <div style={sectionTitleStyle}>Organizer type</div>
               <label
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 8,
+                  gap: 10,
                   fontSize: 13,
                   cursor: "pointer",
+                  padding: "12px 12px",
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
                 <input
@@ -826,32 +948,16 @@ const isVerifiedCreator =
               </label>
             </div>
 
-            {/* IMAGES & VIDEO */}
-            <div style={{ marginBottom: 18 }}>
+            <div style={sectionBlockStyle}>
               <div style={sectionTitleStyle}>Images & video</div>
 
-              {/* COVER IMAGE */}
-              <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 16 }}>
                 <div style={labelStyle}>Cover image (1) *</div>
-
-                <label
-                  style={{
-                    borderRadius: 14,
-                    border: "1px dashed rgba(255,255,255,0.25)",
-                    padding: 14,
-                    cursor: "pointer",
-                    display: "block",
-                    background:
-                      "radial-gradient(circle at top left, rgba(0,255,160,0.2), rgba(0,0,0,0.9))",
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 3 }}>
-                    📷 Click to upload
+                <label style={uploadBoxStyle}>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>📷 Upload cover image</div>
+                  <div style={{ fontSize: 11, opacity: 0.72 }}>
+                    JPG / PNG • this is the main wow visual
                   </div>
-                  <div style={{ fontSize: 11, opacity: 0.7 }}>
-                    JPG / PNG • max 5 MB
-                  </div>
-
                   <input
                     type="file"
                     accept="image/*"
@@ -874,23 +980,17 @@ const isVerifiedCreator =
                         style={removeBtnStyle}
                         onClick={removeCover}
                       >
-                        🗑️ Remove cover
+                        🗑 Remove cover
                       </button>
                     </div>
 
-                    <div
-                      style={{
-                        borderRadius: 14,
-                        overflow: "hidden",
-                        border: "1px solid rgba(255,255,255,0.22)",
-                      }}
-                    >
+                    <div style={previewFrameStyle}>
                       <img
                         src={coverPreview}
                         alt="Cover preview"
                         style={{
                           width: "100%",
-                          height: 160,
+                          height: isMobile ? 180 : 220,
                           objectFit: "cover",
                         }}
                       />
@@ -899,30 +999,19 @@ const isVerifiedCreator =
                 )}
               </div>
 
-              {/* GALLERY */}
-              <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 16 }}>
                 <div style={labelStyle}>Gallery images (max 6)</div>
 
                 <label
-                  style={{
-                    borderRadius: 14,
-                    border: "1px dashed rgba(255,255,255,0.25)",
-                    padding: 14,
-                    cursor: "pointer",
-                    display: "block",
-                    background:
-                      "radial-gradient(circle at top left, rgba(0,255,160,0.2), rgba(0,0,0,0.9))",
-                  }}
+                  style={uploadBoxStyle}
                   onDrop={handleGalleryDrop}
                   onDragOver={preventDefault}
                   onDragEnter={preventDefault}
                   onDragLeave={preventDefault}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 3 }}>
-                    🖼️ Click or drag & drop
-                  </div>
-                  <div style={{ fontSize: 11, opacity: 0.7 }}>
-                    Add up to 6 photos
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🖼️ Add gallery photos</div>
+                  <div style={{ fontSize: 11, opacity: 0.72 }}>
+                    Click or drag & drop. Best for atmosphere, trail, people and scenery.
                   </div>
 
                   <input
@@ -943,6 +1032,7 @@ const isVerifiedCreator =
                         alignItems: "center",
                         marginBottom: 8,
                         gap: 10,
+                        flexWrap: "wrap",
                       }}
                     >
                       <div style={{ fontSize: 11, opacity: 0.75 }}>
@@ -961,7 +1051,7 @@ const isVerifiedCreator =
                       style={{
                         display: "grid",
                         gridTemplateColumns:
-                          "repeat(auto-fill,minmax(80px,1fr))",
+                          "repeat(auto-fill,minmax(84px,1fr))",
                         gap: 8,
                       }}
                     >
@@ -970,9 +1060,10 @@ const isVerifiedCreator =
                           key={i}
                           style={{
                             position: "relative",
-                            borderRadius: 10,
+                            borderRadius: 12,
                             overflow: "hidden",
-                            border: "1px solid rgba(255,255,255,0.18)",
+                            border: "1px solid rgba(255,255,255,0.16)",
+                            boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
                           }}
                         >
                           <button
@@ -989,7 +1080,7 @@ const isVerifiedCreator =
                             alt="gallery"
                             style={{
                               width: "100%",
-                              height: 70,
+                              height: 78,
                               objectFit: "cover",
                             }}
                           />
@@ -1000,25 +1091,12 @@ const isVerifiedCreator =
                 )}
               </div>
 
-              {/* VIDEO */}
               <div>
                 <div style={labelStyle}>Promo video (optional)</div>
-                <label
-                  style={{
-                    borderRadius: 14,
-                    border: "1px dashed rgba(255,255,255,0.25)",
-                    padding: 14,
-                    cursor: "pointer",
-                    display: "block",
-                    background:
-                      "radial-gradient(circle at top right, rgba(0,255,160,0.18), rgba(0,0,0,0.9))",
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 3 }}>
-                    🎬 Click to upload video
-                  </div>
-                  <div style={{ fontSize: 11, opacity: 0.7 }}>
-                    MP4 / WebM • max 50 MB (recommended short teaser)
+                <label style={uploadBoxStyle}>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🎬 Upload promo video</div>
+                  <div style={{ fontSize: 11, opacity: 0.72 }}>
+                    MP4 / WebM • a short teaser makes the tour feel premium
                   </div>
 
                   <input
@@ -1043,23 +1121,17 @@ const isVerifiedCreator =
                         style={removeBtnStyle}
                         onClick={removeVideo}
                       >
-                        🗑️ Remove video
+                        🗑 Remove video
                       </button>
                     </div>
 
-                    <div
-                      style={{
-                        borderRadius: 14,
-                        overflow: "hidden",
-                        border: "1px solid rgba(255,255,255,0.22)",
-                      }}
-                    >
+                    <div style={previewFrameStyle}>
                       <video
                         src={videoPreview}
                         controls
                         style={{
                           width: "100%",
-                          height: 200,
+                          height: isMobile ? 210 : 240,
                           objectFit: "cover",
                           backgroundColor: "black",
                         }}
@@ -1070,7 +1142,6 @@ const isVerifiedCreator =
               </div>
             </div>
 
-            {/* ERRORS & SUCCESS */}
             {errorMsg && (
               <div style={errorStyle}>
                 {showVerifiedBanner ? (
@@ -1091,123 +1162,315 @@ const isVerifiedCreator =
 
             {successMsg && <div style={successStyle}>{successMsg}</div>}
 
-            {/* SUBMIT */}
-           {!isVerifiedCreator ? (
-  <div style={{ marginTop: 14 }}>
-    <button
-      type="button"
-      disabled
-      style={{
-        ...submitBtnStyle,
-        background: "linear-gradient(135deg, #555, #333)",
-        cursor: "not-allowed",
-        boxShadow: "none",
-      }}
-    >
-      🔒 Verification required
-    </button>
+            {!isVerifiedCreator ? (
+              <div style={{ marginTop: 14 }}>
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    ...submitBtnStyle,
+                    background: "linear-gradient(135deg, #555, #333)",
+                    cursor: "not-allowed",
+                    boxShadow: "none",
+                    color: "#ececec",
+                  }}
+                >
+                  🔒 Verification required
+                </button>
 
-    <div
-      style={{
-        marginTop: 10,
-        fontSize: 13,
-        padding: "10px",
-        borderRadius: 10,
-        background: "rgba(255,60,80,0.16)",
-        border: "1px solid rgba(255,90,110,0.7)",
-        color: "#ffd3d8",
-        textAlign: "center",
-      }}
-    >
-      ⛔ You must be a verified creator to publish tours.{" "}
-      <span
-        onClick={() => navigate("/apply-creator")}
-        style={{
-          textDecoration: "underline",
-          cursor: "pointer",
-          fontWeight: 700,
-        }}
-      >
-        Apply for verification
-      </span>
-    </div>
-  </div>
-) : (
-  <button type="submit" disabled={loading} style={submitBtnStyle}>
-    {loading ? "Creating..." : "Create Tour"}
-  </button>
-)}
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 13,
+                    padding: "12px",
+                    borderRadius: 14,
+                    background: "rgba(255,60,80,0.12)",
+                    border: "1px solid rgba(255,90,110,0.42)",
+                    color: "#ffd3d8",
+                    textAlign: "center",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  ⛔ You must be a verified creator to publish tours.{" "}
+                  <span
+                    onClick={() => navigate("/apply-creator")}
+                    style={{
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Apply for verification
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <button type="submit" disabled={loading} style={submitBtnStyle}>
+                {loading ? "Creating..." : "Create Tour"}
+              </button>
+            )}
           </form>
 
-          {/* RIGHT SIDE — MAP + PREVIEW */}
-          <div style={cardStyle}>
-            <div style={{ marginBottom: 16 }}>
+          <div style={rightStackStyle}>
+            <div style={cardStyle}>
               <div style={sectionTitleStyle}>Map location</div>
-              <p style={hintTextStyle}>Click on the map to place a marker.</p>
-            </div>
+              <p style={{ ...hintTextStyle, marginTop: -2, marginBottom: 12 }}>
+                Tap the map to pin the exact tour point.
+              </p>
 
-            {/* MAP */}
-            <div style={mapContainerOuterStyle}>
-              <MapContainer
-                center={[44.0, 21.0]} // Serbia center
-                zoom={7}
-                scrollWheelZoom={true}
-                style={{ width: "100%", height: 220 }}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution="&copy; OpenStreetMap contributors"
-                />
-
-                <LocationMarker
-                  onSelect={(lat, lng) => {
-                    setLatitude(lat);
-                    setLongitude(lng);
-                  }}
-                />
-              </MapContainer>
-            </div>
-
-            {/* SUMMARY */}
-            <div style={{ marginTop: 18 }}>
-              <div style={sectionTitleStyle}>Quick summary</div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={miniPillStyle}>🏷️ {title || "Tour title"}</div>
-                <div style={miniPillStyle}>🧭 {activity || "No activity"}</div>
-                <div style={miniPillStyle}>
-                  📍{" "}
-                  {locationName
-                    ? `${locationName}${country ? ", " + country : ""}`
-                    : "No location name"}
-                </div>
-                <div style={miniPillStyle}>
-                  👥 {maxPeople ? `${maxPeople} people` : "No group size"}
-                </div>
-                <div style={miniPillStyle}>
-                  💶 {price ? `${price} €` : "No price set"}
-                </div>
-
-                {applicationDeadline && (
-                  <div style={miniPillStyle}>
-                    ⏳ Applications until: {applicationDeadline}
-                  </div>
-                )}
-
-                {latitude && longitude && (
-                  <div style={miniPillStyle}>
-                    📌 {latitude.toFixed(4)}, {longitude.toFixed(4)}
-                  </div>
-                )}
+              <div style={mapContainerOuterStyle}>
+                <MapContainer
+                  center={selectedPosition || [44.0, 21.0]}
+                  zoom={selectedPosition ? 11 : 7}
+                  scrollWheelZoom={true}
+                  style={{ width: "100%", height: isMobile ? 260 : 300 }}
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution="&copy; OpenStreetMap contributors"
+                  />
+                  <LocationMarker
+                    selectedPosition={
+                      selectedPosition
+                        ? { lat: selectedPosition[0], lng: selectedPosition[1] }
+                        : null
+                    }
+                    onSelect={(lat, lng) => {
+                      setLatitude(lat);
+                      setLongitude(lng);
+                    }}
+                  />
+                </MapContainer>
               </div>
 
-              <div style={{ marginTop: 14, fontSize: 11, opacity: 0.7 }}>
-                Tip: write honestly about difficulty, gear, and weather.
+              <div
+                style={{
+                  marginTop: 12,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                <div style={statCardSmallStyle}>
+                  <div style={{ fontSize: 11, opacity: 0.68 }}>Latitude</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, marginTop: 4 }}>
+                    {latitude ? latitude.toFixed(4) : "—"}
+                  </div>
+                </div>
+
+                <div style={statCardSmallStyle}>
+                  <div style={{ fontSize: 11, opacity: 0.68 }}>Longitude</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, marginTop: 4 }}>
+                    {longitude ? longitude.toFixed(4) : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={cardStyle}>
+              <div style={sectionTitleStyle}>Live preview</div>
+
+              <div
+                style={{
+                  position: "relative",
+                  borderRadius: 20,
+                  overflow: "hidden",
+                  minHeight: 260,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  boxShadow: "0 20px 46px rgba(0,0,0,0.42)",
+                  background: "rgba(0,0,0,0.32)",
+                }}
+              >
+                {coverPreview ? (
+                  <img
+                    src={coverPreview}
+                    alt="preview"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "radial-gradient(500px 220px at 18% 10%, rgba(0,255,170,0.16), transparent 60%)," +
+                        "radial-gradient(420px 200px at 88% 0%, rgba(0,185,255,0.14), transparent 58%)," +
+                        "linear-gradient(180deg, rgba(6,18,14,1), rgba(2,8,6,1))",
+                    }}
+                  />
+                )}
+
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                      "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.72) 62%, rgba(0,0,0,0.90))",
+                  }}
+                />
+
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    left: 12,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "7px 11px",
+                    borderRadius: 999,
+                    background: "rgba(0,0,0,0.42)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    backdropFilter: "blur(14px)",
+                    fontSize: 11,
+                    fontWeight: 900,
+                    letterSpacing: "0.10em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  🧭 {activity || "Activity"}
+                </div>
+
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 14,
+                    right: 14,
+                    bottom: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 1000,
+                      lineHeight: 1.03,
+                      letterSpacing: "-0.03em",
+                    }}
+                  >
+                    {title || "Your tour title will appear here"}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                      color: "rgba(240,255,246,0.80)",
+                    }}
+                  >
+                    {locationName
+                      ? `📍 ${locationName}${country ? `, ${country}` : ""}`
+                      : "📍 Add location name and country"}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: "flex",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div style={miniPillStyle}>
+                      👥 {maxPeople ? `${maxPeople} people` : "No group size"}
+                    </div>
+                    <div style={miniPillStyle}>
+                      💶 {price ? `${price} €` : "No price"}
+                    </div>
+                    <div style={miniPillStyle}>
+                      🗓 {dateStart || "Start"} {dateEnd ? `→ ${dateEnd}` : ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <div style={sectionTitleStyle}>Quick summary</div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={miniPillStyle}>🏷️ {title || "Tour title"}</div>
+                  <div style={miniPillStyle}>🧭 {activity || "No activity"}</div>
+                  <div style={miniPillStyle}>
+                    📍{" "}
+                    {locationName
+                      ? `${locationName}${country ? ", " + country : ""}`
+                      : "No location name"}
+                  </div>
+                  <div style={miniPillStyle}>
+                    👥 {maxPeople ? `${maxPeople} people` : "No group size"}
+                  </div>
+                  <div style={miniPillStyle}>
+                    💶 {price ? `${price} €` : "No price set"}
+                  </div>
+                  {applicationDeadline && (
+                    <div style={miniPillStyle}>
+                      ⏳ Until {applicationDeadline}
+                    </div>
+                  )}
+                  {latitude && longitude && (
+                    <div style={miniPillStyle}>
+                      📌 {latitude.toFixed(4)}, {longitude.toFixed(4)}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: 14, fontSize: 11, opacity: 0.72, lineHeight: 1.5 }}>
+                  Tip: the best tours feel clear, safe, visual and easy to trust at first glance.
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {isMobile && (
+        <div
+          style={{
+            position: "fixed",
+            left: 10,
+            right: 10,
+            bottom: 10,
+            zIndex: 5000,
+            padding: 10,
+            borderRadius: 20,
+            background: "rgba(8,16,13,0.84)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            backdropFilter: "blur(18px)",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.45)",
+          }}
+        >
+          {!isVerifiedCreator ? (
+            <button
+              type="button"
+              onClick={() => navigate("/apply-creator")}
+              style={{
+                ...submitBtnStyle,
+                marginTop: 0,
+                background: "linear-gradient(135deg, #444, #2c2c2c)",
+                color: "#f3f3f3",
+                boxShadow: "none",
+              }}
+            >
+              Apply for verification
+            </button>
+          ) : (
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={loading}
+              style={{ ...submitBtnStyle, marginTop: 0 }}
+            >
+              {loading ? "Creating..." : "Create Tour"}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

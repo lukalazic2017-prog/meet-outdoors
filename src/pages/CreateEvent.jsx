@@ -21,6 +21,9 @@ export default function CreateEvent() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 860 : false
+  );
 
   useEffect(() => {
     const loadUser = async () => {
@@ -32,6 +35,12 @@ export default function CreateEvent() {
     };
 
     loadUser();
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 860);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const [form, setForm] = useState({
@@ -119,7 +128,7 @@ export default function CreateEvent() {
   const buildDateTime = (date, time) => {
     if (!date) return null;
     const safeTime = time || "00:00";
-    const d = new Date(`${date}T${safeTime}:00`);
+    const d = new `Date(${date}T${safeTime}:00)`;
     return isNaN(d.getTime()) ? null : d.toISOString();
   };
 
@@ -211,266 +220,378 @@ export default function CreateEvent() {
     "https://images.pexels.com/photos/3324422/pexels-photo-3324422.jpeg";
   const cover = form.coverUrl || defaultCover;
   const pricePreview = form.isFree
-  ? "Free event"
-  : form.priceFrom
-  ? `From ${form.priceFrom} €`
-  : "Price on request";
-  const pageStyles = {
+    ? "Free event"
+    : form.priceFrom
+    ? `From ${form.priceFrom} €`
+    : "Price on request";
+
+  const now = new Date();
+  const fakeStatus = "Draft";
+
+  const styles = {
     page: {
       minHeight: "100vh",
-      padding: "26px 16px 40px",
+      padding: isMobile ? "0 0 96px" : "0 0 48px",
       background:
-        "radial-gradient(circle at top, #010d0e 0%, #020308 45%, #000000 100%)",
+        "radial-gradient(1000px 420px at 8% -5%, rgba(0,255,184,0.16), transparent 60%)," +
+        "radial-gradient(900px 400px at 100% 10%, rgba(0,170,255,0.12), transparent 58%)," +
+        "radial-gradient(850px 340px at 50% 100%, rgba(124,77,255,0.10), transparent 55%)," +
+        "linear-gradient(180deg, #041512 0%, #02070b 42%, #000000 100%)",
       display: "flex",
       justifyContent: "center",
-      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      fontFamily:
+        "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       color: "#f6fbf8",
+      overflowX: "hidden",
     },
     container: {
       width: "100%",
-      maxWidth: 1180,
+      maxWidth: 1280,
+      padding: isMobile ? "0 12px" : "0 16px",
+      boxSizing: "border-box",
     },
-    headerRow: {
+
+    hero: {
+      position: "relative",
+      minHeight: isMobile ? 320 : 280,
+      borderRadius: isMobile ? "0 0 28px 28px" : "0 0 32px 32px",
+      overflow: "hidden",
+      marginBottom: 18,
+      boxShadow: "0 30px 90px rgba(0,0,0,0.55)",
+      border: isMobile ? "none" : "1px solid rgba(255,255,255,0.08)",
+      borderTop: "none",
+      background:
+        "radial-gradient(650px 250px at 10% 0%, rgba(0,255,184,0.14), transparent 60%)," +
+        "radial-gradient(650px 280px at 90% 0%, rgba(0,170,255,0.10), transparent 60%)," +
+        "linear-gradient(180deg, rgba(8,22,18,0.98), rgba(3,10,8,1))",
+    },
+    heroOverlay: {
+      position: "absolute",
+      inset: 0,
+      background:
+        "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.68) 72%, rgba(0,0,0,0.84))",
+    },
+    heroGlow: {
+      position: "absolute",
+      inset: 0,
+      background:
+        "radial-gradient(700px 240px at 8% 0%, rgba(0,255,184,0.12), transparent 48%)," +
+        "radial-gradient(460px 220px at 92% 8%, rgba(124,77,255,0.10), transparent 50%)",
+      pointerEvents: "none",
+    },
+    heroInner: {
+      position: "relative",
+      zIndex: 2,
+      padding: isMobile ? "18px 16px 20px" : "24px 26px 24px",
+    },
+    heroTop: {
       display: "flex",
       justifyContent: "space-between",
-      alignItems: "flex-end",
-      gap: 18,
-      marginBottom: 18,
+      alignItems: isMobile ? "flex-start" : "center",
+      gap: 10,
       flexWrap: "wrap",
-    },
-    headerLeft: {
-      flex: "1 1 260px",
     },
     badge: {
       display: "inline-flex",
       alignItems: "center",
-      padding: "4px 10px",
-      borderRadius: 999,
-      border: "1px solid rgba(0,255,184,0.6)",
-      background: "rgba(0,40,25,0.9)",
-      fontSize: 11,
-      letterSpacing: "0.16em",
-      textTransform: "uppercase",
-      color: "rgba(214,244,227,0.9)",
-      marginBottom: 8,
-    },
-    title: {
-      fontSize: 30,
-      fontWeight: 800,
-      marginBottom: 4,
-      color: "#f9fffb",
-    },
-    subtitle: {
-      fontSize: 14,
-      color: "rgba(225,240,232,0.85)",
-    },
-    headerRight: {
-      textAlign: "right",
-      fontSize: 12,
-      color: "rgba(220,240,230,0.85)",
-    },
-    chipRow: {
-      display: "flex",
       gap: 8,
-      flexWrap: "wrap",
-      justifyContent: "flex-end",
-      marginTop: 6,
-    },
-    chip: {
-      padding: "4px 9px",
+      padding: "7px 12px",
       borderRadius: 999,
-      border: "1px solid rgba(110,186,150,0.7)",
-      background: "rgba(5,23,16,0.95)",
+      border: "1px solid rgba(255,255,255,0.14)",
+      background: "rgba(255,255,255,0.08)",
+      backdropFilter: "blur(14px)",
       fontSize: 11,
+      letterSpacing: "0.14em",
+      textTransform: "uppercase",
+      color: "rgba(214,244,227,0.94)",
+      fontWeight: 900,
+      boxShadow: "0 10px 24px rgba(0,0,0,0.20)",
     },
+    heroTitle: {
+      fontSize: isMobile ? 34 : 52,
+      lineHeight: isMobile ? 1 : 0.96,
+      fontWeight: 1000,
+      letterSpacing: "-0.05em",
+      color: "#f9fffb",
+      margin: isMobile ? "22px 0 8px" : "28px 0 8px",
+      maxWidth: 780,
+      textShadow: "0 14px 34px rgba(0,0,0,0.45)",
+    },
+    heroSubtitle: {
+      fontSize: isMobile ? 13 : 15,
+      lineHeight: 1.65,
+      maxWidth: 760,
+      color: "rgba(225,240,232,0.82)",
+    },
+    heroStats: {
+      marginTop: 16,
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0, 1fr))",
+      gap: 10,
+    },
+    heroStat: {
+      padding: isMobile ? "12px 12px" : "14px 14px",
+      borderRadius: 18,
+      background: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      backdropFilter: "blur(16px)",
+      boxShadow: "0 14px 34px rgba(0,0,0,0.18)",
+    },
+
     mainGrid: {
       display: "grid",
-      gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2.3fr)",
+      gridTemplateColumns: isMobile
+        ? "1fr"
+        : "minmax(0, 1.55fr) minmax(380px, 0.95fr)",
       gap: 18,
-      alignItems: "flex-start",
+      alignItems: "start",
     },
+
     card: {
-      borderRadius: 20,
-      padding: 18,
+      borderRadius: isMobile ? 22 : 24,
+      padding: isMobile ? 14 : 18,
       background:
-        "radial-gradient(circle at top left, rgba(10,32,26,0.98), rgba(5,16,13,0.98))",
-      border: "1px solid rgba(85,150,120,0.9)",
-      boxShadow: "0 22px 60px rgba(0,0,0,0.85)",
+        "linear-gradient(145deg, rgba(8,18,16,0.72), rgba(3,10,8,0.68))",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 22px 60px rgba(0,0,0,0.55)",
+      backdropFilter: "blur(18px)",
       fontSize: 13,
+      overflow: "hidden",
     },
+    rightStack: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 18,
+      position: isMobile ? "static" : "sticky",
+      top: 16,
+    },
+
     sectionTitleRow: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "baseline",
       gap: 8,
-      marginBottom: 10,
+      marginBottom: 12,
+      flexWrap: "wrap",
     },
     sectionTitle: {
-      fontSize: 14,
-      fontWeight: 700,
+      fontSize: 12,
+      fontWeight: 900,
+      marginBottom: 0,
+      textTransform: "uppercase",
+      letterSpacing: "0.12em",
+      color: "rgba(210,255,230,0.88)",
     },
     sectionHint: {
       fontSize: 11,
-      color: "rgba(220,240,230,0.7)",
+      color: "rgba(220,240,230,0.66)",
+      lineHeight: 1.45,
     },
+    block: {
+      marginBottom: 18,
+      paddingBottom: 18,
+      borderBottom: "1px solid rgba(255,255,255,0.06)",
+    },
+
     fieldGrid2: {
       display: "grid",
-      gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)",
-      gap: 12,
+      gridTemplateColumns: isMobile ? "1fr" : "minmax(0,1fr) minmax(0,1fr)",
+      gap: 10,
       marginBottom: 10,
     },
     fieldGrid3: {
       display: "grid",
-      gridTemplateColumns: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)",
+      gridTemplateColumns: isMobile
+        ? "1fr"
+        : "minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)",
       gap: 10,
       marginBottom: 10,
     },
     field: {
       display: "flex",
       flexDirection: "column",
-      gap: 4,
+      gap: 6,
       marginBottom: 10,
     },
     labelRow: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap",
       fontSize: 12,
     },
     label: {
-      fontWeight: 500,
-      color: "rgba(235,250,242,0.95)",
+      fontWeight: 700,
+      color: "rgba(235,250,242,0.96)",
     },
     labelHint: {
       fontSize: 11,
-      color: "rgba(200,220,210,0.8)",
+      color: "rgba(200,220,210,0.74)",
     },
     input: {
-      borderRadius: 999,
-      border: "1px solid rgba(115,185,150,0.9)",
-      padding: "8px 12px",
-      background: "rgba(4,20,16,0.95)",
+      borderRadius: 14,
+      border: "1px solid rgba(255,255,255,0.12)",
+      padding: isMobile ? "12px 12px" : "11px 12px",
+      background: "rgba(0,0,0,0.42)",
       color: "#f6fbf8",
-      fontSize: 13,
+      fontSize: 14,
+      fontWeight: 600,
       outline: "none",
+      boxSizing: "border-box",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
     },
     textarea: {
-      borderRadius: 14,
-      border: "1px solid rgba(115,185,150,0.9)",
-      padding: "10px 12px",
-      background: "rgba(4,20,16,0.95)",
+      borderRadius: 16,
+      border: "1px solid rgba(255,255,255,0.12)",
+      padding: "12px 12px",
+      background: "rgba(0,0,0,0.42)",
       color: "#f6fbf8",
-      fontSize: 13,
-      minHeight: 90,
+      fontSize: 14,
+      minHeight: isMobile ? 120 : 100,
       resize: "vertical",
       outline: "none",
+      lineHeight: 1.6,
+      boxSizing: "border-box",
     },
     select: {
-      borderRadius: 999,
-      border: "1px solid rgba(115,185,150,0.9)",
-      padding: "8px 12px",
-      background: "rgba(4,20,16,0.95)",
+      borderRadius: 14,
+      border: "1px solid rgba(255,255,255,0.12)",
+      padding: isMobile ? "12px 12px" : "11px 12px",
+      background: "rgba(0,0,0,0.42)",
       color: "#f6fbf8",
-      fontSize: 13,
+      fontSize: 14,
+      fontWeight: 600,
       outline: "none",
     },
+
     categoryGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))",
+      gridTemplateColumns: isMobile
+        ? "1fr 1fr"
+        : "repeat(auto-fit, minmax(140px,1fr))",
       gap: 8,
       marginTop: 4,
       marginBottom: 8,
     },
     categoryButton: (active) => ({
-      borderRadius: 12,
-      padding: "8px 10px",
+      borderRadius: 16,
+      padding: isMobile ? "12px 10px" : "10px 10px",
       border: active
-        ? "1px solid rgba(0,255,184,0.9)"
-        : "1px solid rgba(125,190,160,0.6)",
+        ? "1px solid rgba(0,255,184,0.70)"
+        : "1px solid rgba(255,255,255,0.10)",
       background: active
-        ? "linear-gradient(135deg, rgba(0,255,184,0.22), rgba(0,160,110,0.4))"
-        : "rgba(5,23,18,0.95)",
-      color: active ? "#eafff8" : "rgba(225,240,235,0.9)",
+        ? "linear-gradient(135deg, rgba(0,255,184,0.18), rgba(0,130,92,0.32))"
+        : "rgba(255,255,255,0.05)",
+      color: active ? "#eafff8" : "rgba(225,240,235,0.92)",
       cursor: "pointer",
       fontSize: 12,
       display: "flex",
       flexDirection: "column",
       alignItems: "flex-start",
-      gap: 2,
+      gap: 4,
       transition: "all 0.18s ease",
+      boxShadow: active ? "0 14px 36px rgba(0,255,184,0.10)" : "none",
+      textAlign: "left",
     }),
     categoryLabel: {
-      fontWeight: 600,
+      fontWeight: 800,
       fontSize: 12,
+      lineHeight: 1.25,
     },
     categorySub: {
       fontSize: 11,
-      opacity: 0.7,
+      opacity: 0.72,
+      lineHeight: 1.35,
     },
+
     toggleRow: {
       display: "flex",
       alignItems: "center",
-      gap: 8,
+      gap: 10,
       marginTop: 4,
-      fontSize: 12,
+      fontSize: 13,
+      padding: "12px 12px",
+      borderRadius: 16,
+      background: "rgba(255,255,255,0.05)",
+      border: "1px solid rgba(255,255,255,0.08)",
     },
-    errorBox: {
+
+    uploader: {
       marginTop: 8,
+      marginBottom: 12,
+      padding: "14px 14px",
+      borderRadius: 18,
+      border: "1px dashed rgba(255,255,255,0.18)",
+      background:
+        "radial-gradient(circle at top left, rgba(0,255,184,0.10), rgba(0,0,0,0.28))",
+    },
+
+    errorBox: {
+      marginTop: 10,
       marginBottom: 4,
-      borderRadius: 10,
-      padding: "8px 10px",
-      background: "rgba(255,60,60,0.08)",
-      border: "1px solid rgba(255,100,100,0.8)",
-      color: "#ff9a9a",
+      borderRadius: 14,
+      padding: "11px 12px",
+      background: "rgba(255,60,60,0.10)",
+      border: "1px solid rgba(255,100,100,0.44)",
+      color: "#ffb8b8",
       fontSize: 12,
+      lineHeight: 1.5,
     },
     successBox: {
-      marginTop: 8,
+      marginTop: 10,
       marginBottom: 4,
-      borderRadius: 10,
-      padding: "8px 10px",
-      background: "rgba(0,255,160,0.06)",
-      border: "1px solid rgba(0,255,160,0.7)",
+      borderRadius: 14,
+      padding: "11px 12px",
+      background: "rgba(0,255,160,0.08)",
+      border: "1px solid rgba(0,255,160,0.38)",
       color: "#d0ffe8",
       fontSize: 12,
+      lineHeight: 1.5,
     },
     submitRow: {
       marginTop: 12,
       display: "flex",
-      justifyContent: "flex-end",
+      justifyContent: isMobile ? "stretch" : "flex-end",
     },
     submitButton: {
-      padding: "9px 22px",
+      width: isMobile ? "100%" : "auto",
+      padding: isMobile ? "15px 20px" : "12px 24px",
       borderRadius: 999,
       border: "none",
       cursor: "pointer",
-      fontWeight: 700,
+      fontWeight: 900,
       fontSize: 13,
-      background:
-        "linear-gradient(125deg, #00ffb8, #00c287, #00905c)",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+      background: "linear-gradient(125deg, #00ffb8, #00c287, #00905c)",
       color: "#022015",
-      boxShadow: "0 0 20px rgba(0,255,184,0.45)",
+      boxShadow: "0 0 24px rgba(0,255,184,0.28)",
       display: "inline-flex",
       alignItems: "center",
+      justifyContent: "center",
       gap: 8,
     },
 
-    // RIGHT SIDE
     previewTitle: {
-      fontSize: 13,
-      fontWeight: 700,
-      marginBottom: 8,
+      fontSize: 12,
+      fontWeight: 900,
+      marginBottom: 12,
+      textTransform: "uppercase",
+      letterSpacing: "0.12em",
+      color: "rgba(210,255,230,0.88)",
     },
     previewCard: {
-      borderRadius: 18,
+      borderRadius: 24,
       overflow: "hidden",
-      border: "1px solid rgba(90,150,120,0.9)",
+      border: "1px solid rgba(255,255,255,0.08)",
       background:
         "linear-gradient(135deg, rgba(4,18,13,0.98), rgba(6,24,17,0.98))",
       marginBottom: 14,
+      boxShadow: "0 24px 60px rgba(0,0,0,0.40)",
     },
     previewImgWrapper: {
-      height: 150,
+      height: isMobile ? 220 : 240,
       position: "relative",
       overflow: "hidden",
     },
@@ -479,416 +600,493 @@ export default function CreateEvent() {
       height: "100%",
       objectFit: "cover",
       transform: "scale(1.03)",
+      filter: "saturate(1.08) contrast(1.03)",
     },
     previewOverlay: {
       position: "absolute",
       inset: 0,
       background:
-        "linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.15))",
+        "linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.18))",
     },
     previewTitleBox: {
       position: "absolute",
       left: 14,
-      bottom: 10,
+      bottom: 12,
       right: 14,
       display: "flex",
       justifyContent: "space-between",
       alignItems: "flex-end",
-      gap: 8,
+      gap: 10,
     },
     previewStatus: {
       fontSize: 11,
       borderRadius: 999,
-      padding: "3px 8px",
+      padding: "5px 10px",
       background: "rgba(0,255,184,0.16)",
-      border: "1px solid rgba(0,255,184,0.7)",
+      border: "1px solid rgba(0,255,184,0.52)",
       color: "#e2fff7",
       textTransform: "uppercase",
-      letterSpacing: "0.08em",
+      letterSpacing: "0.10em",
+      fontWeight: 900,
+      backdropFilter: "blur(10px)",
     },
     previewPrice: {
+      marginTop: 8,
       fontSize: 13,
-      fontWeight: 700,
+      fontWeight: 900,
       color: "#e6fff5",
+      textAlign: "right",
+      textShadow: "0 8px 24px rgba(0,0,0,0.55)",
     },
     previewBody: {
-      padding: 12,
+      padding: 14,
       fontSize: 12,
       color: "rgba(230,244,238,0.9)",
+      lineHeight: 1.55,
     },
-    previewLine: { marginBottom: 4 },
+    previewLine: { marginBottom: 6 },
+
+    statMiniGrid: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 10,
+      marginTop: 12,
+      marginBottom: 14,
+    },
+    statMini: {
+      padding: "12px 12px",
+      borderRadius: 18,
+      background: "rgba(255,255,255,0.05)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 14px 34px rgba(0,0,0,0.18)",
+    },
 
     mapBox: {
-      borderRadius: 16,
+      borderRadius: 20,
       overflow: "hidden",
-      border: "1px solid rgba(85,145,120,0.9)",
-      marginTop: 8,
+      border: "1px solid rgba(255,255,255,0.08)",
+      marginTop: 10,
+      boxShadow: "0 22px 60px rgba(0,0,0,0.34)",
     },
     mapContainer: {
-      height: 220,
+      height: isMobile ? 300 : 320,
       width: "100%",
+    },
+
+    stickyBar: {
+      position: "fixed",
+      left: 10,
+      right: 10,
+      bottom: 10,
+      zIndex: 5000,
+      padding: 10,
+      borderRadius: 20,
+      background: "rgba(8,16,13,0.84)",
+      border: "1px solid rgba(255,255,255,0.10)",
+      backdropFilter: "blur(18px)",
+      boxShadow: "0 24px 60px rgba(0,0,0,0.42)",
     },
   };
 
-  const now = new Date();
-  const fakeStatus = "Draft";
-
   return (
-    <div style={pageStyles.page}>
-      <div style={pageStyles.container}>
-        {/* HEADER */}
-        <div style={pageStyles.headerRow}>
-          <div style={pageStyles.headerLeft}>
-            <div style={pageStyles.badge}>Create · Event</div>
-            <h1 style={pageStyles.title}>Host an outdoor event.</h1>
-            <p style={pageStyles.subtitle}>
-              Design a world-class outdoor gathering in a few steps – add
-              details, location and pricing, and share it with the community.
-            </p>
-          </div>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <div style={styles.hero}>
+          <div style={styles.heroOverlay} />
+          <div style={styles.heroGlow} />
+          <div style={styles.heroInner}>
+            <div style={styles.heroTop}>
+              <div style={styles.badge}>⚡ Create · Event</div>
+              <div style={styles.badge}>
+                Today · {now.toLocaleDateString()}
+              </div>
+            </div>
 
-          <div style={pageStyles.headerRight}>
-            <div>Today · {now.toLocaleDateString()}</div>
-            <div style={pageStyles.chipRow}>
-              <span style={pageStyles.chip}>Step 1 · Event details</span>
-              <span style={pageStyles.chip}>Step 2 · Preview & publish</span>
+            <h1 style={styles.heroTitle}>Host an outdoor event that feels premium instantly.</h1>
+
+            <p style={styles.heroSubtitle}>
+              Add the vibe, location, timing, pricing and visuals in one place.
+              This screen is built to feel polished on desktop and even stronger on mobile.
+            </p>
+
+            <div style={styles.heroStats}>
+              <div style={styles.heroStat}>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>
+                  {form.category || "Type"}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
+                  event category
+                </div>
+              </div>
+              <div style={styles.heroStat}>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>
+                  {form.isFree ? "Free" : pricePreview}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
+                  pricing mode
+                </div>
+              </div>
+              <div style={styles.heroStat}>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>
+                  {form.country || "Country"}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
+                  location target
+                </div>
+              </div>
+              <div style={styles.heroStat}>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>
+                  LIVE
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
+                  preview updates
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* MAIN GRID */}
-        <div style={pageStyles.mainGrid}>
-          {/* LEFT – FORM */}
-          <form style={pageStyles.card} onSubmit={handleSubmit}>
-            {/* BASIC INFO */}
-            <div style={pageStyles.sectionTitleRow}>
-              <div style={pageStyles.sectionTitle}>Basic information</div>
-              <div style={pageStyles.sectionHint}>
-                Give your event a clear name and short tagline.
-              </div>
-            </div>
-
-            <div style={pageStyles.field}>
-              <div style={pageStyles.labelRow}>
-                <span style={pageStyles.label}>Event title *</span>
-                <span style={pageStyles.labelHint}>e.g. Balkan Outdoor Meetup 2025</span>
-              </div>
-              <input
-                type="text"
-                style={pageStyles.input}
-                value={form.title}
-                onChange={handleChange("title")}
-                placeholder="Name your event"
-              />
-            </div>
-
-            <div style={pageStyles.field}>
-              <div style={pageStyles.labelRow}>
-                <span style={pageStyles.label}>Subtitle</span>
-                <span style={pageStyles.labelHint}>
-                  Short line that sets the vibe.
-                </span>
-              </div>
-              <input
-                type="text"
-                style={pageStyles.input}
-                value={form.subtitle}
-                onChange={handleChange("subtitle")}
-                placeholder="Optional tagline for your event"
-              />
-            </div>
-
-            <div style={pageStyles.field}>
-              <div style={pageStyles.labelRow}>
-                <span style={pageStyles.label}>Category *</span>
-                <span style={pageStyles.labelHint}>
-                  Choose one that best describes your event.
-                </span>
-              </div>
-
-              <div style={pageStyles.categoryGrid}>
-                {categoryOptions.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    style={pageStyles.categoryButton(form.category === cat)}
-                    onClick={() => handleCategoryClick(cat)}
-                  >
-                    <span style={pageStyles.categoryLabel}>{cat}</span>
-                    <span style={pageStyles.categorySub}>
-                      {form.category === cat
-                        ? "Selected"
-                        : "Click to set as main type"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={pageStyles.field}>
-              <div style={pageStyles.labelRow}>
-                <span style={pageStyles.label}>Description</span>
-                <span style={pageStyles.labelHint}>
-                  What will happen at this event?
-                </span>
-              </div>
-              <textarea
-                style={pageStyles.textarea}
-                value={form.description}
-                onChange={handleChange("description")}
-                placeholder="Share the flow of the day, who it's for, and what to expect."
-              />
-            </div>
-
-            {/* TIME */}
-            <div style={pageStyles.sectionTitleRow}>
-              <div style={pageStyles.sectionTitle}>Date & time</div>
-              <div style={pageStyles.sectionHint}>
-                Set when your event starts and ends.
-              </div>
-            </div>
-
-            <div style={pageStyles.fieldGrid2}>
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>Start date *</span>
+        <div style={styles.mainGrid}>
+          <form style={styles.card} onSubmit={handleSubmit}>
+            <div style={styles.block}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>Basic information</div>
+                <div style={styles.sectionHint}>
+                  Give the event a clear identity and strong first impression.
                 </div>
-                <input
-                  type="date"
-                  style={pageStyles.input}
-                  value={form.startDate}
-                  onChange={handleChange("startDate")}
-                />
               </div>
 
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>Start time</span>
-                </div>
-                <input
-                  type="time"
-                  style={pageStyles.input}
-                  value={form.startTime}
-                  onChange={handleChange("startTime")}
-                />
-              </div>
-            </div>
-
-            <div style={pageStyles.fieldGrid2}>
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>End date</span>
-                </div>
-                <input
-                  type="date"
-                  style={pageStyles.input}
-                  value={form.endDate}
-                  onChange={handleChange("endDate")}
-                />
-              </div>
-
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>End time</span>
-                </div>
-                <input
-                  type="time"
-                  style={pageStyles.input}
-                  value={form.endTime}
-                  onChange={handleChange("endTime")}
-                />
-              </div>
-            </div>
-
-            {/* LOCATION */}
-            <div style={pageStyles.sectionTitleRow}>
-              <div style={pageStyles.sectionTitle}>Location</div>
-              <div style={pageStyles.sectionHint}>
-                You can add an exact spot, city and country.
-              </div>
-            </div>
-
-            <div style={pageStyles.field}>
-              <div style={pageStyles.labelRow}>
-                <span style={pageStyles.label}>Location name</span>
-                <span style={pageStyles.labelHint}>
-                  e.g. Kopaonik, Lake Ohrid, Durmitor Basecamp
-                </span>
-              </div>
-              <input
-                type="text"
-                style={pageStyles.input}
-                value={form.locationName}
-                onChange={handleChange("locationName")}
-                placeholder="Trailhead, hut, camp or venue name"
-              />
-            </div>
-
-            <div style={pageStyles.fieldGrid3}>
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>City</span>
+              <div style={styles.field}>
+                <div style={styles.labelRow}>
+                  <span style={styles.label}>Event title *</span>
+                  <span style={styles.labelHint}>
+                    e.g. Balkan Outdoor Meetup 2025
+                  </span>
                 </div>
                 <input
                   type="text"
-                  style={pageStyles.input}
-                  value={form.city}
-                  onChange={handleChange("city")}
-                  placeholder="City or region"
+                  style={styles.input}
+                  value={form.title}
+                  onChange={handleChange("title")}
+                  placeholder="Name your event"
                 />
               </div>
 
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>Country *</span>
+              <div style={styles.field}>
+                <div style={styles.labelRow}>
+                  <span style={styles.label}>Subtitle</span>
+                  <span style={styles.labelHint}>
+                    One strong sentence that sets the vibe.
+                  </span>
                 </div>
-                <select
-                  style={pageStyles.select}
-                  value={form.country}
-                  onChange={handleChange("country")}
-                >
-                  {countryOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c || "Select country"}
-                    </option>
+                <input
+                  type="text"
+                  style={styles.input}
+                  value={form.subtitle}
+                  onChange={handleChange("subtitle")}
+                  placeholder="Optional tagline for your event"
+                />
+              </div>
+
+              <div style={styles.field}>
+                <div style={styles.labelRow}>
+                  <span style={styles.label}>Category *</span>
+                  <span style={styles.labelHint}>
+                    Choose the main type people will instantly recognize.
+                  </span>
+                </div>
+
+                <div style={styles.categoryGrid}>
+                  {categoryOptions.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      style={styles.categoryButton(form.category === cat)}
+                      onClick={() => handleCategoryClick(cat)}
+                    >
+                      <span style={styles.categoryLabel}>{cat}</span>
+                      <span style={styles.categorySub}>
+                        {form.category === cat ? "Selected" : "Tap to choose"}
+                      </span>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
 
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>Coordinates</span>
-                  <span style={pageStyles.labelHint}>
-                    Click on the map to set
+              <div style={styles.field}>
+                <div style={styles.labelRow}>
+                  <span style={styles.label}>Description</span>
+                  <span style={styles.labelHint}>
+                    Tell people what they can expect.
                   </span>
                 </div>
-                <div
-                  style={{
-                    borderRadius: 999,
-                    border: "1px solid rgba(115,185,150,0.9)",
-                    padding: "7px 11px",
-                    background: "rgba(4,20,16,0.95)",
-                    fontSize: 12,
-                  }}
-                >
-                  {form.latitude.toFixed(4)}, {form.longitude.toFixed(4)}
-                </div>
-              </div>
-            </div>
-
-            {/* PRICING */}
-            <div style={pageStyles.sectionTitleRow}>
-              <div style={pageStyles.sectionTitle}>Pricing</div>
-              <div style={pageStyles.sectionHint}>
-                Decide if this event is free or paid.
-              </div>
-            </div>
-
-            <div style={pageStyles.toggleRow}>
-              <input
-                type="checkbox"
-                id="isFree"
-                checked={form.isFree}
-                onChange={handleChange("isFree")}
-              />
-              <label htmlFor="isFree">
-                This is a <strong>free event</strong>
-              </label>
-            </div>
-
-            {!form.isFree && (
-              <div style={{ ...pageStyles.field, marginTop: 8 }}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>Price from</span>
-                  <span style={pageStyles.labelHint}>
-                    Minimum ticket or participation fee.
-                  </span>
-                </div>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  style={pageStyles.input}
-                  value={form.priceFrom}
-                  onChange={handleChange("priceFrom")}
-                  placeholder="e.g. 20 (EUR)"
+                <textarea
+                  style={styles.textarea}
+                  value={form.description}
+                  onChange={handleChange("description")}
+                  placeholder="Share the flow of the day, audience, energy, highlights, logistics and what makes this event worth joining."
                 />
               </div>
-            )}
+            </div>
 
-            {/* ORGANIZER */}
-            <div style={pageStyles.sectionTitleRow}>
-              <div style={pageStyles.sectionTitle}>Organizer</div>
-              <div style={pageStyles.sectionHint}>
-                Let people know who is behind this event.
+            <div style={styles.block}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>Date & time</div>
+                <div style={styles.sectionHint}>
+                  Set the rhythm of the event precisely.
+                </div>
+              </div>
+
+              <div style={styles.fieldGrid2}>
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>Start date *</span>
+                  </div>
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={form.startDate}
+                    onChange={handleChange("startDate")}
+                  />
+                </div>
+
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>Start time</span>
+                  </div>
+                  <input
+                    type="time"
+                    style={styles.input}
+                    value={form.startTime}
+                    onChange={handleChange("startTime")}
+                  />
+                </div>
+              </div>
+
+              <div style={styles.fieldGrid2}>
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>End date</span>
+                  </div>
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={form.endDate}
+                    onChange={handleChange("endDate")}
+                  />
+                </div>
+
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>End time</span>
+                  </div>
+                  <input
+                    type="time"
+                    style={styles.input}
+                    value={form.endTime}
+                    onChange={handleChange("endTime")}
+                  />
+                </div>
               </div>
             </div>
 
-            <div style={pageStyles.fieldGrid2}>
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>Organizer name</span>
+            <div style={styles.block}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>Location</div>
+                <div style={styles.sectionHint}>
+                  Exact place, city, country and pin on map.
+                </div>
+              </div>
+
+              <div style={styles.field}>
+                <div style={styles.labelRow}>
+                  <span style={styles.label}>Location name</span>
+                  <span style={styles.labelHint}>
+                    e.g. Kopaonik, Lake Ohrid, Durmitor Basecamp
+                  </span>
                 </div>
                 <input
                   type="text"
-                  style={pageStyles.input}
-                  value={form.organizerName}
-                  onChange={handleChange("organizerName")}
-                  placeholder="Your name or organization"
+                  style={styles.input}
+                  value={form.locationName}
+                  onChange={handleChange("locationName")}
+                  placeholder="Trailhead, camp, venue or exact place"
                 />
               </div>
 
-              <div style={pageStyles.field}>
-                <div style={pageStyles.labelRow}>
-                  <span style={pageStyles.label}>Event website</span>
+              <div style={styles.fieldGrid3}>
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>City</span>
+                  </div>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    value={form.city}
+                    onChange={handleChange("city")}
+                    placeholder="City or region"
+                  />
+                </div>
+
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>Country *</span>
+                  </div>
+                  <select
+                    style={styles.select}
+                    value={form.country}
+                    onChange={handleChange("country")}
+                  >
+                    {countryOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {c || "Select country"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>Coordinates</span>
+                    <span style={styles.labelHint}>Tap map below</span>
+                  </div>
+                  <div
+                    style={{
+                      ...styles.input,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {form.latitude.toFixed(4)}, {form.longitude.toFixed(4)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.block}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>Pricing</div>
+                <div style={styles.sectionHint}>
+                  Make it free or set a visible starting price.
+                </div>
+              </div>
+
+              <div style={styles.toggleRow}>
+                <input
+                  type="checkbox"
+                  id="isFree"
+                  checked={form.isFree}
+                  onChange={handleChange("isFree")}
+                />
+                <label htmlFor="isFree">
+                  This is a <strong>free event</strong>
+                </label>
+              </div>
+
+              {!form.isFree && (
+                <div style={{ ...styles.field, marginTop: 10 }}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>Price from</span>
+                    <span style={styles.labelHint}>
+                      Minimum ticket or participation fee
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    style={styles.input}
+                    value={form.priceFrom}
+                    onChange={handleChange("priceFrom")}
+                    placeholder="e.g. 20 (EUR)"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={styles.block}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>Organizer</div>
+                <div style={styles.sectionHint}>
+                  Add trust with your name and event site.
+                </div>
+              </div>
+
+              <div style={styles.fieldGrid2}>
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>Organizer name</span>
+                  </div>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    value={form.organizerName}
+                    onChange={handleChange("organizerName")}
+                    placeholder="Your name or organization"
+                  />
+                </div>
+
+                <div style={styles.field}>
+                  <div style={styles.labelRow}>
+                    <span style={styles.label}>Event website</span>
+                  </div>
+                  <input
+                    type="url"
+                    style={styles.input}
+                    value={form.websiteUrl}
+                    onChange={handleChange("websiteUrl")}
+                    placeholder="Optional external link"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.block}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>Visuals</div>
+                <div style={styles.sectionHint}>
+                  Paste a cover URL or upload an image directly.
+                </div>
+              </div>
+
+              <div style={styles.field}>
+                <div style={styles.labelRow}>
+                  <span style={styles.label}>Cover image URL</span>
+                  <span style={styles.labelHint}>
+                    Direct image link for the event hero
+                  </span>
                 </div>
                 <input
                   type="url"
-                  style={pageStyles.input}
-                  value={form.websiteUrl}
-                  onChange={handleChange("websiteUrl")}
-                  placeholder="Optional external link"
+                  style={styles.input}
+                  value={form.coverUrl}
+                  onChange={handleChange("coverUrl")}
+                  placeholder="https://…"
                 />
               </div>
-            </div>
 
-            {/* COVER URL */}
-            <div style={pageStyles.field}>
-              <div style={pageStyles.labelRow}>
-                <span style={pageStyles.label}>Cover image URL</span>
-                <span style={pageStyles.labelHint}>
-                  Paste a direct image link (we'll use it as a hero image).
-                </span>
+              <div style={styles.uploader}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ color: "white", width: "100%" }}
+                />
+                {fileUploading && (
+                  <div style={{ fontSize: 12, marginTop: 8, color: "#8affc1" }}>
+                    Uploading image…
+                  </div>
+                )}
               </div>
-              <input
-                type="url"
-                style={pageStyles.input}
-                value={form.coverUrl}
-                onChange={handleChange("coverUrl")}
-                placeholder="https://…"
-              />
             </div>
-            <div style={{ marginTop: 8, marginBottom: 12 }}>
-  <input
-    type="file"
-    accept="image/*"
-    onChange={handleImageUpload}
-    style={{ color: "white" }}
-  />
-  {fileUploading && (
-    <div style={{ fontSize: 12, marginTop: 4, color: "#8affc1" }}>
-      Uploading image…
-    </div>
-  )}
-</div>
 
-            {errorMsg && <div style={pageStyles.errorBox}>{errorMsg}</div>}
-            {successMsg && <div style={pageStyles.successBox}>{successMsg}</div>}
+            {errorMsg && <div style={styles.errorBox}>{errorMsg}</div>}
+            {successMsg && <div style={styles.successBox}>{successMsg}</div>}
 
-            <div style={pageStyles.submitRow}>
+            <div style={styles.submitRow}>
               <button
                 type="submit"
-                style={pageStyles.submitButton}
+                style={styles.submitButton}
                 disabled={saving}
               >
                 {saving ? "Saving…" : "Save event"}
@@ -897,111 +1095,165 @@ export default function CreateEvent() {
             </div>
           </form>
 
-          {/* RIGHT – LIVE PREVIEW + MAP */}
-          <div style={pageStyles.card}>
-            <div style={pageStyles.previewTitle}>Live preview</div>
+          <div style={styles.rightStack}>
+            <div style={styles.card}>
+              <div style={styles.previewTitle}>Live preview</div>
 
-            <div style={pageStyles.previewCard}>
-              <div style={pageStyles.previewImgWrapper}>
-                <img
-                  src={cover}
-                  alt="preview"
-                  style={pageStyles.previewImg}
-                />
-                <div style={pageStyles.previewOverlay} />
-                <div style={pageStyles.previewTitleBox}>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "rgba(255,255,255,0.85)",
-                        marginBottom: 3,
-                      }}
-                    >
-                      {form.category || "Event category"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: "#f7fff9",
-                      }}
-                    >
-                      {form.title || "Your event title will appear here"}
-                    </div>
-                    {form.subtitle && (
+              <div style={styles.previewCard}>
+                <div style={styles.previewImgWrapper}>
+                  <img src={cover} alt="preview" style={styles.previewImg} />
+                  <div style={styles.previewOverlay} />
+
+                  <div style={styles.previewTitleBox}>
+                    <div>
                       <div
                         style={{
-                          fontSize: 12,
-                          color: "rgba(230,245,240,0.8)",
-                          marginTop: 2,
+                          fontSize: 11,
+                          color: "rgba(255,255,255,0.86)",
+                          marginBottom: 4,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          fontWeight: 900,
                         }}
                       >
-                        {form.subtitle}
+                        {form.category || "Event category"}
                       </div>
-                    )}
-                  </div>
 
-                  <div style={{ textAlign: "right" }}>
-                    <div style={pageStyles.previewStatus}>{fakeStatus}</div>
-                    <div style={pageStyles.previewPrice}>{pricePreview}</div>
+                      <div
+                        style={{
+                          fontSize: isMobile ? 18 : 22,
+                          fontWeight: 1000,
+                          lineHeight: 1.05,
+                          color: "#f7fff9",
+                          letterSpacing: "-0.03em",
+                          maxWidth: 260,
+                        }}
+                      >
+                        {form.title || "Your event title will appear here"}
+                      </div>
+
+                      {form.subtitle && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "rgba(230,245,240,0.80)",
+                            marginTop: 4,
+                            lineHeight: 1.45,
+                            maxWidth: 260,
+                          }}
+                        >
+                          {form.subtitle}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ textAlign: "right" }}>
+                      <div style={styles.previewStatus}>{fakeStatus}</div>
+                      <div style={styles.previewPrice}>{pricePreview}</div>
+                    </div>
                   </div>
+                </div>
+
+                <div style={styles.previewBody}>
+                  <div style={styles.previewLine}>
+                    📅 {form.startDate ? form.startDate : "Pick a start date"}{" "}
+                    {form.startTime && `· ${form.startTime}`}
+                  </div>
+                  <div style={styles.previewLine}>
+                    📍{" "}
+                    {form.locationName ||
+                      form.city ||
+                      form.country ||
+                      "Location will be shown here"}
+                  </div>
+                  <div style={styles.previewLine}>
+                    🌍 {form.country || "Choose a country"}
+                  </div>
+                  {form.description && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontSize: 11,
+                        opacity: 0.82,
+                      }}
+                    >
+                      {form.description.slice(0, 150)}
+                      {form.description.length > 150 ? "…" : ""}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div style={pageStyles.previewBody}>
-                <div style={pageStyles.previewLine}>
-                  📅{" "}
-                  {form.startDate
-                    ? form.startDate
-                    : "Pick a start date"}{" "}
-                  {form.startTime && `· ${form.startTime}`}
-                </div>
-                <div style={pageStyles.previewLine}>
-                  📍{" "}
-                  {form.locationName ||
-                    form.city ||
-                    form.country ||
-                    "Location will be shown here"}
-                </div>
-                {form.description && (
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 11,
-                      opacity: 0.8,
-                    }}
-                  >
-                    {form.description.slice(0, 140)}
-                    {form.description.length > 140 ? "…" : ""}
+              <div style={styles.statMiniGrid}>
+                <div style={styles.statMini}>
+                  <div style={{ fontSize: 11, opacity: 0.66 }}>Price</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, marginTop: 4 }}>
+                    {pricePreview}
                   </div>
-                )}
+                </div>
+                <div style={styles.statMini}>
+                  <div style={{ fontSize: 11, opacity: 0.66 }}>Status</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, marginTop: 4 }}>
+                    {fakeStatus}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style={pageStyles.previewTitle}>Location map</div>
-            <div style={pageStyles.sectionHint}>
-              Click on the map to update the marker position.
-            </div>
+            <div style={styles.card}>
+              <div style={styles.previewTitle}>Location map</div>
+              <div style={styles.sectionHint}>
+                Tap on the map to move the marker and set the exact event position.
+              </div>
 
-            <div style={pageStyles.mapBox}>
-              <MapContainer
-                center={[form.latitude, form.longitude]}
-                zoom={7}
-                scrollWheelZoom={true}
-                style={pageStyles.mapContainer}
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <LocationPicker
-                  lat={form.latitude}
-                  lng={form.longitude}
-                  onChange={handleLocationChange}
-                />
-              </MapContainer>
+              <div style={styles.mapBox}>
+                <MapContainer
+                  center={[form.latitude, form.longitude]}
+                  zoom={7}
+                  scrollWheelZoom={true}
+                  style={styles.mapContainer}
+                >
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <LocationPicker
+                    lat={form.latitude}
+                    lng={form.longitude}
+                    onChange={handleLocationChange}
+                  />
+                </MapContainer>
+              </div>
+
+              <div style={{ ...styles.statMiniGrid, marginBottom: 0 }}>
+                <div style={styles.statMini}>
+                  <div style={{ fontSize: 11, opacity: 0.66 }}>Latitude</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, marginTop: 4 }}>
+                    {form.latitude.toFixed(4)}
+                  </div>
+                </div>
+                <div style={styles.statMini}>
+                  <div style={{ fontSize: 11, opacity: 0.66 }}>Longitude</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, marginTop: 4 }}>
+                    {form.longitude.toFixed(4)}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {isMobile && (
+        <div style={styles.stickyBar}>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            style={{ ...styles.submitButton, width: "100%" }}
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save event"}
+            {!saving && <span>➜</span>}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

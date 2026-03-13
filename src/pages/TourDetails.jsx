@@ -312,43 +312,83 @@ export default function TourDetails() {
   }
 
   if (loading || !tour) {
-    return <div style={{ color: "white" }}>Loading tour...</div>;
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at top, #071f16 0%, #020806 45%, #020405 100%)",
+          color: "white",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          padding: 20,
+        }}
+      >
+        <div
+          style={{
+            padding: "18px 24px",
+            borderRadius: 18,
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+          }}
+        >
+          Loading tour...
+        </div>
+      </div>
+    );
   }
 
   const isCreator = user && user.id === tour.creator_id;
   const isFull =
     (tour.participants || 0) >= (tour.max_people || Number.MAX_SAFE_INTEGER);
   const gallery = Array.isArray(tour.image_urls) ? tour.image_urls : [];
+  const isSmallScreen =
+    typeof window !== "undefined" && window.innerWidth < 860;
+
+  const coverImage =
+    tour.cover_url ||
+    "https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg";
 
   const pageWrapper = {
     minHeight: "100vh",
-    padding: "24px 16px 50px",
+    padding: isSmallScreen ? "0 0 96px" : "22px 16px 50px",
     background:
-      "radial-gradient(circle at top, #071f16 0%, #020806 45%, #020405 100%)",
+      "radial-gradient(1000px 460px at 12% -5%, rgba(0,255,176,0.10), transparent 56%)," +
+      "radial-gradient(900px 420px at 90% -8%, rgba(124,77,255,0.10), transparent 54%)," +
+      "linear-gradient(180deg, #071f16 0%, #020806 45%, #020405 100%)",
     color: "#ffffff",
     boxSizing: "border-box",
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   };
 
   const container = {
-    maxWidth: "1100px",
+    maxWidth: "1180px",
     margin: "0 auto",
     boxSizing: "border-box",
   };
 
   const headerCard = {
-    borderRadius: 22,
+    borderRadius: isSmallScreen ? "0 0 28px 28px" : 28,
     overflow: "hidden",
     position: "relative",
-    marginBottom: 18,
-    border: "1px solid rgba(255,255,255,0.08)",
-    boxShadow: "0 26px 70px rgba(0,0,0,0.75)",
+    marginBottom: isSmallScreen ? 14 : 18,
+    border: isSmallScreen ? "none" : "1px solid rgba(255,255,255,0.08)",
+    boxShadow: isSmallScreen
+      ? "0 22px 48px rgba(0,0,0,0.42)"
+      : "0 26px 70px rgba(0,0,0,0.75)",
+    background: "rgba(0,0,0,0.35)",
   };
 
   const coverOverlay = {
     position: "absolute",
     inset: 0,
     background:
-      "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.9) 75%)",
+      "linear-gradient(180deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.55) 38%, rgba(0,0,0,0.92) 100%)",
   };
 
   const layout = {
@@ -358,140 +398,252 @@ export default function TourDetails() {
     gap: 18,
   };
 
+  const layoutResponsive = isSmallScreen
+    ? { ...layout, gridTemplateColumns: "1fr", gap: 14, marginTop: 14 }
+    : layout;
+
   const card = {
-    background: "rgba(0,0,0,0.55)",
-    borderRadius: 20,
-    padding: 18,
-    border: "1px solid rgba(255,255,255,0.06)",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+    background:
+      "linear-gradient(145deg, rgba(0,0,0,0.52), rgba(8,18,14,0.74))",
+    borderRadius: isSmallScreen ? 22 : 24,
+    padding: isSmallScreen ? 15 : 18,
+    border: "1px solid rgba(255,255,255,0.07)",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
     backdropFilter: "blur(18px)",
   };
 
   const sectionTitle = {
-    fontSize: 14,
+    fontSize: 12,
     textTransform: "uppercase",
-    letterSpacing: "0.09em",
+    letterSpacing: "0.13em",
     color: "rgba(200,255,230,0.85)",
     marginBottom: 10,
+    fontWeight: 900,
   };
 
   const pillRow = {
     display: "flex",
     flexWrap: "wrap",
     gap: 8,
-    marginTop: 8,
+    marginTop: 10,
   };
 
   const pill = {
     fontSize: 12,
-    padding: "4px 10px",
+    padding: "8px 11px",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(0,0,0,0.5)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(255,255,255,0.05)",
+    boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
   };
 
   const primaryBtn = {
     width: "100%",
-    padding: "12px",
+    padding: isSmallScreen ? "14px 14px" : "13px 12px",
     border: "none",
     borderRadius: 999,
     background:
       "linear-gradient(135deg, #00ffb0 0%, #00cf7c 40%, #02a45d 100%)",
     color: "#02140b",
-    fontWeight: 800,
+    fontWeight: 900,
     letterSpacing: "0.05em",
     textTransform: "uppercase",
     cursor: "pointer",
     marginBottom: 10,
+    boxShadow: "0 16px 36px rgba(0,207,124,0.22)",
+    minHeight: isSmallScreen ? 48 : "auto",
   };
 
   const secondaryBtn = {
     width: "100%",
-    padding: "11px",
+    padding: isSmallScreen ? "13px 12px" : "11px",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(0,0,0,0.6)",
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "rgba(255,255,255,0.05)",
     color: "white",
-    fontWeight: 600,
+    fontWeight: 800,
     cursor: "pointer",
     marginBottom: 10,
+    minHeight: isSmallScreen ? 46 : "auto",
   };
 
   const dangerBtn = {
     width: "100%",
-    padding: "11px",
+    padding: isSmallScreen ? "13px 12px" : "11px",
     borderRadius: 999,
     border: "none",
-    background: "#ff4040",
+    background: "linear-gradient(135deg, #ff5d5d, #d92c2c)",
     color: "white",
-    fontWeight: 700,
+    fontWeight: 800,
     cursor: "pointer",
+    boxShadow: "0 16px 36px rgba(255,64,64,0.16)",
+    minHeight: isSmallScreen ? 46 : "auto",
   };
 
   const smallBtn = {
-    padding: "6px 14px",
+    padding: "8px 14px",
     borderRadius: 999,
-    border: "none",
-    background: "rgba(0,0,0,0.7)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(0,0,0,0.58)",
     color: "white",
     cursor: "pointer",
     fontSize: 13,
+    fontWeight: 700,
   };
 
-  const isSmallScreen =
-    typeof window !== "undefined" && window.innerWidth < 820;
-  const layoutResponsive = isSmallScreen
-    ? { ...layout, gridTemplateColumns: "1fr" }
-    : layout;
+  const heroInfoCard = {
+    position: "absolute",
+    left: isSmallScreen ? 14 : 18,
+    right: isSmallScreen ? 14 : 18,
+    bottom: isSmallScreen ? 14 : 18,
+    zIndex: 2,
+  };
+
+  const statGrid = {
+    display: "grid",
+    gridTemplateColumns: isSmallScreen ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+    gap: 10,
+    marginTop: 14,
+  };
+
+  const statCard = {
+    padding: isSmallScreen ? "12px 10px" : "14px 12px",
+    borderRadius: 18,
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 12px 28px rgba(0,0,0,0.20)",
+    textAlign: "center",
+  };
+
+  const quickSummaryGrid = {
+    display: "grid",
+    gridTemplateColumns: isSmallScreen ? "1fr" : "1fr 1fr",
+    gap: 10,
+  };
 
   return (
     <div style={pageWrapper}>
       <div style={container}>
         <div style={headerCard}>
-          <div style={{ position: "relative", height: 260, overflow: "hidden" }}>
+          <div
+            style={{
+              position: "relative",
+              height: isSmallScreen ? 360 : 320,
+              overflow: "hidden",
+            }}
+          >
             <img
-              src={
-                tour.cover_url ||
-                "https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg"
-              }
+              src={coverImage}
               alt="cover"
               style={{
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                transform: "scale(1.02)",
+                transform: "scale(1.03)",
                 filter: "saturate(1.15) contrast(1.05)",
               }}
             />
             <div style={coverOverlay} />
 
-            <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
+            <div
+              style={{
+                position: "absolute",
+                top: isSmallScreen ? 14 : 16,
+                left: isSmallScreen ? 14 : 18,
+                right: isSmallScreen ? 14 : 18,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 10,
+                zIndex: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={() => navigate(-1)}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.16)",
+                  background: "rgba(0,0,0,0.38)",
+                  color: "#fff",
+                  borderRadius: 999,
+                  padding: "10px 14px",
+                  fontWeight: 800,
+                  backdropFilter: "blur(10px)",
+                  boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
+                  cursor: "pointer",
+                }}
+              >
+                ← Back
+              </button>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "7px 11px",
+                    borderRadius: 999,
+                    background: "rgba(0,0,0,0.42)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  ⛰️ {tour.activity || "Outdoor tour"}
+                </div>
+
+                <div
+                  style={{
+                    padding: "7px 11px",
+                    borderRadius: 999,
+                    background: "rgba(0,0,0,0.42)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  🌍 {tour.country || "Unknown country"}
+                </div>
+              </div>
+            </div>
+
+            <div style={heroInfoCard}>
               <div
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 8,
-                  padding: "4px 10px",
+                  padding: "6px 12px",
                   borderRadius: 999,
-                  background: "rgba(0,0,0,0.65)",
-                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(0,0,0,0.48)",
+                  border: "1px solid rgba(255,255,255,0.16)",
                   fontSize: 11,
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
                   color: "rgba(210,255,230,0.95)",
-                  marginBottom: 8,
+                  marginBottom: 10,
+                  fontWeight: 900,
+                  backdropFilter: "blur(10px)",
                 }}
               >
-                <span>⛰️ {tour.activity || "Outdoor tour"}</span>
-                <span style={{ opacity: 0.7 }}>•</span>
-                <span>{tour.country || "Unknown country"}</span>
+                🧭 Premium outdoor experience
               </div>
 
               <h1
                 style={{
-                  fontSize: 26,
-                  fontWeight: 800,
-                  textShadow: "0 8px 30px rgba(0,0,0,0.9)",
+                  fontSize: isSmallScreen ? 30 : 34,
+                  lineHeight: 0.98,
+                  fontWeight: 950,
+                  letterSpacing: "-0.03em",
+                  textShadow: "0 8px 30px rgba(0,0,0,0.85)",
+                  margin: 0,
                 }}
               >
                 {tour.title}
@@ -499,30 +651,72 @@ export default function TourDetails() {
 
               <div
                 style={{
-                  fontSize: 13,
-                  color: "rgba(230,255,240,0.78)",
-                  maxWidth: 520,
+                  marginTop: 8,
+                  fontSize: isSmallScreen ? 13 : 14,
+                  color: "rgba(230,255,240,0.82)",
+                  maxWidth: 620,
+                  lineHeight: 1.55,
                 }}
               >
-                {tour.location_name && (
+                {tour.location_name ? (
                   <>
                     📍 {tour.location_name}
                     {tour.country ? `, ${tour.country}` : ""}
                   </>
+                ) : (
+                  "Outdoor destination"
                 )}
+              </div>
+
+              <div style={statGrid}>
+                <div style={statCard}>
+                  <div style={{ fontSize: 18, fontWeight: 900 }}>
+                    {tour.participants || 0}
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
+                    Joined
+                  </div>
+                </div>
+
+                <div style={statCard}>
+                  <div style={{ fontSize: 18, fontWeight: 900 }}>
+                    {tour.max_people || "∞"}
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
+                    Capacity
+                  </div>
+                </div>
+
+                <div style={statCard}>
+                  <div style={{ fontSize: 18, fontWeight: 900 }}>
+                    {tour.price ? `${tour.price}€` : "Free"}
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
+                    Price
+                  </div>
+                </div>
+
+                <div style={statCard}>
+                  <div style={{ fontSize: 18, fontWeight: 900 }}>
+                    {isFull ? "Full" : "Open"}
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>
+                    Status
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <div style={layoutResponsive}>
-          <div style={card}>
-            <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={card}>
               <div style={sectionTitle}>Overview</div>
 
               {creatorProfile && (
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>
                     Organized by
                   </div>
 
@@ -534,63 +728,46 @@ export default function TourDetails() {
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 10,
+                        gap: 12,
                         background: "rgba(255,255,255,0.06)",
-                        padding: "8px 10px",
-                        borderRadius: 999,
-                        width: "fit-content",
+                        padding: "10px 12px",
+                        borderRadius: 18,
                         border: "1px solid rgba(255,255,255,0.10)",
+                        boxShadow: "0 12px 28px rgba(0,0,0,0.22)",
                       }}
                     >
                       <img
-                        src={creatorProfile.avatar_url || "https://i.pravatar.cc/80"}
+                        src={
+                          creatorProfile.avatar_url || "https://i.pravatar.cc/80"
+                        }
                         alt=""
                         style={{
-                          width: 34,
-                          height: 34,
+                          width: 42,
+                          height: 42,
                           borderRadius: "50%",
                           objectFit: "cover",
+                          border: "1px solid rgba(255,255,255,0.12)",
                         }}
                       />
-                      <div style={{ minWidth: 0 }}>
+
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <div
                           style={{
                             display: "flex",
                             alignItems: "center",
                             gap: 8,
                             flexWrap: "wrap",
-                            fontWeight: 800,
-                            fontSize: 13,
+                            fontWeight: 900,
+                            fontSize: 14,
                           }}
                         >
-                          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-  <span>{creatorProfile?.full_name || "Organizer"}</span>
+                          <span>{creatorProfile?.full_name || "Organizer"}</span>
 
-  {creatorProfile?.is_verified_creator && (
-    <span
-      style={{
-        fontSize:10,
-        padding:"3px 8px",
-        borderRadius:999,
-        background:"rgba(0,255,176,0.14)",
-        border:"1px solid rgba(0,255,176,0.35)",
-        color:"#9cffd8",
-        fontWeight:900,
-        letterSpacing:"0.06em",
-        textTransform:"uppercase"
-      }}
-    >
-      Verified Organizer
-    </span>
-  )}
-
-</div>
-
-                          {creatorProfile.is_verified_creator && (
+                          {creatorProfile?.is_verified_creator && (
                             <span
                               style={{
                                 fontSize: 10,
-                                padding: "3px 8px",
+                                padding: "4px 8px",
                                 borderRadius: 999,
                                 background: "rgba(0,255,176,0.14)",
                                 border: "1px solid rgba(0,255,176,0.35)",
@@ -607,8 +784,9 @@ export default function TourDetails() {
 
                         <div
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             opacity: 0.7,
+                            marginTop: 2,
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
@@ -617,73 +795,105 @@ export default function TourDetails() {
                           {creatorProfile.home_base || "Organizer profile"}
                         </div>
                       </div>
+
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.72,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Open →
+                      </div>
                     </div>
                   </Link>
                 </div>
               )}
 
               <div style={pillRow}>
-                <div style={pill}>🗓 {tour.date_start} → {tour.date_end}</div>
+                <div style={pill}>
+                  🗓 {tour.date_start} → {tour.date_end}
+                </div>
                 <div style={pill}>
                   💶 {tour.price ? `${tour.price} € per person` : "Free tour"}
                 </div>
                 <div style={pill}>
                   👥 {tour.participants || 0}/{tour.max_people} participants
-                  {isFull && <span style={{ color: "#ff8080", marginLeft: 6 }}>(Full)</span>}
+                  {isFull && (
+                    <span style={{ color: "#ff9090", marginLeft: 6 }}>
+                      (Full)
+                    </span>
+                  )}
                 </div>
                 {tour.is_legal_entity && (
                   <div style={pill}>🏢 Organized by a legal entity</div>
                 )}
               </div>
-            </div>
 
-            {tour.application_start && (
-              <div style={pill}>
-                📝 Applications from {formatDate(tour.application_start)}
+              {(tour.application_start || tour.application_deadline) && (
+                <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                  {tour.application_start && (
+                    <div style={pill}>
+                      📝 Applications from {formatDate(tour.application_start)}
+                    </div>
+                  )}
+
+                  {tour.application_deadline && (
+                    <div style={pill}>
+                      ⏳ Applications until {formatDate(tour.application_deadline)}
+                      {countdown && (
+                        <span
+                          style={{
+                            marginLeft: 6,
+                            color: "#00ffb0",
+                            fontWeight: 700,
+                          }}
+                        >
+                          ({countdown})
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ marginTop: 18 }}>
+                <div style={sectionTitle}>Description</div>
+                <p
+                  style={{
+                    fontSize: 14,
+                    lineHeight: 1.7,
+                    color: "rgba(240,255,245,0.92)",
+                    whiteSpace: "pre-line",
+                    margin: 0,
+                  }}
+                >
+                  {tour.description || "No description provided."}
+                </p>
               </div>
-            )}
-
-            {tour.application_deadline && (
-              <div style={pill}>
-                ⏳ Applications until {formatDate(tour.application_deadline)}
-                {countdown && (
-                  <span style={{ marginLeft: 6, color: "#00ffb0", fontWeight: 600 }}>
-                    ({countdown})
-                  </span>
-                )}
-              </div>
-            )}
-
-            <div style={{ marginBottom: 18, marginTop: 16 }}>
-              <div style={sectionTitle}>Description</div>
-              <p
-                style={{
-                  fontSize: 14,
-                  lineHeight: 1.55,
-                  color: "rgba(240,255,245,0.9)",
-                  whiteSpace: "pre-line",
-                }}
-              >
-                {tour.description || "No description provided."}
-              </p>
             </div>
 
             {gallery.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
+              <div style={card}>
                 <div style={sectionTitle}>Gallery</div>
 
                 <div
                   style={{
-                    borderRadius: 16,
+                    borderRadius: 18,
                     overflow: "hidden",
-                    marginBottom: 10,
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    marginBottom: 12,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    boxShadow: "0 16px 38px rgba(0,0,0,0.32)",
                   }}
                 >
                   <img
                     src={gallery[currentImage]}
                     alt="Tour"
-                    style={{ width: "100%", height: 230, objectFit: "cover" }}
+                    style={{
+                      width: "100%",
+                      height: isSmallScreen ? 260 : 300,
+                      objectFit: "cover",
+                    }}
                   />
                 </div>
 
@@ -692,7 +902,8 @@ export default function TourDetails() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: 8,
+                    marginBottom: 10,
+                    gap: 10,
                   }}
                 >
                   <button
@@ -705,9 +916,11 @@ export default function TourDetails() {
                   >
                     ◀ Prev
                   </button>
-                  <span style={{ fontSize: 12, opacity: 0.7 }}>
+
+                  <span style={{ fontSize: 12, opacity: 0.72 }}>
                     {currentImage + 1} / {gallery.length}
                   </span>
+
                   <button
                     style={smallBtn}
                     onClick={() =>
@@ -720,27 +933,42 @@ export default function TourDetails() {
                   </button>
                 </div>
 
-                <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    overflowX: "auto",
+                    paddingBottom: 4,
+                  }}
+                >
                   {gallery.map((img, idx) => (
                     <div
                       key={idx}
                       onClick={() => setCurrentImage(idx)}
                       style={{
-                        flex: "0 0 70px",
-                        height: 60,
-                        borderRadius: 10,
+                        flex: "0 0 76px",
+                        height: 66,
+                        borderRadius: 12,
                         overflow: "hidden",
                         border:
                           idx === currentImage
                             ? "2px solid #00ffb0"
-                            : "1px solid rgba(255,255,255,0.2)",
+                            : "1px solid rgba(255,255,255,0.14)",
                         cursor: "pointer",
+                        boxShadow:
+                          idx === currentImage
+                            ? "0 0 0 3px rgba(0,255,176,0.12)"
+                            : "none",
                       }}
                     >
                       <img
                         src={img}
                         alt={`thumb-${idx}`}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
                       />
                     </div>
                   ))}
@@ -749,7 +977,7 @@ export default function TourDetails() {
             )}
 
             {tour.video_url && (
-              <div style={{ marginBottom: 22 }}>
+              <div style={card}>
                 <div style={sectionTitle}>Video</div>
 
                 <div
@@ -758,7 +986,7 @@ export default function TourDetails() {
                     overflow: "hidden",
                     border: "1px solid rgba(255,255,255,0.12)",
                     background: "rgba(0,0,0,0.75)",
-                    boxShadow: "0 18px 50px rgba(0,0,0,0.85)",
+                    boxShadow: "0 18px 50px rgba(0,0,0,0.50)",
                   }}
                 >
                   <video
@@ -768,7 +996,7 @@ export default function TourDetails() {
                     preload="metadata"
                     style={{
                       width: "100%",
-                      height: 260,
+                      height: isSmallScreen ? 230 : 280,
                       objectFit: "cover",
                       backgroundColor: "black",
                     }}
@@ -779,7 +1007,7 @@ export default function TourDetails() {
                   style={{
                     marginTop: 8,
                     fontSize: 11,
-                    opacity: 0.7,
+                    opacity: 0.72,
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
@@ -790,35 +1018,59 @@ export default function TourDetails() {
               </div>
             )}
 
-            <div>
+            <div style={card}>
               <div style={sectionTitle}>Location on map</div>
+
               {tour.latitude && tour.longitude ? (
                 <>
-                  <div style={{ marginTop: 15, borderRadius: 12, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      marginTop: 10,
+                      borderRadius: 16,
+                      overflow: "hidden",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      boxShadow: "0 16px 40px rgba(0,0,0,0.34)",
+                    }}
+                  >
                     <MapContainer
                       center={[tour.latitude, tour.longitude]}
                       zoom={12}
                       scrollWheelZoom={true}
-                      style={{ height: "250px", width: "100%" }}
+                      style={{
+                        height: isSmallScreen ? "250px" : "290px",
+                        width: "100%",
+                      }}
                     >
                       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                       <Marker position={[tour.latitude, tour.longitude]} />
                     </MapContainer>
                   </div>
-                  <div style={{ marginTop: 8, fontSize: 12, color: "rgba(230,255,240,0.75)" }}>
+
+                  <div
+                    style={{
+                      marginTop: 10,
+                      fontSize: 12,
+                      color: "rgba(230,255,240,0.78)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 14,
+                      padding: "10px 12px",
+                      width: "fit-content",
+                    }}
+                  >
                     📌 {tour.latitude.toFixed(4)}, {tour.longitude.toFixed(4)}
                   </div>
                 </>
               ) : (
-                <p style={{ fontSize: 13, opacity: 0.8 }}>
+                <p style={{ fontSize: 13, opacity: 0.8, margin: 0 }}>
                   Location coordinates are not set for this tour.
                 </p>
               )}
             </div>
           </div>
 
-          <div style={card}>
-            <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={card}>
               <div style={sectionTitle}>Your options</div>
 
               {!isCreator && (
@@ -836,12 +1088,20 @@ export default function TourDetails() {
                       {isFull ? "Tour is full" : "Join tour"}
                     </button>
                   ) : (
-                    <button style={secondaryBtn} onClick={leaveTour} disabled={loading}>
+                    <button
+                      style={secondaryBtn}
+                      onClick={leaveTour}
+                      disabled={loading}
+                    >
                       Leave tour
                     </button>
                   )}
 
-                  <button style={secondaryBtn} onClick={toggleSave} disabled={loading}>
+                  <button
+                    style={secondaryBtn}
+                    onClick={toggleSave}
+                    disabled={loading}
+                  >
                     {isSaved ? "♥ Saved" : "♡ Save tour"}
                   </button>
 
@@ -877,9 +1137,10 @@ export default function TourDetails() {
               )}
             </div>
 
-            <div>
+            <div style={card}>
               <div style={sectionTitle}>Quick summary</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+
+              <div style={quickSummaryGrid}>
                 <div style={pill}>🏷️ {tour.title || "Tour title"}</div>
                 <div style={pill}>🧭 {tour.activity || "Activity not set"}</div>
 
@@ -888,7 +1149,11 @@ export default function TourDetails() {
                     👤 Organizer:{" "}
                     <Link
                       to={`/profile/${creatorProfile.id}`}
-                      style={{ color: "#00ffb0", textDecoration: "none", fontWeight: 700 }}
+                      style={{
+                        color: "#00ffb0",
+                        textDecoration: "none",
+                        fontWeight: 800,
+                      }}
                     >
                       {creatorProfile.full_name || "Organizer"}
                     </Link>
@@ -905,87 +1170,256 @@ export default function TourDetails() {
                     ? `${tour.location_name}${tour.country ? ", " + tour.country : ""}`
                     : "Location not set"}
                 </div>
+
                 <div style={pill}>
                   👥 {tour.participants || 0}/{tour.max_people} participants
                 </div>
-                <div style={pill}>💶 {tour.price ? `${tour.price} €` : "Free"}</div>
-                <div style={pill}>🕒 {tour.date_start} → {tour.date_end}</div>
-              </div>
 
-              <div style={{ marginTop: 14, fontSize: 11, opacity: 0.7, lineHeight: 1.5 }}>
-                Tip: use the group chat to coordinate meeting points, gear and timing so everyone arrives relaxed and ready.
-              </div>
-
-              <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 6 }}>
-                  Participants
+                <div style={pill}>
+                  💶 {tour.price ? `${tour.price} €` : "Free"}
                 </div>
 
-                {participantsList.length === 0 ? (
-                  <div style={{ fontSize: 13, opacity: 0.6 }}>
-                    No participants yet
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {participantsList.map((p, idx) => (
-                      <Link
-                        key={idx}
-                        to={`/profile/${p.user_id}`}
-                        style={{ textDecoration: "none", color: "inherit" }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            background: "rgba(255,255,255,0.06)",
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            cursor: "pointer",
-                          }}
-                        >
-                          {p.profiles?.avatar_url ? (
-                            <img
-                              src={p.profiles.avatar_url}
-                              alt=""
-                              style={{
-                                width: 26,
-                                height: 26,
-                                borderRadius: "50%",
-                                objectFit: "cover",
-                              }}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: 26,
-                                height: 26,
-                                borderRadius: "50%",
-                                background: "#1abc9c",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                color: "#000",
-                              }}
-                            >
-                              {p.profiles?.full_name?.[0] || "U"}
-                            </div>
-                          )}
-
-                          <span style={{ fontSize: 13 }}>
-                            {p.profiles?.full_name || "User"}
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                <div style={pill}>
+                  🕒 {tour.date_start} → {tour.date_end}
+                </div>
               </div>
+
+              <div
+                style={{
+                  marginTop: 16,
+                  fontSize: 12,
+                  opacity: 0.75,
+                  lineHeight: 1.6,
+                  padding: "12px 14px",
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                Tip: use the group chat to coordinate meeting points, gear and
+                timing so everyone arrives relaxed and ready.
+              </div>
+            </div>
+
+            <div style={card}>
+              <div style={sectionTitle}>Participants</div>
+
+              {participantsList.length === 0 ? (
+                <div style={{ fontSize: 13, opacity: 0.68 }}>
+                  No participants yet
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 10,
+                  }}
+                >
+                  {participantsList.map((p, idx) => (
+                    <Link
+                      key={idx}
+                      to={`/profile/${p.user_id}`}
+                      style={{ textDecoration: "none", color: "inherit" }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          background: "rgba(255,255,255,0.06)",
+                          padding: "10px 12px",
+                          borderRadius: 18,
+                          cursor: "pointer",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+                        }}
+                      >
+                        {p.profiles?.avatar_url ? (
+                          <img
+                            src={p.profiles.avatar_url}
+                            alt=""
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: "50%",
+                              objectFit: "cover",
+                              border: "1px solid rgba(255,255,255,0.10)",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: "50%",
+                              background:
+                                "linear-gradient(135deg, #1abc9c, #00ffb0)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 13,
+                              fontWeight: 900,
+                              color: "#000",
+                            }}
+                          >
+                            {p.profiles?.full_name?.[0] || "U"}
+                          </div>
+                        )}
+
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 800,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <span>{p.profiles?.full_name || "User"}</span>
+
+                            {p.profiles?.is_verified_creator && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  padding: "3px 7px",
+                                  borderRadius: 999,
+                                  background: "rgba(0,255,176,0.12)",
+                                  border: "1px solid rgba(0,255,176,0.28)",
+                                  color: "#9cffd8",
+                                  fontWeight: 900,
+                                  letterSpacing: "0.05em",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                Verified
+                              </span>
+                            )}
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: 11,
+                              opacity: 0.66,
+                              marginTop: 2,
+                            }}
+                          >
+                            Joined the adventure
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: 12, opacity: 0.65 }}>
+                          Open →
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
+
+        {isSmallScreen && !isCreator && (
+          <div
+            style={{
+              position: "fixed",
+              left: 10,
+              right: 10,
+              bottom: 10,
+              zIndex: 9999,
+              borderRadius: 20,
+              background: "rgba(4,12,9,0.88)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              backdropFilter: "blur(16px)",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.42)",
+              padding: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                marginBottom: 8,
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 900,
+                    color: "#fff",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {tour.title}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "rgba(230,255,240,0.75)",
+                    marginTop: 2,
+                  }}
+                >
+                  👥 {tour.participants || 0}/{tour.max_people} ·{" "}
+                  {tour.price ? `${tour.price}€` : "Free"}
+                </div>
+              </div>
+
+              <button
+                onClick={toggleSave}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#fff",
+                  borderRadius: 14,
+                  padding: "12px 14px",
+                  fontWeight: 800,
+                  minWidth: 68,
+                }}
+              >
+                {isSaved ? "♥" : "♡"}
+              </button>
+            </div>
+
+            {!isJoined ? (
+              <button
+                style={{
+                  ...primaryBtn,
+                  marginBottom: 0,
+                  opacity: isFull ? 0.5 : 1,
+                  cursor: isFull ? "default" : "pointer",
+                }}
+                disabled={isFull || loading}
+                onClick={joinTour}
+              >
+                {isFull ? "Tour is full" : "Join tour"}
+              </button>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <button
+                  style={{ ...secondaryBtn, marginBottom: 0 }}
+                  onClick={leaveTour}
+                  disabled={loading}
+                >
+                  Leave
+                </button>
+
+                <button
+                  style={{ ...primaryBtn, marginBottom: 0 }}
+                  onClick={() => navigate(`/chat/${tour.id}`)}
+                >
+                  Group chat
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

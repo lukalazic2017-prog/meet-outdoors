@@ -26,7 +26,8 @@ export default function EventDetails() {
   const [leaving, setLeaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // ✅ MOBILE DETECTION (no CSS file)
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 820px)");
@@ -40,7 +41,6 @@ export default function EventDetails() {
     };
   }, []);
 
-  // ===== HELPERS =====
   const formatDateTime = (iso) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -85,7 +85,6 @@ export default function EventDetails() {
     return Number.isFinite(n) ? n : null;
   };
 
-  // ===== LOAD ATTENDEES =====
   const loadAttendees = async (eventId, currentUser) => {
     const { data, error } = await supabase
       .from("event_attendees")
@@ -115,7 +114,6 @@ export default function EventDetails() {
     }
   };
 
-  // ===== LOAD EVENT =====
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -147,7 +145,6 @@ export default function EventDetails() {
     load();
   }, [id]);
 
-  // ===== JOIN =====
   const handleJoin = async () => {
     if (!event) return;
 
@@ -177,7 +174,6 @@ export default function EventDetails() {
     setJoining(false);
   };
 
-  // ===== LEAVE =====
   const handleLeave = async () => {
     if (!event) return;
 
@@ -208,7 +204,6 @@ export default function EventDetails() {
     setLeaving(false);
   };
 
-  // ===== DELETE EVENT =====
   const handleDeleteEvent = async () => {
     if (!event) return;
 
@@ -227,10 +222,8 @@ export default function EventDetails() {
   };
 
   const isOwner = user && event && user.id === event.creator_id;
-
   const joinLabel = hasJoined ? "You’re going" : "Join event";
 
-  // Map coords
   const lat = useMemo(() => {
     const n = safeNum(event?.latitude);
     return n ?? 43.9;
@@ -241,23 +234,29 @@ export default function EventDetails() {
     return n ?? 21;
   }, [event?.longitude]);
 
-  // ===== STYLES (Outdoor Luxury / Patagonia vibe) =====
+  const heroParticipants = attendees.slice(0, 5);
+
   const styles = {
     page: {
       minHeight: "100vh",
       background:
-        "radial-gradient(circle at top, rgba(245,242,235,1) 0%, rgba(241,236,227,1) 30%, rgba(236,231,221,1) 100%)",
+        "radial-gradient(900px 420px at 10% -5%, rgba(42,77,57,0.20), transparent 55%)," +
+        "radial-gradient(900px 420px at 90% 0%, rgba(126,107,66,0.16), transparent 55%)," +
+        "linear-gradient(180deg, #f4efe5 0%, #ede6d8 36%, #e7dfcf 100%)",
       color: "#1a1d17",
-      padding: isMobile ? "16px 12px 92px" : "22px 16px 40px", // ✅ extra bottom padding for sticky bar
-      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+      padding: isMobile ? "0 0 98px" : "16px 16px 40px",
+      fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
       display: "flex",
       justifyContent: "center",
       boxSizing: "border-box",
+      overflowX: "hidden",
     },
+
     container: {
       width: "100%",
-      maxWidth: 1180,
+      maxWidth: 1240,
       boxSizing: "border-box",
+      padding: isMobile ? 0 : 0,
     },
 
     topBar: {
@@ -266,62 +265,124 @@ export default function EventDetails() {
       justifyContent: "space-between",
       gap: 10,
       flexWrap: "wrap",
-      marginBottom: isMobile ? 10 : 14,
+      marginBottom: isMobile ? 0 : 14,
+      padding: isMobile ? "14px 14px 10px" : "0 0 0",
     },
+
     backBtn: {
       display: "inline-flex",
       alignItems: "center",
       gap: 10,
-      padding: "10px 14px",
+      padding: isMobile ? "10px 14px" : "10px 14px",
       borderRadius: 999,
-      border: "1px solid rgba(58, 72, 46, 0.18)",
-      background: "rgba(255,255,255,0.7)",
-      backdropFilter: "blur(8px)",
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      background: "rgba(255,255,255,0.72)",
+      backdropFilter: "blur(12px)",
       cursor: "pointer",
-      fontWeight: 800,
+      fontWeight: 900,
       fontSize: 13,
       color: "#1f2a1d",
-      boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
+      boxShadow: "0 12px 26px rgba(0,0,0,0.07)",
       userSelect: "none",
       WebkitTapHighlightColor: "transparent",
     },
+
     crumb: {
       fontSize: 12,
       color: "rgba(40,52,34,0.72)",
-      fontWeight: 700,
+      fontWeight: 800,
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
     },
 
     hero: {
       position: "relative",
-      borderRadius: isMobile ? 20 : 26,
+      borderRadius: isMobile ? "0 0 30px 30px" : 30,
       overflow: "hidden",
-      border: "1px solid rgba(55, 72, 44, 0.18)",
-      boxShadow: "0 30px 90px rgba(16, 20, 14, 0.18)",
+      border: isMobile ? "none" : "1px solid rgba(55, 72, 44, 0.14)",
+      boxShadow: isMobile
+        ? "0 26px 70px rgba(16, 20, 14, 0.16)"
+        : "0 30px 90px rgba(16, 20, 14, 0.16)",
       background: "rgba(255,255,255,0.55)",
     },
+
     heroImg: {
       width: "100%",
-      height: isMobile ? 230 : 320, // ✅ smaller on mobile
+      height: isMobile ? 330 : 420,
       objectFit: "cover",
-      transform: "scale(1.02)",
-      filter: "saturate(1.05) contrast(1.02)",
+      transform: "scale(1.03)",
+      filter: "saturate(1.08) contrast(1.04)",
       display: "block",
+      cursor: "zoom-in",
     },
+
     heroOverlay: {
       position: "absolute",
       inset: 0,
       background:
-        "linear-gradient(to top, rgba(236,231,221,0.98) 0%, rgba(236,231,221,0.28) 60%, rgba(236,231,221,0.0) 100%)",
+        isMobile
+          ? "linear-gradient(to top, rgba(236,231,221,1) 0%, rgba(236,231,221,0.95) 18%, rgba(236,231,221,0.25) 60%, rgba(236,231,221,0.05) 100%)"
+          : "linear-gradient(to top, rgba(236,231,221,0.98) 0%, rgba(236,231,221,0.76) 20%, rgba(236,231,221,0.18) 55%, rgba(236,231,221,0.02) 100%)",
     },
 
-    // ✅ Hero content: on desktop absolute overlay, on mobile static flow so nothing gets hidden
+    heroShine: {
+      position: "absolute",
+      inset: 0,
+      background:
+        "radial-gradient(420px 220px at 18% 10%, rgba(255,255,255,0.30), transparent 60%)," +
+        "radial-gradient(520px 260px at 85% 15%, rgba(255,255,255,0.18), transparent 65%)",
+      mixBlendMode: "screen",
+      pointerEvents: "none",
+    },
+
+    heroTopFloating: {
+      position: "absolute",
+      top: isMobile ? 14 : 18,
+      left: isMobile ? 14 : 18,
+      right: isMobile ? 14 : 18,
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 10,
+      flexWrap: "wrap",
+      zIndex: 3,
+    },
+
+    heroTopActions: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+    },
+
+    glassMiniBtn: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      height: 40,
+      minWidth: 40,
+      padding: "0 14px",
+      borderRadius: 999,
+      border: "1px solid rgba(255,255,255,0.18)",
+      background: "rgba(18,24,18,0.26)",
+      backdropFilter: "blur(12px)",
+      color: "#fff",
+      fontWeight: 900,
+      fontSize: 12,
+      boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+      cursor: "pointer",
+      WebkitTapHighlightColor: "transparent",
+    },
+
     heroContent: isMobile
       ? {
           position: "relative",
-          padding: 14,
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
+          padding: "0 14px 14px",
+          marginTop: -18,
+          display: "grid",
+          gap: 14,
+          zIndex: 2,
         }
       : {
           position: "absolute",
@@ -329,14 +390,16 @@ export default function EventDetails() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-end",
-          gap: 16,
+          gap: 18,
           flexWrap: "wrap",
+          zIndex: 2,
         },
 
     heroLeft: {
       minWidth: 0,
-      maxWidth: isMobile ? "100%" : 720,
+      maxWidth: isMobile ? "100%" : 760,
     },
+
     badgesRow: {
       display: "flex",
       alignItems: "center",
@@ -344,52 +407,60 @@ export default function EventDetails() {
       flexWrap: "wrap",
       marginBottom: 10,
     },
+
     badge: {
       display: "inline-flex",
       alignItems: "center",
       gap: 8,
-      padding: "7px 12px",
+      padding: isMobile ? "8px 12px" : "8px 12px",
       borderRadius: 999,
-      border: "1px solid rgba(58, 72, 46, 0.18)",
+      border: "1px solid rgba(58, 72, 46, 0.14)",
       background: "rgba(255,255,255,0.72)",
-      backdropFilter: "blur(8px)",
-      fontSize: 12,
+      backdropFilter: "blur(10px)",
+      fontSize: 11,
       fontWeight: 900,
       color: "#263321",
-      letterSpacing: "0.06em",
+      letterSpacing: "0.08em",
       textTransform: "uppercase",
       whiteSpace: "nowrap",
+      boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
     },
+
     heroTitle: {
-      fontSize: isMobile ? 26 : 36,
-      fontWeight: 950,
-      lineHeight: 1.05,
+      fontSize: isMobile ? 30 : 48,
+      fontWeight: 1000,
+      lineHeight: 0.97,
       margin: 0,
       color: "#162014",
-      textShadow: "0 10px 18px rgba(0,0,0,0.10)",
+      letterSpacing: "-0.04em",
+      textShadow: "0 10px 20px rgba(255,255,255,0.15)",
       wordBreak: "break-word",
     },
+
     heroSubtitle: {
-      marginTop: 8,
-      fontSize: isMobile ? 13 : 14,
-      fontWeight: 650,
+      marginTop: 10,
+      fontSize: isMobile ? 14 : 15,
+      fontWeight: 700,
       color: "rgba(28, 34, 22, 0.78)",
       maxWidth: 620,
+      lineHeight: 1.6,
     },
+
     metaRow: {
-      marginTop: 12,
+      marginTop: 14,
       display: "flex",
       gap: 10,
       flexWrap: "wrap",
     },
+
     metaPill: {
       display: "inline-flex",
       alignItems: "center",
       gap: 8,
-      padding: isMobile ? "9px 10px" : "10px 12px",
-      borderRadius: 14,
-      border: "1px solid rgba(58, 72, 46, 0.16)",
-      background: "rgba(255,255,255,0.78)",
+      padding: isMobile ? "10px 12px" : "10px 12px",
+      borderRadius: 16,
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      background: "rgba(255,255,255,0.80)",
       backdropFilter: "blur(10px)",
       fontSize: 12,
       fontWeight: 800,
@@ -398,149 +469,253 @@ export default function EventDetails() {
       maxWidth: "100%",
     },
 
-    // ✅ On mobile, action card should NOT fight with overlay; we still show it but also sticky CTA
+    peoplePreviewRow: {
+      marginTop: 14,
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      flexWrap: "wrap",
+    },
+
+    peopleStack: {
+      display: "flex",
+      alignItems: "center",
+    },
+
+    peopleStackAvatar: {
+      width: 34,
+      height: 34,
+      borderRadius: "50%",
+      objectFit: "cover",
+      border: "2px solid rgba(255,255,255,0.92)",
+      boxShadow: "0 8px 18px rgba(0,0,0,0.10)",
+      background: "#fff",
+    },
+
+    peoplePreviewText: {
+      fontSize: 12,
+      fontWeight: 800,
+      color: "rgba(27,38,23,0.72)",
+    },
+
     heroRight: {
       minWidth: 0,
+      width: isMobile ? "100%" : 360,
       maxWidth: isMobile ? "100%" : 360,
       alignSelf: isMobile ? "stretch" : "flex-end",
     },
+
     actionCard: {
-      borderRadius: 20,
-      padding: 14,
-      border: "1px solid rgba(58, 72, 46, 0.18)",
-      background: "rgba(255,255,255,0.86)",
-      backdropFilter: "blur(10px)",
-      boxShadow: "0 18px 40px rgba(0,0,0,0.10)",
+      borderRadius: 24,
+      padding: isMobile ? 16 : 18,
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      background:
+        "linear-gradient(180deg, rgba(255,255,255,0.90), rgba(255,255,255,0.82))",
+      backdropFilter: "blur(14px)",
+      boxShadow:
+        "0 24px 48px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.50)",
     },
+
+    actionTopRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 10,
+    },
+
     actionTitle: {
       fontSize: 13,
-      fontWeight: 950,
-      letterSpacing: "0.02em",
+      fontWeight: 1000,
+      letterSpacing: "0.08em",
       marginBottom: 6,
       color: "#1b2617",
+      textTransform: "uppercase",
     },
+
     actionSub: {
       fontSize: 12,
       fontWeight: 700,
       color: "rgba(35, 45, 30, 0.76)",
-      marginBottom: 12,
+      lineHeight: 1.55,
     },
+
+    statusBubble: {
+      display: "inline-flex",
+      padding: "7px 11px",
+      borderRadius: 999,
+      background: "rgba(40,64,42,0.10)",
+      border: "1px solid rgba(40,64,42,0.14)",
+      fontSize: 11,
+      fontWeight: 1000,
+      color: "#26402b",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+      whiteSpace: "nowrap",
+    },
+
     bigCount: {
-      fontSize: 28,
-      fontWeight: 950,
+      fontSize: isMobile ? 38 : 44,
+      fontWeight: 1000,
+      color: "#1b2617",
+      lineHeight: 1,
+      letterSpacing: "-0.04em",
+      marginTop: 14,
+    },
+
+    countHint: {
+      marginTop: 6,
+      fontSize: 12,
+      fontWeight: 800,
+      color: "rgba(35,45,30,0.70)",
+      lineHeight: 1.5,
+    },
+
+    miniStats: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3, minmax(0,1fr))",
+      gap: 10,
+      marginTop: 14,
+      marginBottom: 4,
+    },
+
+    miniStatCard: {
+      borderRadius: 16,
+      padding: "12px 10px",
+      background: "rgba(245,242,235,0.72)",
+      border: "1px solid rgba(58,72,46,0.10)",
+      textAlign: "center",
+    },
+
+    miniStatValue: {
+      fontSize: 16,
+      fontWeight: 1000,
       color: "#1b2617",
       lineHeight: 1,
     },
-    countHint: {
-      marginTop: 4,
-      fontSize: 12,
-      fontWeight: 700,
-      color: "rgba(35,45,30,0.7)",
+
+    miniStatLabel: {
+      marginTop: 5,
+      fontSize: 10,
+      fontWeight: 900,
+      letterSpacing: "0.10em",
+      textTransform: "uppercase",
+      color: "rgba(35,45,30,0.60)",
     },
 
     primaryBtn: (disabled) => ({
-      marginTop: 12,
+      marginTop: 14,
       width: "100%",
+      minHeight: 48,
       padding: "12px 14px",
       borderRadius: 999,
       border: "none",
       cursor: disabled ? "default" : "pointer",
-      fontWeight: 950,
+      fontWeight: 1000,
       fontSize: 13,
       background: disabled
         ? "rgba(38, 60, 32, 0.25)"
         : "linear-gradient(135deg, #28402a, #1f3423)",
       color: "#f3f1ea",
-      boxShadow: disabled ? "none" : "0 14px 32px rgba(33, 52, 31, 0.25)",
+      boxShadow: disabled ? "none" : "0 16px 36px rgba(33, 52, 31, 0.24)",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       gap: 10,
       WebkitTapHighlightColor: "transparent",
     }),
+
     secondaryBtn: {
       marginTop: 10,
       width: "100%",
+      minHeight: 46,
       padding: "11px 14px",
       borderRadius: 999,
-      border: "1px solid rgba(96, 52, 37, 0.25)",
+      border: "1px solid rgba(96, 52, 37, 0.18)",
       cursor: "pointer",
       fontWeight: 950,
       fontSize: 13,
-      background: "rgba(255,255,255,0.88)",
+      background: "rgba(255,255,255,0.92)",
       color: "#5a2d22",
-      boxShadow: "0 12px 26px rgba(0,0,0,0.06)",
+      boxShadow: "0 12px 26px rgba(0,0,0,0.05)",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       gap: 10,
       WebkitTapHighlightColor: "transparent",
     },
+
     ownerRow: {
       marginTop: 10,
       display: "flex",
       gap: 10,
       flexWrap: "wrap",
     },
+
     ownerBtn: (danger) => ({
       flex: 1,
       minWidth: 140,
+      minHeight: 46,
       padding: "11px 12px",
       borderRadius: 999,
       border: danger
-        ? "1px solid rgba(140, 60, 40, 0.28)"
-        : "1px solid rgba(58, 72, 46, 0.18)",
+        ? "1px solid rgba(140, 60, 40, 0.20)"
+        : "1px solid rgba(58, 72, 46, 0.14)",
       cursor: "pointer",
-      fontWeight: 950,
+      fontWeight: 1000,
       fontSize: 12,
       background: danger
-        ? "rgba(255, 240, 235, 0.9)"
-        : "rgba(255,255,255,0.9)",
+        ? "rgba(255, 240, 235, 0.94)"
+        : "rgba(255,255,255,0.94)",
       color: danger ? "#7a2a1a" : "#1f2a1d",
-      boxShadow: "0 12px 26px rgba(0,0,0,0.06)",
+      boxShadow: "0 12px 26px rgba(0,0,0,0.05)",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
       WebkitTapHighlightColor: "transparent",
     }),
+
     errorBox: {
-      marginTop: 10,
-      borderRadius: 14,
-      padding: "10px 12px",
-      border: "1px solid rgba(140,60,40,0.22)",
-      background: "rgba(255, 238, 234, 0.9)",
+      marginTop: 12,
+      borderRadius: 16,
+      padding: "11px 12px",
+      border: "1px solid rgba(140,60,40,0.18)",
+      background: "rgba(255, 238, 234, 0.92)",
       color: "#7a2a1a",
       fontWeight: 850,
       fontSize: 12,
+      lineHeight: 1.5,
     },
 
-    // ✅ Responsive grid: stack on mobile
     grid: isMobile
       ? {
           display: "grid",
           gridTemplateColumns: "1fr",
-          gap: 12,
-          marginTop: 12,
+          gap: 14,
+          marginTop: 14,
           alignItems: "start",
+          padding: "0 14px",
         }
       : {
           display: "grid",
-          gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)",
-          gap: 16,
-          marginTop: 16,
+          gridTemplateColumns: "minmax(0, 3fr) minmax(380px, 2fr)",
+          gap: 18,
+          marginTop: 18,
           alignItems: "start",
         },
 
     card: {
-      borderRadius: 22,
-      padding: isMobile ? 14 : 16,
-      border: "1px solid rgba(58, 72, 46, 0.18)",
-      background: "rgba(255,255,255,0.84)",
-      backdropFilter: "blur(10px)",
-      boxShadow: "0 20px 55px rgba(0,0,0,0.10)",
+      borderRadius: 24,
+      padding: isMobile ? 16 : 18,
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      background:
+        "linear-gradient(180deg, rgba(255,255,255,0.88), rgba(255,255,255,0.82))",
+      backdropFilter: "blur(12px)",
+      boxShadow:
+        "0 20px 55px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.45)",
       overflow: "hidden",
     },
+
     sectionTitleRow: {
       display: "flex",
       alignItems: "baseline",
@@ -549,67 +724,90 @@ export default function EventDetails() {
       marginBottom: 10,
       flexWrap: "wrap",
     },
+
     sectionTitle: {
       fontSize: 14,
       fontWeight: 1000,
       color: "#1b2617",
-      letterSpacing: "0.02em",
+      letterSpacing: "0.04em",
+      textTransform: "uppercase",
     },
+
     sectionHint: {
       fontSize: 12,
-      fontWeight: 700,
-      color: "rgba(35,45,30,0.72)",
+      fontWeight: 800,
+      color: "rgba(35,45,30,0.68)",
     },
+
     paragraph: {
       marginTop: 6,
-      fontSize: 13,
-      lineHeight: 1.65,
+      fontSize: 14,
+      lineHeight: 1.75,
       fontWeight: 650,
       color: "rgba(26, 32, 20, 0.86)",
       whiteSpace: "pre-wrap",
     },
+
     infoGrid: {
-      marginTop: 12,
+      marginTop: 14,
       display: "grid",
       gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0,1fr))",
-      gap: 10,
+      gap: 12,
     },
+
     infoBox: {
-      borderRadius: 16,
-      padding: 12,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
-      background: "rgba(245,242,235,0.65)",
+      borderRadius: 18,
+      padding: 14,
+      border: "1px solid rgba(58, 72, 46, 0.12)",
+      background:
+        "linear-gradient(180deg, rgba(245,242,235,0.76), rgba(245,242,235,0.64))",
       minWidth: 0,
+      boxShadow: "0 10px 22px rgba(0,0,0,0.03)",
     },
+
     infoLabel: {
-      fontSize: 11,
+      fontSize: 10,
       textTransform: "uppercase",
-      letterSpacing: "0.12em",
-      fontWeight: 900,
-      color: "rgba(35,45,30,0.65)",
-      marginBottom: 6,
+      letterSpacing: "0.16em",
+      fontWeight: 1000,
+      color: "rgba(35,45,30,0.58)",
+      marginBottom: 8,
     },
+
     infoValue: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: 900,
       color: "#1b2617",
       wordBreak: "break-word",
+      lineHeight: 1.45,
     },
 
     mapBox: {
-      borderRadius: 18,
+      borderRadius: 20,
       overflow: "hidden",
-      border: "1px solid rgba(58, 72, 46, 0.18)",
-      boxShadow: "0 14px 38px rgba(0,0,0,0.08)",
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      boxShadow: "0 14px 38px rgba(0,0,0,0.06)",
     },
+
     mapWrap: {
-      height: isMobile ? 220 : 260,
+      height: isMobile ? 260 : 320,
       width: "100%",
     },
 
-    attendeesWrap: {
-      marginTop: 16,
+    mapTopMeta: {
+      marginTop: 12,
+      padding: "12px 14px",
+      borderRadius: 16,
+      border: "1px solid rgba(58,72,46,0.12)",
+      background: "rgba(245,242,235,0.66)",
+      display: "grid",
+      gap: 6,
     },
+
+    attendeesWrap: {
+      marginTop: 18,
+    },
+
     attendeesHeader: {
       display: "flex",
       alignItems: "center",
@@ -617,51 +815,59 @@ export default function EventDetails() {
       gap: 10,
       flexWrap: "wrap",
     },
+
     attendeesCountChip: {
       display: "inline-flex",
       alignItems: "center",
       gap: 8,
       padding: "8px 12px",
       borderRadius: 999,
-      border: "1px solid rgba(58, 72, 46, 0.16)",
-      background: "rgba(245,242,235,0.75)",
-      fontWeight: 950,
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      background: "rgba(245,242,235,0.84)",
+      fontWeight: 1000,
       fontSize: 12,
       color: "#1f2a1d",
       whiteSpace: "nowrap",
+      boxShadow: "0 8px 18px rgba(0,0,0,0.04)",
     },
+
     attendeeList: {
-      marginTop: 12,
-      maxHeight: isMobile ? 260 : 320,
+      marginTop: 14,
+      maxHeight: isMobile ? 380 : 480,
       overflowY: "auto",
       paddingRight: 4,
     },
+
     attendeeRow: {
       display: "flex",
       alignItems: "center",
       gap: 12,
-      padding: "10px 10px",
-      borderRadius: 16,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
-      background: "rgba(255,255,255,0.90)",
-      boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
+      padding: "12px 12px",
+      borderRadius: 18,
+      border: "1px solid rgba(58, 72, 46, 0.12)",
+      background: "rgba(255,255,255,0.92)",
+      boxShadow: "0 10px 22px rgba(0,0,0,0.04)",
       marginBottom: 10,
       minWidth: 0,
+      transition: "transform .15s ease, box-shadow .15s ease",
     },
+
     avatar: {
-      width: 40,
-      height: 40,
+      width: 42,
+      height: 42,
       borderRadius: "50%",
       objectFit: "cover",
-      border: "1px solid rgba(58, 72, 46, 0.18)",
+      border: "1px solid rgba(58, 72, 46, 0.16)",
       background: "rgba(245,242,235,0.9)",
       flex: "0 0 auto",
+      boxShadow: "0 8px 16px rgba(0,0,0,0.05)",
     },
+
     avatarFallback: {
-      width: 40,
-      height: 40,
+      width: 42,
+      height: 42,
       borderRadius: "50%",
-      border: "1px solid rgba(58, 72, 46, 0.18)",
+      border: "1px solid rgba(58, 72, 46, 0.16)",
       background:
         "linear-gradient(135deg, rgba(40,64,42,0.18), rgba(160,140,95,0.18))",
       display: "flex",
@@ -670,7 +876,9 @@ export default function EventDetails() {
       fontWeight: 1000,
       color: "#1f2a1d",
       flex: "0 0 auto",
+      boxShadow: "0 8px 16px rgba(0,0,0,0.05)",
     },
+
     attendeeName: {
       fontSize: 13,
       fontWeight: 1000,
@@ -681,12 +889,20 @@ export default function EventDetails() {
       flexWrap: "wrap",
       minWidth: 0,
     },
+
+    attendeeArrow: {
+      flex: "0 0 auto",
+      fontSize: 13,
+      color: "rgba(35,45,30,0.52)",
+      fontWeight: 900,
+    },
+
     youTag: {
       display: "inline-flex",
       padding: "3px 8px",
       borderRadius: 999,
-      border: "1px solid rgba(40,64,42,0.24)",
-      background: "rgba(245,242,235,0.9)",
+      border: "1px solid rgba(40,64,42,0.18)",
+      background: "rgba(245,242,235,0.92)",
       fontSize: 10,
       fontWeight: 1000,
       letterSpacing: "0.12em",
@@ -695,26 +911,27 @@ export default function EventDetails() {
       whiteSpace: "nowrap",
     },
 
-    // ✅ Sticky CTA (mobile only)
     stickyBar: {
       position: "fixed",
       left: 10,
       right: 10,
       bottom: 10,
       zIndex: 5000,
-      borderRadius: 18,
-      border: "1px solid rgba(58, 72, 46, 0.18)",
-      background: "rgba(255,255,255,0.88)",
-      backdropFilter: "blur(14px)",
-      boxShadow: "0 22px 60px rgba(0,0,0,0.22)",
+      borderRadius: 20,
+      border: "1px solid rgba(58, 72, 46, 0.14)",
+      background: "rgba(255,255,255,0.90)",
+      backdropFilter: "blur(16px)",
+      boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
       padding: 10,
     },
+
     stickyInner: {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       gap: 10,
     },
+
     stickyMeta: {
       minWidth: 0,
       flex: 1,
@@ -722,15 +939,17 @@ export default function EventDetails() {
       flexDirection: "column",
       gap: 4,
     },
+
     stickyTitle: {
       fontSize: 13,
-      fontWeight: 950,
+      fontWeight: 1000,
       color: "#1b2617",
       lineHeight: 1.15,
       whiteSpace: "nowrap",
       overflow: "hidden",
       textOverflow: "ellipsis",
     },
+
     stickySub: {
       fontSize: 12,
       fontWeight: 800,
@@ -739,39 +958,77 @@ export default function EventDetails() {
       overflow: "hidden",
       textOverflow: "ellipsis",
     },
+
     stickyBtnPrimary: (disabled) => ({
       flex: "0 0 auto",
-      padding: "12px 14px",
-      borderRadius: 14,
+      minHeight: 46,
+      padding: "12px 16px",
+      borderRadius: 16,
       border: "none",
-      fontWeight: 950,
+      fontWeight: 1000,
       fontSize: 13,
       cursor: disabled ? "default" : "pointer",
       background: disabled
         ? "rgba(38, 60, 32, 0.25)"
         : "linear-gradient(135deg, #28402a, #1f3423)",
       color: "#f3f1ea",
-      boxShadow: disabled ? "none" : "0 14px 26px rgba(33, 52, 31, 0.22)",
+      boxShadow: disabled ? "none" : "0 14px 26px rgba(33, 52, 31, 0.18)",
       whiteSpace: "nowrap",
       WebkitTapHighlightColor: "transparent",
     }),
+
     stickyBtnSecondary: {
       flex: "0 0 auto",
+      minHeight: 46,
       padding: "12px 14px",
-      borderRadius: 14,
-      border: "1px solid rgba(96, 52, 37, 0.25)",
-      fontWeight: 950,
+      borderRadius: 16,
+      border: "1px solid rgba(96, 52, 37, 0.18)",
+      fontWeight: 1000,
       fontSize: 13,
       cursor: "pointer",
-      background: "rgba(255,255,255,0.92)",
+      background: "rgba(255,255,255,0.94)",
       color: "#5a2d22",
-      boxShadow: "0 12px 22px rgba(0,0,0,0.10)",
+      boxShadow: "0 12px 22px rgba(0,0,0,0.08)",
       whiteSpace: "nowrap",
       WebkitTapHighlightColor: "transparent",
     },
+
+    lightboxOverlay: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 9000,
+      background: "rgba(0,0,0,0.92)",
+      backdropFilter: "blur(10px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 18,
+    },
+
+    lightboxImg: {
+      maxWidth: "100%",
+      maxHeight: "100%",
+      objectFit: "contain",
+      borderRadius: 20,
+      boxShadow: "0 30px 80px rgba(0,0,0,0.60)",
+    },
+
+    lightboxClose: {
+      position: "absolute",
+      top: 16,
+      right: 16,
+      height: 42,
+      minWidth: 42,
+      padding: "0 14px",
+      borderRadius: 999,
+      border: "1px solid rgba(255,255,255,0.16)",
+      background: "rgba(255,255,255,0.08)",
+      color: "#fff",
+      fontWeight: 1000,
+      cursor: "pointer",
+    },
   };
 
-  // ===== RENDER =====
   if (loading) {
     return (
       <div style={styles.page}>
@@ -786,9 +1043,10 @@ export default function EventDetails() {
           <div style={styles.hero}>
             <img src={defaultCover} alt="loading" style={styles.heroImg} />
             <div style={styles.heroOverlay} />
+            <div style={styles.heroShine} />
           </div>
 
-          <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+          <div style={{ marginTop: 16, display: "grid", gap: 12, padding: isMobile ? "0 14px" : 0 }}>
             <div style={styles.card}>
               <div style={styles.sectionTitleRow}>
                 <div style={styles.sectionTitle}>About this event</div>
@@ -835,13 +1093,15 @@ export default function EventDetails() {
             <div style={styles.crumb}>Event not found</div>
           </div>
 
-          <div style={styles.card}>
-            <div style={styles.sectionTitleRow}>
-              <div style={styles.sectionTitle}>We couldn’t find this event</div>
-              <div style={styles.sectionHint}>It may have been removed.</div>
-            </div>
-            <div style={styles.paragraph}>
-              Try going back and exploring other events.
+          <div style={{ padding: isMobile ? "0 14px" : 0 }}>
+            <div style={styles.card}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>We couldn’t find this event</div>
+                <div style={styles.sectionHint}>It may have been removed.</div>
+              </div>
+              <div style={styles.paragraph}>
+                Try going back and exploring other events.
+              </div>
             </div>
           </div>
         </div>
@@ -850,403 +1110,536 @@ export default function EventDetails() {
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        {/* TOP BAR */}
-        <div style={styles.topBar}>
-          <button style={styles.backBtn} onClick={() => navigate(-1)}>
-            ← Back to explore
-          </button>
-          <div style={styles.crumb}>
-            {event.category ? `${event.category} · ` : ""}
-            {event.country || "Outdoor"}
+    <>
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.topBar}>
+            <button style={styles.backBtn} onClick={() => navigate(-1)}>
+              ← Back to explore
+            </button>
+            <div style={styles.crumb}>
+              {event.category ? `${event.category} · ` : ""}
+              {event.country || "Outdoor"}
+            </div>
           </div>
-        </div>
 
-        {/* HERO */}
-        <div style={styles.hero}>
-          <img src={coverUrl} alt={event.title} style={styles.heroImg} />
-          <div style={styles.heroOverlay} />
+          <div style={styles.hero}>
+            <img
+              src={coverUrl}
+              alt={event.title}
+              style={styles.heroImg}
+              onClick={() => setLightboxOpen(true)}
+            />
+            <div style={styles.heroOverlay} />
+            <div style={styles.heroShine} />
 
-          <div style={styles.heroContent}>
-            <div style={styles.heroLeft}>
-              <div style={styles.badgesRow}>
-                {event.category && (
-                  <div style={styles.badge}>⛰ {event.category}</div>
-                )}
-                <div style={styles.badge}>🌿 Outdoor event</div>
-              </div>
-
-              <h1 style={styles.heroTitle}>{event.title}</h1>
-
-              {event.subtitle && (
-                <div style={styles.heroSubtitle}>{event.subtitle}</div>
+            <div style={styles.heroTopFloating}>
+              {isMobile ? (
+                <button style={styles.glassMiniBtn} onClick={() => navigate(-1)}>
+                  ← Back
+                </button>
+              ) : (
+                <div />
               )}
 
-              <div style={styles.metaRow}>
-                <div style={styles.metaPill}>📅 {dateLine || "Date TBA"}</div>
-                <div style={styles.metaPill}>📍 {locationLine}</div>
-                <div style={styles.metaPill}>👥 {attendeesCount} going</div>
-                <div style={styles.metaPill}>🏷 {priceLine}</div>
-              </div>
-            </div>
+              <div style={styles.heroTopActions}>
+                <button
+                  style={styles.glassMiniBtn}
+                  onClick={() => setLightboxOpen(true)}
+                >
+                  ⤢ View
+                </button>
 
-            {/* Desktop action card stays visible */}
-            <div style={styles.heroRight}>
-              <div style={styles.actionCard}>
-                <div style={styles.actionTitle}>Reserve your spot</div>
-                <div style={styles.actionSub}>
-                  Join the group and see who’s going.
-                </div>
-
-                <div style={styles.bigCount}>{attendeesCount}</div>
-                <div style={styles.countHint}>
-                  {attendeesCount === 0
-                    ? "Be the first one to join."
-                    : attendeesCount === 1
-                    ? "Person going so far."
-                    : "People going so far."}
-                </div>
-
-                {/* ✅ On mobile, CTA is sticky; here we still keep controls for desktop/tablet */}
-                {!isMobile && (
-                  <>
-                    {hasJoined ? (
-                      <>
-                        <button style={styles.primaryBtn(true)} disabled>
-                          ✅ You’re going
-                        </button>
-                        <button
-                          onClick={handleLeave}
-                          disabled={leaving}
-                          style={styles.secondaryBtn}
-                        >
-                          {leaving ? "Leaving…" : "Leave event"}
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={handleJoin}
-                        disabled={joining}
-                        style={styles.primaryBtn(joining)}
-                      >
-                        {joining ? "Joining…" : joinLabel}{" "}
-                        {!joining && <span>➜</span>}
-                      </button>
-                    )}
-
-                    {!user && (
-                      <div
-                        style={{
-                          marginTop: 10,
-                          fontSize: 12,
-                          fontWeight: 750,
-                          color: "rgba(35,45,30,0.72)",
-                        }}
-                      >
-                        Sign in to join this event.
-                      </div>
-                    )}
-
-                    {isOwner && (
-                      <div style={styles.ownerRow}>
-                        <button
-                          onClick={() => navigate(`/edit-event/${event.id}`)}
-                          style={styles.ownerBtn(false)}
-                        >
-                          ✏️ Edit
-                        </button>
-                        <button
-                          onClick={handleDeleteEvent}
-                          style={styles.ownerBtn(true)}
-                        >
-                          🗑 Delete
-                        </button>
-                      </div>
-                    )}
-
-                    {errorMsg && <div style={styles.errorBox}>{errorMsg}</div>}
-                  </>
+                {isOwner && (
+                  <button
+                    style={styles.glassMiniBtn}
+                    onClick={() => navigate(`/edit-event/${event.id}`)}
+                  >
+                    ✏️ Edit
+                  </button>
                 )}
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* MAIN GRID */}
-        <div style={styles.grid}>
-          {/* LEFT - ABOUT + INFO */}
-          <div style={styles.card}>
-            <div style={styles.sectionTitleRow}>
-              <div style={styles.sectionTitle}>About this event</div>
-              <div style={styles.sectionHint}>
-                Details, vibe and what to expect.
-              </div>
-            </div>
-
-            <div style={styles.paragraph}>
-              {event.description ||
-                "The organizer hasn’t added a description yet."}
-            </div>
-
-            <div style={styles.infoGrid}>
-              <div style={styles.infoBox}>
-                <div style={styles.infoLabel}>Location</div>
-                <div style={styles.infoValue}>{locationLine}</div>
-              </div>
-
-              <div style={styles.infoBox}>
-                <div style={styles.infoLabel}>Dates</div>
-                <div style={styles.infoValue}>{dateLine || "Date TBA"}</div>
-              </div>
-
-              <div style={styles.infoBox}>
-                <div style={styles.infoLabel}>Price</div>
-                <div style={styles.infoValue}>{priceLine}</div>
-              </div>
-
-              <div style={styles.infoBox}>
-  <div style={styles.infoLabel}>Organizer</div>
-
-  <div
-    onClick={() => {
-      if (event.creator_id) navigate(`/profile/${event.creator_id}`);
-    }}
-    style={{
-      ...styles.infoValue,
-      cursor: event.creator_id ? "pointer" : "default",
-      textDecoration: event.creator_id ? "underline" : "none",
-    }}
-  >
-    {event.organizer_name || "Host not specified"}
-  </div>
-
-  {event.website_url && (
-    <a
-      href={event.website_url}
-      target="_blank"
-      rel="noreferrer"
-      style={{
-        display: "inline-block",
-        marginTop: 8,
-        fontSize: 12,
-        fontWeight: 900,
-        color: "#1f3423",
-        textDecoration: "underline",
-      }}
-    >
-      Visit event website
-    </a>
-  )}
-</div>
-</div>
-
-            {/* ATTENDEES */}
-            <div style={styles.attendeesWrap}>
-              <div style={styles.attendeesHeader}>
-                <div style={styles.sectionTitle}>People going</div>
-                <div style={styles.attendeesCountChip}>
-                  👥 {attendeesCount}{" "}
-                  {attendeesCount === 1 ? "person" : "people"}
+            <div style={styles.heroContent}>
+              <div style={styles.heroLeft}>
+                <div style={styles.badgesRow}>
+                  {event.category && <div style={styles.badge}>⛰ {event.category}</div>}
+                  <div style={styles.badge}>🌿 Outdoor event</div>
+                  <div style={styles.badge}>⚡ Live gathering</div>
                 </div>
-              </div>
 
-              {attendees.length === 0 ? (
-                <div
-                  style={{
-                    marginTop: 10,
-                    fontSize: 12,
-                    fontWeight: 800,
-                    color: "rgba(35,45,30,0.72)",
-                  }}
-                >
-                  No one yet. Be the first to join.
+                <h1 style={styles.heroTitle}>{event.title}</h1>
+
+                {event.subtitle && (
+                  <div style={styles.heroSubtitle}>{event.subtitle}</div>
+                )}
+
+                <div style={styles.metaRow}>
+                  <div style={styles.metaPill}>📅 {dateLine || "Date TBA"}</div>
+                  <div style={styles.metaPill}>📍 {locationLine}</div>
+                  <div style={styles.metaPill}>👥 {attendeesCount} going</div>
+                  <div style={styles.metaPill}>🏷 {priceLine}</div>
                 </div>
-              ) : (
-                <div style={styles.attendeeList}>
-                  {attendees.map((row) => {
-                    const p = row.profiles;
-                    const fullName = p?.full_name || "Outdoor friend";
-                    const isYou = user && row.user_id === user.id;
 
-                    return (
-                      <div
-  key={row.id}
-  style={{
-    ...styles.attendeeRow,
-    cursor: row.user_id ? "pointer" : "default",
-  }}
-  onClick={() => {
-    if (row.user_id) navigate(`/profile/${row.user_id}`);
-  }}
->
-                        {p?.avatar_url ? (
+                <div style={styles.peoplePreviewRow}>
+                  <div style={styles.peopleStack}>
+                    {heroParticipants.length > 0 ? (
+                      heroParticipants.map((row, idx) =>
+                        row?.profiles?.avatar_url ? (
                           <img
-                            src={p.avatar_url}
+                            key={row.id}
+                            src={row.profiles.avatar_url}
                             alt=""
-                            style={styles.avatar}
+                            style={{
+                              ...styles.peopleStackAvatar,
+                              marginLeft: idx === 0 ? 0 : -10,
+                              zIndex: 20 - idx,
+                            }}
                           />
                         ) : (
-                          <div style={styles.avatarFallback}>
-                            {initialsFromName(fullName)}
-                          </div>
-                        )}
-
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 2,
-                            minWidth: 0,
-                            flex: 1,
-                          }}
-                        >
-                          <div style={styles.attendeeName}>
-                            <span
-                              style={{
-                                minWidth: 0,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                maxWidth: "100%",
-                              }}
-                            >
-                              {fullName}
-                            </span>
-                            {isYou && <span style={styles.youTag}>YOU</span>}
-                          </div>
                           <div
+                            key={row.id}
                             style={{
-                              fontSize: 12,
-                              fontWeight: 750,
-                              color: "rgba(35,45,30,0.68)",
+                              ...styles.peopleStackAvatar,
+                              marginLeft: idx === 0 ? 0 : -10,
+                              zIndex: 20 - idx,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 1000,
+                              background: "#f5efe4",
                             }}
                           >
-                            {isYou ? "That’s you" : "Joining the adventure"}
+                            {initialsFromName(row?.profiles?.full_name)}
                           </div>
-                        </div>
+                        )
+                      )
+                    ) : (
+                      <div style={styles.peoplePreviewText}>No attendees yet.</div>
+                    )}
+                  </div>
+
+                  {heroParticipants.length > 0 && (
+                    <div style={styles.peoplePreviewText}>
+                      {attendeesCount === 1
+                        ? "1 person already going"
+                        : `${attendeesCount} people already going`}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={styles.heroRight}>
+                <div style={styles.actionCard}>
+                  <div style={styles.actionTopRow}>
+                    <div>
+                      <div style={styles.actionTitle}>Reserve your spot</div>
+                      <div style={styles.actionSub}>
+                        Join the group, see who’s going and plan the route with confidence.
                       </div>
-                    );
-                  })}
+                    </div>
+
+                    <div style={styles.statusBubble}>
+                      {hasJoined ? "Going" : "Open"}
+                    </div>
+                  </div>
+
+                  <div style={styles.bigCount}>{attendeesCount}</div>
+                  <div style={styles.countHint}>
+                    {attendeesCount === 0
+                      ? "Be the first one to join."
+                      : attendeesCount === 1
+                      ? "Person going so far."
+                      : "People going so far."}
+                  </div>
+
+                  <div style={styles.miniStats}>
+                    <div style={styles.miniStatCard}>
+                      <div style={styles.miniStatValue}>
+                        {event.is_free ? "Free" : event.price_from ? `${event.price_from}€` : "—"}
+                      </div>
+                      <div style={styles.miniStatLabel}>Price</div>
+                    </div>
+                    <div style={styles.miniStatCard}>
+                      <div style={styles.miniStatValue}>{attendeesCount}</div>
+                      <div style={styles.miniStatLabel}>Going</div>
+                    </div>
+                    <div style={styles.miniStatCard}>
+                      <div style={styles.miniStatValue}>
+                        {event.city || event.country || "—"}
+                      </div>
+                      <div style={styles.miniStatLabel}>Place</div>
+                    </div>
+                  </div>
+
+                  {!isMobile && (
+                    <>
+                      {hasJoined ? (
+                        <>
+                          <button style={styles.primaryBtn(true)} disabled>
+                            ✅ You’re going
+                          </button>
+                          <button
+                            onClick={handleLeave}
+                            disabled={leaving}
+                            style={styles.secondaryBtn}
+                          >
+                            {leaving ? "Leaving…" : "Leave event"}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={handleJoin}
+                          disabled={joining}
+                          style={styles.primaryBtn(joining)}
+                        >
+                          {joining ? "Joining…" : joinLabel} {!joining && <span>➜</span>}
+                        </button>
+                      )}
+
+                      {!user && (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: "rgba(35,45,30,0.72)",
+                          }}
+                        >
+                          Sign in to join this event.
+                        </div>
+                      )}
+
+                      {isOwner && (
+                        <div style={styles.ownerRow}>
+                          <button
+                            onClick={() => navigate(`/edit-event/${event.id}`)}
+                            style={styles.ownerBtn(false)}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            onClick={handleDeleteEvent}
+                            style={styles.ownerBtn(true)}
+                          >
+                            🗑 Delete
+                          </button>
+                        </div>
+                      )}
+
+                      {errorMsg && <div style={styles.errorBox}>{errorMsg}</div>}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.grid}>
+            <div style={styles.card}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>About this event</div>
+                <div style={styles.sectionHint}>
+                  Details, vibe and what to expect.
+                </div>
+              </div>
+
+              <div style={styles.paragraph}>
+                {event.description ||
+                  "The organizer hasn’t added a description yet."}
+              </div>
+
+              <div style={styles.infoGrid}>
+                <div style={styles.infoBox}>
+                  <div style={styles.infoLabel}>Location</div>
+                  <div style={styles.infoValue}>{locationLine}</div>
+                </div>
+
+                <div style={styles.infoBox}>
+                  <div style={styles.infoLabel}>Dates</div>
+                  <div style={styles.infoValue}>{dateLine || "Date TBA"}</div>
+                </div>
+
+                <div style={styles.infoBox}>
+                  <div style={styles.infoLabel}>Price</div>
+                  <div style={styles.infoValue}>{priceLine}</div>
+                </div>
+
+                <div style={styles.infoBox}>
+                  <div style={styles.infoLabel}>Organizer</div>
+
+                  <div
+                    onClick={() => {
+                      if (event.creator_id) navigate(`/profile/${event.creator_id}`);
+                    }}
+                    style={{
+                      ...styles.infoValue,
+                      cursor: event.creator_id ? "pointer" : "default",
+                      textDecoration: event.creator_id ? "underline" : "none",
+                    }}
+                  >
+                    {event.organizer_name || "Host not specified"}
+                  </div>
+
+                  {event.website_url && (
+                    <a
+                      href={event.website_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "inline-block",
+                        marginTop: 10,
+                        fontSize: 12,
+                        fontWeight: 1000,
+                        color: "#1f3423",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      Visit event website
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              <div style={styles.attendeesWrap}>
+                <div style={styles.attendeesHeader}>
+                  <div style={styles.sectionTitle}>People going</div>
+                  <div style={styles.attendeesCountChip}>
+                    👥 {attendeesCount} {attendeesCount === 1 ? "person" : "people"}
+                  </div>
+                </div>
+
+                {attendees.length === 0 ? (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: "rgba(35,45,30,0.72)",
+                    }}
+                  >
+                    No one yet. Be the first to join.
+                  </div>
+                ) : (
+                  <div style={styles.attendeeList}>
+                    {attendees.map((row) => {
+                      const p = row.profiles;
+                      const fullName = p?.full_name || "Outdoor friend";
+                      const isYou = user && row.user_id === user.id;
+
+                      return (
+                        <div
+                          key={row.id}
+                          style={{
+                            ...styles.attendeeRow,
+                            cursor: row.user_id ? "pointer" : "default",
+                          }}
+                          onClick={() => {
+                            if (row.user_id) navigate(`/profile/${row.user_id}`);
+                          }}
+                          onMouseEnter={(e) => {
+                            if (isMobile) return;
+                            e.currentTarget.style.transform = "translateY(-2px)";
+                            e.currentTarget.style.boxShadow = "0 16px 28px rgba(0,0,0,0.06)";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (isMobile) return;
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 10px 22px rgba(0,0,0,0.04)";
+                          }}
+                        >
+                          {p?.avatar_url ? (
+                            <img src={p.avatar_url} alt="" style={styles.avatar} />
+                          ) : (
+                            <div style={styles.avatarFallback}>
+                              {initialsFromName(fullName)}
+                            </div>
+                          )}
+
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 2,
+                              minWidth: 0,
+                              flex: 1,
+                            }}
+                          >
+                            <div style={styles.attendeeName}>
+                              <span
+                                style={{
+                                  minWidth: 0,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  maxWidth: "100%",
+                                }}
+                              >
+                                {fullName}
+                              </span>
+                              {isYou && <span style={styles.youTag}>YOU</span>}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 750,
+                                color: "rgba(35,45,30,0.68)",
+                              }}
+                            >
+                              {isYou ? "That’s you" : "Joining the adventure"}
+                            </div>
+                          </div>
+
+                          <div style={styles.attendeeArrow}>→</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={styles.card}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>Meeting point</div>
+                <div style={styles.sectionHint}>Plan your route.</div>
+              </div>
+
+              <div style={styles.mapBox}>
+                <MapContainer
+                  center={[lat, lng]}
+                  zoom={isMobile ? 6 : 7}
+                  scrollWheelZoom={true}
+                  style={styles.mapWrap}
+                >
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <Marker position={[lat, lng]} />
+                </MapContainer>
+              </div>
+
+              <div style={styles.mapTopMeta}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 1000,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "rgba(35,45,30,0.56)",
+                  }}
+                >
+                  Coordinates
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 1000,
+                    color: "#1b2617",
+                  }}
+                >
+                  {safeNum(event.latitude)?.toFixed(4) ?? "—"},{" "}
+                  {safeNum(event.longitude)?.toFixed(4) ?? "—"}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "rgba(35,45,30,0.66)",
+                    lineHeight: 1.55,
+                  }}
+                >
+                  Open the map, zoom in and plan your arrival before the event starts.
+                </div>
+              </div>
+
+              {isOwner && (
+                <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    onClick={() => navigate(`/edit-event/${event.id}`)}
+                    style={styles.ownerBtn(false)}
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={handleDeleteEvent}
+                    style={styles.ownerBtn(true)}
+                  >
+                    🗑 Delete
+                  </button>
                 </div>
               )}
+
+              {isMobile && errorMsg && <div style={styles.errorBox}>{errorMsg}</div>}
             </div>
           </div>
+        </div>
 
-          {/* RIGHT - MAP */}
-          <div style={styles.card}>
-            <div style={styles.sectionTitleRow}>
-              <div style={styles.sectionTitle}>Meeting point</div>
-              <div style={styles.sectionHint}>Plan your route.</div>
+        {isMobile && (
+          <div style={styles.stickyBar}>
+            <div style={styles.stickyInner}>
+              <div style={styles.stickyMeta}>
+                <div style={styles.stickyTitle}>{event.title}</div>
+                <div style={styles.stickySub}>
+                  👥 {attendeesCount} going · {priceLine || "Price TBA"}
+                </div>
+              </div>
+
+              {hasJoined ? (
+                <>
+                  <button style={styles.stickyBtnPrimary(true)} disabled>
+                    ✅ Going
+                  </button>
+                  <button
+                    onClick={handleLeave}
+                    disabled={leaving}
+                    style={styles.stickyBtnSecondary}
+                  >
+                    {leaving ? "Leaving…" : "Leave"}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleJoin}
+                  disabled={joining}
+                  style={styles.stickyBtnPrimary(joining)}
+                >
+                  {joining ? "Joining…" : "Join"}
+                </button>
+              )}
             </div>
 
-            <div style={styles.mapBox}>
-              <MapContainer
-                center={[lat, lng]}
-                zoom={isMobile ? 6 : 7}
-                scrollWheelZoom={true}
-                style={styles.mapWrap}
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <Marker position={[lat, lng]} />
-              </MapContainer>
-            </div>
-
-            <div
-              style={{
-                marginTop: 10,
-                fontSize: 12,
-                fontWeight: 800,
-                color: "rgba(35,45,30,0.72)",
-              }}
-            >
-              Coordinates:
+            {!user && (
               <div
                 style={{
-                  marginTop: 6,
-                  fontSize: 13,
-                  fontWeight: 1000,
-                  color: "#1b2617",
+                  marginTop: 8,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "rgba(35,45,30,0.72)",
                 }}
               >
-                {safeNum(event.latitude)?.toFixed(4) ?? "—"},{" "}
-                {safeNum(event.longitude)?.toFixed(4) ?? "—"}
-              </div>
-            </div>
-
-            {/* ✅ Owner actions also visible on mobile (in map card) */}
-            {isOwner && (
-              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button
-                  onClick={() => navigate(`/edit-event/${event.id}`)}
-                  style={styles.ownerBtn(false)}
-                >
-                  ✏️ Edit
-                </button>
-                <button
-                  onClick={handleDeleteEvent}
-                  style={styles.ownerBtn(true)}
-                >
-                  🗑 Delete
-                </button>
+                Sign in to join this event.
               </div>
             )}
-
-            {/* ✅ Error also visible on mobile */}
-            {isMobile && errorMsg && <div style={styles.errorBox}>{errorMsg}</div>}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ✅ STICKY JOIN BAR (MOBILE ONLY) */}
-      {isMobile && (
-        <div style={styles.stickyBar}>
-          <div style={styles.stickyInner}>
-            <div style={styles.stickyMeta}>
-              <div style={styles.stickyTitle}>{event.title}</div>
-              <div style={styles.stickySub}>
-                👥 {attendeesCount} going · {priceLine || "Price TBA"}
-              </div>
-            </div>
-
-            {hasJoined ? (
-              <>
-                <button style={styles.stickyBtnPrimary(true)} disabled>
-                  ✅ Going
-                </button>
-                <button
-                  onClick={handleLeave}
-                  disabled={leaving}
-                  style={styles.stickyBtnSecondary}
-                >
-                  {leaving ? "Leaving…" : "Leave"}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleJoin}
-                disabled={joining}
-                style={styles.stickyBtnPrimary(joining)}
-              >
-                {joining ? "Joining…" : "Join"}
-              </button>
-            )}
-          </div>
-
-          {!user && (
-            <div
-              style={{
-                marginTop: 8,
-                fontSize: 12,
-                fontWeight: 800,
-                color: "rgba(35,45,30,0.72)",
-              }}
-            >
-              Sign in to join this event.
-            </div>
-          )}
+      {lightboxOpen && (
+        <div style={styles.lightboxOverlay} onClick={() => setLightboxOpen(false)}>
+          <button
+            style={styles.lightboxClose}
+            onClick={() => setLightboxOpen(false)}
+          >
+            ✕
+          </button>
+          <img
+            src={coverUrl}
+            alt={event.title}
+            style={styles.lightboxImg}
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
-    </div>
+    </>
   );
 }
