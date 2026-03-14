@@ -58,7 +58,7 @@ export default function Events() {
     return () => supabase.removeChannel(channel);
   }, []);
 
-  const now = new Date();
+  const now = new Date.now();
 
   const filteredEvents = useMemo(() => {
     return events.filter((evt) => {

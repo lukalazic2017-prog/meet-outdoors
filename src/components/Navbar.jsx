@@ -546,12 +546,6 @@ export default function Navbar() {
     whiteSpace: "nowrap",
   };
 
-  const authPrimaryBtn = {
-    ...authBtn,
-    background: "linear-gradient(120deg, #00ffb8, #35ffc9, #00c28a)",
-    color: "#012216",
-    border: "none",
-  };
 
   const mobileTopIcon = (active = false) => ({
     width: 40,
