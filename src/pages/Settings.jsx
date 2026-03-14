@@ -140,6 +140,7 @@ export default function Settings() {
   const pageStyle = {
     minHeight: "100vh",
     padding: "24px 16px 60px",
+    marginTop: -120,
     background:
       "radial-gradient(circle at top, #041e17 0%, #02070a 45%, #000000 100%)",
     color: "#ffffff",

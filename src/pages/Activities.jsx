@@ -139,6 +139,7 @@ export default function Activities() {
     width: "100%",
     minHeight: "100vh",
     padding: isMobile ? "0 0 92px" : "0 0 60px",
+    marginTop: -120,
     background:
       "radial-gradient(1200px 520px at 15% -8%, rgba(0,255,176,0.18), rgba(0,0,0,0) 60%)," +
       "radial-gradient(1000px 480px at 100% 12%, rgba(0,185,255,0.14), rgba(0,0,0,0) 55%)," +

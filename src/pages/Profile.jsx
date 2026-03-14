@@ -407,8 +407,9 @@ function MobileProfileView({
   return (
     <div
       style={{
-        minHeight: "100vh",
-        paddingTop: 72,
+        minHeight: "60vh",
+        paddingTop: 0,
+        marginTop: -120,
         background:
           "radial-gradient(700px 320px at 20% 0%, rgba(0,255,195,0.22), transparent 60%)," +
           "radial-gradient(700px 320px at 80% 0%, rgba(124,77,255,0.18), transparent 60%)," +
@@ -1554,7 +1555,7 @@ export default function Profile() {
         />
       </div>
 
-      <div style={{ padding: 18, marginTop: -92, position: "relative" }}>
+      <div style={{ padding: 18, marginTop:-92, position: "relative" }}>
         <div
           style={{
             display: "flex",

@@ -232,6 +232,7 @@ export default function CreateEvent() {
     page: {
       minHeight: "100vh",
       padding: isMobile ? "0 0 96px" : "0 0 48px",
+      marginTop: -120,
       background:
         "radial-gradient(1000px 420px at 8% -5%, rgba(0,255,184,0.16), transparent 60%)," +
         "radial-gradient(900px 400px at 100% 10%, rgba(0,170,255,0.12), transparent 58%)," +

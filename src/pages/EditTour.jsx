@@ -314,6 +314,7 @@ export default function EditTour() {
   const pageWrapperStyle = {
     minHeight: "100vh",
     padding: "30px 16px 60px",
+    marginTop: -120,
     background:
       "radial-gradient(circle at top, #062a1d 0%, #030b08 55%, #020605 100%)",
     color: "#ffffff",

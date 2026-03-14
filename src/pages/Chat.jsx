@@ -300,6 +300,7 @@ export default function Chat() {
         minHeight: "100vh",
         padding: isMobile ? "0 0 90px" : "16px 16px 24px",
         color: "#ffffff",
+        marginTop: -120,
         background:
           "radial-gradient(900px 320px at 10% 0%, rgba(0,255,184,0.16), transparent 55%)," +
           "radial-gradient(900px 360px at 90% 0%, rgba(88,170,255,0.14), transparent 55%)," +

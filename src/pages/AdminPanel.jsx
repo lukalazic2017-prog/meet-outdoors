@@ -336,6 +336,7 @@ export default function AdminPanel() {
         "linear-gradient(180deg, #03110d 0%, #020805 50%, #000000 100%)",
       color: "white",
       padding: isMobile ? "14px 12px 28px" : "22px 18px 36px",
+      marginTop: -120,
       boxSizing: "border-box",
       fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
     },

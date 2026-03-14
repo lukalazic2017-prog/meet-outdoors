@@ -238,79 +238,133 @@ export default function EventDetails() {
 
   const styles = {
     page: {
+      position: "relative",
       minHeight: "100vh",
-      background:
-        "radial-gradient(900px 420px at 10% -5%, rgba(42,77,57,0.20), transparent 55%)," +
-        "radial-gradient(900px 420px at 90% 0%, rgba(126,107,66,0.16), transparent 55%)," +
-        "linear-gradient(180deg, #f4efe5 0%, #ede6d8 36%, #e7dfcf 100%)",
-      color: "#1a1d17",
-      padding: isMobile ? "0 0 98px" : "16px 16px 40px",
-      fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-      display: "flex",
-      justifyContent: "center",
-      boxSizing: "border-box",
       overflowX: "hidden",
+      overflowY: "visible",
+      marginTop: isMobile ? -120 : 100,
+      padding: isMobile ? "0 0 110px" : "64px 0 40px",
+      background:
+        "radial-gradient(circle at top, #081b16 0%, #04100d 28%, #02060b 58%, #000000 100%)",
+      color: "#eafff5",
+      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    },
+
+    bgGlow1: {
+      position: "absolute",
+      top: -180,
+      left: -160,
+      width: 520,
+      height: 520,
+      borderRadius: "50%",
+      background:
+        "radial-gradient(circle, rgba(0,255,190,0.16), transparent 68%)",
+      filter: "blur(30px)",
+      pointerEvents: "none",
+    },
+
+    bgGlow2: {
+      position: "absolute",
+      top: 40,
+      right: -140,
+      width: 500,
+      height: 500,
+      borderRadius: "50%",
+      background:
+        "radial-gradient(circle, rgba(124,77,255,0.16), transparent 68%)",
+      filter: "blur(40px)",
+      pointerEvents: "none",
+    },
+
+    bgGlow3: {
+      position: "absolute",
+      bottom: -160,
+      left: "20%",
+      width: 420,
+      height: 420,
+      borderRadius: "50%",
+      background:
+        "radial-gradient(circle, rgba(0,200,255,0.10), transparent 68%)",
+      filter: "blur(45px)",
+      pointerEvents: "none",
+    },
+
+    bgGrid: {
+      position: "absolute",
+      inset: 0,
+      backgroundImage:
+        "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+      backgroundSize: "36px 36px",
+      maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
+      pointerEvents: "none",
     },
 
     container: {
+      position: "relative",
+      zIndex: 2,
       width: "100%",
-      maxWidth: 1240,
+      maxWidth: 1400,
+      margin: "0 auto",
+      padding: isMobile ? "0 0 20px" : "0 18px 20px",
+      overflow: "visible",
       boxSizing: "border-box",
-      padding: isMobile ? 0 : 0,
     },
 
     topBar: {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      gap: 10,
+      gap: 12,
       flexWrap: "wrap",
       marginBottom: isMobile ? 0 : 14,
-      padding: isMobile ? "14px 14px 10px" : "0 0 0",
+      padding: isMobile ? "14px 14px 10px" : "0 4px",
     },
 
     backBtn: {
       display: "inline-flex",
       alignItems: "center",
       gap: 10,
-      padding: isMobile ? "10px 14px" : "10px 14px",
+      minHeight: 46,
+      padding: "0 16px",
       borderRadius: 999,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
-      background: "rgba(255,255,255,0.72)",
-      backdropFilter: "blur(12px)",
-      cursor: "pointer",
+      border: "1px solid rgba(255,255,255,0.10)",
+      background:
+        "linear-gradient(145deg, rgba(7,22,17,0.96), rgba(3,11,8,0.96))",
+      color: "#f5fff9",
       fontWeight: 900,
       fontSize: 13,
-      color: "#1f2a1d",
-      boxShadow: "0 12px 26px rgba(0,0,0,0.07)",
-      userSelect: "none",
+      boxShadow: "0 14px 32px rgba(0,0,0,0.30)",
+      cursor: "pointer",
       WebkitTapHighlightColor: "transparent",
     },
 
     crumb: {
-      fontSize: 12,
-      color: "rgba(40,52,34,0.72)",
-      fontWeight: 800,
-      letterSpacing: "0.06em",
+      fontSize: 11,
+      letterSpacing: "0.14em",
       textTransform: "uppercase",
+      color: "rgba(234,255,245,0.60)",
+      fontWeight: 900,
     },
 
     hero: {
       position: "relative",
-      borderRadius: isMobile ? "0 0 30px 30px" : 30,
+      padding: 0,
+      borderRadius: isMobile ? "0 0 34px 34px" : 34,
       overflow: "hidden",
-      border: isMobile ? "none" : "1px solid rgba(55, 72, 44, 0.14)",
+      border: isMobile ? "none" : "1px solid rgba(255,255,255,0.08)",
+      background:
+        "linear-gradient(145deg, rgba(10,24,19,0.94), rgba(3,10,8,0.98))",
       boxShadow: isMobile
-        ? "0 26px 70px rgba(16, 20, 14, 0.16)"
-        : "0 30px 90px rgba(16, 20, 14, 0.16)",
-      background: "rgba(255,255,255,0.55)",
+        ? "0 26px 70px rgba(16,20,14,0.34)"
+        : "0 30px 90px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.04)",
+      marginBottom: isMobile ? 14 : 22,
     },
 
     heroImg: {
       width: "100%",
-      height: isMobile ? 330 : 420,
+      height: isMobile ? 420 : 520,
       objectFit: "cover",
-      transform: "scale(1.03)",
+      transform: "scale(1.05)",
       filter: "saturate(1.08) contrast(1.04)",
       display: "block",
       cursor: "zoom-in",
@@ -319,18 +373,16 @@ export default function EventDetails() {
     heroOverlay: {
       position: "absolute",
       inset: 0,
-      background:
-        isMobile
-          ? "linear-gradient(to top, rgba(236,231,221,1) 0%, rgba(236,231,221,0.95) 18%, rgba(236,231,221,0.25) 60%, rgba(236,231,221,0.05) 100%)"
-          : "linear-gradient(to top, rgba(236,231,221,0.98) 0%, rgba(236,231,221,0.76) 20%, rgba(236,231,221,0.18) 55%, rgba(236,231,221,0.02) 100%)",
+      background: isMobile
+        ? "linear-gradient(to top, rgba(2,8,6,1) 0%, rgba(2,8,6,0.98) 16%, rgba(2,8,6,0.68) 36%, rgba(2,8,6,0.20) 62%, rgba(2,8,6,0.08) 100%)"
+        : "linear-gradient(to top, rgba(2,8,6,0.96) 0%, rgba(2,8,6,0.76) 22%, rgba(2,8,6,0.30) 55%, rgba(2,8,6,0.10) 100%)",
     },
 
     heroShine: {
       position: "absolute",
       inset: 0,
       background:
-        "radial-gradient(420px 220px at 18% 10%, rgba(255,255,255,0.30), transparent 60%)," +
-        "radial-gradient(520px 260px at 85% 15%, rgba(255,255,255,0.18), transparent 65%)",
+        "radial-gradient(circle at 18% 16%, rgba(0,255,190,0.18), transparent 28%), radial-gradient(circle at 80% 12%, rgba(124,77,255,0.18), transparent 30%)",
       mixBlendMode: "screen",
       pointerEvents: "none",
     },
@@ -360,17 +412,17 @@ export default function EventDetails() {
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
-      height: 40,
+      minHeight: 40,
       minWidth: 40,
       padding: "0 14px",
       borderRadius: 999,
-      border: "1px solid rgba(255,255,255,0.18)",
-      background: "rgba(18,24,18,0.26)",
+      border: "1px solid rgba(255,255,255,0.16)",
+      background: "rgba(8,18,14,0.52)",
       backdropFilter: "blur(12px)",
       color: "#fff",
       fontWeight: 900,
       fontSize: 12,
-      boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+      boxShadow: "0 12px 28px rgba(0,0,0,0.24)",
       cursor: "pointer",
       WebkitTapHighlightColor: "transparent",
     },
@@ -378,15 +430,15 @@ export default function EventDetails() {
     heroContent: isMobile
       ? {
           position: "relative",
-          padding: "0 14px 14px",
-          marginTop: -18,
+          padding: "0 14px 16px",
+          marginTop: -26,
           display: "grid",
           gap: 14,
           zIndex: 2,
         }
       : {
           position: "absolute",
-          inset: 18,
+          inset: 22,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-end",
@@ -405,49 +457,49 @@ export default function EventDetails() {
       alignItems: "center",
       gap: 8,
       flexWrap: "wrap",
-      marginBottom: 10,
+      marginBottom: 12,
     },
 
     badge: {
       display: "inline-flex",
       alignItems: "center",
       gap: 8,
-      padding: isMobile ? "8px 12px" : "8px 12px",
+      padding: "8px 13px",
       borderRadius: 999,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
-      background: "rgba(255,255,255,0.72)",
-      backdropFilter: "blur(10px)",
+      border: "1px solid rgba(0,255,190,0.22)",
+      background: "rgba(0,255,190,0.08)",
+      boxShadow: "0 0 18px rgba(0,255,190,0.08)",
       fontSize: 11,
       fontWeight: 900,
-      color: "#263321",
       letterSpacing: "0.08em",
       textTransform: "uppercase",
+      color: "#c8fff3",
       whiteSpace: "nowrap",
-      boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
+      backdropFilter: "blur(10px)",
     },
 
     heroTitle: {
-      fontSize: isMobile ? 30 : 48,
+      fontSize: isMobile ? 32 : 54,
       fontWeight: 1000,
-      lineHeight: 0.97,
+      lineHeight: 0.96,
       margin: 0,
-      color: "#162014",
+      color: "#f4fff9",
       letterSpacing: "-0.04em",
-      textShadow: "0 10px 20px rgba(255,255,255,0.15)",
+      textShadow: "0 6px 28px rgba(0,255,190,0.10)",
       wordBreak: "break-word",
     },
 
     heroSubtitle: {
-      marginTop: 10,
+      marginTop: 12,
       fontSize: isMobile ? 14 : 15,
       fontWeight: 700,
-      color: "rgba(28, 34, 22, 0.78)",
+      color: "rgba(234,255,245,0.74)",
       maxWidth: 620,
-      lineHeight: 1.6,
+      lineHeight: 1.65,
     },
 
     metaRow: {
-      marginTop: 14,
+      marginTop: 16,
       display: "flex",
       gap: 10,
       flexWrap: "wrap",
@@ -457,20 +509,20 @@ export default function EventDetails() {
       display: "inline-flex",
       alignItems: "center",
       gap: 8,
-      padding: isMobile ? "10px 12px" : "10px 12px",
+      padding: "10px 12px",
       borderRadius: 16,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
-      background: "rgba(255,255,255,0.80)",
-      backdropFilter: "blur(10px)",
+      border: "1px solid rgba(255,255,255,0.10)",
+      background: "rgba(255,255,255,0.06)",
+      backdropFilter: "blur(12px)",
       fontSize: 12,
       fontWeight: 800,
-      color: "rgba(26, 32, 20, 0.9)",
-      boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
+      color: "rgba(234,255,245,0.90)",
+      boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
       maxWidth: "100%",
     },
 
     peoplePreviewRow: {
-      marginTop: 14,
+      marginTop: 16,
       display: "flex",
       alignItems: "center",
       gap: 12,
@@ -483,19 +535,20 @@ export default function EventDetails() {
     },
 
     peopleStackAvatar: {
-      width: 34,
-      height: 34,
+      width: 36,
+      height: 36,
       borderRadius: "50%",
       objectFit: "cover",
-      border: "2px solid rgba(255,255,255,0.92)",
-      boxShadow: "0 8px 18px rgba(0,0,0,0.10)",
-      background: "#fff",
+      border: "2px solid rgba(0,255,190,0.78)",
+      boxShadow: "0 0 16px rgba(0,255,190,0.22)",
+      background: "#08130f",
+      color: "#fff",
     },
 
     peoplePreviewText: {
       fontSize: 12,
       fontWeight: 800,
-      color: "rgba(27,38,23,0.72)",
+      color: "rgba(234,255,245,0.72)",
     },
 
     heroRight: {
@@ -508,12 +561,12 @@ export default function EventDetails() {
     actionCard: {
       borderRadius: 24,
       padding: isMobile ? 16 : 18,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
+      border: "1px solid rgba(255,255,255,0.08)",
       background:
-        "linear-gradient(180deg, rgba(255,255,255,0.90), rgba(255,255,255,0.82))",
+        "linear-gradient(145deg, rgba(9,24,18,0.92), rgba(4,12,9,0.92))",
       backdropFilter: "blur(14px)",
       boxShadow:
-        "0 24px 48px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.50)",
+        "0 24px 48px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.04)",
     },
 
     actionTopRow: {
@@ -524,18 +577,18 @@ export default function EventDetails() {
     },
 
     actionTitle: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: 1000,
-      letterSpacing: "0.08em",
+      letterSpacing: "0.12em",
       marginBottom: 6,
-      color: "#1b2617",
+      color: "rgba(234,255,245,0.70)",
       textTransform: "uppercase",
     },
 
     actionSub: {
       fontSize: 12,
       fontWeight: 700,
-      color: "rgba(35, 45, 30, 0.76)",
+      color: "rgba(234,255,245,0.74)",
       lineHeight: 1.55,
     },
 
@@ -543,11 +596,15 @@ export default function EventDetails() {
       display: "inline-flex",
       padding: "7px 11px",
       borderRadius: 999,
-      background: "rgba(40,64,42,0.10)",
-      border: "1px solid rgba(40,64,42,0.14)",
+      background: hasJoined
+        ? "rgba(0,255,190,0.12)"
+        : "rgba(255,255,255,0.06)",
+      border: hasJoined
+        ? "1px solid rgba(0,255,190,0.24)"
+        : "1px solid rgba(255,255,255,0.10)",
       fontSize: 11,
       fontWeight: 1000,
-      color: "#26402b",
+      color: hasJoined ? "#cffff0" : "#fff",
       letterSpacing: "0.08em",
       textTransform: "uppercase",
       whiteSpace: "nowrap",
@@ -556,17 +613,17 @@ export default function EventDetails() {
     bigCount: {
       fontSize: isMobile ? 38 : 44,
       fontWeight: 1000,
-      color: "#1b2617",
+      color: "#ffffff",
       lineHeight: 1,
       letterSpacing: "-0.04em",
-      marginTop: 14,
+      marginTop: 16,
     },
 
     countHint: {
       marginTop: 6,
       fontSize: 12,
       fontWeight: 800,
-      color: "rgba(35,45,30,0.70)",
+      color: "rgba(234,255,245,0.66)",
       lineHeight: 1.5,
     },
 
@@ -574,23 +631,28 @@ export default function EventDetails() {
       display: "grid",
       gridTemplateColumns: "repeat(3, minmax(0,1fr))",
       gap: 10,
-      marginTop: 14,
+      marginTop: 16,
       marginBottom: 4,
     },
 
     miniStatCard: {
       borderRadius: 16,
       padding: "12px 10px",
-      background: "rgba(245,242,235,0.72)",
-      border: "1px solid rgba(58,72,46,0.10)",
+      background:
+        "linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03))",
+      border: "1px solid rgba(255,255,255,0.08)",
       textAlign: "center",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
     },
 
     miniStatValue: {
       fontSize: 16,
       fontWeight: 1000,
-      color: "#1b2617",
-      lineHeight: 1,
+      color: "#ffffff",
+      lineHeight: 1.05,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
     },
 
     miniStatLabel: {
@@ -599,13 +661,13 @@ export default function EventDetails() {
       fontWeight: 900,
       letterSpacing: "0.10em",
       textTransform: "uppercase",
-      color: "rgba(35,45,30,0.60)",
+      color: "rgba(234,255,245,0.54)",
     },
 
     primaryBtn: (disabled) => ({
       marginTop: 14,
       width: "100%",
-      minHeight: 48,
+      minHeight: 50,
       padding: "12px 14px",
       borderRadius: 999,
       border: "none",
@@ -613,10 +675,10 @@ export default function EventDetails() {
       fontWeight: 1000,
       fontSize: 13,
       background: disabled
-        ? "rgba(38, 60, 32, 0.25)"
-        : "linear-gradient(135deg, #28402a, #1f3423)",
-      color: "#f3f1ea",
-      boxShadow: disabled ? "none" : "0 16px 36px rgba(33, 52, 31, 0.24)",
+        ? "rgba(255,255,255,0.14)"
+        : "linear-gradient(135deg, #00ffbe, #52d6ff, #7c4dff)",
+      color: disabled ? "rgba(234,255,245,0.76)" : "#042217",
+      boxShadow: disabled ? "none" : "0 16px 36px rgba(0,255,190,0.20)",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -627,16 +689,16 @@ export default function EventDetails() {
     secondaryBtn: {
       marginTop: 10,
       width: "100%",
-      minHeight: 46,
+      minHeight: 48,
       padding: "11px 14px",
       borderRadius: 999,
-      border: "1px solid rgba(96, 52, 37, 0.18)",
+      border: "1px solid rgba(255,255,255,0.10)",
       cursor: "pointer",
       fontWeight: 950,
       fontSize: 13,
-      background: "rgba(255,255,255,0.92)",
-      color: "#5a2d22",
-      boxShadow: "0 12px 26px rgba(0,0,0,0.05)",
+      background: "rgba(255,255,255,0.06)",
+      color: "#fff",
+      boxShadow: "0 12px 26px rgba(0,0,0,0.12)",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -658,16 +720,16 @@ export default function EventDetails() {
       padding: "11px 12px",
       borderRadius: 999,
       border: danger
-        ? "1px solid rgba(140, 60, 40, 0.20)"
-        : "1px solid rgba(58, 72, 46, 0.14)",
+        ? "1px solid rgba(255,110,90,0.18)"
+        : "1px solid rgba(255,255,255,0.10)",
       cursor: "pointer",
       fontWeight: 1000,
       fontSize: 12,
       background: danger
-        ? "rgba(255, 240, 235, 0.94)"
-        : "rgba(255,255,255,0.94)",
-      color: danger ? "#7a2a1a" : "#1f2a1d",
-      boxShadow: "0 12px 26px rgba(0,0,0,0.05)",
+        ? "rgba(255,110,90,0.08)"
+        : "rgba(255,255,255,0.06)",
+      color: danger ? "#ffb7aa" : "#f5fff9",
+      boxShadow: "0 12px 26px rgba(0,0,0,0.10)",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -679,9 +741,9 @@ export default function EventDetails() {
       marginTop: 12,
       borderRadius: 16,
       padding: "11px 12px",
-      border: "1px solid rgba(140,60,40,0.18)",
-      background: "rgba(255, 238, 234, 0.92)",
-      color: "#7a2a1a",
+      border: "1px solid rgba(255,110,90,0.18)",
+      background: "rgba(255,110,90,0.10)",
+      color: "#ffd0c6",
       fontWeight: 850,
       fontSize: 12,
       lineHeight: 1.5,
@@ -705,14 +767,14 @@ export default function EventDetails() {
         },
 
     card: {
-      borderRadius: 24,
+      borderRadius: 28,
       padding: isMobile ? 16 : 18,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
+      border: "1px solid rgba(255,255,255,0.08)",
       background:
-        "linear-gradient(180deg, rgba(255,255,255,0.88), rgba(255,255,255,0.82))",
+        "linear-gradient(145deg, rgba(8,26,21,0.96), rgba(2,9,7,0.96))",
       backdropFilter: "blur(12px)",
       boxShadow:
-        "0 20px 55px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.45)",
+        "0 20px 55px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)",
       overflow: "hidden",
     },
 
@@ -726,17 +788,17 @@ export default function EventDetails() {
     },
 
     sectionTitle: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: 1000,
-      color: "#1b2617",
-      letterSpacing: "0.04em",
+      color: "#f4fff9",
+      letterSpacing: "0.12em",
       textTransform: "uppercase",
     },
 
     sectionHint: {
       fontSize: 12,
       fontWeight: 800,
-      color: "rgba(35,45,30,0.68)",
+      color: "rgba(234,255,245,0.62)",
     },
 
     paragraph: {
@@ -744,7 +806,7 @@ export default function EventDetails() {
       fontSize: 14,
       lineHeight: 1.75,
       fontWeight: 650,
-      color: "rgba(26, 32, 20, 0.86)",
+      color: "rgba(234,255,245,0.84)",
       whiteSpace: "pre-wrap",
     },
 
@@ -756,13 +818,13 @@ export default function EventDetails() {
     },
 
     infoBox: {
-      borderRadius: 18,
+      borderRadius: 20,
       padding: 14,
-      border: "1px solid rgba(58, 72, 46, 0.12)",
+      border: "1px solid rgba(255,255,255,0.08)",
       background:
-        "linear-gradient(180deg, rgba(245,242,235,0.76), rgba(245,242,235,0.64))",
+        "linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03))",
       minWidth: 0,
-      boxShadow: "0 10px 22px rgba(0,0,0,0.03)",
+      boxShadow: "0 10px 22px rgba(0,0,0,0.10)",
     },
 
     infoLabel: {
@@ -770,27 +832,27 @@ export default function EventDetails() {
       textTransform: "uppercase",
       letterSpacing: "0.16em",
       fontWeight: 1000,
-      color: "rgba(35,45,30,0.58)",
+      color: "rgba(234,255,245,0.52)",
       marginBottom: 8,
     },
 
     infoValue: {
       fontSize: 14,
       fontWeight: 900,
-      color: "#1b2617",
+      color: "#ffffff",
       wordBreak: "break-word",
       lineHeight: 1.45,
     },
 
     mapBox: {
-      borderRadius: 20,
+      borderRadius: 22,
       overflow: "hidden",
-      border: "1px solid rgba(58, 72, 46, 0.14)",
-      boxShadow: "0 14px 38px rgba(0,0,0,0.06)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 14px 38px rgba(0,0,0,0.18)",
     },
 
     mapWrap: {
-      height: isMobile ? 260 : 320,
+      height: isMobile ? 280 : 340,
       width: "100%",
     },
 
@@ -798,8 +860,8 @@ export default function EventDetails() {
       marginTop: 12,
       padding: "12px 14px",
       borderRadius: 16,
-      border: "1px solid rgba(58,72,46,0.12)",
-      background: "rgba(245,242,235,0.66)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      background: "rgba(255,255,255,0.04)",
       display: "grid",
       gap: 6,
     },
@@ -822,18 +884,18 @@ export default function EventDetails() {
       gap: 8,
       padding: "8px 12px",
       borderRadius: 999,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
-      background: "rgba(245,242,235,0.84)",
+      border: "1px solid rgba(255,255,255,0.10)",
+      background: "rgba(255,255,255,0.06)",
       fontWeight: 1000,
       fontSize: 12,
-      color: "#1f2a1d",
+      color: "#f5fff9",
       whiteSpace: "nowrap",
-      boxShadow: "0 8px 18px rgba(0,0,0,0.04)",
+      boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
     },
 
     attendeeList: {
       marginTop: 14,
-      maxHeight: isMobile ? 380 : 480,
+      maxHeight: isMobile ? 420 : 520,
       overflowY: "auto",
       paddingRight: 4,
     },
@@ -843,46 +905,47 @@ export default function EventDetails() {
       alignItems: "center",
       gap: 12,
       padding: "12px 12px",
-      borderRadius: 18,
-      border: "1px solid rgba(58, 72, 46, 0.12)",
-      background: "rgba(255,255,255,0.92)",
-      boxShadow: "0 10px 22px rgba(0,0,0,0.04)",
+      borderRadius: 20,
+      border: "1px solid rgba(255,255,255,0.08)",
+      background:
+        "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
+      boxShadow: "0 10px 22px rgba(0,0,0,0.10)",
       marginBottom: 10,
       minWidth: 0,
       transition: "transform .15s ease, box-shadow .15s ease",
     },
 
     avatar: {
-      width: 42,
-      height: 42,
+      width: 44,
+      height: 44,
       borderRadius: "50%",
       objectFit: "cover",
-      border: "1px solid rgba(58, 72, 46, 0.16)",
-      background: "rgba(245,242,235,0.9)",
+      border: "2px solid rgba(0,255,190,0.70)",
+      background: "#0b1612",
       flex: "0 0 auto",
-      boxShadow: "0 8px 16px rgba(0,0,0,0.05)",
+      boxShadow: "0 0 16px rgba(0,255,190,0.18)",
     },
 
     avatarFallback: {
-      width: 42,
-      height: 42,
+      width: 44,
+      height: 44,
       borderRadius: "50%",
-      border: "1px solid rgba(58, 72, 46, 0.16)",
+      border: "2px solid rgba(0,255,190,0.34)",
       background:
-        "linear-gradient(135deg, rgba(40,64,42,0.18), rgba(160,140,95,0.18))",
+        "linear-gradient(135deg, rgba(0,255,190,0.18), rgba(124,77,255,0.18))",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       fontWeight: 1000,
-      color: "#1f2a1d",
+      color: "#f5fff9",
       flex: "0 0 auto",
-      boxShadow: "0 8px 16px rgba(0,0,0,0.05)",
+      boxShadow: "0 8px 16px rgba(0,0,0,0.10)",
     },
 
     attendeeName: {
       fontSize: 13,
       fontWeight: 1000,
-      color: "#1b2617",
+      color: "#ffffff",
       display: "flex",
       alignItems: "center",
       gap: 8,
@@ -893,7 +956,7 @@ export default function EventDetails() {
     attendeeArrow: {
       flex: "0 0 auto",
       fontSize: 13,
-      color: "rgba(35,45,30,0.52)",
+      color: "rgba(234,255,245,0.52)",
       fontWeight: 900,
     },
 
@@ -901,27 +964,28 @@ export default function EventDetails() {
       display: "inline-flex",
       padding: "3px 8px",
       borderRadius: 999,
-      border: "1px solid rgba(40,64,42,0.18)",
-      background: "rgba(245,242,235,0.92)",
+      border: "1px solid rgba(0,255,190,0.20)",
+      background: "rgba(0,255,190,0.10)",
       fontSize: 10,
       fontWeight: 1000,
       letterSpacing: "0.12em",
       textTransform: "uppercase",
-      color: "#1f2a1d",
+      color: "#cffff0",
       whiteSpace: "nowrap",
     },
 
     stickyBar: {
-      position: "fixed",
+      position: "relative",
       left: 10,
-      right: 10,
-      bottom: 10,
+      right: 5,
+      bottom: 0,
       zIndex: 5000,
-      borderRadius: 20,
-      border: "1px solid rgba(58, 72, 46, 0.14)",
-      background: "rgba(255,255,255,0.90)",
-      backdropFilter: "blur(16px)",
-      boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+      borderRadius: 22,
+      border: "1px solid rgba(255,255,255,0.10)",
+      background:
+        "linear-gradient(145deg, rgba(8,26,21,0.96), rgba(2,9,7,0.96))",
+      backdropFilter: "blur(18px)",
+      boxShadow: "0 24px 60px rgba(0,0,0,0.32)",
       padding: 10,
     },
 
@@ -943,7 +1007,7 @@ export default function EventDetails() {
     stickyTitle: {
       fontSize: 13,
       fontWeight: 1000,
-      color: "#1b2617",
+      color: "#ffffff",
       lineHeight: 1.15,
       whiteSpace: "nowrap",
       overflow: "hidden",
@@ -953,7 +1017,7 @@ export default function EventDetails() {
     stickySub: {
       fontSize: 12,
       fontWeight: 800,
-      color: "rgba(35,45,30,0.72)",
+      color: "rgba(234,255,245,0.68)",
       whiteSpace: "nowrap",
       overflow: "hidden",
       textOverflow: "ellipsis",
@@ -969,10 +1033,10 @@ export default function EventDetails() {
       fontSize: 13,
       cursor: disabled ? "default" : "pointer",
       background: disabled
-        ? "rgba(38, 60, 32, 0.25)"
-        : "linear-gradient(135deg, #28402a, #1f3423)",
-      color: "#f3f1ea",
-      boxShadow: disabled ? "none" : "0 14px 26px rgba(33, 52, 31, 0.18)",
+        ? "rgba(255,255,255,0.14)"
+        : "linear-gradient(135deg, #00ffbe, #52d6ff, #7c4dff)",
+      color: disabled ? "rgba(234,255,245,0.80)" : "#042217",
+      boxShadow: disabled ? "none" : "0 14px 26px rgba(0,255,190,0.18)",
       whiteSpace: "nowrap",
       WebkitTapHighlightColor: "transparent",
     }),
@@ -982,13 +1046,13 @@ export default function EventDetails() {
       minHeight: 46,
       padding: "12px 14px",
       borderRadius: 16,
-      border: "1px solid rgba(96, 52, 37, 0.18)",
+      border: "1px solid rgba(255,255,255,0.10)",
       fontWeight: 1000,
       fontSize: 13,
       cursor: "pointer",
-      background: "rgba(255,255,255,0.94)",
-      color: "#5a2d22",
-      boxShadow: "0 12px 22px rgba(0,0,0,0.08)",
+      background: "rgba(255,255,255,0.06)",
+      color: "#fff",
+      boxShadow: "0 12px 22px rgba(0,0,0,0.14)",
       whiteSpace: "nowrap",
       WebkitTapHighlightColor: "transparent",
     },
@@ -1027,11 +1091,23 @@ export default function EventDetails() {
       fontWeight: 1000,
       cursor: "pointer",
     },
+
+    skeletonLine: {
+      height: 14,
+      borderRadius: 999,
+      background:
+        "linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
+    },
   };
 
   if (loading) {
     return (
       <div style={styles.page}>
+        <div style={styles.bgGlow1} />
+        <div style={styles.bgGlow2} />
+        <div style={styles.bgGlow3} />
+        <div style={styles.bgGrid} />
+
         <div style={styles.container}>
           <div style={styles.topBar}>
             <button style={styles.backBtn} onClick={() => navigate(-1)}>
@@ -1046,33 +1122,34 @@ export default function EventDetails() {
             <div style={styles.heroShine} />
           </div>
 
-          <div style={{ marginTop: 16, display: "grid", gap: 12, padding: isMobile ? "0 14px" : 0 }}>
+          <div
+            style={{
+              marginTop: 16,
+              display: "grid",
+              gap: 12,
+              padding: isMobile ? "0 14px" : 10,
+              
+            }}
+          >
             <div style={styles.card}>
               <div style={styles.sectionTitleRow}>
                 <div style={styles.sectionTitle}>About this event</div>
                 <div style={styles.sectionHint}>Loading details…</div>
               </div>
+
+              <div style={{ ...styles.skeletonLine, width: "76%" }} />
               <div
                 style={{
-                  height: 14,
-                  borderRadius: 10,
-                  background: "rgba(0,0,0,0.06)",
+                  ...styles.skeletonLine,
+                  marginTop: 10,
+                  width: "92%",
                 }}
               />
               <div
                 style={{
-                  height: 14,
+                  ...styles.skeletonLine,
                   marginTop: 10,
-                  borderRadius: 10,
-                  background: "rgba(0,0,0,0.06)",
-                }}
-              />
-              <div
-                style={{
-                  height: 14,
-                  marginTop: 10,
-                  borderRadius: 10,
-                  background: "rgba(0,0,0,0.06)",
+                  width: "64%",
                 }}
               />
             </div>
@@ -1085,6 +1162,11 @@ export default function EventDetails() {
   if (!event) {
     return (
       <div style={styles.page}>
+        <div style={styles.bgGlow1} />
+        <div style={styles.bgGlow2} />
+        <div style={styles.bgGlow3} />
+        <div style={styles.bgGrid} />
+
         <div style={styles.container}>
           <div style={styles.topBar}>
             <button style={styles.backBtn} onClick={() => navigate(-1)}>
@@ -1094,6 +1176,7 @@ export default function EventDetails() {
           </div>
 
           <div style={{ padding: isMobile ? "0 14px" : 0 }}>
+            
             <div style={styles.card}>
               <div style={styles.sectionTitleRow}>
                 <div style={styles.sectionTitle}>We couldn’t find this event</div>
@@ -1112,6 +1195,11 @@ export default function EventDetails() {
   return (
     <>
       <div style={styles.page}>
+        <div style={styles.bgGlow1} />
+        <div style={styles.bgGlow2} />
+        <div style={styles.bgGlow3} />
+        <div style={styles.bgGrid} />
+
         <div style={styles.container}>
           <div style={styles.topBar}>
             <button style={styles.backBtn} onClick={() => navigate(-1)}>
@@ -1208,7 +1296,6 @@ export default function EventDetails() {
                               alignItems: "center",
                               justifyContent: "center",
                               fontWeight: 1000,
-                              background: "#f5efe4",
                             }}
                           >
                             {initialsFromName(row?.profiles?.full_name)}
@@ -1236,7 +1323,8 @@ export default function EventDetails() {
                     <div>
                       <div style={styles.actionTitle}>Reserve your spot</div>
                       <div style={styles.actionSub}>
-                        Join the group, see who’s going and plan the route with confidence.
+                        Join the group, see who’s going and plan the route with
+                        confidence.
                       </div>
                     </div>
 
@@ -1257,7 +1345,11 @@ export default function EventDetails() {
                   <div style={styles.miniStats}>
                     <div style={styles.miniStatCard}>
                       <div style={styles.miniStatValue}>
-                        {event.is_free ? "Free" : event.price_from ? `${event.price_from}€` : "—"}
+                        {event.is_free
+                          ? "Free"
+                          : event.price_from
+                          ? `${event.price_from}€`
+                          : "—"}
                       </div>
                       <div style={styles.miniStatLabel}>Price</div>
                     </div>
@@ -1304,7 +1396,7 @@ export default function EventDetails() {
                             marginTop: 10,
                             fontSize: 12,
                             fontWeight: 800,
-                            color: "rgba(35,45,30,0.72)",
+                            color: "rgba(234,255,245,0.72)",
                           }}
                         >
                           Sign in to join this event.
@@ -1392,7 +1484,7 @@ export default function EventDetails() {
                         marginTop: 10,
                         fontSize: 12,
                         fontWeight: 1000,
-                        color: "#1f3423",
+                        color: "#7cefe0",
                         textDecoration: "underline",
                       }}
                     >
@@ -1416,7 +1508,7 @@ export default function EventDetails() {
                       marginTop: 12,
                       fontSize: 12,
                       fontWeight: 800,
-                      color: "rgba(35,45,30,0.72)",
+                      color: "rgba(234,255,245,0.72)",
                     }}
                   >
                     No one yet. Be the first to join.
@@ -1441,12 +1533,14 @@ export default function EventDetails() {
                           onMouseEnter={(e) => {
                             if (isMobile) return;
                             e.currentTarget.style.transform = "translateY(-2px)";
-                            e.currentTarget.style.boxShadow = "0 16px 28px rgba(0,0,0,0.06)";
+                            e.currentTarget.style.boxShadow =
+                              "0 16px 28px rgba(0,0,0,0.18)";
                           }}
                           onMouseLeave={(e) => {
                             if (isMobile) return;
                             e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow = "0 10px 22px rgba(0,0,0,0.04)";
+                            e.currentTarget.style.boxShadow =
+                              "0 10px 22px rgba(0,0,0,0.10)";
                           }}
                         >
                           {p?.avatar_url ? (
@@ -1484,7 +1578,7 @@ export default function EventDetails() {
                               style={{
                                 fontSize: 12,
                                 fontWeight: 750,
-                                color: "rgba(35,45,30,0.68)",
+                                color: "rgba(234,255,245,0.62)",
                               }}
                             >
                               {isYou ? "That’s you" : "Joining the adventure"}
@@ -1525,7 +1619,7 @@ export default function EventDetails() {
                     fontWeight: 1000,
                     letterSpacing: "0.12em",
                     textTransform: "uppercase",
-                    color: "rgba(35,45,30,0.56)",
+                    color: "rgba(234,255,245,0.54)",
                   }}
                 >
                   Coordinates
@@ -1534,7 +1628,7 @@ export default function EventDetails() {
                   style={{
                     fontSize: 14,
                     fontWeight: 1000,
-                    color: "#1b2617",
+                    color: "#ffffff",
                   }}
                 >
                   {safeNum(event.latitude)?.toFixed(4) ?? "—"},{" "}
@@ -1544,16 +1638,24 @@ export default function EventDetails() {
                   style={{
                     fontSize: 12,
                     fontWeight: 700,
-                    color: "rgba(35,45,30,0.66)",
+                    color: "rgba(234,255,245,0.66)",
                     lineHeight: 1.55,
                   }}
                 >
-                  Open the map, zoom in and plan your arrival before the event starts.
+                  Open the map, zoom in and plan your arrival before the event
+                  starts.
                 </div>
               </div>
 
               {isOwner && (
-                <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    marginTop: 14,
+                    display: "flex",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
                   <button
                     onClick={() => navigate(`/edit-event/${event.id}`)}
                     style={styles.ownerBtn(false)}
@@ -1614,7 +1716,7 @@ export default function EventDetails() {
                   marginTop: 8,
                   fontSize: 12,
                   fontWeight: 800,
-                  color: "rgba(35,45,30,0.72)",
+                  color: "rgba(234,255,245,0.68)",
                 }}
               >
                 Sign in to join this event.

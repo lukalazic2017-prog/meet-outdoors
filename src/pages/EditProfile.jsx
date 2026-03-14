@@ -283,6 +283,7 @@ export default function EditProfile() {
       page: {
         minHeight: "100vh",
         padding: isMobile ? "0 0 34px" : "18px 16px 40px",
+        marginTop: -120,
         background:
           "radial-gradient(900px 420px at 10% 0%, rgba(0,255,190,0.16), transparent 58%)," +
           "radial-gradient(900px 420px at 90% 0%, rgba(0,170,255,0.14), transparent 58%)," +

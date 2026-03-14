@@ -1,5 +1,5 @@
 // src/pages/Events.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
@@ -59,14 +59,17 @@ export default function Events() {
   }, []);
 
   const now = new Date();
-  const filteredEvents = events.filter((evt) => {
-    if (evt.end_time && new Date(evt.end_time) < now) return false;
-    if (countryFilter !== "All countries" && evt.country !== countryFilter)
-      return false;
-    if (categoryFilter !== "All categories" && evt.category !== categoryFilter)
-      return false;
-    return true;
-  });
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((evt) => {
+      if (evt.end_time && new Date(evt.end_time) < now) return false;
+      if (countryFilter !== "All countries" && evt.country !== countryFilter)
+        return false;
+      if (categoryFilter !== "All categories" && evt.category !== categoryFilter)
+        return false;
+      return true;
+    });
+  }, [events, countryFilter, categoryFilter, now]);
 
   const countries = [
     "All countries",
@@ -106,6 +109,17 @@ export default function Events() {
     0
   );
 
+  const mobileQuickFilters = [
+    "All categories",
+    "Meetup",
+    "Festival",
+    "Workshop",
+    "Hiking Day",
+    "Climbing Event",
+    "Bike Gathering",
+    "Community Event",
+  ];
+
   const filterContent = (
     <div style={styles.filtersWrap}>
       <Filter
@@ -138,6 +152,8 @@ export default function Events() {
             onClick={() => {
               setCountryFilter("All countries");
               setCategoryFilter("All categories");
+              setShowCountryList(false);
+              setShowCategoryList(false);
             }}
           >
             Reset
@@ -198,13 +214,13 @@ export default function Events() {
 
         {isMobile && (
           <>
-            <div style={styles.mobileToolbar}>
+            <div style={styles.mobileTopTools}>
               <button
                 type="button"
-                style={styles.mobileToolbarBtn}
+                style={styles.mobileFilterMainBtn}
                 onClick={() => setShowFiltersMobile(true)}
               >
-                ⚙️ Filters
+                <span>⚙️ Filters</span>
                 {activeFilterCount > 0 && (
                   <span style={styles.mobileToolbarCount}>
                     {activeFilterCount}
@@ -214,6 +230,51 @@ export default function Events() {
 
               <div style={styles.mobileResultsChip}>
                 🔍 {loading ? "Loading..." : `${filteredEvents.length} shown`}
+              </div>
+            </div>
+
+            <div style={styles.mobileSwipeSection}>
+              <div style={styles.mobileSwipeHeader}>
+                <div style={styles.mobileSwipeTitle}>Quick filters</div>
+                <div style={styles.mobileSwipeHint}>Swipe horizontally</div>
+              </div>
+
+              <div style={styles.mobileChipsRow}>
+                {mobileQuickFilters.map((chip) => {
+                  const active = categoryFilter === chip;
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setCategoryFilter(chip)}
+                      style={{
+                        ...styles.mobileChip,
+                        ...(active ? styles.mobileChipActive : {}),
+                      }}
+                    >
+                      {chip === "All categories" ? "All" : chip}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={styles.mobileChipsRowSecondary}>
+                {countries.slice(0, 8).map((chip) => {
+                  const active = countryFilter === chip;
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setCountryFilter(chip)}
+                      style={{
+                        ...styles.mobileChipSecondary,
+                        ...(active ? styles.mobileChipSecondaryActive : {}),
+                      }}
+                    >
+                      {chip === "All countries" ? "Any country" : chip}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -266,10 +327,13 @@ export default function Events() {
           )}
         </div>
 
-        <div style={styles.grid}>
+        <div style={isMobile ? styles.mobileCardsRow : styles.grid}>
           {loading
-            ? Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={styles.skeletonCard}>
+            ? Array.from({ length: isMobile ? 4 : 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={isMobile ? styles.mobileSkeletonCard : styles.skeletonCard}
+                >
                   <div style={styles.skeletonImage} />
                   <div style={styles.skeletonBody}>
                     <div style={styles.skeletonLineLg} />
@@ -287,7 +351,7 @@ export default function Events() {
                 return (
                   <div
                     key={evt.id}
-                    style={styles.card}
+                    style={isMobile ? styles.mobileCard : styles.card}
                     onClick={() => navigate(`/event/${evt.id}`)}
                     onMouseEnter={(e) => {
                       if (isMobile) return;
@@ -382,26 +446,6 @@ export default function Events() {
             </div>
           </div>
         )}
-
-        {isMobile && (
-          <div style={styles.mobileStickyBar}>
-            <div style={styles.mobileStickyInfo}>
-              <div style={styles.mobileStickyTitle}>Explore events</div>
-              <div style={styles.mobileStickySub}>
-                {loading ? "Loading..." : `${filteredEvents.length} results`} ·{" "}
-                {categoryFilter}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              style={styles.mobileStickyBtn}
-              onClick={() => setShowFiltersMobile(true)}
-            >
-              Filters
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -466,11 +510,13 @@ const styles = {
   page: {
     position: "relative",
     minHeight: "100vh",
-    overflow: "visible",
+    overflowX: "hidden",
+    overflowY: "visible",
+    marginTop: -120,
+    padding: "64px 0 40px",
     background:
       "radial-gradient(circle at top, #081b16 0%, #04100d 28%, #02060b 58%, #000000 100%)",
     color: "#eafff5",
-    padding: "0 0 110px",
     fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
 
@@ -479,7 +525,7 @@ const styles = {
     zIndex: 2,
     maxWidth: 1400,
     margin: "0 auto",
-    padding: "0 18px",
+    padding: "0 18px 20px",
     overflow: "visible",
   },
 
@@ -531,16 +577,16 @@ const styles = {
 
   hero: {
     position: "relative",
-    padding: "30px 24px 24px",
-    borderRadius: "0 0 34px 34px",
+    padding: "34px 24px 24px",
+    borderRadius: "0 0 36px 36px",
     border: "1px solid rgba(255,255,255,0.08)",
     borderTop: "none",
     background:
-      "linear-gradient(145deg, rgba(10,24,19,0.92), rgba(3,10,8,0.96))",
+      "linear-gradient(145deg, rgba(10,24,19,0.94), rgba(3,10,8,0.98))",
     boxShadow:
       "0 26px 80px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04)",
     overflow: "visible",
-    marginBottom: 24,
+    marginBottom: 22,
   },
 
   heroGlow: {
@@ -727,13 +773,160 @@ const styles = {
     transition: "background 0.2s ease",
   },
 
+  mobileTopTools: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  mobileFilterMainBtn: {
+    minHeight: 48,
+    padding: "0 16px",
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background:
+      "linear-gradient(145deg, rgba(7,22,17,0.96), rgba(3,11,8,0.96))",
+    color: "#f5fff9",
+    fontWeight: 900,
+    fontSize: 13,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    boxShadow: "0 14px 32px rgba(0,0,0,0.30)",
+    position: "relative",
+  },
+
+  mobileToolbarCount: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 999,
+    background: "#00ffbe",
+    color: "#042217",
+    fontSize: 11,
+    fontWeight: 900,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0 6px",
+  },
+
+  mobileResultsChip: {
+    minHeight: 48,
+    padding: "0 14px",
+    borderRadius: 16,
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    color: "rgba(234,255,245,0.88)",
+    fontWeight: 800,
+    fontSize: 12,
+    display: "inline-flex",
+    alignItems: "center",
+    whiteSpace: "nowrap",
+  },
+
+  mobileSwipeSection: {
+    marginBottom: 18,
+  },
+
+  mobileSwipeHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+    paddingInline: 2,
+  },
+
+  mobileSwipeTitle: {
+    fontSize: 12,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "rgba(234,255,245,0.88)",
+    fontWeight: 900,
+  },
+
+  mobileSwipeHint: {
+    fontSize: 11,
+    color: "rgba(234,255,245,0.58)",
+    fontWeight: 700,
+  },
+
+  mobileChipsRow: {
+    display: "flex",
+    gap: 10,
+    overflowX: "auto",
+    paddingBottom: 6,
+    paddingLeft: 2,
+    paddingRight: 2,
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+  },
+
+  mobileChipsRowSecondary: {
+    display: "flex",
+    gap: 10,
+    overflowX: "auto",
+    paddingTop: 10,
+    paddingBottom: 4,
+    paddingLeft: 2,
+    paddingRight: 2,
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+  },
+
+  mobileChip: {
+    flex: "0 0 auto",
+    minHeight: 42,
+    padding: "0 16px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(255,255,255,0.05)",
+    color: "rgba(234,255,245,0.88)",
+    fontWeight: 800,
+    fontSize: 12,
+    whiteSpace: "nowrap",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.24)",
+  },
+
+  mobileChipActive: {
+    background:
+      "linear-gradient(135deg, rgba(0,255,190,0.16), rgba(124,77,255,0.16))",
+    border: "1px solid rgba(0,255,190,0.30)",
+    color: "#ffffff",
+    boxShadow: "0 14px 30px rgba(0,255,190,0.18)",
+  },
+
+  mobileChipSecondary: {
+    flex: "0 0 auto",
+    minHeight: 38,
+    padding: "0 14px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.04)",
+    color: "rgba(234,255,245,0.70)",
+    fontWeight: 700,
+    fontSize: 11,
+    whiteSpace: "nowrap",
+  },
+
+  mobileChipSecondaryActive: {
+    background: "rgba(0,255,190,0.12)",
+    border: "1px solid rgba(0,255,190,0.22)",
+    color: "#dffff5",
+  },
+
   topRow: {
     display: "flex",
     alignItems: "flex-end",
     justifyContent: "space-between",
     gap: 18,
     flexWrap: "wrap",
-    marginBottom: 22,
+    marginBottom: 20,
     paddingInline: 4,
   },
 
@@ -781,6 +974,18 @@ const styles = {
     gap: 24,
   },
 
+  mobileCardsRow: {
+    display: "flex",
+    gap: 16,
+    overflowX: "auto",
+    paddingBottom: 10,
+    paddingLeft: 2,
+    paddingRight: 2,
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+  },
+
   card: {
     position: "relative",
     overflow: "hidden",
@@ -791,6 +996,20 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.08)",
     boxShadow: "0 28px 80px rgba(0,0,0,0.55)",
     transition: "transform 0.35s ease, box-shadow 0.35s ease",
+  },
+
+  mobileCard: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 30,
+    cursor: "pointer",
+    background:
+      "linear-gradient(145deg, rgba(8,26,21,0.98), rgba(2,9,7,0.98))",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 28px 80px rgba(0,0,0,0.55)",
+    flex: "0 0 84%",
+    minWidth: "84%",
+    maxWidth: "84%",
   },
 
   imageWrap: {
@@ -980,6 +1199,18 @@ const styles = {
     boxShadow: "0 28px 80px rgba(0,0,0,0.42)",
   },
 
+  mobileSkeletonCard: {
+    overflow: "hidden",
+    borderRadius: 30,
+    background:
+      "linear-gradient(145deg, rgba(8,26,21,0.96), rgba(2,9,7,0.96))",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 28px 80px rgba(0,0,0,0.42)",
+    flex: "0 0 84%",
+    minWidth: "84%",
+    maxWidth: "84%",
+  },
+
   skeletonImage: {
     height: 240,
     background:
@@ -1041,60 +1272,6 @@ const styles = {
     fontSize: 14,
     color: "rgba(234,255,245,0.62)",
     lineHeight: 1.7,
-  },
-
-  mobileToolbar: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 14,
-  },
-
-  mobileToolbarBtn: {
-    minHeight: 46,
-    padding: "0 16px",
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background:
-      "linear-gradient(145deg, rgba(7,22,17,0.96), rgba(3,11,8,0.96))",
-    color: "#f5fff9",
-    fontWeight: 900,
-    fontSize: 13,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    boxShadow: "0 14px 32px rgba(0,0,0,0.30)",
-    position: "relative",
-  },
-
-  mobileToolbarCount: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 999,
-    background: "#00ffbe",
-    color: "#042217",
-    fontSize: 11,
-    fontWeight: 900,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 6px",
-  },
-
-  mobileResultsChip: {
-    minHeight: 46,
-    padding: "0 14px",
-    borderRadius: 16,
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    color: "rgba(234,255,245,0.88)",
-    fontWeight: 800,
-    fontSize: 12,
-    display: "inline-flex",
-    alignItems: "center",
-    whiteSpace: "nowrap",
   },
 
   filterOverlay: {
@@ -1183,57 +1360,5 @@ const styles = {
     fontWeight: 1000,
     fontSize: 13,
     boxShadow: "0 14px 34px rgba(0,255,190,0.20)",
-  },
-
-  mobileStickyBar: {
-    position: "fixed",
-    left: 10,
-    right: 10,
-    bottom: 10,
-    zIndex: 9997,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    padding: "10px 12px",
-    borderRadius: 20,
-    background: "rgba(4,14,11,0.88)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    backdropFilter: "blur(18px)",
-    boxShadow: "0 22px 60px rgba(0,0,0,0.42)",
-  },
-
-  mobileStickyInfo: {
-    minWidth: 0,
-    flex: 1,
-  },
-
-  mobileStickyTitle: {
-    fontSize: 13,
-    fontWeight: 1000,
-    color: "#fff",
-    lineHeight: 1.1,
-  },
-
-  mobileStickySub: {
-    marginTop: 3,
-    fontSize: 11,
-    color: "rgba(234,255,245,0.72)",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-
-  mobileStickyBtn: {
-    minHeight: 44,
-    padding: "0 14px",
-    borderRadius: 14,
-    border: "none",
-    background: "linear-gradient(135deg, #00ffbe, #52d6ff, #7c4dff)",
-    color: "#042217",
-    fontWeight: 1000,
-    fontSize: 12,
-    boxShadow: "0 14px 34px rgba(0,255,190,0.20)",
-    whiteSpace: "nowrap",
   },
 };

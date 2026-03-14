@@ -281,6 +281,7 @@ export default function ApplyCreator() {
   const pageStyle = {
     minHeight: "100vh",
     padding: isMobile ? "16px 12px 40px" : "28px 16px 70px",
+    marginTop: -120,
     background:
       "radial-gradient(1000px 480px at 0% 0%, rgba(0,255,170,0.10), transparent 55%), radial-gradient(900px 420px at 100% 0%, rgba(0,180,255,0.10), transparent 55%), linear-gradient(180deg, #041812 0%, #020907 45%, #010403 100%)",
     color: "#ffffff",

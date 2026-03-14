@@ -145,6 +145,7 @@ export default function AdminCreatorRequests() {
   const pageStyle = {
     minHeight: "100vh",
     padding: "28px 16px 50px",
+    marginTop: -120,
     background:
       "radial-gradient(circle at top, #071d15 0%, #020806 50%, #000000 100%)",
     color: "white",

@@ -410,6 +410,7 @@ export default function CreateTour() {
   const pageWrapperStyle = {
     minHeight: "100vh",
     padding: isMobile ? "0 0 98px" : "0 0 70px",
+    marginTop: -120,
     background:
       "radial-gradient(1000px 420px at 8% -6%, rgba(0,255,170,0.18), transparent 60%)," +
       "radial-gradient(920px 400px at 100% 8%, rgba(0,185,255,0.14), transparent 60%)," +

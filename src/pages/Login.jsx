@@ -579,11 +579,7 @@ export default function Login() {
                   Log in to continue your outdoor journey.
                 </div>
 
-                <div style={styles.dividerWrapper}>
-                  <div style={styles.dividerLine} />
-                  <div style={styles.dividerLine} />
-                  <div style={styles.dividerLine} />
-                </div>
+                
               </div>
 
               <form style={styles.form} onSubmit={handleLogin}>

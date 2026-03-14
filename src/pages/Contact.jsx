@@ -10,6 +10,7 @@ export default function Contact() {
       style={{
         minHeight: "100vh",
         padding: "40px 20px 80px",
+        marginTop: -120,
         background:
           "radial-gradient(circle at top, #062c22 0%, #02060b 45%, #000000 100%)",
         color: "#ffffff",
