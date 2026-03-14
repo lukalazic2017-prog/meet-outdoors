@@ -533,6 +533,20 @@ export default function Navbar() {
     marginBottom: 0,
   };
 
+  const authBtn = {
+    padding: "10px 16px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.05)",
+    color: "white",
+    fontWeight: 800,
+    fontSize: 13,
+    cursor: "pointer",
+    boxShadow: "0 10px 26px rgba(0,0,0,0.55)",
+    whiteSpace: "nowrap",
+  };
+
+
   const mobileTopIcon = (active = false) => ({
     width: 40,
     height: 40,
@@ -2362,7 +2376,7 @@ export default function Navbar() {
               <button
                 onClick={() => setCreateMenuOpen((p) => !p)}
                 style={{
-                  width: 72,
+                  width: 65,
                   height: 72,
                   marginBottom: 10,
                   borderRadius: 24,
@@ -2416,7 +2430,7 @@ export default function Navbar() {
                 style={bottomTab(isMobileBottomActive("activities"))}
               >
                 <span style={{ fontSize: 19 }}>⛰️</span>
-                <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.04em" }}>
+                <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.04em" }}>
                   ACTIVITIES
                 </span>
               </button>
@@ -2429,7 +2443,7 @@ export default function Navbar() {
                 style={bottomTab(isMobileBottomActive("timeline"))}
               >
                 <span style={{ fontSize: 19 }}>🕒</span>
-                <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.04em" }}>
+                <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.04em" }}>
                   TIMELINE
                 </span>
               </button>
@@ -2442,7 +2456,7 @@ export default function Navbar() {
                 style={bottomTab(isMobileBottomActive("profile"))}
               >
                 <span style={{ fontSize: 19 }}>👤</span>
-                <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.04em" }}>
+                <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.04em" }}>
                   PROFILE
                 </span>
               </button>
