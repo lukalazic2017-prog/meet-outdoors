@@ -533,20 +533,6 @@ export default function Navbar() {
     marginBottom: 0,
   };
 
-  const authBtn = {
-    padding: "10px 16px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(255,255,255,0.05)",
-    color: "white",
-    fontWeight: 800,
-    fontSize: 13,
-    cursor: "pointer",
-    boxShadow: "0 10px 26px rgba(0,0,0,0.55)",
-    whiteSpace: "nowrap",
-  };
-
-
   const mobileTopIcon = (active = false) => ({
     width: 40,
     height: 40,
