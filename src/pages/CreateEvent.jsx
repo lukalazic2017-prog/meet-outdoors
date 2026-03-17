@@ -307,7 +307,7 @@ export default function CreateEvent() {
     : "Price on request";
 
   const fakeStatus = form.isTraining ? "Training" : "Draft";
-  const NAVBAR_OFFSET = isMobile ? 84 : 112;
+  
 
   const styles = {
     page: {

@@ -276,14 +276,7 @@ function MobileProfileView({
     cursor: "pointer",
   };
 
-  const sectionTitle = {
-    fontSize: 11,
-    letterSpacing: "0.16em",
-    textTransform: "uppercase",
-    color: "rgba(230,255,245,0.70)",
-    marginBottom: 10,
-    fontWeight: 900,
-  };
+  
 
   const card = { ...glass, padding: 14 };
 
@@ -1418,14 +1411,6 @@ export default function Profile() {
 
   const card = { ...glass, padding: 18 };
 
-  const sectionTitle = {
-    fontSize: 12,
-    letterSpacing: "0.14em",
-    textTransform: "uppercase",
-    color: "rgba(230,255,245,0.75)",
-    marginBottom: 10,
-    fontWeight: 900,
-  };
 
   const pill = {
     padding: "8px 12px",
