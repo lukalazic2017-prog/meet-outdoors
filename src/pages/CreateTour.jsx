@@ -516,6 +516,7 @@ export default function CreateTour() {
     padding: isMobile
       ? `${NAVBAR_OFFSET + 16}px 0 42px`
       : `${NAVBAR_OFFSET + 18}px 0 56px`,
+      marginTop: -120,
     background:
       "radial-gradient(1000px 420px at 8% -6%, rgba(0,255,170,0.18), transparent 60%)," +
       "radial-gradient(920px 400px at 100% 8%, rgba(0,185,255,0.14), transparent 60%)," +

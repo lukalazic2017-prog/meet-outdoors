@@ -98,6 +98,7 @@ if (savedRows && savedRows.length > 0) {
   const page = {
     minHeight: "100vh",
     padding: "30px 16px 60px",
+    marginTop: -120,
     background:
       "radial-gradient(circle at top, #021d14 0%, #02080a 45%, #000000 100%)",
     color: "#e9fff6",

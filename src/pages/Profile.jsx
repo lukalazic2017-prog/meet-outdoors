@@ -529,6 +529,7 @@ function MobileProfileView({
         minHeight: "100vh",
         paddingTop: NAVBAR_OFFSET,
         paddingBottom: 30,
+        marginTop: -120,
         background:
           "radial-gradient(700px 320px at 20% 0%, rgba(0,255,195,0.22), transparent 60%)," +
           "radial-gradient(700px 320px at 80% 0%, rgba(124,77,255,0.18), transparent 60%)," +

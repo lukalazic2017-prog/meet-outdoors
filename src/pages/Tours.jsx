@@ -510,6 +510,7 @@ export default function Tours() {
       style={{
         ...styles.page,
         paddingTop: isMobile ? NAVBAR_OFFSET + 16 : NAVBAR_OFFSET + 18,
+        marginTop: - 120,
       }}
     >
       <style>{`
@@ -1359,10 +1360,10 @@ const styles = {
   },
 
   dropdown: {
-    position: "absolute",
+    position: "relative",
     left: 0,
     right: 0,
-    top: "calc(100% + 8px)",
+    marginTop: 10,
     maxHeight: 320,
     overflowY: "auto",
     borderRadius: 22,
