@@ -12,15 +12,18 @@ const FriendBadge = () => (
   <span
     style={{
       fontSize: 11,
-      padding: "4px 12px",
+      padding: "5px 12px",
       borderRadius: 999,
       background: "linear-gradient(135deg, #00ffc3, #00b4ff, #7c4dff)",
       color: "#02130d",
       fontWeight: 950,
-      boxShadow: "0 0 18px rgba(0,255,195,0.45)",
+      boxShadow: "0 0 18px rgba(0,255,195,0.35)",
       whiteSpace: "nowrap",
-      border: "1px solid rgba(255,255,255,0.20)",
+      border: "1px solid rgba(255,255,255,0.18)",
       letterSpacing: "0.06em",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
     }}
   >
     🤝 FRIEND
@@ -75,6 +78,117 @@ function formatDateTime(d) {
   }
 }
 
+function getTourDateLabel(t) {
+  return t?.date_start || t?.start_date || t?.date || "";
+}
+
+function getEventDateLabel(e) {
+  return e?.start_date || e?.start_time || e?.date || "";
+}
+
+function getTourImage(t) {
+  return (
+    t?.cover_url ||
+    (Array.isArray(t?.image_urls) ? t.image_urls[0] : null) ||
+    t?.image_url ||
+    ""
+  );
+}
+
+function getSocialButtonStyle(type) {
+  if (type === "instagram") {
+    return {
+      background:
+        "linear-gradient(135deg, rgba(225,48,108,0.24), rgba(255,186,73,0.18))",
+      border: "1px solid rgba(225,48,108,0.42)",
+      color: "#fff4f8",
+      boxShadow: "0 0 22px rgba(225,48,108,0.18)",
+    };
+  }
+
+  if (type === "tiktok") {
+    return {
+      background:
+        "linear-gradient(135deg, rgba(0,0,0,0.84), rgba(255,0,80,0.22), rgba(0,255,255,0.18))",
+      border: "1px solid rgba(255,255,255,0.16)",
+      color: "#ffffff",
+      boxShadow: "0 0 24px rgba(255,0,80,0.16)",
+    };
+  }
+
+  return {
+    background:
+      "linear-gradient(135deg, rgba(255,0,0,0.24), rgba(255,80,80,0.16))",
+    border: "1px solid rgba(255,0,0,0.42)",
+    color: "#fff1f1",
+    boxShadow: "0 0 22px rgba(255,0,0,0.18)",
+  };
+}
+
+function SectionHeader({ eyebrow, title, right }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+        marginBottom: 14,
+      }}
+    >
+      <div>
+        {eyebrow ? (
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: "rgba(230,255,245,0.62)",
+              fontWeight: 900,
+              marginBottom: 6,
+            }}
+          >
+            {eyebrow}
+          </div>
+        ) : null}
+
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: 950,
+            lineHeight: 1.06,
+            color: "#f8fffb",
+            letterSpacing: "-0.03em",
+          }}
+        >
+          {title}
+        </div>
+      </div>
+
+      {right || null}
+    </div>
+  );
+}
+
+function EmptyState({ text }) {
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        padding: "16px 14px",
+        background: "rgba(0,0,0,0.28)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        color: "rgba(235,250,242,0.72)",
+        fontSize: 13,
+        lineHeight: 1.6,
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
 /* ================= MOBILE PROFILE VIEW ================= */
 
 function MobileProfileView({
@@ -111,17 +225,19 @@ function MobileProfileView({
   const safeBio =
     profile?.bio || "No description yet. This explorer prefers actions over words.";
 
+  const NAVBAR_OFFSET = 84;
+
   const glass = {
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
-    boxShadow: "0 20px 70px rgba(0,0,0,0.65)",
+    boxShadow: "0 18px 60px rgba(0,0,0,0.55)",
     backdropFilter: "blur(16px)",
-    borderRadius: 22,
+    borderRadius: 24,
   };
 
   const pill = {
     fontSize: 12,
-    padding: "7px 12px",
+    padding: "8px 12px",
     borderRadius: 999,
     background: "rgba(0,0,0,0.35)",
     border: "1px solid rgba(255,255,255,0.14)",
@@ -129,6 +245,7 @@ function MobileProfileView({
     alignItems: "center",
     gap: 8,
     whiteSpace: "nowrap",
+    color: "rgba(245,255,250,0.96)",
   };
 
   const btnPrimary = {
@@ -144,7 +261,7 @@ function MobileProfileView({
       : "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
     color: isFollowing ? "white" : "#02130d",
     boxShadow:
-      "0 0 30px rgba(0,255,195,0.30), 0 16px 40px rgba(0,0,0,0.40)",
+      "0 0 24px rgba(0,255,195,0.24), 0 16px 40px rgba(0,0,0,0.32)",
     opacity: followBusy ? 0.7 : 1,
   };
 
@@ -152,7 +269,7 @@ function MobileProfileView({
     width: "100%",
     padding: "13px 0",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.22)",
+    border: "1px solid rgba(255,255,255,0.18)",
     background: "rgba(0,0,0,0.35)",
     fontWeight: 950,
     color: "white",
@@ -163,7 +280,7 @@ function MobileProfileView({
     fontSize: 11,
     letterSpacing: "0.16em",
     textTransform: "uppercase",
-    color: "rgba(230,255,245,0.75)",
+    color: "rgba(230,255,245,0.70)",
     marginBottom: 10,
     fontWeight: 900,
   };
@@ -175,7 +292,7 @@ function MobileProfileView({
       onClick={onClick}
       style={{
         background: "rgba(255,255,255,0.08)",
-        borderRadius: 18,
+        borderRadius: 20,
         padding: "14px 10px",
         textAlign: "center",
         border: "1px solid rgba(255,255,255,0.10)",
@@ -183,28 +300,29 @@ function MobileProfileView({
         boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
       }}
     >
-      <div style={{ fontSize: 19, fontWeight: 950, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 20, fontWeight: 950, lineHeight: 1.1 }}>
+        {value}
+      </div>
       <div style={{ fontSize: 11, opacity: 0.75, marginTop: 4 }}>{label}</div>
     </div>
   );
 
   const TourCard = ({ t }) => {
-    const img =
-      t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+    const img = getTourImage(t);
 
     return (
       <div
         onClick={() => navigate?.(`/tour/${t.id}`)}
         style={{
           cursor: "pointer",
-          borderRadius: 18,
+          borderRadius: 20,
           overflow: "hidden",
           border: "1px solid rgba(255,255,255,0.12)",
           background: "rgba(0,0,0,0.35)",
           boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
         }}
       >
-        <div style={{ position: "relative", height: 150 }}>
+        <div style={{ position: "relative", height: 156 }}>
           {img ? (
             <img
               src={img}
@@ -223,17 +341,21 @@ function MobileProfileView({
               }}
             />
           )}
+
           <div
             style={{
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.88))",
+                "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.90))",
             }}
           />
-          <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
-            <div style={{ fontWeight: 950, fontSize: 14 }}>{t.title}</div>
-            <div style={{ fontSize: 12, opacity: 0.8, marginTop: 3 }}>
+
+          <div style={{ position: "absolute", left: 12, bottom: 12, right: 12 }}>
+            <div style={{ fontWeight: 950, fontSize: 14, lineHeight: 1.2 }}>
+              {t.title}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
               📍 {t.location_name || "Unknown place"}
               {t.country ? `, ${t.country}` : ""}
             </div>
@@ -247,9 +369,10 @@ function MobileProfileView({
             justifyContent: "space-between",
             fontSize: 12,
             opacity: 0.9,
+            gap: 8,
           }}
         >
-          <span>{t.date_start ? `🗓 ${t.date_start}` : "🗓 Date TBA"}</span>
+          <span>{getTourDateLabel(t) ? `🗓 ${getTourDateLabel(t)}` : "🗓 Date TBA"}</span>
           <span>{t.price ? `💶 ${t.price}€` : "Free"}</span>
         </div>
       </div>
@@ -264,14 +387,14 @@ function MobileProfileView({
         onClick={() => navigate?.(`/event/${e.id}`)}
         style={{
           cursor: "pointer",
-          borderRadius: 18,
+          borderRadius: 20,
           overflow: "hidden",
           border: "1px solid rgba(255,255,255,0.12)",
           background: "rgba(0,0,0,0.35)",
           boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
         }}
       >
-        <div style={{ position: "relative", height: 150 }}>
+        <div style={{ position: "relative", height: 156 }}>
           {img ? (
             <img
               src={img}
@@ -300,9 +423,11 @@ function MobileProfileView({
             }}
           />
 
-          <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
-            <div style={{ fontWeight: 950, fontSize: 14 }}>{e.title}</div>
-            <div style={{ fontSize: 12, opacity: 0.82, marginTop: 3 }}>
+          <div style={{ position: "absolute", left: 12, bottom: 12, right: 12 }}>
+            <div style={{ fontWeight: 950, fontSize: 14, lineHeight: 1.2 }}>
+              {e.title}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.82, marginTop: 4 }}>
               📍 {e.city || "City"}
               {e.country ? `, ${e.country}` : ""}
             </div>
@@ -316,9 +441,10 @@ function MobileProfileView({
             justifyContent: "space-between",
             fontSize: 12,
             opacity: 0.9,
+            gap: 8,
           }}
         >
-          <span>🗓 {e.start_date ? formatDate(e.start_date) : "Date TBA"}</span>
+          <span>🗓 {getEventDateLabel(e) ? formatDate(getEventDateLabel(e)) : "Date TBA"}</span>
           <span>→ Open</span>
         </div>
       </div>
@@ -407,9 +533,9 @@ function MobileProfileView({
   return (
     <div
       style={{
-        minHeight: "60vh",
-        paddingTop: 0,
-        marginTop: -120,
+        minHeight: "100vh",
+        paddingTop: NAVBAR_OFFSET,
+        paddingBottom: 30,
         background:
           "radial-gradient(700px 320px at 20% 0%, rgba(0,255,195,0.22), transparent 60%)," +
           "radial-gradient(700px 320px at 80% 0%, rgba(124,77,255,0.18), transparent 60%)," +
@@ -418,7 +544,7 @@ function MobileProfileView({
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      <div style={{ position: "relative", height: 220 }}>
+      <div style={{ position: "relative", height: 250 }}>
         {cover ? (
           <img
             src={cover}
@@ -448,7 +574,7 @@ function MobileProfileView({
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.92))",
+              "linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.94))",
           }}
         />
 
@@ -458,13 +584,13 @@ function MobileProfileView({
             left: "50%",
             bottom: -58,
             transform: "translateX(-50%)",
-            width: 128,
-            height: 128,
+            width: 132,
+            height: 132,
             borderRadius: "50%",
             padding: 4,
             background: "linear-gradient(135deg,#00ffc3,#00b4ff,#7c4dff)",
             boxShadow:
-              "0 0 34px rgba(0,255,195,0.45), 0 0 90px rgba(0,180,255,0.18)",
+              "0 0 34px rgba(0,255,195,0.35), 0 0 90px rgba(0,180,255,0.18)",
           }}
         >
           <img
@@ -477,7 +603,7 @@ function MobileProfileView({
               borderRadius: "50%",
               objectFit: "cover",
               objectPosition: "50% 35%",
-              border: "3px solid rgba(0,0,0,0.78)",
+              border: "3px solid rgba(0,0,0,0.82)",
               background: "rgba(0,0,0,0.35)",
               cursor: "pointer",
             }}
@@ -485,13 +611,13 @@ function MobileProfileView({
         </div>
       </div>
 
-      <div style={{ padding: 14, paddingTop: 72, maxWidth: 720, margin: "0 auto" }}>
+      <div style={{ padding: 14, paddingTop: 74, maxWidth: 760, margin: "0 auto" }}>
         <div style={{ textAlign: "center" }}>
           <div
             style={{
-              fontSize: 31,
+              fontSize: 32,
               fontWeight: 950,
-              lineHeight: 1.05,
+              lineHeight: 1.04,
               textShadow: "0 10px 30px rgba(0,0,0,0.55)",
             }}
           >
@@ -500,7 +626,7 @@ function MobileProfileView({
 
           <div
             style={{
-              marginTop: 8,
+              marginTop: 10,
               display: "flex",
               gap: 8,
               justifyContent: "center",
@@ -519,7 +645,7 @@ function MobileProfileView({
                 border: "1px solid rgba(255,211,107,0.30)",
                 color: "#ffd36b",
                 fontWeight: 900,
-                textShadow: "0 0 10px rgba(255,211,107,0.35)",
+                textShadow: "0 0 10px rgba(255,211,107,0.25)",
               }}
             >
               ⭐ {avgRating || "New"} rating
@@ -542,27 +668,10 @@ function MobileProfileView({
               </span>
             )}
 
-            {Boolean(isFriend) && (
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: "5px 12px",
-                  borderRadius: 999,
-                  background:
-                    "linear-gradient(135deg, #00ffc3, #00b4ff, #7c4dff)",
-                  color: "#02130d",
-                  fontWeight: 950,
-                  border: "1px solid rgba(255,255,255,0.20)",
-                  letterSpacing: "0.06em",
-                  boxShadow: "0 0 18px rgba(0,255,195,0.35)",
-                }}
-              >
-                🤝 FRIEND
-              </span>
-            )}
+            {Boolean(isFriend) && <FriendBadge />}
           </div>
 
-          <div style={{ opacity: 0.8, fontSize: 13, marginTop: 8 }}>
+          <div style={{ opacity: 0.8, fontSize: 13, marginTop: 10 }}>
             📍 {safeCity}, {safeCountry}
           </div>
 
@@ -621,8 +730,8 @@ function MobileProfileView({
           style={{
             marginTop: 16,
             ...glass,
-            padding: 14,
-            lineHeight: 1.6,
+            padding: 16,
+            lineHeight: 1.7,
             fontSize: 14,
             opacity: 0.94,
           }}
@@ -691,12 +800,13 @@ function MobileProfileView({
                 style={{
                   padding: "9px 14px",
                   borderRadius: 999,
-                  background: "rgba(225,48,108,0.18)",
-                  border: "1px solid rgba(225,48,108,0.35)",
-                  color: "white",
                   textDecoration: "none",
                   fontWeight: 900,
                   fontSize: 12,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  ...getSocialButtonStyle("instagram"),
                 }}
               >
                 📸 Instagram
@@ -710,12 +820,13 @@ function MobileProfileView({
                 style={{
                   padding: "9px 14px",
                   borderRadius: 999,
-                  background: "rgba(255,0,80,0.16)",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  color: "white",
                   textDecoration: "none",
                   fontWeight: 900,
                   fontSize: 12,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  ...getSocialButtonStyle("tiktok"),
                 }}
               >
                 🎵 TikTok
@@ -729,12 +840,13 @@ function MobileProfileView({
                 style={{
                   padding: "9px 14px",
                   borderRadius: 999,
-                  background: "rgba(255,0,0,0.16)",
-                  border: "1px solid rgba(255,0,0,0.35)",
-                  color: "white",
                   textDecoration: "none",
                   fontWeight: 900,
                   fontSize: 12,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  ...getSocialButtonStyle("youtube"),
                 }}
               >
                 ▶️ YouTube
@@ -744,25 +856,16 @@ function MobileProfileView({
         )}
 
         <div style={{ marginTop: 18, ...card }}>
-          <div style={sectionTitle}>Tours</div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <div style={{ fontSize: 18, fontWeight: 950 }}>Created tours</div>
-            <div style={pill}>🗺️ {tours.length}</div>
-          </div>
+          <SectionHeader
+            eyebrow="Tours"
+            title="Created tours"
+            right={<div style={pill}>🗺️ {tours.length}</div>}
+          />
 
           {tours.length === 0 ? (
-            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
-              No tours created yet.
-            </div>
+            <EmptyState text="No tours created yet." />
           ) : (
-            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gap: 12 }}>
               {tours.slice(0, 3).map((t) => (
                 <TourCard key={t.id} t={t} />
               ))}
@@ -779,25 +882,16 @@ function MobileProfileView({
         </div>
 
         <div style={{ marginTop: 14, ...card }}>
-          <div style={sectionTitle}>Joined tours</div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <div style={{ fontSize: 18, fontWeight: 950 }}>Tours joined</div>
-            <div style={pill}>🤝 {joinedTours.length}</div>
-          </div>
+          <SectionHeader
+            eyebrow="Joined"
+            title="Tours joined"
+            right={<div style={pill}>🤝 {joinedTours.length}</div>}
+          />
 
           {joinedTours.length === 0 ? (
-            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
-              No joined tours yet.
-            </div>
+            <EmptyState text="No joined tours yet." />
           ) : (
-            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gap: 12 }}>
               {joinedTours.slice(0, 3).map((t) => (
                 <TourCard key={t.id} t={t} />
               ))}
@@ -806,25 +900,16 @@ function MobileProfileView({
         </div>
 
         <div style={{ marginTop: 14, ...card }}>
-          <div style={sectionTitle}>Events</div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <div style={{ fontSize: 18, fontWeight: 950 }}>Upcoming events</div>
-            <div style={pill}>🎟️ {events.length}</div>
-          </div>
+          <SectionHeader
+            eyebrow="Events"
+            title="Upcoming events"
+            right={<div style={pill}>🎟️ {events.length}</div>}
+          />
 
           {events.length === 0 ? (
-            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
-              No events yet.
-            </div>
+            <EmptyState text="No events yet." />
           ) : (
-            <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gap: 12 }}>
               {events.slice(0, 3).map((e) => (
                 <EventCard key={e.id} e={e} />
               ))}
@@ -841,25 +926,16 @@ function MobileProfileView({
         </div>
 
         <div style={{ marginTop: 14, ...card, marginBottom: 28 }}>
-          <div style={sectionTitle}>Timeline</div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <div style={{ fontSize: 18, fontWeight: 950 }}>Recent activity</div>
-            <div style={pill}>🕒 {timeline.length}</div>
-          </div>
+          <SectionHeader
+            eyebrow="Timeline"
+            title="Recent activity"
+            right={<div style={pill}>🕒 {timeline.length}</div>}
+          />
 
           {timeline.length === 0 ? (
-            <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
-              No activity yet.
-            </div>
+            <EmptyState text="No activity yet." />
           ) : (
-            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+            <div style={{ display: "grid", gap: 10 }}>
               {timeline.slice(0, 6).map((it, idx) => (
                 <TimelineRow key={idx} it={it} />
               ))}
@@ -917,6 +993,8 @@ function MobileProfileView({
     </div>
   );
 }
+
+/* ================= DESKTOP PROFILE ================= */
 
 export default function Profile() {
   const { id } = useParams();
@@ -1169,7 +1247,7 @@ export default function Profile() {
         title: "Created a new tour",
         subtitle: t.title,
         meta: `${t.location_name || "Unknown place"}${t.country ? `, ${t.country}` : ""}`,
-        cover: t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null),
+        cover: getTourImage(t),
         id: t.id,
       });
     });
@@ -1288,8 +1366,10 @@ export default function Profile() {
       }[lvl];
 
       const b = [];
-      if ((tours.length || 0) >= 1) b.push({ t: "🧭 Explorer", tip: "Created at least 1 tour" });
-      if ((events.length || 0) >= 1) b.push({ t: "🏕️ Host", tip: "Created at least 1 event" });
+      if ((tours.length || 0) >= 1)
+        b.push({ t: "🧭 Explorer", tip: "Created at least 1 tour" });
+      if ((events.length || 0) >= 1)
+        b.push({ t: "🏕️ Host", tip: "Created at least 1 event" });
       if (followersCount >= 10) b.push({ t: "🔥 Popular", tip: "10+ followers" });
       if (lvl >= 4) b.push({ t: "💠 Elite", tip: "Level 4+" });
       if (lvl >= 5) b.push({ t: "🏆 Legend", tip: "Level 5" });
@@ -1306,6 +1386,8 @@ export default function Profile() {
       };
     }, [tours.length, events.length, followersCount, avgRating, isFriend]);
 
+  const NAVBAR_OFFSET = 112;
+
   const page = {
     minHeight: "100vh",
     color: "#eafff7",
@@ -1314,12 +1396,13 @@ export default function Profile() {
       "radial-gradient(900px 500px at 85% 10%, rgba(124,77,255,0.16), transparent 55%)," +
       "linear-gradient(180deg, #02080a 0%, #010405 100%)",
     fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    paddingTop: NAVBAR_OFFSET,
   };
 
   const wrap = {
-    maxWidth: 1200,
+    maxWidth: 1240,
     margin: "0 auto",
-    padding: "18px 16px 90px",
+    padding: "20px 16px 90px",
     display: "flex",
     flexDirection: "column",
     gap: 18,
@@ -1328,9 +1411,9 @@ export default function Profile() {
   const glass = {
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
-    boxShadow: "0 30px 90px rgba(0,0,0,0.65)",
+    boxShadow: "0 24px 80px rgba(0,0,0,0.58)",
     backdropFilter: "blur(18px)",
-    borderRadius: 26,
+    borderRadius: 28,
   };
 
   const card = { ...glass, padding: 18 };
@@ -1341,6 +1424,7 @@ export default function Profile() {
     textTransform: "uppercase",
     color: "rgba(230,255,245,0.75)",
     marginBottom: 10,
+    fontWeight: 900,
   };
 
   const pill = {
@@ -1369,7 +1453,7 @@ export default function Profile() {
   const btnGhost = {
     padding: "11px 16px",
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.26)",
+    border: "1px solid rgba(255,255,255,0.22)",
     background: "rgba(0,0,0,0.35)",
     color: "white",
     cursor: "pointer",
@@ -1508,8 +1592,15 @@ export default function Profile() {
   );
 
   const heroCard = (
-    <div style={{ ...glass, overflow: "visible", position: "relative", padding: 0 }}>
-      <div style={{ position: "relative", height: 340 }}>
+    <div
+      style={{
+        ...glass,
+        overflow: "hidden",
+        position: "relative",
+        padding: 0,
+      }}
+    >
+      <div style={{ position: "relative", height: 360 }}>
         {cover ? (
           <img
             src={cover}
@@ -1518,7 +1609,7 @@ export default function Profile() {
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              filter: "saturate(1.1) contrast(1.05) brightness(1.02)",
+              filter: "saturate(1.08) contrast(1.04) brightness(0.94)",
             }}
           />
         ) : (
@@ -1547,34 +1638,42 @@ export default function Profile() {
             position: "absolute",
             inset: 0,
             background:
-              "radial-gradient(520px 260px at 18% 12%, rgba(0,255,195,0.25), transparent 65%)," +
-              "radial-gradient(540px 280px at 82% 12%, rgba(124,77,255,0.22), transparent 70%)",
+              "radial-gradient(520px 260px at 18% 12%, rgba(0,255,195,0.20), transparent 65%)," +
+              "radial-gradient(540px 280px at 82% 12%, rgba(124,77,255,0.18), transparent 70%)",
             mixBlendMode: "screen",
             opacity: 0.9,
           }}
         />
       </div>
 
-      <div style={{ padding: 18, marginTop:-92, position: "relative" }}>
+      <div style={{ padding: 22, marginTop: -102, position: "relative" }}>
         <div
           style={{
             display: "flex",
-            gap: 16,
+            gap: 18,
             alignItems: "flex-end",
             justifyContent: "space-between",
             flexWrap: "wrap",
           }}
         >
-          <div style={{ display: "flex", gap: 14, alignItems: "flex-end" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              alignItems: "flex-end",
+              flexWrap: "wrap",
+            }}
+          >
             <div
               style={{
-                width: 126,
-                height: 126,
+                width: 132,
+                height: 132,
                 borderRadius: "50%",
                 padding: 4,
                 background: `conic-gradient(from 210deg, ${theme.a}, ${theme.b}, ${theme.c}, ${theme.a})`,
                 boxShadow:
-                  "0 0 44px rgba(0,255,195,0.35), 0 0 90px rgba(124,77,255,0.18)",
+                  "0 0 44px rgba(0,255,195,0.30), 0 0 90px rgba(124,77,255,0.16)",
+                flexShrink: 0,
               }}
             >
               <img
@@ -1590,20 +1689,20 @@ export default function Profile() {
               />
             </div>
 
-            <div style={{ paddingBottom: 6, maxWidth: 640 }}>
+            <div style={{ paddingBottom: 6, maxWidth: 680 }}>
               <div
                 style={{
                   display: "flex",
                   gap: 10,
                   flexWrap: "wrap",
                   alignItems: "center",
-                  marginBottom: 10,
+                  marginBottom: 12,
                 }}
               >
                 <div style={pill}>
                   🧬 Level <b style={{ color: "white" }}>{level}</b>
                   <span style={{ opacity: 0.6 }}>•</span>
-                  <span style={{ color: "rgba(255,255,255,0.9)" }}>{levelName}</span>
+                  <span style={{ color: "rgba(255,255,255,0.92)" }}>{levelName}</span>
                 </div>
                 <div style={pill}>🏅 {badgeText}</div>
                 <div style={pill}>
@@ -1616,12 +1715,12 @@ export default function Profile() {
               <div
                 style={{
                   display: "flex",
-                  gap: 10,
+                  gap: 12,
                   flexWrap: "wrap",
                   alignItems: "center",
                 }}
               >
-                <div style={{ fontSize: 36, fontWeight: 950 }}>
+                <div style={{ fontSize: 38, fontWeight: 950, lineHeight: 1.02 }}>
                   {profile.full_name || profile.username || "Explorer"}
                 </div>
 
@@ -1631,7 +1730,7 @@ export default function Profile() {
                   <span
                     style={{
                       fontSize: 11,
-                      padding: "4px 10px",
+                      padding: "5px 10px",
                       borderRadius: 999,
                       background: "rgba(0,255,176,0.14)",
                       border: "1px solid rgba(0,255,176,0.35)",
@@ -1650,15 +1749,16 @@ export default function Profile() {
               <div
                 style={{
                   marginTop: 8,
-                  fontSize: 13,
-                  opacity: 0.82,
-                  lineHeight: 1.6,
+                  fontSize: 14,
+                  opacity: 0.84,
+                  lineHeight: 1.7,
+                  maxWidth: 720,
                 }}
               >
                 {profile.bio || "No description yet. This explorer prefers actions over words."}
               </div>
 
-              <div style={{ marginTop: 14, maxWidth: 640 }}>
+              <div style={{ marginTop: 14, maxWidth: 650 }}>
                 <ProfileRatingBox ratedUserId={profile.id} user={authUser} />
               </div>
 
@@ -1686,12 +1786,8 @@ export default function Profile() {
                         fontSize: 12,
                         fontWeight: 950,
                         letterSpacing: "0.05em",
-                        background:
-                          "linear-gradient(135deg, rgba(225,48,108,0.35), rgba(255,220,128,0.25))",
-                        border: "1px solid rgba(225,48,108,0.45)",
-                        color: "#fff0f7",
                         textDecoration: "none",
-                        boxShadow: "0 0 24px rgba(225,48,108,0.35)",
+                        ...getSocialButtonStyle("instagram"),
                       }}
                     >
                       📸 Instagram
@@ -1712,13 +1808,8 @@ export default function Profile() {
                         fontSize: 12,
                         fontWeight: 950,
                         letterSpacing: "0.05em",
-                        background:
-                          "linear-gradient(135deg, rgba(0,0,0,0.85), rgba(255,0,80,0.35), rgba(0,255,255,0.35))",
-                        border: "1px solid rgba(255,255,255,0.25)",
-                        color: "#ffffff",
                         textDecoration: "none",
-                        boxShadow:
-                          "0 0 28px rgba(255,0,80,0.35), 0 0 28px rgba(0,255,255,0.25)",
+                        ...getSocialButtonStyle("tiktok"),
                       }}
                     >
                       🎵 TikTok
@@ -1739,12 +1830,8 @@ export default function Profile() {
                         fontSize: 12,
                         fontWeight: 950,
                         letterSpacing: "0.05em",
-                        background:
-                          "linear-gradient(135deg, rgba(255,0,0,0.35), rgba(255,80,80,0.20))",
-                        border: "1px solid rgba(255,0,0,0.55)",
-                        color: "#ffeaea",
                         textDecoration: "none",
-                        boxShadow: "0 0 30px rgba(255,0,0,0.45)",
+                        ...getSocialButtonStyle("youtube"),
                       }}
                     >
                       ▶️ YouTube
@@ -1781,7 +1868,7 @@ export default function Profile() {
                 </div>
               )}
 
-              <div style={{ marginTop: 12, maxWidth: 640 }}>
+              <div style={{ marginTop: 14, maxWidth: 680 }}>
                 <div
                   style={{
                     display: "flex",
@@ -1791,7 +1878,7 @@ export default function Profile() {
                     marginBottom: 6,
                   }}
                 >
-                  <span>XP</span>
+                  <span>XP progress</span>
                   <span>
                     {xp} / {nextCap}
                   </span>
@@ -1802,7 +1889,7 @@ export default function Profile() {
                     borderRadius: 999,
                     background: "rgba(255,255,255,0.12)",
                     overflow: "hidden",
-                    boxShadow: "0 0 22px rgba(0,255,195,0.15)",
+                    boxShadow: "0 0 22px rgba(0,255,195,0.10)",
                   }}
                 >
                   <div
@@ -1827,7 +1914,7 @@ export default function Profile() {
             marginTop: 18,
             display: "grid",
             gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            gap: 10,
+            gap: 12,
           }}
         >
           {[
@@ -1863,18 +1950,18 @@ export default function Profile() {
                 cursor: "pointer",
                 background: "rgba(0,0,0,0.35)",
                 border: "1px solid rgba(255,255,255,0.10)",
-                borderRadius: 18,
+                borderRadius: 20,
                 padding: 14,
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                boxShadow: "0 16px 50px rgba(0,0,0,0.45)",
+                gap: 12,
+                boxShadow: "0 14px 44px rgba(0,0,0,0.34)",
               }}
             >
               <div
                 style={{
-                  width: 38,
-                  height: 38,
+                  width: 40,
+                  height: 40,
                   borderRadius: 14,
                   display: "flex",
                   alignItems: "center",
@@ -1882,6 +1969,7 @@ export default function Profile() {
                   background:
                     "linear-gradient(135deg, rgba(0,255,195,0.14), rgba(124,77,255,0.14))",
                   border: "1px solid rgba(255,255,255,0.10)",
+                  flexShrink: 0,
                 }}
               >
                 {s.icon}
@@ -1947,35 +2035,25 @@ export default function Profile() {
   const OverviewGrid = (
     <div style={gridResponsive}>
       <div style={card}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            <div style={sectionTitle}>Timeline</div>
-            <div style={{ fontSize: 18, fontWeight: 950 }}>Recent activity</div>
-          </div>
-          <div style={{ ...pill, opacity: 0.95 }}>🕒 {timeline.length} items</div>
-        </div>
+        <SectionHeader
+          eyebrow="Timeline"
+          title="Recent activity"
+          right={<div style={{ ...pill, opacity: 0.95 }}>🕒 {timeline.length} items</div>}
+        />
 
         {timeline.length === 0 ? (
-          <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
-            No activity yet.
-          </div>
+          <EmptyState text="No activity yet." />
         ) : (
-          <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {timeline.map((it, i) => (
               <div
                 key={i}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: it.cover ? "84px 1fr" : "1fr",
+                  gridTemplateColumns: it.cover ? "90px 1fr" : "1fr",
                   gap: 12,
                   padding: 12,
-                  borderRadius: 18,
+                  borderRadius: 20,
                   background: "rgba(0,0,0,0.35)",
                   border: "1px solid rgba(255,255,255,0.10)",
                 }}
@@ -1983,8 +2061,8 @@ export default function Profile() {
                 {it.cover ? (
                   <div
                     style={{
-                      width: 84,
-                      height: 66,
+                      width: 90,
+                      height: 70,
                       borderRadius: 14,
                       overflow: "hidden",
                       border: "1px solid rgba(255,255,255,0.10)",
@@ -2003,7 +2081,7 @@ export default function Profile() {
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
-                        filter: "saturate(1.15)",
+                        filter: "saturate(1.12)",
                       }}
                     />
                   </div>
@@ -2012,8 +2090,8 @@ export default function Profile() {
                 <div style={{ display: "flex", gap: 10 }}>
                   <div
                     style={{
-                      width: 40,
-                      height: 40,
+                      width: 42,
+                      height: 42,
                       borderRadius: 16,
                       display: "flex",
                       alignItems: "center",
@@ -2059,7 +2137,15 @@ export default function Profile() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div style={card}>
-          <div style={sectionTitle}>Rating</div>
+          <SectionHeader
+            eyebrow="Rating"
+            title="Reputation"
+            right={
+              <div style={pill}>
+                🏆 Boost: <b style={{ color: "white" }}>{Math.round((avgRating || 0) * 60)}</b> XP
+              </div>
+            }
+          />
 
           <div
             style={{
@@ -2071,17 +2157,13 @@ export default function Profile() {
             }}
           >
             <div>
-              <div style={{ fontSize: 36, fontWeight: 950, lineHeight: 1 }}>
+              <div style={{ fontSize: 38, fontWeight: 950, lineHeight: 1 }}>
                 {avgRating ? avgRating.toFixed(1) : "N/A"}
                 <span style={{ fontSize: 16, opacity: 0.9 }}> ★</span>
               </div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>
                 {ratingsCount} rating{ratingsCount === 1 ? "" : "s"}
               </div>
-            </div>
-
-            <div style={pill}>
-              🏆 Boost: <b style={{ color: "white" }}>{Math.round((avgRating || 0) * 60)}</b> XP
             </div>
           </div>
 
@@ -2093,32 +2175,24 @@ export default function Profile() {
         </div>
 
         <div style={card}>
-          <div
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-          >
-            <div>
-              <div style={sectionTitle}>Tours</div>
-              <div style={{ fontSize: 18, fontWeight: 950 }}>Created tours</div>
-            </div>
-            <div style={pill}>🗺️ {tours.length}</div>
-          </div>
+          <SectionHeader
+            eyebrow="Tours"
+            title="Created tours"
+            right={<div style={pill}>🗺️ {tours.length}</div>}
+          />
 
           {tours.length === 0 ? (
-            <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
-              No tours created yet.
-            </div>
+            <EmptyState text="No tours created yet." />
           ) : (
             <div
               style={{
-                marginTop: 14,
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
                 gap: 12,
               }}
             >
               {tours.slice(0, 8).map((t) => {
-                const img =
-                  t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+                const img = getTourImage(t);
 
                 return (
                   <div
@@ -2133,7 +2207,7 @@ export default function Profile() {
                       boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
                     }}
                   >
-                    <div style={{ position: "relative", height: 122 }}>
+                    <div style={{ position: "relative", height: 128 }}>
                       {img ? (
                         <img
                           src={img}
@@ -2142,7 +2216,7 @@ export default function Profile() {
                             width: "100%",
                             height: "100%",
                             objectFit: "cover",
-                            filter: "saturate(1.15) contrast(1.05) brightness(0.92)",
+                            filter: "saturate(1.12) contrast(1.04) brightness(0.92)",
                           }}
                         />
                       ) : (
@@ -2162,7 +2236,7 @@ export default function Profile() {
                           position: "absolute",
                           inset: 0,
                           background:
-                            "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.85))",
+                            "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.88))",
                         }}
                       />
                       <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
@@ -2183,7 +2257,7 @@ export default function Profile() {
                       }}
                     >
                       <div style={{ fontSize: 11, opacity: 0.72 }}>
-                        {t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}
+                        {getTourDateLabel(t) ? `🗓 ${getTourDateLabel(t)}` : "🗓 Date tbd"}
                       </div>
                       <div style={{ fontSize: 11, opacity: 0.9 }}>
                         {t.price ? `💶 ${t.price}€` : "Free"}
@@ -2204,32 +2278,24 @@ export default function Profile() {
         </div>
 
         <div style={card}>
-          <div
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-          >
-            <div>
-              <div style={sectionTitle}>Joined tours</div>
-              <div style={{ fontSize: 18, fontWeight: 950 }}>Tours joined</div>
-            </div>
-            <div style={pill}>🤝 {joinedTours.length}</div>
-          </div>
+          <SectionHeader
+            eyebrow="Joined"
+            title="Tours joined"
+            right={<div style={pill}>🤝 {joinedTours.length}</div>}
+          />
 
           {joinedTours.length === 0 ? (
-            <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
-              No joined tours yet.
-            </div>
+            <EmptyState text="No joined tours yet." />
           ) : (
             <div
               style={{
-                marginTop: 14,
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
                 gap: 12,
               }}
             >
               {joinedTours.slice(0, 4).map((t) => {
-                const img =
-                  t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+                const img = getTourImage(t);
 
                 return (
                   <div
@@ -2244,7 +2310,7 @@ export default function Profile() {
                       boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
                     }}
                   >
-                    <div style={{ position: "relative", height: 122 }}>
+                    <div style={{ position: "relative", height: 128 }}>
                       {img ? (
                         <img
                           src={img}
@@ -2253,7 +2319,7 @@ export default function Profile() {
                             width: "100%",
                             height: "100%",
                             objectFit: "cover",
-                            filter: "saturate(1.15) contrast(1.05) brightness(0.92)",
+                            filter: "saturate(1.12) contrast(1.04) brightness(0.92)",
                           }}
                         />
                       ) : (
@@ -2273,7 +2339,7 @@ export default function Profile() {
                           position: "absolute",
                           inset: 0,
                           background:
-                            "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.85))",
+                            "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.88))",
                         }}
                       />
                       <div style={{ position: "absolute", left: 10, bottom: 10, right: 10 }}>
@@ -2294,7 +2360,7 @@ export default function Profile() {
                       }}
                     >
                       <div style={{ fontSize: 11, opacity: 0.72 }}>
-                        {t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}
+                        {getTourDateLabel(t) ? `🗓 ${getTourDateLabel(t)}` : "🗓 Date tbd"}
                       </div>
                       <div style={{ fontSize: 11, opacity: 0.9 }}>
                         {t.price ? `💶 ${t.price}€` : "Free"}
@@ -2312,25 +2378,20 @@ export default function Profile() {
 
   const ToursTab = (
     <div style={card}>
-      <div style={sectionTitle}>Tours</div>
-      <div style={{ fontSize: 20, fontWeight: 950 }}>All created tours</div>
+      <SectionHeader eyebrow="Tours" title="All created tours" />
 
       {tours.length === 0 ? (
-        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
-          No tours created yet.
-        </div>
+        <EmptyState text="No tours created yet." />
       ) : (
         <div
           style={{
-            marginTop: 14,
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
             gap: 12,
           }}
         >
           {tours.map((t) => {
-            const img =
-              t.cover_url || (Array.isArray(t.image_urls) ? t.image_urls[0] : null) || "";
+            const img = getTourImage(t);
 
             return (
               <div
@@ -2345,7 +2406,7 @@ export default function Profile() {
                   boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
                 }}
               >
-                <div style={{ position: "relative", height: 150 }}>
+                <div style={{ position: "relative", height: 156 }}>
                   {img ? (
                     <img
                       src={img}
@@ -2354,7 +2415,7 @@ export default function Profile() {
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
-                        filter: "saturate(1.15) contrast(1.05) brightness(0.92)",
+                        filter: "saturate(1.12) contrast(1.04) brightness(0.92)",
                       }}
                     />
                   ) : (
@@ -2396,7 +2457,9 @@ export default function Profile() {
                     opacity: 0.9,
                   }}
                 >
-                  <span>{t.date_start ? `🗓 ${t.date_start}` : "🗓 Date tbd"}</span>
+                  <span>
+                    {getTourDateLabel(t) ? `🗓 ${getTourDateLabel(t)}` : "🗓 Date tbd"}
+                  </span>
                   <span>{t.price ? `💶 ${t.price}€` : "Free"}</span>
                 </div>
               </div>
@@ -2409,17 +2472,13 @@ export default function Profile() {
 
   const EventsTab = (
     <div style={card}>
-      <div style={sectionTitle}>Events</div>
-      <div style={{ fontSize: 20, fontWeight: 950 }}>Upcoming adventures</div>
+      <SectionHeader eyebrow="Events" title="Upcoming adventures" />
 
       {events.length === 0 ? (
-        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
-          No events created yet.
-        </div>
+        <EmptyState text="No events created yet." />
       ) : (
         <div
           style={{
-            marginTop: 14,
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
             gap: 12,
@@ -2440,7 +2499,7 @@ export default function Profile() {
                   boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
                 }}
               >
-                <div style={{ position: "relative", height: 150 }}>
+                <div style={{ position: "relative", height: 156 }}>
                   {c ? (
                     <img
                       src={c}
@@ -2449,7 +2508,7 @@ export default function Profile() {
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
-                        filter: "saturate(1.15) contrast(1.05)",
+                        filter: "saturate(1.12) contrast(1.04)",
                       }}
                     />
                   ) : (
@@ -2490,7 +2549,9 @@ export default function Profile() {
                     opacity: 0.9,
                   }}
                 >
-                  <span>🗓️ {e.start_date ? formatDate(e.start_date) : "Date TBA"}</span>
+                  <span>
+                    🗓️ {getEventDateLabel(e) ? formatDate(getEventDateLabel(e)) : "Date TBA"}
+                  </span>
                   <span>→ Open</span>
                 </div>
               </div>
@@ -2503,15 +2564,12 @@ export default function Profile() {
 
   const TimelineTab = (
     <div style={card}>
-      <div style={sectionTitle}>Timeline</div>
-      <div style={{ fontSize: 20, fontWeight: 950 }}>Everything this explorer did</div>
+      <SectionHeader eyebrow="Timeline" title="Everything this explorer did" />
 
       {timeline.length === 0 ? (
-        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
-          No activity yet.
-        </div>
+        <EmptyState text="No activity yet." />
       ) : (
-        <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {timeline.map((it, i) => (
             <div
               key={i}
@@ -2579,30 +2637,19 @@ export default function Profile() {
 
   const FriendsTab = (
     <div style={card}>
-      <div style={sectionTitle}>Friends</div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 10,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ fontSize: 20, fontWeight: 950 }}>Mutual follows</div>
-        {!canSeeFriends && <div style={pill}>🔒 Private</div>}
-      </div>
+      <SectionHeader
+        eyebrow="Friends"
+        title="Mutual follows"
+        right={!canSeeFriends ? <div style={pill}>🔒 Private</div> : null}
+      />
 
       {!canSeeFriends ? (
-        <div style={{ marginTop: 12, opacity: 0.78, fontSize: 13, lineHeight: 1.6 }}>
-          Friends list is private. <b>Only friends</b> can see it.
-        </div>
+        <EmptyState text="Friends list is private. Only friends can see it." />
       ) : friendsList.length === 0 ? (
-        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>No friends yet.</div>
+        <EmptyState text="No friends yet." />
       ) : (
         <div
           style={{
-            marginTop: 14,
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
             gap: 10,
@@ -2626,7 +2673,7 @@ export default function Profile() {
               <img
                 src={u.avatar_url || "https://i.pravatar.cc/80"}
                 alt=""
-                style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover" }}
+                style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }}
               />
               <div style={{ minWidth: 0 }}>
                 <div
@@ -2671,12 +2718,13 @@ export default function Profile() {
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(0,0,0,0.55)",
+              background: "rgba(0,0,0,0.62)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               padding: 16,
               zIndex: 9999,
+              backdropFilter: "blur(8px)",
             }}
           >
             <div
@@ -2689,32 +2737,24 @@ export default function Profile() {
                 padding: 16,
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 10,
-                }}
-              >
-                <div>
-                  <div style={sectionTitle}>Followers</div>
-                  <div style={{ fontSize: 18, fontWeight: 950 }}>{followersCount} people</div>
-                </div>
-                <button style={btnGhost} onClick={() => setShowFollowers(false)}>
-                  Close
-                </button>
-              </div>
+              <SectionHeader
+                eyebrow="Followers"
+                title={`${followersCount} people`}
+                right={
+                  <button style={btnGhost} onClick={() => setShowFollowers(false)}>
+                    Close
+                  </button>
+                }
+              />
 
               {followersList.length === 0 ? (
-                <div style={{ opacity: 0.75, padding: 10 }}>No followers yet.</div>
+                <EmptyState text="No followers yet." />
               ) : (
                 <div
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
                     gap: 10,
-                    marginTop: 10,
                   }}
                 >
                   {followersList.map((u) => (
@@ -2769,12 +2809,13 @@ export default function Profile() {
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(0,0,0,0.55)",
+              background: "rgba(0,0,0,0.62)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               padding: 16,
               zIndex: 9999,
+              backdropFilter: "blur(8px)",
             }}
           >
             <div
@@ -2785,9 +2826,7 @@ export default function Profile() {
                 padding: 18,
               }}
             >
-              <div style={sectionTitle}>Friends</div>
-
-              <div style={{ fontSize: 20, fontWeight: 950 }}>🔒 Private list</div>
+              <SectionHeader eyebrow="Friends" title="🔒 Private list" />
 
               <div
                 style={{

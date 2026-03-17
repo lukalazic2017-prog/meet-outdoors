@@ -41,6 +41,16 @@ export default function EventDetails() {
     };
   }, []);
 
+  const isTrainingCategory = (category) => {
+    return [
+      "Ski School Event",
+      "Paragliding School Event",
+      "Diving School Event",
+      "Climbing School Event",
+      "Survival Training Event",
+    ].includes(category);
+  };
+
   const formatDateTime = (iso) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -70,6 +80,7 @@ export default function EventDetails() {
     : "";
 
   const coverUrl = event?.cover_url || defaultCover;
+  const isTraining = !!event?.is_training || isTrainingCategory(event?.category);
 
   const initialsFromName = (name) => {
     const safe = (name || "").trim();
@@ -245,9 +256,10 @@ export default function EventDetails() {
       marginTop: isMobile ? -120 : 100,
       padding: isMobile ? "0 0 110px" : "64px 0 40px",
       background:
-        "radial-gradient(circle at top, #081b16 0%, #04100d 28%, #02060b 58%, #000000 100%)",
+        "radial-gradient(circle at top, #0a1f19 0%, #05110e 26%, #02070b 58%, #000000 100%)",
       color: "#eafff5",
-      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      fontFamily:
+        'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
 
     bgGlow1: {
@@ -293,7 +305,7 @@ export default function EventDetails() {
       position: "absolute",
       inset: 0,
       backgroundImage:
-        "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+        "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
       backgroundSize: "36px 36px",
       maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
       pointerEvents: "none",
@@ -362,7 +374,7 @@ export default function EventDetails() {
 
     heroImg: {
       width: "100%",
-      height: isMobile ? 420 : 520,
+      height: isMobile ? 420 : 540,
       objectFit: "cover",
       transform: "scale(1.05)",
       filter: "saturate(1.08) contrast(1.04)",
@@ -478,6 +490,13 @@ export default function EventDetails() {
       backdropFilter: "blur(10px)",
     },
 
+    trainingBadge: {
+      border: "1px solid rgba(170,130,255,0.28)",
+      background: "rgba(124,77,255,0.16)",
+      color: "#efe4ff",
+      boxShadow: "0 0 18px rgba(124,77,255,0.10)",
+    },
+
     heroTitle: {
       fontSize: isMobile ? 32 : 54,
       fontWeight: 1000,
@@ -521,6 +540,12 @@ export default function EventDetails() {
       maxWidth: "100%",
     },
 
+    trainingMetaPill: {
+      border: "1px solid rgba(170,130,255,0.24)",
+      background: "rgba(124,77,255,0.16)",
+      color: "#efe4ff",
+    },
+
     peoplePreviewRow: {
       marginTop: 16,
       display: "flex",
@@ -553,8 +578,8 @@ export default function EventDetails() {
 
     heroRight: {
       minWidth: 0,
-      width: isMobile ? "100%" : 360,
-      maxWidth: isMobile ? "100%" : 360,
+      width: isMobile ? "100%" : 380,
+      maxWidth: isMobile ? "100%" : 380,
       alignSelf: isMobile ? "stretch" : "flex-end",
     },
 
@@ -598,13 +623,17 @@ export default function EventDetails() {
       borderRadius: 999,
       background: hasJoined
         ? "rgba(0,255,190,0.12)"
+        : isTraining
+        ? "rgba(124,77,255,0.18)"
         : "rgba(255,255,255,0.06)",
       border: hasJoined
         ? "1px solid rgba(0,255,190,0.24)"
+        : isTraining
+        ? "1px solid rgba(170,130,255,0.28)"
         : "1px solid rgba(255,255,255,0.10)",
       fontSize: 11,
       fontWeight: 1000,
-      color: hasJoined ? "#cffff0" : "#fff",
+      color: hasJoined ? "#cffff0" : isTraining ? "#efe4ff" : "#fff",
       letterSpacing: "0.08em",
       textTransform: "uppercase",
       whiteSpace: "nowrap",
@@ -977,9 +1006,9 @@ export default function EventDetails() {
     stickyBar: {
       position: "relative",
       left: 10,
-      right: 5,
+      right: 10,
       bottom: 0,
-      zIndex: 5000,
+      zIndex: 10000,
       borderRadius: 22,
       border: "1px solid rgba(255,255,255,0.10)",
       background:
@@ -1128,7 +1157,6 @@ export default function EventDetails() {
               display: "grid",
               gap: 12,
               padding: isMobile ? "0 14px" : 10,
-              
             }}
           >
             <div style={styles.card}>
@@ -1176,7 +1204,6 @@ export default function EventDetails() {
           </div>
 
           <div style={{ padding: isMobile ? "0 14px" : 0 }}>
-            
             <div style={styles.card}>
               <div style={styles.sectionTitleRow}>
                 <div style={styles.sectionTitle}>We couldn’t find this event</div>
@@ -1252,9 +1279,24 @@ export default function EventDetails() {
             <div style={styles.heroContent}>
               <div style={styles.heroLeft}>
                 <div style={styles.badgesRow}>
-                  {event.category && <div style={styles.badge}>⛰ {event.category}</div>}
+                  {event.category && (
+                    <div
+                      style={{
+                        ...styles.badge,
+                        ...(isTraining ? styles.trainingBadge : {}),
+                      }}
+                    >
+                      {isTraining ? "🎓" : "⛰"} {event.category}
+                    </div>
+                  )}
                   <div style={styles.badge}>🌿 Outdoor event</div>
-                  <div style={styles.badge}>⚡ Live gathering</div>
+                  {isTraining ? (
+                    <div style={{ ...styles.badge, ...styles.trainingBadge }}>
+                      🏫 School / Training
+                    </div>
+                  ) : (
+                    <div style={styles.badge}>⚡ Live gathering</div>
+                  )}
                 </div>
 
                 <h1 style={styles.heroTitle}>{event.title}</h1>
@@ -1268,6 +1310,11 @@ export default function EventDetails() {
                   <div style={styles.metaPill}>📍 {locationLine}</div>
                   <div style={styles.metaPill}>👥 {attendeesCount} going</div>
                   <div style={styles.metaPill}>🏷 {priceLine}</div>
+                  {isTraining && (
+                    <div style={{ ...styles.metaPill, ...styles.trainingMetaPill }}>
+                      🎓 Training event
+                    </div>
+                  )}
                 </div>
 
                 <div style={styles.peoplePreviewRow}>
@@ -1321,15 +1368,18 @@ export default function EventDetails() {
                 <div style={styles.actionCard}>
                   <div style={styles.actionTopRow}>
                     <div>
-                      <div style={styles.actionTitle}>Reserve your spot</div>
+                      <div style={styles.actionTitle}>
+                        {isTraining ? "Reserve your place" : "Reserve your spot"}
+                      </div>
                       <div style={styles.actionSub}>
-                        Join the group, see who’s going and plan the route with
-                        confidence.
+                        {isTraining
+                          ? "Join the training, see who’s attending and lock in your place early."
+                          : "Join the group, see who’s going and plan the route with confidence."}
                       </div>
                     </div>
 
                     <div style={styles.statusBubble}>
-                      {hasJoined ? "Going" : "Open"}
+                      {hasJoined ? "Going" : isTraining ? "Training" : "Open"}
                     </div>
                   </div>
 
@@ -1492,6 +1542,40 @@ export default function EventDetails() {
                     </a>
                   )}
                 </div>
+
+                {isTraining && (
+                  <>
+                    <div style={styles.infoBox}>
+                      <div style={styles.infoLabel}>Skill level</div>
+                      <div style={styles.infoValue}>
+                        {event.skill_level
+                          ? String(event.skill_level).replaceAll("_", " ")
+                          : "All levels"}
+                      </div>
+                    </div>
+
+                    <div style={styles.infoBox}>
+                      <div style={styles.infoLabel}>Training language</div>
+                      <div style={styles.infoValue}>
+                        {event.training_language || "Not specified"}
+                      </div>
+                    </div>
+
+                    <div style={styles.infoBox}>
+                      <div style={styles.infoLabel}>Equipment</div>
+                      <div style={styles.infoValue}>
+                        {event.equipment_included ? "Included" : "Not included"}
+                      </div>
+                    </div>
+
+                    <div style={styles.infoBox}>
+                      <div style={styles.infoLabel}>Certificate</div>
+                      <div style={styles.infoValue}>
+                        {event.certificate_included ? "Included" : "Not included"}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div style={styles.attendeesWrap}>
@@ -1705,7 +1789,7 @@ export default function EventDetails() {
                   disabled={joining}
                   style={styles.stickyBtnPrimary(joining)}
                 >
-                  {joining ? "Joining…" : "Join"}
+                  {joining ? "Joining…" : isTraining ? "Join training" : "Join"}
                 </button>
               )}
             </div>

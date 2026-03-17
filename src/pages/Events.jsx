@@ -1,5 +1,5 @@
 // src/pages/Events.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
@@ -17,11 +17,13 @@ export default function Events() {
 
   const [showCountryList, setShowCountryList] = useState(false);
   const [showCategoryList, setShowCategoryList] = useState(false);
-  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
 
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
+
+  const countryRef = useRef(null);
+  const categoryRef = useRef(null);
 
   async function loadEvents() {
     setLoading(true);
@@ -58,6 +60,33 @@ export default function Events() {
     return () => supabase.removeChannel(channel);
   }, []);
 
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (countryRef.current && !countryRef.current.contains(e.target)) {
+        setShowCountryList(false);
+      }
+
+      if (categoryRef.current && !categoryRef.current.contains(e.target)) {
+        setShowCategoryList(false);
+      }
+    };
+
+    const onEsc = (e) => {
+      if (e.key === "Escape") {
+        setShowCountryList(false);
+        setShowCategoryList(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onEsc);
+
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, []);
+
   const now = Date.now();
 
   const filteredEvents = useMemo(() => {
@@ -80,24 +109,45 @@ export default function Events() {
     "North Macedonia",
     "Albania",
     "Greece",
-    "Italy",
-    "France",
-    "Germany",
+    "Bulgaria",
+    "Romania",
+    "Slovenia",
+    "Hungary",
     "Austria",
+    "Germany",
     "Switzerland",
+    "Italy",
+    "Spain",
+    "France",
+    "Portugal",
+    "Turkey",
+    "Georgia",
+    "Cyprus",
     "USA",
+    "Canada",
+    "Australia",
+    "Other",
   ];
 
   const categories = [
     "All categories",
     "Meetup",
     "Festival",
-    "Workshop",
     "Hiking Day",
+    "Running Event",
+    "Charity Event",
+    "Outdoor Conference",
+    "Workshop",
+    "Retreat",
+    "Charity Event",
     "Climbing Event",
     "Bike Gathering",
     "Community Event",
-    "Charity Event",
+    "Ski School Event",
+    "Paragliding School Event",
+    "Diving School Event",
+    "Climbing School Event",
+    "Survival Training Event",
   ];
 
   const activeFilterCount =
@@ -109,19 +159,59 @@ export default function Events() {
     0
   );
 
-  const mobileQuickFilters = [
+  const quickCategories = [
     "All categories",
     "Meetup",
     "Festival",
     "Workshop",
     "Hiking Day",
+    "Running Event",
+    "Charity Event",
+    "Retreat",
     "Climbing Event",
     "Bike Gathering",
     "Community Event",
+    "Ski School Event",
+    "Paragliding School Event",
+    "Diving School Event",
+    "Climbing School Event",
+    "Survival Training Event",
   ];
 
+  const quickCountries = [
+    "All countries",
+    "Serbia",
+    "Bosnia & Herzegovina",
+    "Croatia",
+    "Montenegro",
+    "North Macedonia",
+    "Albania",
+    "Greece",
+    "Italy",
+    "France",
+    "Germany",
+    "Austria",
+  ];
+
+  const resetFilters = () => {
+    setCountryFilter("All countries");
+    setCategoryFilter("All categories");
+    setShowCountryList(false);
+    setShowCategoryList(false);
+  };
+
+  const isTrainingCategory = (category) => {
+    return [
+      "Ski School Event",
+      "Paragliding School Event",
+      "Diving School Event",
+      "Climbing School Event",
+      "Survival Training Event",
+    ].includes(category);
+  };
+
   const filterContent = (
-    <div style={styles.filtersWrap}>
+    <div style={styles.filterRowDesktop}>
       <Filter
         label="Country"
         value={countryFilter}
@@ -131,6 +221,7 @@ export default function Events() {
         list={countries}
         onSelect={setCountryFilter}
         isMobile={isMobile}
+        innerRef={countryRef}
       />
 
       <Filter
@@ -142,37 +233,55 @@ export default function Events() {
         list={categories}
         onSelect={setCategoryFilter}
         isMobile={isMobile}
+        innerRef={categoryRef}
       />
 
-      {isMobile && (
-        <div style={styles.mobileFilterActions}>
-          <button
-            type="button"
-            style={styles.mobileFilterGhost}
-            onClick={() => {
-              setCountryFilter("All countries");
-              setCategoryFilter("All categories");
-              setShowCountryList(false);
-              setShowCategoryList(false);
-            }}
-          >
-            Reset
-          </button>
-
-          <button
-            type="button"
-            style={styles.mobileFilterPrimary}
-            onClick={() => setShowFiltersMobile(false)}
-          >
-            Apply filters
-          </button>
-        </div>
+      {activeFilterCount > 0 && (
+        <button
+          type="button"
+          style={styles.desktopResetBtn}
+          onClick={resetFilters}
+        >
+          Reset all ({activeFilterCount})
+        </button>
       )}
     </div>
   );
 
   return (
     <div style={styles.page}>
+      <style>{`
+        .events-hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+
+        .events-dropdown-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .events-dropdown-scroll::-webkit-scrollbar-thumb {
+          background: rgba(170,255,228,0.18);
+          border-radius: 999px;
+        }
+
+        .events-card-hover {
+          transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+        }
+
+        .events-card-hover:hover {
+          transform: translateY(-8px) scale(1.01);
+          box-shadow:
+            0 42px 120px rgba(0,0,0,0.72),
+            0 0 0 1px rgba(0,255,195,0.18) inset,
+            0 0 40px rgba(0,255,190,0.10);
+          border-color: rgba(160,255,226,0.16);
+        }
+
+        .events-card-hover:hover img {
+          transform: scale(1.1);
+        }
+      `}</style>
+
       <div style={styles.bgGlow1} />
       <div style={styles.bgGlow2} />
       <div style={styles.bgGlow3} />
@@ -182,6 +291,7 @@ export default function Events() {
         <div style={styles.hero}>
           <div style={styles.heroGlow} />
           <div style={styles.heroGlow2} />
+          <div style={styles.heroLine} />
 
           <div style={styles.heroBadge}>⚡ LIVE OUTDOOR ENERGY</div>
 
@@ -189,7 +299,7 @@ export default function Events() {
 
           <p style={styles.subtitle}>
             Real gatherings. Wild places. Good people. Find the next brutal
-            adventure and jump in.
+            adventure, training, school event or community experience and jump in.
           </p>
 
           <div style={styles.heroStats}>
@@ -209,39 +319,112 @@ export default function Events() {
             </div>
           </div>
 
-          {!isMobile && filterContent}
+          {!isMobile && (
+            <>
+              <div style={styles.quickSection}>
+                <div style={styles.quickSectionHead}>
+                  <div style={styles.quickSectionTitle}>Quick categories</div>
+                  <div style={styles.quickSectionSub}>
+                    Everything important in one brutal filter bar
+                  </div>
+                </div>
+
+                <div
+                  style={styles.quickRow}
+                  className="events-hide-scrollbar"
+                >
+                  {quickCategories.map((chip) => {
+                    const active = categoryFilter === chip;
+                    const training = isTrainingCategory(chip);
+
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setCategoryFilter(chip)}
+                        style={{
+                          ...styles.quickChip,
+                          ...(active ? styles.quickChipActive : {}),
+                          ...(training ? styles.quickChipTraining : {}),
+                          ...(active && training
+                            ? styles.quickChipTrainingActive
+                            : {}),
+                        }}
+                      >
+                        {chip === "All categories" ? "All" : chip}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div
+                  style={{ ...styles.quickRow, marginTop: 10 }}
+                  className="events-hide-scrollbar"
+                >
+                  {quickCountries.map((chip) => {
+                    const active = countryFilter === chip;
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setCountryFilter(chip)}
+                        style={{
+                          ...styles.quickChipSecondary,
+                          ...(active ? styles.quickChipSecondaryActive : {}),
+                        }}
+                      >
+                        {chip === "All countries" ? "Any country" : chip}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={styles.desktopFilterShell}>
+                <div style={styles.desktopFilterTopRow}>
+                  <div style={styles.desktopFilterTitle}>Advanced selectors</div>
+                  <div style={styles.desktopFilterMeta}>
+                    {loading ? "Loading…" : `${filteredEvents.length} shown`}
+                  </div>
+                </div>
+                {filterContent}
+              </div>
+            </>
+          )}
         </div>
 
         {isMobile && (
           <>
-            <div style={styles.mobileTopTools}>
-              <button
-                type="button"
-                style={styles.mobileFilterMainBtn}
-                onClick={() => setShowFiltersMobile(true)}
-              >
-                <span>⚙️ Filters</span>
-                {activeFilterCount > 0 && (
-                  <span style={styles.mobileToolbarCount}>
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-
+            <div style={styles.mobileResultsOnly}>
               <div style={styles.mobileResultsChip}>
                 🔍 {loading ? "Loading..." : `${filteredEvents.length} shown`}
               </div>
+
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  style={styles.mobileResetBtn}
+                  onClick={resetFilters}
+                >
+                  Reset ({activeFilterCount})
+                </button>
+              )}
             </div>
 
             <div style={styles.mobileSwipeSection}>
               <div style={styles.mobileSwipeHeader}>
-                <div style={styles.mobileSwipeTitle}>Quick filters</div>
+                <div style={styles.mobileSwipeTitle}>Quick categories</div>
                 <div style={styles.mobileSwipeHint}>Swipe horizontally</div>
               </div>
 
-              <div style={styles.mobileChipsRow}>
-                {mobileQuickFilters.map((chip) => {
+              <div
+                style={styles.mobileChipsRow}
+                className="events-hide-scrollbar"
+              >
+                {quickCategories.map((chip) => {
                   const active = categoryFilter === chip;
+                  const training = isTrainingCategory(chip);
+
                   return (
                     <button
                       key={chip}
@@ -250,6 +433,10 @@ export default function Events() {
                       style={{
                         ...styles.mobileChip,
                         ...(active ? styles.mobileChipActive : {}),
+                        ...(training ? styles.mobileChipTraining : {}),
+                        ...(active && training
+                          ? styles.mobileChipTrainingActive
+                          : {}),
                       }}
                     >
                       {chip === "All categories" ? "All" : chip}
@@ -258,8 +445,11 @@ export default function Events() {
                 })}
               </div>
 
-              <div style={styles.mobileChipsRowSecondary}>
-                {countries.slice(0, 8).map((chip) => {
+              <div
+                style={styles.mobileChipsRowSecondary}
+                className="events-hide-scrollbar"
+              >
+                {quickCountries.map((chip) => {
                   const active = countryFilter === chip;
                   return (
                     <button
@@ -276,39 +466,32 @@ export default function Events() {
                   );
                 })}
               </div>
-            </div>
 
-            <div
-              style={{
-                ...styles.filterOverlay,
-                display: showFiltersMobile ? "block" : "none",
-              }}
-              onClick={() => setShowFiltersMobile(false)}
-            />
+              <div style={styles.mobileInlineFilters}>
+                <Filter
+                  label="Country"
+                  value={countryFilter}
+                  open={showCountryList}
+                  setOpen={setShowCountryList}
+                  closeOther={setShowCategoryList}
+                  list={countries}
+                  onSelect={setCountryFilter}
+                  isMobile={true}
+                  innerRef={countryRef}
+                />
 
-            <div
-              style={{
-                ...styles.filterDrawer,
-                transform: showFiltersMobile
-                  ? "translateY(0)"
-                  : "translateY(105%)",
-              }}
-            >
-              <div style={styles.filterDrawerHandle} />
-
-              <div style={styles.filterDrawerHead}>
-                <div style={styles.filterDrawerTitle}>Filters</div>
-
-                <button
-                  type="button"
-                  style={styles.filterDrawerClose}
-                  onClick={() => setShowFiltersMobile(false)}
-                >
-                  Close
-                </button>
+                <Filter
+                  label="Category"
+                  value={categoryFilter}
+                  open={showCategoryList}
+                  setOpen={setShowCategoryList}
+                  closeOther={setShowCountryList}
+                  list={categories}
+                  onSelect={setCategoryFilter}
+                  isMobile={true}
+                  innerRef={categoryRef}
+                />
               </div>
-
-              {filterContent}
             </div>
           </>
         )}
@@ -327,7 +510,10 @@ export default function Events() {
           )}
         </div>
 
-        <div style={isMobile ? styles.mobileCardsRow : styles.grid}>
+        <div
+          style={isMobile ? styles.mobileCardsRow : styles.grid}
+          className={isMobile ? "events-hide-scrollbar" : ""}
+        >
           {loading
             ? Array.from({ length: isMobile ? 4 : 6 }).map((_, i) => (
                 <div
@@ -348,24 +534,14 @@ export default function Events() {
                   .filter((a) => a?.avatar_url)
                   .slice(0, 5);
 
+                const training = isTrainingCategory(evt.category);
+
                 return (
                   <div
                     key={evt.id}
                     style={isMobile ? styles.mobileCard : styles.card}
+                    className={!isMobile ? "events-card-hover" : ""}
                     onClick={() => navigate(`/event/${evt.id}`)}
-                    onMouseEnter={(e) => {
-                      if (isMobile) return;
-                      e.currentTarget.style.transform =
-                        "translateY(-8px) scale(1.01)";
-                      e.currentTarget.style.boxShadow =
-                        "0 40px 120px rgba(0,0,0,0.72), 0 0 0 1px rgba(0,255,195,0.18) inset";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (isMobile) return;
-                      e.currentTarget.style.transform = "translateY(0) scale(1)";
-                      e.currentTarget.style.boxShadow =
-                        "0 28px 80px rgba(0,0,0,0.55)";
-                    }}
                   >
                     <div style={styles.imageWrap}>
                       <img
@@ -378,10 +554,23 @@ export default function Events() {
                       <div style={styles.imageNoise} />
 
                       <div style={styles.topBadges}>
-                        <div style={styles.categoryTag}>
+                        <div
+                          style={{
+                            ...styles.categoryTag,
+                            ...(training ? styles.categoryTagTraining : {}),
+                          }}
+                        >
                           #{evt.category || "Event"}
                         </div>
-                        <div style={styles.livePill}>● LIVE</div>
+
+                        <div
+                          style={{
+                            ...styles.livePill,
+                            ...(training ? styles.trainingPill : {}),
+                          }}
+                        >
+                          {training ? "● TRAINING" : "● LIVE"}
+                        </div>
                       </div>
 
                       <div style={styles.imageBottom}>
@@ -401,6 +590,16 @@ export default function Events() {
                         <div style={styles.metaPill}>
                           👥 {evt.attendees_count || 0} going
                         </div>
+                        {training && (
+                          <div
+                            style={{
+                              ...styles.metaPill,
+                              ...styles.trainingMetaPill,
+                            }}
+                          >
+                            🎓 School / Training
+                          </div>
+                        )}
                       </div>
 
                       <div style={styles.divider} />
@@ -442,8 +641,16 @@ export default function Events() {
             <div style={styles.emptyIcon}>🌌</div>
             <div style={styles.emptyTitle}>No events for these filters</div>
             <div style={styles.emptyText}>
-              Change country or category and load another adventure.
+              Change category or country and load another adventure.
             </div>
+
+            <button
+              type="button"
+              style={styles.emptyResetBtn}
+              onClick={resetFilters}
+            >
+              Reset filters
+            </button>
           </div>
         )}
       </div>
@@ -460,9 +667,10 @@ function Filter({
   list,
   onSelect,
   isMobile,
+  innerRef,
 }) {
   return (
-    <div style={styles.filterShell}>
+    <div style={styles.filterShell} ref={innerRef}>
       <div style={styles.filterLabel}>{label}</div>
 
       <div
@@ -480,8 +688,9 @@ function Filter({
         <div
           style={{
             ...styles.dropdown,
-            top: isMobile ? 70 : 76,
+            ...(isMobile ? styles.dropdownMobile : {}),
           }}
+          className="events-dropdown-scroll"
         >
           {list.map((v) => (
             <div
@@ -513,11 +722,12 @@ const styles = {
     overflowX: "hidden",
     overflowY: "visible",
     marginTop: -120,
-    padding: "64px 0 40px",
+    padding: "72px 0 44px",
     background:
-      "radial-gradient(circle at top, #081b16 0%, #04100d 28%, #02060b 58%, #000000 100%)",
+      "radial-gradient(circle at top, #0a1f19 0%, #05110e 26%, #02070b 58%, #000000 100%)",
     color: "#eafff5",
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily:
+      'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
 
   container: {
@@ -525,7 +735,7 @@ const styles = {
     zIndex: 2,
     maxWidth: 1400,
     margin: "0 auto",
-    padding: "0 18px 20px",
+    padding: "0 18px 24px",
     overflow: "visible",
   },
 
@@ -569,7 +779,7 @@ const styles = {
     position: "absolute",
     inset: 0,
     backgroundImage:
-      "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+      "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
     backgroundSize: "36px 36px",
     maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
     pointerEvents: "none",
@@ -577,8 +787,8 @@ const styles = {
 
   hero: {
     position: "relative",
-    padding: "34px 24px 24px",
-    borderRadius: "0 0 36px 36px",
+    padding: "36px 24px 24px",
+    borderRadius: "0 0 38px 38px",
     border: "1px solid rgba(255,255,255,0.08)",
     borderTop: "none",
     background:
@@ -586,7 +796,7 @@ const styles = {
     boxShadow:
       "0 26px 80px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04)",
     overflow: "visible",
-    marginBottom: 22,
+    marginBottom: 24,
   },
 
   heroGlow: {
@@ -610,6 +820,17 @@ const styles = {
     borderRadius: "50%",
     background: "radial-gradient(circle, rgba(124,77,255,0.14), transparent 70%)",
     filter: "blur(30px)",
+    pointerEvents: "none",
+  },
+
+  heroLine: {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    top: 0,
+    height: 1,
+    background:
+      "linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)",
     pointerEvents: "none",
   },
 
@@ -648,7 +869,7 @@ const styles = {
     maxWidth: 760,
     color: "rgba(234,255,245,0.72)",
     fontSize: 16,
-    lineHeight: 1.7,
+    lineHeight: 1.72,
     fontWeight: 500,
     position: "relative",
     zIndex: 2,
@@ -664,24 +885,25 @@ const styles = {
   },
 
   heroStatCard: {
-    borderRadius: 22,
-    padding: "16px 18px",
+    borderRadius: 24,
+    padding: "18px 18px",
     border: "1px solid rgba(255,255,255,0.08)",
     background:
-      "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+      "linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 26px rgba(0,0,0,0.18)",
     backdropFilter: "blur(10px)",
   },
 
   heroStatNumber: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 1000,
     color: "#ffffff",
     lineHeight: 1,
   },
 
   heroStatLabel: {
-    marginTop: 6,
+    marginTop: 7,
     fontSize: 12,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
@@ -689,18 +911,162 @@ const styles = {
     fontWeight: 800,
   },
 
-  filtersWrap: {
-    marginTop: 26,
+  quickSection: {
+    marginTop: 24,
+    padding: "18px",
+    borderRadius: 26,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+    backdropFilter: "blur(14px)",
+    boxShadow: "0 16px 40px rgba(0,0,0,0.24)",
+  },
+
+  quickSectionHead: {
     display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 10,
     flexWrap: "wrap",
+    marginBottom: 12,
+  },
+
+  quickSectionTitle: {
+    fontSize: 13,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "rgba(234,255,245,0.82)",
+    fontWeight: 900,
+  },
+
+  quickSectionSub: {
+    fontSize: 12,
+    color: "rgba(234,255,245,0.58)",
+    fontWeight: 700,
+  },
+
+  quickRow: {
+    display: "flex",
+    gap: 10,
+    overflowX: "auto",
+    paddingBottom: 4,
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+  },
+
+  quickChip: {
+    flex: "0 0 auto",
+    minHeight: 42,
+    padding: "0 16px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(255,255,255,0.05)",
+    color: "rgba(234,255,245,0.88)",
+    fontWeight: 800,
+    fontSize: 12,
+    whiteSpace: "nowrap",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.24)",
+    cursor: "pointer",
+  },
+
+  quickChipActive: {
+    background:
+      "linear-gradient(135deg, rgba(0,255,190,0.16), rgba(124,77,255,0.16))",
+    border: "1px solid rgba(0,255,190,0.30)",
+    color: "#ffffff",
+    boxShadow: "0 14px 30px rgba(0,255,190,0.18)",
+  },
+
+  quickChipTraining: {
+    border: "1px solid rgba(124,77,255,0.20)",
+    background: "rgba(124,77,255,0.08)",
+  },
+
+  quickChipTrainingActive: {
+    background:
+      "linear-gradient(135deg, rgba(124,77,255,0.24), rgba(0,255,190,0.16))",
+    border: "1px solid rgba(170,130,255,0.34)",
+    color: "#ffffff",
+  },
+
+  quickChipSecondary: {
+    flex: "0 0 auto",
+    minHeight: 38,
+    padding: "0 14px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.04)",
+    color: "rgba(234,255,245,0.72)",
+    fontWeight: 700,
+    fontSize: 11,
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+  },
+
+  quickChipSecondaryActive: {
+    background: "rgba(0,255,190,0.12)",
+    border: "1px solid rgba(0,255,190,0.22)",
+    color: "#dffff5",
+  },
+
+  desktopFilterShell: {
+    marginTop: 16,
+    padding: "18px",
+    borderRadius: 26,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+    backdropFilter: "blur(14px)",
+    boxShadow: "0 16px 40px rgba(0,0,0,0.24)",
+  },
+
+  desktopFilterTopRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    marginBottom: 14,
+  },
+
+  desktopFilterTitle: {
+    fontSize: 13,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "rgba(234,255,245,0.76)",
+    fontWeight: 900,
+  },
+
+  desktopFilterMeta: {
+    fontSize: 12,
+    color: "rgba(234,255,245,0.60)",
+    fontWeight: 700,
+  },
+
+  filterRowDesktop: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) auto",
     gap: 16,
-    width: "100%",
+    alignItems: "end",
+  },
+
+  desktopResetBtn: {
+    minHeight: 54,
+    padding: "0 18px",
+    borderRadius: 18,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(255,255,255,0.05)",
+    color: "#f6fff9",
+    fontWeight: 800,
+    fontSize: 12,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
   },
 
   filterShell: {
     position: "relative",
-    minWidth: 220,
-    flex: "1 1 220px",
+    minWidth: 0,
     zIndex: 30,
   },
 
@@ -718,7 +1084,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    minHeight: 52,
+    minHeight: 54,
     padding: "0 18px",
     borderRadius: 18,
     border: "1px solid rgba(0,255,190,0.22)",
@@ -746,18 +1112,27 @@ const styles = {
 
   dropdown: {
     position: "absolute",
+    top: 76,
     left: 0,
     right: 0,
     maxHeight: 320,
     overflowY: "auto",
     borderRadius: 22,
-    background: "rgba(4,16,12,0.97)",
+    background: "rgba(4,16,12,0.98)",
     border: "1px solid rgba(0,255,190,0.22)",
     boxShadow:
       "0 24px 80px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.03) inset",
     zIndex: 99999,
     padding: 8,
     backdropFilter: "blur(14px)",
+  },
+
+  dropdownMobile: {
+    position: "relative",
+    top: 10,
+    left: "auto",
+    right: "auto",
+    maxHeight: 240,
   },
 
   dropdownItem: {
@@ -773,7 +1148,7 @@ const styles = {
     transition: "background 0.2s ease",
   },
 
-  mobileTopTools: {
+  mobileResultsOnly: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -781,40 +1156,8 @@ const styles = {
     marginBottom: 14,
   },
 
-  mobileFilterMainBtn: {
-    minHeight: 48,
-    padding: "0 16px",
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background:
-      "linear-gradient(145deg, rgba(7,22,17,0.96), rgba(3,11,8,0.96))",
-    color: "#f5fff9",
-    fontWeight: 900,
-    fontSize: 13,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    boxShadow: "0 14px 32px rgba(0,0,0,0.30)",
-    position: "relative",
-  },
-
-  mobileToolbarCount: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 999,
-    background: "#00ffbe",
-    color: "#042217",
-    fontSize: 11,
-    fontWeight: 900,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 6px",
-  },
-
   mobileResultsChip: {
-    minHeight: 48,
+    minHeight: 50,
     padding: "0 14px",
     borderRadius: 16,
     background: "rgba(255,255,255,0.05)",
@@ -827,8 +1170,27 @@ const styles = {
     whiteSpace: "nowrap",
   },
 
+  mobileResetBtn: {
+    minHeight: 50,
+    padding: "0 14px",
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background:
+      "linear-gradient(145deg, rgba(7,22,17,0.96), rgba(3,11,8,0.96))",
+    color: "#f5fff9",
+    fontWeight: 900,
+    fontSize: 12,
+    cursor: "pointer",
+  },
+
   mobileSwipeSection: {
-    marginBottom: 18,
+    marginBottom: 20,
+    padding: "14px 12px",
+    borderRadius: 22,
+    border: "1px solid rgba(255,255,255,0.07)",
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+    boxShadow: "0 16px 36px rgba(0,0,0,0.18)",
   },
 
   mobileSwipeHeader: {
@@ -871,7 +1233,7 @@ const styles = {
     gap: 10,
     overflowX: "auto",
     paddingTop: 10,
-    paddingBottom: 4,
+    paddingBottom: 8,
     paddingLeft: 2,
     paddingRight: 2,
     WebkitOverflowScrolling: "touch",
@@ -891,6 +1253,7 @@ const styles = {
     fontSize: 12,
     whiteSpace: "nowrap",
     boxShadow: "0 10px 24px rgba(0,0,0,0.24)",
+    cursor: "pointer",
   },
 
   mobileChipActive: {
@@ -899,6 +1262,18 @@ const styles = {
     border: "1px solid rgba(0,255,190,0.30)",
     color: "#ffffff",
     boxShadow: "0 14px 30px rgba(0,255,190,0.18)",
+  },
+
+  mobileChipTraining: {
+    border: "1px solid rgba(124,77,255,0.20)",
+    background: "rgba(124,77,255,0.08)",
+  },
+
+  mobileChipTrainingActive: {
+    background:
+      "linear-gradient(135deg, rgba(124,77,255,0.24), rgba(0,255,190,0.16))",
+    border: "1px solid rgba(170,130,255,0.34)",
+    color: "#ffffff",
   },
 
   mobileChipSecondary: {
@@ -912,12 +1287,20 @@ const styles = {
     fontWeight: 700,
     fontSize: 11,
     whiteSpace: "nowrap",
+    cursor: "pointer",
   },
 
   mobileChipSecondaryActive: {
     background: "rgba(0,255,190,0.12)",
     border: "1px solid rgba(0,255,190,0.22)",
     color: "#dffff5",
+  },
+
+  mobileInlineFilters: {
+    marginTop: 12,
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: 12,
   },
 
   topRow: {
@@ -995,7 +1378,6 @@ const styles = {
       "linear-gradient(145deg, rgba(8,26,21,0.96), rgba(2,9,7,0.96))",
     border: "1px solid rgba(255,255,255,0.08)",
     boxShadow: "0 28px 80px rgba(0,0,0,0.55)",
-    transition: "transform 0.35s ease, box-shadow 0.35s ease",
   },
 
   mobileCard: {
@@ -1014,7 +1396,7 @@ const styles = {
 
   imageWrap: {
     position: "relative",
-    height: 240,
+    height: 250,
     overflow: "hidden",
   },
 
@@ -1025,13 +1407,14 @@ const styles = {
     transform: "scale(1.06)",
     display: "block",
     filter: "saturate(1.08) contrast(1.04)",
+    transition: "transform 0.45s ease",
   },
 
   imageOverlay: {
     position: "absolute",
     inset: 0,
     background:
-      "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.08) 100%)",
+      "linear-gradient(to top, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.26) 45%, rgba(0,0,0,0.06) 100%)",
   },
 
   imageNoise: {
@@ -1067,6 +1450,12 @@ const styles = {
     backdropFilter: "blur(12px)",
   },
 
+  categoryTagTraining: {
+    background: "rgba(124,77,255,0.18)",
+    border: "1px solid rgba(170,130,255,0.34)",
+    color: "#f0e5ff",
+  },
+
   livePill: {
     padding: "7px 12px",
     borderRadius: 999,
@@ -1077,6 +1466,12 @@ const styles = {
     fontWeight: 900,
     letterSpacing: "0.08em",
     backdropFilter: "blur(10px)",
+  },
+
+  trainingPill: {
+    background: "rgba(124,77,255,0.18)",
+    border: "1px solid rgba(170,130,255,0.34)",
+    color: "#f0e5ff",
   },
 
   imageBottom: {
@@ -1101,7 +1496,7 @@ const styles = {
   },
 
   cardBody: {
-    padding: 20,
+    padding: 22,
   },
 
   cardTitle: {
@@ -1130,6 +1525,12 @@ const styles = {
     color: "rgba(234,255,245,0.82)",
     fontSize: 12,
     fontWeight: 800,
+  },
+
+  trainingMetaPill: {
+    background: "rgba(124,77,255,0.12)",
+    border: "1px solid rgba(170,130,255,0.24)",
+    color: "#efe4ff",
   },
 
   divider: {
@@ -1212,7 +1613,7 @@ const styles = {
   },
 
   skeletonImage: {
-    height: 240,
+    height: 250,
     background:
       "linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
   },
@@ -1274,85 +1675,10 @@ const styles = {
     lineHeight: 1.7,
   },
 
-  filterOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.76)",
-    backdropFilter: "blur(8px)",
-    zIndex: 9998,
-  },
-
-  filterDrawer: {
-    position: "fixed",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    maxHeight: "88vh",
-    overflowY: "auto",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    background:
-      "linear-gradient(180deg, rgba(7,18,14,0.995), rgba(2,8,6,0.995))",
-    borderTop: "1px solid rgba(255,255,255,0.10)",
-    boxShadow: "0 -30px 80px rgba(0,0,0,0.55)",
-    zIndex: 9999,
-    padding: "14px 14px 28px",
-    transition: "transform 0.28s ease",
-  },
-
-  filterDrawerHandle: {
-    width: 56,
-    height: 5,
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.20)",
-    margin: "0 auto 14px",
-  },
-
-  filterDrawerHead: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 12,
-  },
-
-  filterDrawerTitle: {
-    fontSize: 19,
-    fontWeight: 1000,
-    color: "#fff",
-    letterSpacing: "-0.02em",
-  },
-
-  filterDrawerClose: {
-    minHeight: 40,
-    padding: "0 14px",
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(255,255,255,0.05)",
-    color: "#fff",
-    fontWeight: 800,
-    fontSize: 12,
-  },
-
-  mobileFilterActions: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-    width: "100%",
-  },
-
-  mobileFilterGhost: {
-    minHeight: 48,
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(255,255,255,0.05)",
-    color: "#fff",
-    fontWeight: 900,
-    fontSize: 13,
-  },
-
-  mobileFilterPrimary: {
-    minHeight: 48,
+  emptyResetBtn: {
+    marginTop: 18,
+    minHeight: 46,
+    padding: "0 18px",
     borderRadius: 16,
     border: "none",
     background: "linear-gradient(135deg, #00ffbe, #52d6ff, #7c4dff)",
@@ -1360,5 +1686,6 @@ const styles = {
     fontWeight: 1000,
     fontSize: 13,
     boxShadow: "0 14px 34px rgba(0,255,190,0.20)",
+    cursor: "pointer",
   },
 };

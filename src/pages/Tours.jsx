@@ -1,5 +1,5 @@
 // src/pages/Tours.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
@@ -14,6 +14,9 @@ import {
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 
+const DEFAULT_COVER =
+  "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg";
+
 export default function Tours() {
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +30,6 @@ export default function Tours() {
 
   const [showActivityList, setShowActivityList] = useState(false);
   const [showCountryList, setShowCountryList] = useState(false);
-  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
 
   const [radiusKm, setRadiusKm] = useState(0);
   const [radiusCenter, setRadiusCenter] = useState([43.9, 21.0]);
@@ -38,14 +40,42 @@ export default function Tours() {
 
   const mapCenter = [43.9, 21.0];
   const navigate = useNavigate();
+  const mapSectionRef = useRef(null);
+  const activityRef = useRef(null);
+  const countryRef = useRef(null);
+
+  const NAVBAR_OFFSET = isMobile ? 84 : 112;
 
   useEffect(() => {
-    const onResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+    const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (activityRef.current && !activityRef.current.contains(e.target)) {
+        setShowActivityList(false);
+      }
+      if (countryRef.current && !countryRef.current.contains(e.target)) {
+        setShowCountryList(false);
+      }
+    };
+
+    const onEsc = (e) => {
+      if (e.key === "Escape") {
+        setShowActivityList(false);
+        setShowCountryList(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onEsc);
+
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onEsc);
+    };
   }, []);
 
   function distanceKm(lat1, lon1, lat2, lon2) {
@@ -70,16 +100,22 @@ export default function Tours() {
     return null;
   }
 
-  const getOutdoorMarkerIcon = () =>
-    L.divIcon({
+  function getOutdoorMarkerIcon(training = false) {
+    return L.divIcon({
       html: `
         <div style="
           width:42px;
           height:42px;
           border-radius:999px;
-          background: radial-gradient(circle at 30% 30%, rgba(0,255,190,1), rgba(0,120,88,1));
+          background: ${
+            training
+              ? "radial-gradient(circle at 30% 30%, rgba(170,130,255,1), rgba(90,60,180,1))"
+              : "radial-gradient(circle at 30% 30%, rgba(0,255,190,1), rgba(0,120,88,1))"
+          };
           border:2px solid rgba(5,20,14,0.95);
-          box-shadow: 0 16px 34px rgba(0,0,0,0.55), 0 0 18px rgba(0,255,190,0.45);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.55), 0 0 18px ${
+            training ? "rgba(170,130,255,0.45)" : "rgba(0,255,190,0.45)"
+          };
           display:flex;
           align-items:center;
           justify-content:center;
@@ -87,15 +123,18 @@ export default function Tours() {
           color:#042217;
           font-weight:900;
         ">
-          🧭
+          ${training ? "🎓" : "🧭"}
         </div>
       `,
       className: "",
       iconSize: [42, 42],
       iconAnchor: [21, 21],
     });
+  }
 
   async function loadTours() {
+    setLoading(true);
+
     const { data, error } = await supabase
       .from("tours")
       .select(
@@ -103,7 +142,8 @@ export default function Tours() {
         *,
         profiles:creator_id (
           full_name,
-          avatar_url
+          avatar_url,
+          is_verified_creator
         )
       `
       )
@@ -126,8 +166,8 @@ export default function Tours() {
   function getStatus(tour) {
     const now = new Date();
 
-    const start = tour.start_date ? new Date(tour.start_date) : null;
-    const end = tour.end_date ? new Date(tour.end_date) : null;
+    const start = tour.date_start ? new Date(tour.date_start) : null;
+    const end = tour.date_end ? new Date(tour.date_end) : null;
 
     if (!start && !end) return "Upcoming";
 
@@ -151,84 +191,103 @@ export default function Tours() {
   }
 
   function hasAvailableSpots(tour) {
-    const max = tour.max_participants ?? tour.capacity ?? tour.max_people ?? null;
+    const max = tour.max_people ?? tour.max_participants ?? null;
     const booked =
-      tour.current_participants ?? tour.booked_count ?? tour.attendees_count ?? 0;
+      tour.current_participants ??
+      tour.booked_count ??
+      tour.participants ??
+      tour.attendees_count ??
+      0;
 
     if (!max) return true;
     return booked < max;
   }
 
-  const filteredTours = useMemo(
-    () =>
-      tours.filter((tour) => {
-        const tourActivity = tour.activity ?? "";
-        const tourCountry = tour.country ?? "";
+  function isTrainingTour(tour) {
+    return (
+      tour?.is_training === true ||
+      [
+        "Ski School",
+        "Paragliding School",
+        "Diving School",
+        "Climbing School",
+        "Survival School",
+        "Kayak School",
+        "Horse Riding School",
+        "Cycling School",
+        "Hiking School",
+        "Camping School",
+      ].includes(tour?.activity)
+    );
+  }
 
-        const matchActivity =
-          activityFilter === "All Activities" || tourActivity === activityFilter;
+  const filteredTours = useMemo(() => {
+    return tours.filter((tour) => {
+      const tourActivity = tour.activity ?? "";
+      const tourCountry = tour.country ?? "";
 
-        const matchCountry =
-          countryFilter === "All Countries" || tourCountry === countryFilter;
+      const matchActivity =
+        activityFilter === "All Activities" || tourActivity === activityFilter;
 
-        const status = getStatus(tour);
-        const matchStatus = statusFilter === "All" || statusFilter === status;
+      const matchCountry =
+        countryFilter === "All Countries" || tourCountry === countryFilter;
 
-        let matchDate = true;
-        if (startDateFilter) {
-          const start = tour.start_date ? new Date(tour.start_date) : null;
-          if (!start || start < new Date(startDateFilter)) {
-            matchDate = false;
-          }
+      const status = getStatus(tour);
+      const matchStatus = statusFilter === "All" || statusFilter === status;
+
+      let matchDate = true;
+      if (startDateFilter) {
+        const start = tour.date_start ? new Date(tour.date_start) : null;
+        if (!start || start < new Date(startDateFilter)) {
+          matchDate = false;
         }
-        if (endDateFilter) {
-          const start = tour.start_date ? new Date(tour.start_date) : null;
-          if (!start || start > new Date(endDateFilter)) {
-            matchDate = false;
-          }
+      }
+
+      if (endDateFilter) {
+        const start = tour.date_start ? new Date(tour.date_start) : null;
+        if (!start || start > new Date(endDateFilter)) {
+          matchDate = false;
         }
+      }
 
-        const matchCapacity =
-          capacityFilter === "all" ? true : hasAvailableSpots(tour);
+      const matchCapacity =
+        capacityFilter === "all" ? true : hasAvailableSpots(tour);
 
-        let matchRadius = true;
-        if (radiusKm > 0) {
-          const lat = tour.latitude;
-          const lng = tour.longitude;
-          if (!lat || !lng) {
-            matchRadius = false;
-          } else {
-            const d = distanceKm(radiusCenter[0], radiusCenter[1], lat, lng);
-            matchRadius = d <= radiusKm;
-          }
+      let matchRadius = true;
+      if (radiusKm > 0) {
+        const lat = tour.latitude;
+        const lng = tour.longitude;
+        if (!lat || !lng) {
+          matchRadius = false;
+        } else {
+          const d = distanceKm(radiusCenter[0], radiusCenter[1], lat, lng);
+          matchRadius = d <= radiusKm;
         }
+      }
 
-        return (
-          matchActivity &&
-          matchCountry &&
-          matchStatus &&
-          matchDate &&
-          matchCapacity &&
-          matchRadius
-        );
-      }),
-    [
-      tours,
-      activityFilter,
-      countryFilter,
-      statusFilter,
-      startDateFilter,
-      endDateFilter,
-      capacityFilter,
-      radiusKm,
-      radiusCenter,
-    ]
-  );
+      return (
+        matchActivity &&
+        matchCountry &&
+        matchStatus &&
+        matchDate &&
+        matchCapacity &&
+        matchRadius
+      );
+    });
+  }, [
+    tours,
+    activityFilter,
+    countryFilter,
+    statusFilter,
+    startDateFilter,
+    endDateFilter,
+    capacityFilter,
+    radiusKm,
+    radiusCenter,
+  ]);
 
   const getCover = (tour) =>
-    tour.cover_url ??
-    tour.image_url ??
-    "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg";
+    tour.cover_url ?? tour.image_url ?? DEFAULT_COVER;
 
   const activities = [
     "All Activities",
@@ -236,23 +295,32 @@ export default function Tours() {
     "Cycling",
     "Bicycling",
     "Running / Marathon",
-    "Pilgrimage",
-    "Camping",
-    "Rafting",
-    "Kayaking",
-    "Quad Riding",
-    "Horse Riding",
-    "Climbing",
-    "Canyoning",
     "Paragliding",
     "Parasailing",
+    "Pilgrimage",
+    "Horse Riding",
+    "Fishing",
+    "Rafting",
+    "Quad Riding",
     "Skiing & Snowboarding",
     "Water Skiing",
-    "Surfing",
+    "Skydiving",
+    "Bungee Jumping",
+    "Camping",
     "Diving",
     "Snorkeling",
     "Boat Rides",
     "Road Trip",
+    "Ski School",
+    "Paragliding School",
+    "Diving School",
+    "Climbing School",
+    "Survival School",
+    "Kayak School",
+    "Horse Riding School",
+    "Cycling School",
+    "Hiking School",
+    "Camping School",
     "Other",
   ];
 
@@ -285,7 +353,7 @@ export default function Tours() {
     "Other",
   ];
 
-  const mobileQuickActivities = [
+  const quickActivities = [
     "All Activities",
     "Hiking",
     "Cycling",
@@ -293,8 +361,41 @@ export default function Tours() {
     "Kayaking",
     "Climbing",
     "Road Trip",
+    "Ski School",
+    "Paragliding School",
+    "Diving School",
+    "Climbing School",
+    "Survival School",
     "Other",
   ];
+
+  const quickCountries = [
+    "All Countries",
+    "Serbia",
+    "Bosnia & Herzegovina",
+    "Croatia",
+    "Montenegro",
+    "North Macedonia",
+    "Albania",
+    "Greece",
+    "Italy",
+    "France",
+    "Germany",
+    "Austria",
+  ];
+
+  const resetAllFilters = () => {
+    setActivityFilter("All Activities");
+    setCountryFilter("All Countries");
+    setStatusFilter("All");
+    setCapacityFilter("all");
+    setStartDateFilter("");
+    setEndDateFilter("");
+    setRadiusKm(0);
+    setRadiusCenter(mapCenter);
+    setShowActivityList(false);
+    setShowCountryList(false);
+  };
 
   const activeFilterCount =
     (activityFilter !== "All Activities" ? 1 : 0) +
@@ -313,8 +414,8 @@ export default function Tours() {
     expired: filteredTours.filter((t) => getStatus(t) === "Expired").length,
   };
 
-  const filterContent = (
-    <div style={styles.filtersWrap}>
+  const advancedFilters = (
+    <div style={styles.advancedFilterGrid}>
       <FilterDropdown
         label="Activity"
         value={activityFilter}
@@ -323,7 +424,7 @@ export default function Tours() {
         closeOther={setShowCountryList}
         list={activities}
         onSelect={setActivityFilter}
-        isMobile={isMobile}
+        innerRef={activityRef}
       />
 
       <FilterDropdown
@@ -334,7 +435,7 @@ export default function Tours() {
         closeOther={setShowActivityList}
         list={countries}
         onSelect={setCountryFilter}
-        isMobile={isMobile}
+        innerRef={countryRef}
       />
 
       <div style={styles.filterShellWide}>
@@ -401,62 +502,48 @@ export default function Tours() {
         </div>
         <div style={styles.rangeHint}>Tap map to change center</div>
       </div>
-
-      <div style={styles.filterShellWide}>
-        <div style={styles.filterLabel}>Reset</div>
-        <button
-          type="button"
-          onClick={() => {
-            setActivityFilter("All Activities");
-            setCountryFilter("All Countries");
-            setStatusFilter("All");
-            setCapacityFilter("all");
-            setStartDateFilter("");
-            setEndDateFilter("");
-            setRadiusKm(0);
-            setRadiusCenter(mapCenter);
-          }}
-          style={styles.clearBtn}
-        >
-          Clear all filters
-        </button>
-      </div>
-
-      {isMobile && (
-        <div style={styles.mobileFilterActions}>
-          <button
-            type="button"
-            style={styles.mobileFilterGhost}
-            onClick={() => {
-              setActivityFilter("All Activities");
-              setCountryFilter("All Countries");
-              setStatusFilter("All");
-              setCapacityFilter("all");
-              setStartDateFilter("");
-              setEndDateFilter("");
-              setRadiusKm(0);
-              setRadiusCenter(mapCenter);
-              setShowActivityList(false);
-              setShowCountryList(false);
-            }}
-          >
-            Reset
-          </button>
-
-          <button
-            type="button"
-            style={styles.mobileFilterPrimary}
-            onClick={() => setShowFiltersMobile(false)}
-          >
-            Apply filters
-          </button>
-        </div>
-      )}
     </div>
   );
 
   return (
-    <div style={styles.page}>
+    <div
+      style={{
+        ...styles.page,
+        paddingTop: isMobile ? NAVBAR_OFFSET + 16 : NAVBAR_OFFSET + 18,
+      }}
+    >
+      <style>{`
+        .tours-hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+
+        .tours-dropdown-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .tours-dropdown-scroll::-webkit-scrollbar-thumb {
+          background: rgba(170,255,228,0.18);
+          border-radius: 999px;
+        }
+
+        .tours-card-hover {
+          transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+        }
+
+        .tours-card-hover:hover {
+          transform: translateY(-8px) scale(1.01);
+          box-shadow:
+            0 42px 120px rgba(0,0,0,0.72),
+            0 0 0 1px rgba(0,255,195,0.18) inset,
+            0 0 40px rgba(0,255,190,0.10);
+          border-color: rgba(160,255,226,0.16);
+        }
+
+        .tours-card-hover:hover img {
+          transform: scale(1.08);
+        }
+      `}</style>
+
       <div style={styles.bgGlow1} />
       <div style={styles.bgGlow2} />
       <div style={styles.bgGlow3} />
@@ -466,6 +553,7 @@ export default function Tours() {
         <div style={styles.hero}>
           <div style={styles.heroGlow} />
           <div style={styles.heroGlow2} />
+          <div style={styles.heroLine} />
 
           <div style={styles.heroBadge}>🧭 EXPLORE REAL ADVENTURES</div>
 
@@ -474,7 +562,7 @@ export default function Tours() {
           <p style={styles.subtitle}>
             Browse powerful outdoor experiences from real hosts. Filter by
             activity, country, dates, availability and radius — then find your
-            next brutal adventure.
+            next brutal adventure or premium school experience.
           </p>
 
           <div style={styles.heroStats}>
@@ -499,7 +587,90 @@ export default function Tours() {
             </div>
           </div>
 
-          {!isMobile && filterContent}
+          <div style={styles.quickSection}>
+            <div style={styles.quickSectionHead}>
+              <div style={styles.quickSectionTitle}>Quick filters</div>
+              <div style={styles.quickSectionSub}>
+                Fast browsing, brutal UX
+              </div>
+            </div>
+
+            <div style={styles.quickRow} className="tours-hide-scrollbar">
+              {quickActivities.map((chip) => {
+                const active = activityFilter === chip;
+                const training = [
+                  "Ski School",
+                  "Paragliding School",
+                  "Diving School",
+                  "Climbing School",
+                  "Survival School",
+                ].includes(chip);
+
+                return (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setActivityFilter(chip)}
+                    style={{
+                      ...styles.quickChip,
+                      ...(active ? styles.quickChipActive : {}),
+                      ...(training ? styles.quickChipTraining : {}),
+                      ...(active && training
+                        ? styles.quickChipTrainingActive
+                        : {}),
+                    }}
+                  >
+                    {chip === "All Activities" ? "All" : chip}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              style={{ ...styles.quickRow, marginTop: 10 }}
+              className="tours-hide-scrollbar"
+            >
+              {quickCountries.map((chip) => {
+                const active = countryFilter === chip;
+                return (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setCountryFilter(chip)}
+                    style={{
+                      ...styles.quickChipSecondary,
+                      ...(active ? styles.quickChipSecondaryActive : {}),
+                    }}
+                  >
+                    {chip === "All Countries" ? "Any country" : chip}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={styles.desktopFilterShell}>
+            <div style={styles.desktopFilterTopRow}>
+              <div style={styles.desktopFilterTitle}>Advanced filters</div>
+              <div style={styles.desktopFilterMeta}>
+                {loading ? "Loading..." : `${filteredTours.length} shown`}
+              </div>
+            </div>
+
+            {advancedFilters}
+
+            {activeFilterCount > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  style={styles.clearBtnInline}
+                >
+                  Reset all filters ({activeFilterCount})
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {isMobile && (
@@ -507,22 +678,12 @@ export default function Tours() {
             <div style={styles.mobileTopTools}>
               <button
                 type="button"
-                style={styles.mobileFilterMainBtn}
-                onClick={() => setShowFiltersMobile(true)}
-              >
-                <span>⚙️ Filters</span>
-                {activeFilterCount > 0 && (
-                  <span style={styles.mobileToolbarCount}>
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
                 style={styles.mobileMapBtn}
                 onClick={() =>
-                  window.scrollTo({ top: 760, behavior: "smooth" })
+                  mapSectionRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  })
                 }
               >
                 🗺️ Map
@@ -531,84 +692,20 @@ export default function Tours() {
               <div style={styles.mobileResultsChip}>
                 🔍 {loading ? "Loading..." : `${filteredTours.length} shown`}
               </div>
-            </div>
 
-            <div style={styles.mobileSwipeSection}>
-              <div style={styles.mobileSwipeHeader}>
-                <div style={styles.mobileSwipeTitle}>Quick filters</div>
-                <div style={styles.mobileSwipeHint}>Swipe horizontally</div>
-              </div>
-
-              <div style={styles.mobileChipsRow}>
-                {mobileQuickActivities.map((chip) => {
-                  const active = activityFilter === chip;
-                  return (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => setActivityFilter(chip)}
-                      style={{
-                        ...styles.mobileChip,
-                        ...(active ? styles.mobileChipActive : {}),
-                      }}
-                    >
-                      {chip === "All Activities" ? "All" : chip}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={styles.mobileChipsRowSecondary}>
-                {countries.slice(0, 8).map((chip) => {
-                  const active = countryFilter === chip;
-                  return (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => setCountryFilter(chip)}
-                      style={{
-                        ...styles.mobileChipSecondary,
-                        ...(active ? styles.mobileChipSecondaryActive : {}),
-                      }}
-                    >
-                      {chip === "All Countries" ? "Any country" : chip}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div
-              style={{
-                ...styles.filterOverlay,
-                display: showFiltersMobile ? "block" : "none",
-              }}
-              onClick={() => setShowFiltersMobile(false)}
-            />
-
-            <div
-              style={{
-                ...styles.filterDrawer,
-                transform: showFiltersMobile
-                  ? "translateY(0)"
-                  : "translateY(105%)",
-              }}
-            >
-              <div style={styles.filterDrawerHandle} />
-
-              <div style={styles.filterDrawerHead}>
-                <div style={styles.filterDrawerTitle}>Filters</div>
-
+              {activeFilterCount > 0 && (
                 <button
                   type="button"
-                  style={styles.filterDrawerClose}
-                  onClick={() => setShowFiltersMobile(false)}
+                  style={styles.mobileResetBtn}
+                  onClick={resetAllFilters}
                 >
-                  Close
+                  Reset
                 </button>
-              </div>
+              )}
+            </div>
 
-              {filterContent}
+            <div style={styles.mobileInlineFilters}>
+              {advancedFilters}
             </div>
           </>
         )}
@@ -627,7 +724,7 @@ export default function Tours() {
           )}
         </div>
 
-        <div style={styles.mapWrapper}>
+        <div ref={mapSectionRef} style={styles.mapWrapper}>
           <div style={styles.mapTopBar}>
             <div style={styles.mapTopLeft}>
               <div style={styles.mapTitle}>Map of tours</div>
@@ -672,7 +769,7 @@ export default function Tours() {
                   <Marker
                     key={tour.id}
                     position={[tour.latitude, tour.longitude]}
-                    icon={getOutdoorMarkerIcon()}
+                    icon={getOutdoorMarkerIcon(isTrainingTour(tour))}
                     eventHandlers={{
                       click: () => navigate(`/tour/${tour.id}`),
                     }}
@@ -716,32 +813,15 @@ export default function Tours() {
             {filteredTours.map((tour) => {
               const status = getStatus(tour);
               const creatorName =
-                tour.profiles?.full_name ||
-                tour.creator_name ||
-                "Unknown creator";
+                tour.profiles?.full_name || tour.creator_name || "Unknown creator";
+              const training = isTrainingTour(tour);
 
               return (
                 <div
                   key={tour.id}
                   style={styles.card}
+                  className="tours-card-hover"
                   onClick={() => navigate(`/tour/${tour.id}`)}
-                  onMouseEnter={(e) => {
-                    if (isMobile) return;
-                    e.currentTarget.style.transform =
-                      "translateY(-8px) scale(1.01)";
-                    e.currentTarget.style.boxShadow =
-                      "0 40px 120px rgba(0,0,0,0.72), 0 0 0 1px rgba(0,255,195,0.18) inset";
-                    const img = e.currentTarget.querySelector("img");
-                    if (img) img.style.transform = "scale(1.08)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (isMobile) return;
-                    e.currentTarget.style.transform = "translateY(0) scale(1)";
-                    e.currentTarget.style.boxShadow =
-                      "0 28px 80px rgba(0,0,0,0.55)";
-                    const img = e.currentTarget.querySelector("img");
-                    if (img) img.style.transform = "scale(1.04)";
-                  }}
                 >
                   <div style={styles.imageWrap}>
                     <img
@@ -754,15 +834,28 @@ export default function Tours() {
                     <div style={styles.imageNoise} />
 
                     <div style={styles.topBadges}>
-                      <div style={styles.categoryTag}>
+                      <div
+                        style={{
+                          ...styles.categoryTag,
+                          ...(training ? styles.categoryTagTraining : {}),
+                        }}
+                      >
                         #{tour.activity || "Tour"}
                       </div>
-                      <div style={styles.statusBadge(status)}>{status}</div>
+
+                      <div
+                        style={{
+                          ...styles.statusBadge(status),
+                          ...(training ? styles.trainingPill : {}),
+                        }}
+                      >
+                        {training ? "● TRAINING" : status}
+                      </div>
                     </div>
 
                     <div style={styles.imageBottom}>
                       <div style={styles.locationChip}>
-                        📍 {tour.country || "Unknown location"}
+                        📍 {tour.location_name || tour.country || "Unknown location"}
                       </div>
                     </div>
                   </div>
@@ -773,12 +866,24 @@ export default function Tours() {
                     <div style={styles.metaRow}>
                       <div style={styles.metaPill}>👤 {creatorName}</div>
 
-                      {tour.start_date && (
+                      {tour.date_start && (
                         <div style={styles.metaPill}>
-                          📅 {new Date(tour.start_date).toLocaleDateString()}
-                          {tour.end_date
-                            ? ` – ${new Date(tour.end_date).toLocaleDateString()}`
+                          📅 {new Date(tour.date_start).toLocaleDateString()}
+                          {tour.date_end
+                            ? ` – ${new Date(tour.date_end).toLocaleDateString()}`
                             : ""}
+                        </div>
+                      )}
+
+                      {training && (
+                        <div style={{ ...styles.metaPill, ...styles.trainingMetaPill }}>
+                          🎓 School / Training
+                        </div>
+                      )}
+
+                      {training && tour.skill_level && (
+                        <div style={{ ...styles.metaPill, ...styles.trainingMetaPill }}>
+                          🎯 {String(tour.skill_level).replaceAll("_", " ")}
                         </div>
                       )}
                     </div>
@@ -809,25 +914,6 @@ export default function Tours() {
             })}
           </div>
         )}
-
-        {isMobile && (
-          <div style={styles.stickyFilterBar}>
-            <div style={styles.stickyFilterInfo}>
-              <div style={styles.stickyFilterTitle}>Explore tours</div>
-              <div style={styles.stickyFilterSub}>
-                {filteredTours.length} results · {activityFilter}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              style={styles.stickyFilterBtn}
-              onClick={() => setShowFiltersMobile(true)}
-            >
-              Filters
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -841,10 +927,10 @@ function FilterDropdown({
   closeOther,
   list,
   onSelect,
-  isMobile,
+  innerRef,
 }) {
   return (
-    <div style={styles.filterShell}>
+    <div style={styles.filterShell} ref={innerRef}>
       <div style={styles.filterLabel}>{label}</div>
 
       <div
@@ -859,12 +945,7 @@ function FilterDropdown({
       </div>
 
       {open && (
-        <div
-          style={{
-            ...styles.dropdown,
-            top: isMobile ? 70 : 76,
-          }}
-        >
+        <div style={styles.dropdown} className="tours-dropdown-scroll">
           {list.map((v) => (
             <div
               key={v}
@@ -894,12 +975,12 @@ const styles = {
     minHeight: "100vh",
     overflowX: "hidden",
     overflowY: "visible",
-    marginTop: -120,
-    padding: "64px 0 110px",
+    paddingBottom: 42,
     background:
       "radial-gradient(circle at top, #081b16 0%, #04100d 28%, #02060b 58%, #000000 100%)",
     color: "#eafff5",
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily:
+      'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
 
   container: {
@@ -959,10 +1040,10 @@ const styles = {
 
   hero: {
     position: "relative",
+    zIndex: 5,
     padding: "34px 24px 24px",
-    borderRadius: "0 0 36px 36px",
+    borderRadius: 32,
     border: "1px solid rgba(255,255,255,0.08)",
-    borderTop: "none",
     background:
       "linear-gradient(145deg, rgba(10,24,19,0.94), rgba(3,10,8,0.98))",
     boxShadow:
@@ -992,6 +1073,17 @@ const styles = {
     borderRadius: "50%",
     background: "radial-gradient(circle, rgba(124,77,255,0.14), transparent 70%)",
     filter: "blur(30px)",
+    pointerEvents: "none",
+  },
+
+  heroLine: {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    top: 0,
+    height: 1,
+    background:
+      "linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)",
     pointerEvents: "none",
   },
 
@@ -1071,8 +1163,142 @@ const styles = {
     fontWeight: 800,
   },
 
-  filtersWrap: {
-    marginTop: 26,
+  quickSection: {
+    marginTop: 24,
+    padding: "18px",
+    borderRadius: 26,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+    backdropFilter: "blur(14px)",
+    boxShadow: "0 16px 40px rgba(0,0,0,0.24)",
+  },
+
+  quickSectionHead: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 10,
+    flexWrap: "wrap",
+    marginBottom: 12,
+  },
+
+  quickSectionTitle: {
+    fontSize: 13,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "rgba(234,255,245,0.82)",
+    fontWeight: 900,
+  },
+
+  quickSectionSub: {
+    fontSize: 12,
+    color: "rgba(234,255,245,0.58)",
+    fontWeight: 700,
+  },
+
+  quickRow: {
+    display: "flex",
+    gap: 10,
+    overflowX: "auto",
+    paddingBottom: 4,
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+  },
+
+  quickChip: {
+    flex: "0 0 auto",
+    minHeight: 42,
+    padding: "0 16px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(255,255,255,0.05)",
+    color: "rgba(234,255,245,0.88)",
+    fontWeight: 800,
+    fontSize: 12,
+    whiteSpace: "nowrap",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.24)",
+    cursor: "pointer",
+  },
+
+  quickChipActive: {
+    background:
+      "linear-gradient(135deg, rgba(0,255,190,0.16), rgba(124,77,255,0.16))",
+    border: "1px solid rgba(0,255,190,0.30)",
+    color: "#ffffff",
+    boxShadow: "0 14px 30px rgba(0,255,190,0.18)",
+  },
+
+  quickChipTraining: {
+    border: "1px solid rgba(124,77,255,0.20)",
+    background: "rgba(124,77,255,0.08)",
+  },
+
+  quickChipTrainingActive: {
+    background:
+      "linear-gradient(135deg, rgba(124,77,255,0.24), rgba(0,255,190,0.16))",
+    border: "1px solid rgba(170,130,255,0.34)",
+    color: "#ffffff",
+  },
+
+  quickChipSecondary: {
+    flex: "0 0 auto",
+    minHeight: 38,
+    padding: "0 14px",
+    borderRadius: 999,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.04)",
+    color: "rgba(234,255,245,0.72)",
+    fontWeight: 700,
+    fontSize: 11,
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+  },
+
+  quickChipSecondaryActive: {
+    background: "rgba(0,255,190,0.12)",
+    border: "1px solid rgba(0,255,190,0.22)",
+    color: "#dffff5",
+  },
+
+  desktopFilterShell: {
+    marginTop: 16,
+    padding: "18px",
+    borderRadius: 26,
+    border: "1px solid rgba(255,255,255,0.08)",
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+    backdropFilter: "blur(14px)",
+    boxShadow: "0 16px 40px rgba(0,0,0,0.24)",
+  },
+
+  desktopFilterTopRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    marginBottom: 14,
+  },
+
+  desktopFilterTitle: {
+    fontSize: 13,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "rgba(234,255,245,0.76)",
+    fontWeight: 900,
+  },
+
+  desktopFilterMeta: {
+    fontSize: 12,
+    color: "rgba(234,255,245,0.60)",
+    fontWeight: 700,
+  },
+
+  advancedFilterGrid: {
+    position: "relative",
+    zIndex: 60,
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
     gap: 16,
@@ -1083,7 +1309,7 @@ const styles = {
   filterShell: {
     position: "relative",
     minWidth: 220,
-    zIndex: 30,
+    zIndex: 80,
   },
 
   filterShellWide: {
@@ -1136,6 +1362,7 @@ const styles = {
     position: "absolute",
     left: 0,
     right: 0,
+    top: "calc(100% + 8px)",
     maxHeight: 320,
     overflowY: "auto",
     borderRadius: 22,
@@ -1247,19 +1474,16 @@ const styles = {
     color: "rgba(230,245,237,0.72)",
   },
 
-  clearBtn: {
-    minHeight: 52,
-    padding: "0 14px",
+  clearBtnInline: {
+    minHeight: 46,
+    padding: "0 16px",
     borderRadius: 16,
     border: "1px solid rgba(110,186,150,0.22)",
     background: "rgba(20,60,45,0.95)",
     color: "#f5fff9",
-    fontSize: 13,
+    fontSize: 12,
     cursor: "pointer",
-    alignSelf: "flex-start",
     fontWeight: 900,
-    boxShadow: "0 10px 22px rgba(0,0,0,0.22)",
-    width: "100%",
   },
 
   mobileTopTools: {
@@ -1268,24 +1492,6 @@ const styles = {
     justifyContent: "space-between",
     gap: 10,
     marginBottom: 14,
-  },
-
-  mobileFilterMainBtn: {
-    minHeight: 48,
-    padding: "0 16px",
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background:
-      "linear-gradient(145deg, rgba(7,22,17,0.96), rgba(3,11,8,0.96))",
-    color: "#f5fff9",
-    fontWeight: 900,
-    fontSize: 13,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    boxShadow: "0 14px 32px rgba(0,0,0,0.30)",
-    position: "relative",
   },
 
   mobileMapBtn: {
@@ -1303,20 +1509,7 @@ const styles = {
     justifyContent: "center",
     gap: 8,
     boxShadow: "0 14px 32px rgba(0,0,0,0.30)",
-  },
-
-  mobileToolbarCount: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 999,
-    background: "#00ffbe",
-    color: "#042217",
-    fontSize: 11,
-    fontWeight: 900,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 6px",
+    cursor: "pointer",
   },
 
   mobileResultsChip: {
@@ -1333,185 +1526,29 @@ const styles = {
     whiteSpace: "nowrap",
   },
 
-  mobileSwipeSection: {
+  mobileResetBtn: {
+    minHeight: 48,
+    padding: "0 14px",
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,0.10)",
+    background:
+      "linear-gradient(145deg, rgba(7,22,17,0.96), rgba(3,11,8,0.96))",
+    color: "#f5fff9",
+    fontWeight: 900,
+    fontSize: 12,
+    cursor: "pointer",
+  },
+
+  mobileInlineFilters: {
     marginBottom: 18,
-  },
-
-  mobileSwipeHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 10,
-    paddingInline: 2,
-  },
-
-  mobileSwipeTitle: {
-    fontSize: 12,
-    letterSpacing: "0.16em",
-    textTransform: "uppercase",
-    color: "rgba(234,255,245,0.88)",
-    fontWeight: 900,
-  },
-
-  mobileSwipeHint: {
-    fontSize: 11,
-    color: "rgba(234,255,245,0.58)",
-    fontWeight: 700,
-  },
-
-  mobileChipsRow: {
-    display: "flex",
-    gap: 10,
-    overflowX: "auto",
-    paddingBottom: 6,
-    paddingLeft: 2,
-    paddingRight: 2,
-    WebkitOverflowScrolling: "touch",
-    scrollbarWidth: "none",
-    msOverflowStyle: "none",
-  },
-
-  mobileChipsRowSecondary: {
-    display: "flex",
-    gap: 10,
-    overflowX: "auto",
-    paddingTop: 10,
-    paddingBottom: 4,
-    paddingLeft: 2,
-    paddingRight: 2,
-    WebkitOverflowScrolling: "touch",
-    scrollbarWidth: "none",
-    msOverflowStyle: "none",
-  },
-
-  mobileChip: {
-    flex: "0 0 auto",
-    minHeight: 42,
-    padding: "0 16px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(255,255,255,0.05)",
-    color: "rgba(234,255,245,0.88)",
-    fontWeight: 800,
-    fontSize: 12,
-    whiteSpace: "nowrap",
-    boxShadow: "0 10px 24px rgba(0,0,0,0.24)",
-  },
-
-  mobileChipActive: {
+    padding: "14px 12px",
+    borderRadius: 22,
+    border: "1px solid rgba(255,255,255,0.07)",
     background:
-      "linear-gradient(135deg, rgba(0,255,190,0.16), rgba(124,77,255,0.16))",
-    border: "1px solid rgba(0,255,190,0.30)",
-    color: "#ffffff",
-    boxShadow: "0 14px 30px rgba(0,255,190,0.18)",
-  },
-
-  mobileChipSecondary: {
-    flex: "0 0 auto",
-    minHeight: 38,
-    padding: "0 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "rgba(234,255,245,0.70)",
-    fontWeight: 700,
-    fontSize: 11,
-    whiteSpace: "nowrap",
-  },
-
-  mobileChipSecondaryActive: {
-    background: "rgba(0,255,190,0.12)",
-    border: "1px solid rgba(0,255,190,0.22)",
-    color: "#dffff5",
-  },
-
-  filterOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.76)",
-    backdropFilter: "blur(8px)",
-    zIndex: 9998,
-  },
-
-  filterDrawer: {
-    position: "fixed",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    maxHeight: "88vh",
-    overflowY: "auto",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    background:
-      "linear-gradient(180deg, rgba(7,18,14,0.995), rgba(2,8,6,0.995))",
-    borderTop: "1px solid rgba(255,255,255,0.10)",
-    boxShadow: "0 -30px 80px rgba(0,0,0,0.55)",
-    zIndex: 9999,
-    padding: "14px 14px 28px",
-    transition: "transform 0.28s ease",
-  },
-
-  filterDrawerHandle: {
-    width: 56,
-    height: 5,
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.20)",
-    margin: "0 auto 14px",
-  },
-
-  filterDrawerHead: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 12,
-  },
-
-  filterDrawerTitle: {
-    fontSize: 19,
-    fontWeight: 1000,
-    color: "#fff",
-    letterSpacing: "-0.02em",
-  },
-
-  filterDrawerClose: {
-    minHeight: 40,
-    padding: "0 14px",
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(255,255,255,0.05)",
-    color: "#fff",
-    fontWeight: 800,
-    fontSize: 12,
-  },
-
-  mobileFilterActions: {
+      "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+    boxShadow: "0 16px 36px rgba(0,0,0,0.18)",
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-    width: "100%",
-  },
-
-  mobileFilterGhost: {
-    minHeight: 48,
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(255,255,255,0.05)",
-    color: "#fff",
-    fontWeight: 900,
-    fontSize: 13,
-  },
-
-  mobileFilterPrimary: {
-    minHeight: 48,
-    borderRadius: 16,
-    border: "none",
-    background: "linear-gradient(135deg, #00ffbe, #52d6ff, #7c4dff)",
-    color: "#042217",
-    fontWeight: 1000,
-    fontSize: 13,
-    boxShadow: "0 14px 34px rgba(0,255,190,0.20)",
+    gap: 12,
   },
 
   topRow: {
@@ -1663,7 +1700,6 @@ const styles = {
       "linear-gradient(145deg, rgba(8,26,21,0.96), rgba(2,9,7,0.96))",
     border: "1px solid rgba(255,255,255,0.08)",
     boxShadow: "0 28px 80px rgba(0,0,0,0.55)",
-    transition: "transform 0.35s ease, box-shadow 0.35s ease",
   },
 
   imageWrap: {
@@ -1722,6 +1758,12 @@ const styles = {
     backdropFilter: "blur(12px)",
   },
 
+  categoryTagTraining: {
+    background: "rgba(124,77,255,0.18)",
+    border: "1px solid rgba(170,130,255,0.34)",
+    color: "#efe4ff",
+  },
+
   statusBadge: (status) => {
     let bg = "rgba(255,255,255,0.08)";
     let border = "1px solid rgba(255,255,255,0.16)";
@@ -1735,6 +1777,10 @@ const styles = {
       bg = "rgba(255,196,0,0.14)";
       border = "1px solid rgba(255,196,0,0.26)";
       color = "#fff3c7";
+    } else if (status === "Expired") {
+      bg = "rgba(255,255,255,0.08)";
+      border = "1px solid rgba(255,255,255,0.14)";
+      color = "rgba(255,255,255,0.74)";
     }
 
     return {
@@ -1749,6 +1795,12 @@ const styles = {
       backdropFilter: "blur(10px)",
       textTransform: "uppercase",
     };
+  },
+
+  trainingPill: {
+    background: "rgba(124,77,255,0.18)",
+    border: "1px solid rgba(170,130,255,0.34)",
+    color: "#f0e5ff",
   },
 
   imageBottom: {
@@ -1802,6 +1854,12 @@ const styles = {
     color: "rgba(234,255,245,0.82)",
     fontSize: 12,
     fontWeight: 800,
+  },
+
+  trainingMetaPill: {
+    background: "rgba(124,77,255,0.12)",
+    border: "1px solid rgba(170,130,255,0.24)",
+    color: "#efe4ff",
   },
 
   divider: {
@@ -1878,59 +1936,5 @@ const styles = {
     fontSize: 14,
     color: "rgba(234,255,245,0.62)",
     lineHeight: 1.7,
-  },
-
-  stickyFilterBar: {
-    display: "flex",
-    position: "fixed",
-    left: 10,
-    right: 10,
-    bottom: 10,
-    zIndex: 9997,
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    padding: "10px 12px",
-    borderRadius: 18,
-    background: "rgba(5,16,12,0.88)",
-    border: "1px solid rgba(110,186,150,0.16)",
-    backdropFilter: "blur(16px)",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.42)",
-  },
-
-  stickyFilterInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 3,
-    minWidth: 0,
-  },
-
-  stickyFilterTitle: {
-    fontSize: 13,
-    fontWeight: 900,
-    color: "#fff",
-    lineHeight: 1.1,
-  },
-
-  stickyFilterSub: {
-    fontSize: 11,
-    color: "rgba(230,245,237,0.78)",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    maxWidth: 180,
-  },
-
-  stickyFilterBtn: {
-    padding: "12px 14px",
-    borderRadius: 14,
-    border: "none",
-    background: "linear-gradient(120deg, #a4e3c2, #6bc19a, #3f8d6a)",
-    color: "#032013",
-    fontWeight: 900,
-    fontSize: 12,
-    minWidth: 98,
-    boxShadow: "0 10px 24px rgba(63,141,106,0.28)",
-    cursor: "pointer",
   },
 };

@@ -21,6 +21,7 @@ export default function CreateEvent() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 860 : false
   );
@@ -31,7 +32,17 @@ export default function CreateEvent() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (user) setUser(user);
+      if (user) {
+        setUser(user);
+
+        const { data: profileData, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (!error) setProfile(profileData);
+      }
     };
 
     loadUser();
@@ -42,6 +53,14 @@ export default function CreateEvent() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  const isVerifiedCreator =
+    profile?.is_verified === true ||
+    profile?.is_verified_creator === true ||
+    profile?.creator_status === "approved";
+
+  const isSchoolOrInstructor =
+    profile?.account_type === "school" || profile?.account_type === "instructor";
 
   const [form, setForm] = useState({
     title: "",
@@ -62,6 +81,13 @@ export default function CreateEvent() {
     organizerName: "",
     websiteUrl: "",
     coverUrl: "",
+
+    isTraining: false,
+    trainingType: "",
+    skillLevel: "all_levels",
+    equipmentIncluded: false,
+    certificateIncluded: false,
+    trainingLanguage: "",
   });
 
   const [saving, setSaving] = useState(false);
@@ -80,6 +106,11 @@ export default function CreateEvent() {
     "Charity Event",
     "Climbing Event",
     "Bike Gathering",
+    "Ski School Event",
+    "Paragliding School Event",
+    "Diving School Event",
+    "Climbing School Event",
+    "Survival Training Event",
   ];
 
   const countryOptions = [
@@ -111,6 +142,27 @@ export default function CreateEvent() {
     "Other",
   ];
 
+  const trainingTypesList = [
+    { value: "ski_training", label: "Ski Training" },
+    { value: "paragliding_training", label: "Paragliding Training" },
+    { value: "diving_training", label: "Diving Training" },
+    { value: "climbing_training", label: "Climbing Training" },
+    { value: "survival_training", label: "Survival Training" },
+    { value: "kayak_training", label: "Kayak Training" },
+    { value: "horse_riding_training", label: "Horse Riding Training" },
+    { value: "cycling_training", label: "Cycling Training" },
+    { value: "hiking_training", label: "Hiking Training" },
+    { value: "camping_training", label: "Camping Training" },
+    { value: "other", label: "Other Training" },
+  ];
+
+  const skillLevelsList = [
+    { value: "beginner", label: "Beginner" },
+    { value: "intermediate", label: "Intermediate" },
+    { value: "advanced", label: "Advanced" },
+    { value: "all_levels", label: "All Levels" },
+  ];
+
   const handleChange = (field) => (e) => {
     const value =
       e.target.type === "checkbox" ? e.target.checked : e.target.value;
@@ -138,14 +190,23 @@ export default function CreateEvent() {
     if (!form.startDate) return "Start date is required.";
     if (!form.country) return "Country is required.";
     if (!user) return "You must be logged in.";
+    if (!isVerifiedCreator)
+      return "You must be a verified creator to publish events.";
+
+    if (form.isTraining) {
+      if (!form.trainingType) return "Training type is required.";
+      if (!form.skillLevel) return "Skill level is required.";
+    }
+
     return "";
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     setFileUploading(true);
+    setErrorMsg("");
 
     const fileName = `event_${Date.now()}_${file.name}`;
 
@@ -168,7 +229,7 @@ export default function CreateEvent() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
@@ -194,10 +255,26 @@ export default function CreateEvent() {
       longitude: form.longitude,
       is_free: form.isFree,
       price_from: form.isFree ? 0 : Number(form.priceFrom) || null,
-      organizer_name: form.organizerName || null,
-      website_url: form.websiteUrl || null,
+      organizer_name:
+        form.organizerName || profile?.school_name || profile?.full_name || null,
+      website_url: form.websiteUrl || profile?.website_url || null,
       cover_url: form.coverUrl || null,
       creator_id: user.id,
+
+      is_training: form.isTraining,
+      training_type: form.isTraining ? form.trainingType : null,
+      instructor_id:
+        form.isTraining && profile?.account_type === "instructor" ? user.id : null,
+      school_profile_id:
+        form.isTraining &&
+        (profile?.account_type === "school" ||
+          profile?.account_type === "instructor")
+          ? user.id
+          : null,
+      skill_level: form.isTraining ? form.skillLevel : null,
+      equipment_included: form.isTraining ? form.equipmentIncluded : false,
+      certificate_included: form.isTraining ? form.certificateIncluded : false,
+      training_language: form.isTraining ? form.trainingLanguage || null : null,
     };
 
     const { data, error } = await supabase
@@ -209,7 +286,11 @@ export default function CreateEvent() {
     if (error) {
       setErrorMsg(error.message);
     } else {
-      setSuccessMsg("Event created successfully.");
+      setSuccessMsg(
+        form.isTraining
+          ? "Training event created successfully."
+          : "Event created successfully."
+      );
       navigate(`/event/${data.id}`);
     }
 
@@ -225,14 +306,13 @@ export default function CreateEvent() {
     ? `From ${form.priceFrom} €`
     : "Price on request";
 
-  const now = new Date();
-  const fakeStatus = "Draft";
+  const fakeStatus = form.isTraining ? "Training" : "Draft";
+  const NAVBAR_OFFSET = isMobile ? 84 : 112;
 
   const styles = {
     page: {
       minHeight: "100vh",
-      padding: isMobile ? "0 0 96px" : "0 0 48px",
-      marginTop: -120,
+      padding: isMobile ? "98px 0 36px" : "118px 0 48px",
       background:
         "radial-gradient(1000px 420px at 8% -5%, rgba(0,255,184,0.16), transparent 60%)," +
         "radial-gradient(900px 400px at 100% 10%, rgba(0,170,255,0.12), transparent 58%)," +
@@ -244,7 +324,9 @@ export default function CreateEvent() {
         "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       color: "#f6fbf8",
       overflowX: "hidden",
+      boxSizing: "border-box",
     },
+
     container: {
       width: "100%",
       maxWidth: 1280,
@@ -255,23 +337,24 @@ export default function CreateEvent() {
     hero: {
       position: "relative",
       minHeight: isMobile ? 320 : 280,
-      borderRadius: isMobile ? "0 0 28px 28px" : "0 0 32px 32px",
+      borderRadius: isMobile ? 28 : 32,
       overflow: "hidden",
       marginBottom: 18,
       boxShadow: "0 30px 90px rgba(0,0,0,0.55)",
-      border: isMobile ? "none" : "1px solid rgba(255,255,255,0.08)",
-      borderTop: "none",
+      border: "1px solid rgba(255,255,255,0.08)",
       background:
         "radial-gradient(650px 250px at 10% 0%, rgba(0,255,184,0.14), transparent 60%)," +
         "radial-gradient(650px 280px at 90% 0%, rgba(0,170,255,0.10), transparent 60%)," +
         "linear-gradient(180deg, rgba(8,22,18,0.98), rgba(3,10,8,1))",
     },
+
     heroOverlay: {
       position: "absolute",
       inset: 0,
       background:
         "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.68) 72%, rgba(0,0,0,0.84))",
     },
+
     heroGlow: {
       position: "absolute",
       inset: 0,
@@ -280,11 +363,13 @@ export default function CreateEvent() {
         "radial-gradient(460px 220px at 92% 8%, rgba(124,77,255,0.10), transparent 50%)",
       pointerEvents: "none",
     },
+
     heroInner: {
       position: "relative",
       zIndex: 2,
       padding: isMobile ? "18px 16px 20px" : "24px 26px 24px",
     },
+
     heroTop: {
       display: "flex",
       justifyContent: "space-between",
@@ -292,6 +377,7 @@ export default function CreateEvent() {
       gap: 10,
       flexWrap: "wrap",
     },
+
     badge: {
       display: "inline-flex",
       alignItems: "center",
@@ -308,6 +394,7 @@ export default function CreateEvent() {
       fontWeight: 900,
       boxShadow: "0 10px 24px rgba(0,0,0,0.20)",
     },
+
     heroTitle: {
       fontSize: isMobile ? 34 : 52,
       lineHeight: isMobile ? 1 : 0.96,
@@ -318,18 +405,21 @@ export default function CreateEvent() {
       maxWidth: 780,
       textShadow: "0 14px 34px rgba(0,0,0,0.45)",
     },
+
     heroSubtitle: {
       fontSize: isMobile ? 13 : 15,
       lineHeight: 1.65,
       maxWidth: 760,
       color: "rgba(225,240,232,0.82)",
     },
+
     heroStats: {
       marginTop: 16,
       display: "grid",
       gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0, 1fr))",
       gap: 10,
     },
+
     heroStat: {
       padding: isMobile ? "12px 12px" : "14px 14px",
       borderRadius: 18,
@@ -359,12 +449,12 @@ export default function CreateEvent() {
       fontSize: 13,
       overflow: "hidden",
     },
+
     rightStack: {
       display: "flex",
       flexDirection: "column",
       gap: 18,
-      position: isMobile ? "static" : "sticky",
-      top: 16,
+      position: "static",
     },
 
     sectionTitleRow: {
@@ -375,6 +465,7 @@ export default function CreateEvent() {
       marginBottom: 12,
       flexWrap: "wrap",
     },
+
     sectionTitle: {
       fontSize: 12,
       fontWeight: 900,
@@ -383,11 +474,13 @@ export default function CreateEvent() {
       letterSpacing: "0.12em",
       color: "rgba(210,255,230,0.88)",
     },
+
     sectionHint: {
       fontSize: 11,
       color: "rgba(220,240,230,0.66)",
       lineHeight: 1.45,
     },
+
     block: {
       marginBottom: 18,
       paddingBottom: 18,
@@ -400,6 +493,7 @@ export default function CreateEvent() {
       gap: 10,
       marginBottom: 10,
     },
+
     fieldGrid3: {
       display: "grid",
       gridTemplateColumns: isMobile
@@ -408,12 +502,14 @@ export default function CreateEvent() {
       gap: 10,
       marginBottom: 10,
     },
+
     field: {
       display: "flex",
       flexDirection: "column",
       gap: 6,
       marginBottom: 10,
     },
+
     labelRow: {
       display: "flex",
       justifyContent: "space-between",
@@ -422,14 +518,17 @@ export default function CreateEvent() {
       flexWrap: "wrap",
       fontSize: 12,
     },
+
     label: {
       fontWeight: 700,
       color: "rgba(235,250,242,0.96)",
     },
+
     labelHint: {
       fontSize: 11,
       color: "rgba(200,220,210,0.74)",
     },
+
     input: {
       borderRadius: 14,
       border: "1px solid rgba(255,255,255,0.12)",
@@ -442,6 +541,7 @@ export default function CreateEvent() {
       boxSizing: "border-box",
       boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
     },
+
     textarea: {
       borderRadius: 16,
       border: "1px solid rgba(255,255,255,0.12)",
@@ -455,6 +555,7 @@ export default function CreateEvent() {
       lineHeight: 1.6,
       boxSizing: "border-box",
     },
+
     select: {
       borderRadius: 14,
       border: "1px solid rgba(255,255,255,0.12)",
@@ -475,6 +576,7 @@ export default function CreateEvent() {
       marginTop: 4,
       marginBottom: 8,
     },
+
     categoryButton: (active) => ({
       borderRadius: 16,
       padding: isMobile ? "12px 10px" : "10px 10px",
@@ -495,11 +597,13 @@ export default function CreateEvent() {
       boxShadow: active ? "0 14px 36px rgba(0,255,184,0.10)" : "none",
       textAlign: "left",
     }),
+
     categoryLabel: {
       fontWeight: 800,
       fontSize: 12,
       lineHeight: 1.25,
     },
+
     categorySub: {
       fontSize: 11,
       opacity: 0.72,
@@ -539,6 +643,7 @@ export default function CreateEvent() {
       fontSize: 12,
       lineHeight: 1.5,
     },
+
     successBox: {
       marginTop: 10,
       marginBottom: 4,
@@ -550,11 +655,15 @@ export default function CreateEvent() {
       fontSize: 12,
       lineHeight: 1.5,
     },
+
     submitRow: {
-      marginTop: 12,
+      marginTop: 16,
       display: "flex",
       justifyContent: isMobile ? "stretch" : "flex-end",
+      position: "relative",
+      zIndex: 1,
     },
+
     submitButton: {
       width: isMobile ? "100%" : "auto",
       padding: isMobile ? "15px 20px" : "12px 24px",
@@ -572,6 +681,7 @@ export default function CreateEvent() {
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
+      opacity: saving || !isVerifiedCreator ? 0.7 : 1,
     },
 
     previewTitle: {
@@ -582,6 +692,7 @@ export default function CreateEvent() {
       letterSpacing: "0.12em",
       color: "rgba(210,255,230,0.88)",
     },
+
     previewCard: {
       borderRadius: 24,
       overflow: "hidden",
@@ -591,11 +702,13 @@ export default function CreateEvent() {
       marginBottom: 14,
       boxShadow: "0 24px 60px rgba(0,0,0,0.40)",
     },
+
     previewImgWrapper: {
       height: isMobile ? 220 : 240,
       position: "relative",
       overflow: "hidden",
     },
+
     previewImg: {
       width: "100%",
       height: "100%",
@@ -603,12 +716,14 @@ export default function CreateEvent() {
       transform: "scale(1.03)",
       filter: "saturate(1.08) contrast(1.03)",
     },
+
     previewOverlay: {
       position: "absolute",
       inset: 0,
       background:
         "linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.18))",
     },
+
     previewTitleBox: {
       position: "absolute",
       left: 14,
@@ -619,6 +734,7 @@ export default function CreateEvent() {
       alignItems: "flex-end",
       gap: 10,
     },
+
     previewStatus: {
       fontSize: 11,
       borderRadius: 999,
@@ -631,6 +747,7 @@ export default function CreateEvent() {
       fontWeight: 900,
       backdropFilter: "blur(10px)",
     },
+
     previewPrice: {
       marginTop: 8,
       fontSize: 13,
@@ -639,12 +756,14 @@ export default function CreateEvent() {
       textAlign: "right",
       textShadow: "0 8px 24px rgba(0,0,0,0.55)",
     },
+
     previewBody: {
       padding: 14,
       fontSize: 12,
       color: "rgba(230,244,238,0.9)",
       lineHeight: 1.55,
     },
+
     previewLine: { marginBottom: 6 },
 
     statMiniGrid: {
@@ -654,6 +773,7 @@ export default function CreateEvent() {
       marginTop: 12,
       marginBottom: 14,
     },
+
     statMini: {
       padding: "12px 12px",
       borderRadius: 18,
@@ -669,23 +789,10 @@ export default function CreateEvent() {
       marginTop: 10,
       boxShadow: "0 22px 60px rgba(0,0,0,0.34)",
     },
+
     mapContainer: {
       height: isMobile ? 300 : 320,
       width: "100%",
-    },
-
-    stickyBar: {
-      position: "fixed",
-      left: 10,
-      right: 10,
-      bottom: 10,
-      zIndex: 5000,
-      padding: 10,
-      borderRadius: 20,
-      background: "rgba(8,16,13,0.84)",
-      border: "1px solid rgba(255,255,255,0.10)",
-      backdropFilter: "blur(18px)",
-      boxShadow: "0 24px 60px rgba(0,0,0,0.42)",
     },
   };
 
@@ -697,17 +804,29 @@ export default function CreateEvent() {
           <div style={styles.heroGlow} />
           <div style={styles.heroInner}>
             <div style={styles.heroTop}>
-              <div style={styles.badge}>⚡ Create · Event</div>
               <div style={styles.badge}>
-                Today · {now.toLocaleDateString()}
+                {form.isTraining
+                  ? "🎓 Create · Training Event"
+                  : "⚡ Create · Event"}
+              </div>
+              <div style={styles.badge}>
+                {isVerifiedCreator
+                  ? "✅ Verified creator"
+                  : "🔒 Verification required"}
               </div>
             </div>
 
-            <h1 style={styles.heroTitle}>Host an outdoor event that feels premium instantly.</h1>
+            <h1 style={styles.heroTitle}>
+              {form.isTraining
+                ? "Create a training event people instantly trust."
+                : "Host an outdoor event that feels premium instantly."}
+            </h1>
 
             <p style={styles.heroSubtitle}>
               Add the vibe, location, timing, pricing and visuals in one place.
-              This screen is built to feel polished on desktop and even stronger on mobile.
+              {form.isTraining
+                ? " Perfect for schools, instructors and structured outdoor learning."
+                : " This screen is built to feel polished on desktop and even stronger on mobile."}
             </p>
 
             <div style={styles.heroStats}>
@@ -737,10 +856,10 @@ export default function CreateEvent() {
               </div>
               <div style={styles.heroStat}>
                 <div style={{ fontSize: 22, fontWeight: 1000 }}>
-                  LIVE
+                  {form.isTraining ? "PRO" : "LIVE"}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
-                  preview updates
+                  {form.isTraining ? "training mode" : "preview updates"}
                 </div>
               </div>
             </div>
@@ -825,10 +944,137 @@ export default function CreateEvent() {
                   style={styles.textarea}
                   value={form.description}
                   onChange={handleChange("description")}
-                  placeholder="Share the flow of the day, audience, energy, highlights, logistics and what makes this event worth joining."
+                  placeholder={
+                    form.isTraining
+                      ? "Describe structure, safety, skill level, instructor guidance, equipment and what people will learn."
+                      : "Share the flow of the day, audience, energy, highlights, logistics and what makes this event worth joining."
+                  }
                 />
               </div>
             </div>
+
+            <div style={styles.block}>
+              <div style={styles.sectionTitleRow}>
+                <div style={styles.sectionTitle}>Event mode</div>
+                <div style={styles.sectionHint}>
+                  Turn this on for schools, academies and instructor-led sessions.
+                </div>
+              </div>
+
+              <div style={styles.toggleRow}>
+                <input
+                  type="checkbox"
+                  id="isTraining"
+                  checked={form.isTraining}
+                  onChange={handleChange("isTraining")}
+                />
+                <label htmlFor="isTraining">
+                  This is a <strong>training / school event</strong>
+                  {isSchoolOrInstructor ? " (recommended for your profile)" : ""}
+                </label>
+              </div>
+            </div>
+
+            {form.isTraining && (
+              <div style={styles.block}>
+                <div style={styles.sectionTitleRow}>
+                  <div style={styles.sectionTitle}>Training details</div>
+                  <div style={styles.sectionHint}>
+                    Add structured learning info people look for instantly.
+                  </div>
+                </div>
+
+                <div style={styles.fieldGrid2}>
+                  <div style={styles.field}>
+                    <div style={styles.labelRow}>
+                      <span style={styles.label}>Training type *</span>
+                    </div>
+                    <select
+                      style={styles.select}
+                      value={form.trainingType}
+                      onChange={handleChange("trainingType")}
+                    >
+                      <option value="">Select training type</option>
+                      {trainingTypesList.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={styles.field}>
+                    <div style={styles.labelRow}>
+                      <span style={styles.label}>Skill level *</span>
+                    </div>
+                    <select
+                      style={styles.select}
+                      value={form.skillLevel}
+                      onChange={handleChange("skillLevel")}
+                    >
+                      {skillLevelsList.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={styles.fieldGrid2}>
+                  <div style={styles.field}>
+                    <div style={styles.labelRow}>
+                      <span style={styles.label}>Training language</span>
+                    </div>
+                    <input
+                      type="text"
+                      style={styles.input}
+                      value={form.trainingLanguage}
+                      onChange={handleChange("trainingLanguage")}
+                      placeholder="English / Serbian / German"
+                    />
+                  </div>
+
+                  <div style={styles.field}>
+                    <div style={styles.labelRow}>
+                      <span style={styles.label}>Organizer profile type</span>
+                    </div>
+                    <input
+                      type="text"
+                      style={styles.input}
+                      value={profile?.account_type || "creator"}
+                      disabled
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div style={styles.toggleRow}>
+                    <input
+                      type="checkbox"
+                      id="equipmentIncluded"
+                      checked={form.equipmentIncluded}
+                      onChange={handleChange("equipmentIncluded")}
+                    />
+                    <label htmlFor="equipmentIncluded">
+                      Equipment included
+                    </label>
+                  </div>
+
+                  <div style={styles.toggleRow}>
+                    <input
+                      type="checkbox"
+                      id="certificateIncluded"
+                      checked={form.certificateIncluded}
+                      onChange={handleChange("certificateIncluded")}
+                    />
+                    <label htmlFor="certificateIncluded">
+                      Certificate included
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div style={styles.block}>
               <div style={styles.sectionTitleRow}>
@@ -1088,9 +1334,13 @@ export default function CreateEvent() {
               <button
                 type="submit"
                 style={styles.submitButton}
-                disabled={saving}
+                disabled={saving || !isVerifiedCreator}
               >
-                {saving ? "Saving…" : "Save event"}
+                {saving
+                  ? "Saving…"
+                  : form.isTraining
+                  ? "Save training event"
+                  : "Save event"}
                 {!saving && <span>➜</span>}
               </button>
             </div>
@@ -1117,7 +1367,9 @@ export default function CreateEvent() {
                           fontWeight: 900,
                         }}
                       >
-                        {form.category || "Event category"}
+                        {form.isTraining
+                          ? "Training event"
+                          : form.category || "Event category"}
                       </div>
 
                       <div
@@ -1170,6 +1422,26 @@ export default function CreateEvent() {
                   <div style={styles.previewLine}>
                     🌍 {form.country || "Choose a country"}
                   </div>
+                  {form.isTraining && (
+                    <>
+                      <div style={styles.previewLine}>
+                        🎯{" "}
+                        {skillLevelsList.find((s) => s.value === form.skillLevel)
+                          ?.label || "All Levels"}
+                      </div>
+                      {form.trainingLanguage && (
+                        <div style={styles.previewLine}>
+                          🗣 {form.trainingLanguage}
+                        </div>
+                      )}
+                      {form.equipmentIncluded && (
+                        <div style={styles.previewLine}>🧰 Equipment included</div>
+                      )}
+                      {form.certificateIncluded && (
+                        <div style={styles.previewLine}>📜 Certificate included</div>
+                      )}
+                    </>
+                  )}
                   {form.description && (
                     <div
                       style={{
@@ -1240,21 +1512,24 @@ export default function CreateEvent() {
             </div>
           </div>
         </div>
-      </div>
 
-      {isMobile && (
-        <div style={styles.stickyBar}>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            style={{ ...styles.submitButton, width: "100%" }}
-            disabled={saving}
+        {!isVerifiedCreator && (
+          <div
+            style={{
+              marginTop: 16,
+              borderRadius: 18,
+              padding: "14px 16px",
+              background: "rgba(255,60,60,0.10)",
+              border: "1px solid rgba(255,100,100,0.30)",
+              color: "#ffd0d0",
+              fontSize: 13,
+              lineHeight: 1.55,
+            }}
           >
-            {saving ? "Saving…" : "Save event"}
-            {!saving && <span>➜</span>}
-          </button>
-        </div>
-      )}
+            You must be a verified creator to publish events.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

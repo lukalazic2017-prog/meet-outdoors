@@ -45,10 +45,17 @@ export default function CreateTour() {
   const [dateEnd, setDateEnd] = useState("");
   const [price, setPrice] = useState("");
   const [maxPeople, setMaxPeople] = useState("");
-
   const [applicationDeadline, setApplicationDeadline] = useState("");
-
   const [isLegalEntity, setIsLegalEntity] = useState(false);
+
+  const [isTraining, setIsTraining] = useState(false);
+  const [trainingType, setTrainingType] = useState("");
+  const [skillLevel, setSkillLevel] = useState("all_levels");
+  const [durationLabel, setDurationLabel] = useState("");
+  const [equipmentIncluded, setEquipmentIncluded] = useState(false);
+  const [certificateIncluded, setCertificateIncluded] = useState(false);
+  const [trainingSpotsLeft, setTrainingSpotsLeft] = useState("");
+  const [trainingLanguage, setTrainingLanguage] = useState("");
 
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
@@ -75,6 +82,9 @@ export default function CreateTour() {
     profile?.is_verified === true ||
     profile?.is_verified_creator === true ||
     profile?.creator_status === "approved";
+
+  const isSchoolOrInstructor =
+    profile?.account_type === "school" || profile?.account_type === "instructor";
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 860);
@@ -107,6 +117,28 @@ export default function CreateTour() {
     loadUserAndProfile();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (coverPreview) {
+        try {
+          URL.revokeObjectURL(coverPreview);
+        } catch {}
+      }
+
+      if (videoPreview) {
+        try {
+          URL.revokeObjectURL(videoPreview);
+        } catch {}
+      }
+
+      galleryPreviews.forEach((p) => {
+        try {
+          URL.revokeObjectURL(p);
+        } catch {}
+      });
+    };
+  }, [coverPreview, videoPreview, galleryPreviews]);
+
   const activitiesList = [
     "Hiking",
     "Cycling",
@@ -127,6 +159,16 @@ export default function CreateTour() {
     "Diving",
     "Snorkeling",
     "Boat Rides",
+    "Ski School",
+    "Paragliding School",
+    "Diving School",
+    "Climbing School",
+    "Survival School",
+    "Kayak School",
+    "Horse Riding School",
+    "Cycling School",
+    "Hiking School",
+    "Camping School",
     "Other",
   ];
 
@@ -153,6 +195,27 @@ export default function CreateTour() {
     "Turkey",
     "United Kingdom",
     "Other",
+  ];
+
+  const trainingTypesList = [
+    { value: "ski_training", label: "Ski Training" },
+    { value: "paragliding_training", label: "Paragliding Training" },
+    { value: "diving_training", label: "Diving Training" },
+    { value: "climbing_training", label: "Climbing Training" },
+    { value: "survival_training", label: "Survival Training" },
+    { value: "kayak_training", label: "Kayak Training" },
+    { value: "horse_riding_training", label: "Horse Riding Training" },
+    { value: "cycling_training", label: "Cycling Training" },
+    { value: "hiking_training", label: "Hiking Training" },
+    { value: "camping_training", label: "Camping Training" },
+    { value: "other", label: "Other Training" },
+  ];
+
+  const skillLevelsList = [
+    { value: "beginner", label: "Beginner" },
+    { value: "intermediate", label: "Intermediate" },
+    { value: "advanced", label: "Advanced" },
+    { value: "all_levels", label: "All Levels" },
   ];
 
   function handleCoverChange(e) {
@@ -268,15 +331,24 @@ export default function CreateTour() {
     if (!maxPeople || Number(maxPeople) <= 0)
       return "Max people must be greater than 0.";
     if (!description.trim()) return "Description is required.";
-    if (!latitude || !longitude) return "Please pick a location on the map.";
+    if (latitude === null || longitude === null)
+      return "Please pick a location on the map.";
     if (!coverFile) return "Cover image is required.";
     if (!applicationDeadline) return "Application deadline is required.";
+
+    if (isTraining) {
+      if (!trainingType) return "Please select a training type.";
+      if (!skillLevel) return "Please select a skill level.";
+      if (trainingSpotsLeft !== "" && Number(trainingSpotsLeft) < 0) {
+        return "Training spots left cannot be negative.";
+      }
+    }
 
     return null;
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
@@ -352,29 +424,54 @@ export default function CreateTour() {
         ? new Date(applicationDeadline).toISOString()
         : null;
 
-      const { error: insertError } = await supabase.from("tours").insert([
-        {
-          title,
-          activity,
-          country,
-          location_name: locationName,
-          description,
-          date_start: dateStart,
-          date_end: dateEnd,
-          price: Number(price),
-          max_people: Number(maxPeople),
-          is_legal_entity: isLegalEntity,
-          latitude,
-          longitude,
-          cover_url: coverUrl,
-          image_urls: galleryUrls,
-          video_url: videoUrl,
-          application_deadline: deadlineISO,
-          status: "ACTIVE",
-          user_id: user.id,
-          creator_id: user.id,
-        },
-      ]);
+      const startISO = dateStart ? new Date(dateStart).toISOString() : null;
+      const endISO = dateEnd ? new Date(dateEnd).toISOString() : null;
+
+      const insertPayload = {
+        title,
+        activity,
+        country,
+        location_name: locationName,
+        description,
+        date_start: startISO,
+        date_end: endISO,
+        price: Number(price),
+        max_people: Number(maxPeople),
+        is_legal_entity: isLegalEntity,
+        latitude,
+        longitude,
+        cover_url: coverUrl,
+        image_urls: galleryUrls,
+        video_url: videoUrl,
+        application_deadline: deadlineISO,
+        status: "ACTIVE",
+        user_id: user.id,
+        creator_id: user.id,
+
+        is_training: isTraining,
+        training_type: isTraining ? trainingType : null,
+        instructor_id:
+          isTraining && profile?.account_type === "instructor" ? user.id : null,
+        school_profile_id:
+          isTraining &&
+          (profile?.account_type === "school" ||
+            profile?.account_type === "instructor")
+            ? user.id
+            : null,
+        skill_level: isTraining ? skillLevel : null,
+        duration_label: isTraining ? durationLabel || null : null,
+        equipment_included: isTraining ? equipmentIncluded : false,
+        certificate_included: isTraining ? certificateIncluded : false,
+        training_spots_left:
+          isTraining && trainingSpotsLeft !== ""
+            ? Number(trainingSpotsLeft)
+            : null,
+        training_language: isTraining ? trainingLanguage || null : null,
+      };
+
+      const { error: insertError } = await supabase
+        .from("tours")
+        .insert([insertPayload]);
 
       if (insertError) {
         if (insertError.code === "42501") {
@@ -390,7 +487,12 @@ export default function CreateTour() {
         return;
       }
 
-      setSuccessMsg("Tour created successfully! 🌿");
+      setSuccessMsg(
+        isTraining
+          ? "Training tour created successfully! 🎓"
+          : "Tour created successfully! 🌿"
+      );
+
       setTimeout(() => navigate("/my-tours"), 1200);
     } catch (err) {
       console.error(err);
@@ -401,16 +503,19 @@ export default function CreateTour() {
   }
 
   const selectedPosition =
-    latitude && longitude ? [latitude, longitude] : null;
+    latitude !== null && longitude !== null ? [latitude, longitude] : null;
 
   const showVerifiedBanner =
     !!errorMsg &&
     (errorMsg.includes("verified creator") || errorMsg.startsWith("⛔"));
 
+  const NAVBAR_OFFSET = isMobile ? 84 : 112;
+
   const pageWrapperStyle = {
     minHeight: "100vh",
-    padding: isMobile ? "0 0 98px" : "0 0 70px",
-    marginTop: -120,
+    padding: isMobile
+      ? `${NAVBAR_OFFSET + 16}px 0 42px`
+      : `${NAVBAR_OFFSET + 18}px 0 56px`,
     background:
       "radial-gradient(1000px 420px at 8% -6%, rgba(0,255,170,0.18), transparent 60%)," +
       "radial-gradient(920px 400px at 100% 8%, rgba(0,185,255,0.14), transparent 60%)," +
@@ -419,7 +524,8 @@ export default function CreateTour() {
     color: "#ffffff",
     boxSizing: "border-box",
     overflowX: "hidden",
-    fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily:
+      "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   };
 
   const containerStyle = {
@@ -432,12 +538,11 @@ export default function CreateTour() {
   const heroStyle = {
     position: "relative",
     minHeight: isMobile ? 330 : 260,
-    borderRadius: isMobile ? "0 0 28px 28px" : "0 0 30px 30px",
+    borderRadius: isMobile ? 28 : 30,
     overflow: "hidden",
     marginBottom: 18,
     boxShadow: "0 30px 100px rgba(0,0,0,0.62)",
-    border: isMobile ? "none" : "1px solid rgba(255,255,255,0.08)",
-    borderTop: "none",
+    border: "1px solid rgba(255,255,255,0.08)",
     background:
       "radial-gradient(700px 260px at 12% 0%, rgba(0,255,170,0.18), transparent 60%)," +
       "radial-gradient(700px 300px at 88% 0%, rgba(0,185,255,0.12), transparent 60%)," +
@@ -527,7 +632,9 @@ export default function CreateTour() {
   const layoutStyle = {
     marginTop: 12,
     display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.7fr) minmax(360px, 0.95fr)",
+    gridTemplateColumns: isMobile
+      ? "1fr"
+      : "minmax(0, 1.7fr) minmax(360px, 0.95fr)",
     gap: 20,
     alignItems: "start",
   };
@@ -547,8 +654,7 @@ export default function CreateTour() {
     display: "flex",
     flexDirection: "column",
     gap: 18,
-    position: isMobile ? "static" : "sticky",
-    top: 16,
+    position: "static",
   };
 
   const sectionTitleStyle = {
@@ -753,34 +859,54 @@ export default function CreateTour() {
             <div style={heroTopRowStyle}>
               <div style={heroBadgeStyle}>🗺️ Create a new tour</div>
               <div style={heroBadgeStyle}>
-                {isVerifiedCreator ? "✅ Verified creator" : "🔒 Verification required"}
+                {isVerifiedCreator
+                  ? "✅ Verified creator"
+                  : "🔒 Verification required"}
               </div>
             </div>
 
-            <h1 style={heroTitleStyle}>Create a tour that people instantly want to join.</h1>
+            <h1 style={heroTitleStyle}>
+              {isTraining
+                ? "Create a training people instantly trust."
+                : "Create a tour that people instantly want to join."}
+            </h1>
 
             <p style={heroSubtitleStyle}>
-              Add a powerful title, clean visuals, precise map point, honest tour
-              details and a polished preview. This page is built to feel like a real app,
-              especially on mobile.
+              Add a powerful title, clean visuals, precise map point, honest
+              details and a polished preview.
+              {isTraining
+                ? " Perfect for schools, instructors and certified outdoor experiences."
+                : " This page is built to feel like a real app, especially on mobile."}
             </p>
 
             <div style={heroStatsStyle}>
               <div style={heroStatStyle}>
                 <div style={{ fontSize: 22, fontWeight: 1000 }}>1</div>
-                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>Cover image required</div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
+                  Cover image required
+                </div>
               </div>
               <div style={heroStatStyle}>
                 <div style={{ fontSize: 22, fontWeight: 1000 }}>6</div>
-                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>Gallery photos max</div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
+                  Gallery photos max
+                </div>
               </div>
               <div style={heroStatStyle}>
                 <div style={{ fontSize: 22, fontWeight: 1000 }}>1</div>
-                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>Exact map point</div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
+                  Exact map point
+                </div>
               </div>
               <div style={heroStatStyle}>
-                <div style={{ fontSize: 22, fontWeight: 1000 }}>LIVE</div>
-                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>Preview updates instantly</div>
+                <div style={{ fontSize: 22, fontWeight: 1000 }}>
+                  {isTraining ? "PRO" : "LIVE"}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
+                  {isTraining
+                    ? "Training mode enabled"
+                    : "Preview updates instantly"}
+                </div>
               </div>
             </div>
           </div>
@@ -795,7 +921,11 @@ export default function CreateTour() {
                 <div style={labelStyle}>Tour title *</div>
                 <input
                   style={inputBaseStyle}
-                  placeholder="Example: Sunrise hike to Vlasina Lake"
+                  placeholder={
+                    isTraining
+                      ? "Example: Beginner Paragliding School Weekend"
+                      : "Example: Sunrise hike to Vlasina Lake"
+                  }
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
@@ -844,10 +974,181 @@ export default function CreateTour() {
                   onChange={(e) => setLocationName(e.target.value)}
                 />
                 <div style={hintTextStyle}>
-                  This is what people will notice first on cards and tour details.
+                  This is what people will notice first on cards and tour
+                  details.
                 </div>
               </div>
             </div>
+
+            <div style={sectionBlockStyle}>
+              <div style={sectionTitleStyle}>Tour mode</div>
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  padding: "12px 12px",
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  marginBottom: 10,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isTraining}
+                  onChange={(e) => setIsTraining(e.target.checked)}
+                  style={{ width: 16, height: 16 }}
+                />
+                <span>
+                  This is a training / school experience
+                  {isSchoolOrInstructor
+                    ? " (recommended for your profile type)"
+                    : ""}
+                </span>
+              </label>
+
+              <div style={hintTextStyle}>
+                Turn this on for ski schools, paragliding lessons, diving
+                training, climbing instruction, survival camps and similar
+                experiences.
+              </div>
+            </div>
+
+            {isTraining && (
+              <div style={sectionBlockStyle}>
+                <div style={sectionTitleStyle}>Training details</div>
+
+                <div style={{ ...row2Style, marginBottom: 12 }}>
+                  <div>
+                    <div style={labelStyle}>Training type *</div>
+                    <select
+                      style={selectStyle}
+                      value={trainingType}
+                      onChange={(e) => setTrainingType(e.target.value)}
+                    >
+                      <option value="">Select training type</option>
+                      {trainingTypesList.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <div style={labelStyle}>Skill level *</div>
+                    <select
+                      style={selectStyle}
+                      value={skillLevel}
+                      onChange={(e) => setSkillLevel(e.target.value)}
+                    >
+                      {skillLevelsList.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ ...row2Style, marginBottom: 12 }}>
+                  <div>
+                    <div style={labelStyle}>Duration label</div>
+                    <input
+                      style={inputBaseStyle}
+                      placeholder="Example: 2-day training / 4h lesson"
+                      value={durationLabel}
+                      onChange={(e) => setDurationLabel(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={labelStyle}>Training language</div>
+                    <input
+                      style={inputBaseStyle}
+                      placeholder="Example: English / Serbian / German"
+                      value={trainingLanguage}
+                      onChange={(e) => setTrainingLanguage(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ ...row2Style, marginBottom: 12 }}>
+                  <div>
+                    <div style={labelStyle}>Training spots left</div>
+                    <input
+                      style={inputBaseStyle}
+                      type="number"
+                      min="0"
+                      placeholder="Example: 6"
+                      value={trainingSpotsLeft}
+                      onChange={(e) => setTrainingSpotsLeft(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={labelStyle}>Organizer profile type</div>
+                    <input
+                      style={inputBaseStyle}
+                      value={
+                        profile?.account_type ? profile.account_type : "creator"
+                      }
+                      disabled
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      padding: "12px 12px",
+                      borderRadius: 16,
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={equipmentIncluded}
+                      onChange={(e) => setEquipmentIncluded(e.target.checked)}
+                      style={{ width: 16, height: 16 }}
+                    />
+                    <span>Equipment included</span>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      padding: "12px 12px",
+                      borderRadius: 16,
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={certificateIncluded}
+                      onChange={(e) => setCertificateIncluded(e.target.checked)}
+                      style={{ width: 16, height: 16 }}
+                    />
+                    <span>Certificate included</span>
+                  </label>
+                </div>
+              </div>
+            )}
 
             <div style={sectionBlockStyle}>
               <div style={sectionTitleStyle}>Schedule & pricing</div>
@@ -909,7 +1210,8 @@ export default function CreateTour() {
                   onChange={(e) => setApplicationDeadline(e.target.value)}
                 />
                 <div style={hintTextStyle}>
-                  After this deadline, users can no longer apply and the tour will disappear from public lists.
+                  After this deadline, users can no longer apply and the tour
+                  will disappear from public lists.
                 </div>
               </div>
             </div>
@@ -918,7 +1220,11 @@ export default function CreateTour() {
               <div style={sectionTitleStyle}>Description</div>
               <textarea
                 style={textareaStyle}
-                placeholder="Describe route, difficulty, equipment, atmosphere, food, transport, weather and what makes this tour special..."
+                placeholder={
+                  isTraining
+                    ? "Describe lesson structure, safety, equipment, instructor, who it is for, what people will learn and what makes this training special..."
+                    : "Describe route, difficulty, equipment, atmosphere, food, transport, weather and what makes this tour special..."
+                }
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -955,7 +1261,9 @@ export default function CreateTour() {
               <div style={{ marginBottom: 16 }}>
                 <div style={labelStyle}>Cover image (1) *</div>
                 <label style={uploadBoxStyle}>
-                  <div style={{ fontWeight: 800, marginBottom: 4 }}>📷 Upload cover image</div>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                    📷 Upload cover image
+                  </div>
                   <div style={{ fontSize: 11, opacity: 0.72 }}>
                     JPG / PNG • this is the main wow visual
                   </div>
@@ -1010,9 +1318,12 @@ export default function CreateTour() {
                   onDragEnter={preventDefault}
                   onDragLeave={preventDefault}
                 >
-                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🖼️ Add gallery photos</div>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                    🖼️ Add gallery photos
+                  </div>
                   <div style={{ fontSize: 11, opacity: 0.72 }}>
-                    Click or drag & drop. Best for atmosphere, trail, people and scenery.
+                    Click or drag & drop. Best for atmosphere, trail, people and
+                    scenery.
                   </div>
 
                   <input
@@ -1095,7 +1406,9 @@ export default function CreateTour() {
               <div>
                 <div style={labelStyle}>Promo video (optional)</div>
                 <label style={uploadBoxStyle}>
-                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🎬 Upload promo video</div>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                    🎬 Upload promo video
+                  </div>
                   <div style={{ fontSize: 11, opacity: 0.72 }}>
                     MP4 / WebM • a short teaser makes the tour feel premium
                   </div>
@@ -1207,7 +1520,11 @@ export default function CreateTour() {
               </div>
             ) : (
               <button type="submit" disabled={loading} style={submitBtnStyle}>
-                {loading ? "Creating..." : "Create Tour"}
+                {loading
+                  ? "Creating..."
+                  : isTraining
+                  ? "Create Training"
+                  : "Create Tour"}
               </button>
             )}
           </form>
@@ -1255,14 +1572,14 @@ export default function CreateTour() {
                 <div style={statCardSmallStyle}>
                   <div style={{ fontSize: 11, opacity: 0.68 }}>Latitude</div>
                   <div style={{ fontSize: 14, fontWeight: 900, marginTop: 4 }}>
-                    {latitude ? latitude.toFixed(4) : "—"}
+                    {latitude !== null ? latitude.toFixed(4) : "—"}
                   </div>
                 </div>
 
                 <div style={statCardSmallStyle}>
                   <div style={{ fontSize: 11, opacity: 0.68 }}>Longitude</div>
                   <div style={{ fontSize: 14, fontWeight: 900, marginTop: 4 }}>
-                    {longitude ? longitude.toFixed(4) : "—"}
+                    {longitude !== null ? longitude.toFixed(4) : "—"}
                   </div>
                 </div>
               </div>
@@ -1335,7 +1652,7 @@ export default function CreateTour() {
                     textTransform: "uppercase",
                   }}
                 >
-                  🧭 {activity || "Activity"}
+                  {isTraining ? "🎓 Training" : "🧭"} {activity || "Activity"}
                 </div>
 
                 <div
@@ -1387,6 +1704,13 @@ export default function CreateTour() {
                     <div style={miniPillStyle}>
                       🗓 {dateStart || "Start"} {dateEnd ? `→ ${dateEnd}` : ""}
                     </div>
+                    {isTraining && (
+                      <div style={miniPillStyle}>
+                        🎯{" "}
+                        {skillLevelsList.find((s) => s.value === skillLevel)
+                          ?.label || "All Levels"}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1394,9 +1718,13 @@ export default function CreateTour() {
               <div style={{ marginTop: 14 }}>
                 <div style={sectionTitleStyle}>Quick summary</div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
                   <div style={miniPillStyle}>🏷️ {title || "Tour title"}</div>
-                  <div style={miniPillStyle}>🧭 {activity || "No activity"}</div>
+                  <div style={miniPillStyle}>
+                    {isTraining ? "🎓" : "🧭"} {activity || "No activity"}
+                  </div>
                   <div style={miniPillStyle}>
                     📍{" "}
                     {locationName
@@ -1409,69 +1737,58 @@ export default function CreateTour() {
                   <div style={miniPillStyle}>
                     💶 {price ? `${price} €` : "No price set"}
                   </div>
-                  {applicationDeadline && (
-                    <div style={miniPillStyle}>
-                      ⏳ Until {applicationDeadline}
-                    </div>
+                  {isTraining && (
+                    <>
+                      <div style={miniPillStyle}>
+                        🎯{" "}
+                        {skillLevelsList.find((s) => s.value === skillLevel)
+                          ?.label || "All Levels"}
+                      </div>
+                      {durationLabel && (
+                        <div style={miniPillStyle}>⏱ {durationLabel}</div>
+                      )}
+                      {trainingLanguage && (
+                        <div style={miniPillStyle}>🗣 {trainingLanguage}</div>
+                      )}
+                      {trainingSpotsLeft !== "" && (
+                        <div style={miniPillStyle}>
+                          🎟 {trainingSpotsLeft} spots left
+                        </div>
+                      )}
+                      {equipmentIncluded && (
+                        <div style={miniPillStyle}>🧰 Equipment included</div>
+                      )}
+                      {certificateIncluded && (
+                        <div style={miniPillStyle}>📜 Certificate included</div>
+                      )}
+                    </>
                   )}
-                  {latitude && longitude && (
+                  {applicationDeadline && (
+                    <div style={miniPillStyle}>⏳ Until {applicationDeadline}</div>
+                  )}
+                  {latitude !== null && longitude !== null && (
                     <div style={miniPillStyle}>
                       📌 {latitude.toFixed(4)}, {longitude.toFixed(4)}
                     </div>
                   )}
                 </div>
 
-                <div style={{ marginTop: 14, fontSize: 11, opacity: 0.72, lineHeight: 1.5 }}>
-                  Tip: the best tours feel clear, safe, visual and easy to trust at first glance.
+                <div
+                  style={{
+                    marginTop: 14,
+                    fontSize: 11,
+                    opacity: 0.72,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Tip: the best {isTraining ? "trainings" : "tours"} feel clear,
+                  safe, visual and easy to trust at first glance.
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {isMobile && (
-        <div
-          style={{
-            position: "fixed",
-            left: 10,
-            right: 10,
-            bottom: 10,
-            zIndex: 5000,
-            padding: 10,
-            borderRadius: 20,
-            background: "rgba(8,16,13,0.84)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            backdropFilter: "blur(18px)",
-            boxShadow: "0 24px 60px rgba(0,0,0,0.45)",
-          }}
-        >
-          {!isVerifiedCreator ? (
-            <button
-              type="button"
-              onClick={() => navigate("/apply-creator")}
-              style={{
-                ...submitBtnStyle,
-                marginTop: 0,
-                background: "linear-gradient(135deg, #444, #2c2c2c)",
-                color: "#f3f3f3",
-                boxShadow: "none",
-              }}
-            >
-              Apply for verification
-            </button>
-          ) : (
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={loading}
-              style={{ ...submitBtnStyle, marginTop: 0 }}
-            >
-              {loading ? "Creating..." : "Create Tour"}
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

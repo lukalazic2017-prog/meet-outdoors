@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/pages/TourDetails.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import "leaflet/dist/leaflet.css";
@@ -21,8 +22,15 @@ export default function TourDetails() {
   const [countdown, setCountdown] = useState("");
   const [creatorProfile, setCreatorProfile] = useState(null);
 
-  const isSmallScreen =
-    typeof window !== "undefined" && window.innerWidth < 860;
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 860 : false
+  );
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 860);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   function formatDate(date) {
     if (!date) return "";
@@ -49,6 +57,24 @@ export default function TourDetails() {
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
+  }
+
+  function isTrainingTour(t) {
+    return (
+      t?.is_training === true ||
+      [
+        "Ski School",
+        "Paragliding School",
+        "Diving School",
+        "Climbing School",
+        "Survival School",
+        "Kayak School",
+        "Horse Riding School",
+        "Cycling School",
+        "Hiking School",
+        "Camping School",
+      ].includes(t?.activity)
+    );
   }
 
   useEffect(() => {
@@ -317,6 +343,8 @@ export default function TourDetails() {
     navigate("/tours");
   }
 
+  const training = useMemo(() => isTrainingTour(tour), [tour]);
+
   if (loading || !tour) {
     return (
       <div style={styles.loadingPage}>
@@ -328,6 +356,7 @@ export default function TourDetails() {
   const isCreator = user && user.id === tour.creator_id;
   const isFull =
     (tour.participants || 0) >= (tour.max_people || Number.MAX_SAFE_INTEGER);
+
   const gallery = Array.isArray(tour.image_urls) ? tour.image_urls : [];
   const coverImage = tour.cover_url || FALLBACK_COVER;
 
@@ -335,8 +364,8 @@ export default function TourDetails() {
     <div
       style={{
         ...styles.page,
-        marginTop: isSmallScreen ? -120 : 100,
-        padding: isSmallScreen ? "0 0 108px" : "64px 0 42px",
+        marginTop: isMobile ? -120 : 100,
+        padding: isMobile ? "0 0 108px" : "64px 0 42px",
       }}
     >
       <div style={styles.bgGlow1} />
@@ -347,14 +376,14 @@ export default function TourDetails() {
       <div
         style={{
           ...styles.container,
-          padding: isSmallScreen ? "0 0 20px" : "0 18px 20px",
+          padding: isMobile ? "0 0 20px" : "0 18px 20px",
         }}
       >
         <div
           style={{
             ...styles.topBar,
-            padding: isSmallScreen ? "14px 14px 10px" : "0 4px",
-            marginBottom: isSmallScreen ? 0 : 14,
+            padding: isMobile ? "14px 14px 10px" : "0 4px",
+            marginBottom: isMobile ? 0 : 14,
           }}
         >
           <button style={styles.backBtn} onClick={() => navigate(-1)}>
@@ -370,13 +399,13 @@ export default function TourDetails() {
         <div
           style={{
             ...styles.hero,
-            borderRadius: isSmallScreen ? "0 0 34px 34px" : 34,
+            borderRadius: isMobile ? "0 0 34px 34px" : 34,
           }}
         >
           <div
             style={{
               ...styles.heroImageWrap,
-              height: isSmallScreen ? 460 : 520,
+              height: isMobile ? 460 : 540,
             }}
           >
             <img src={coverImage} alt="cover" style={styles.heroImage} />
@@ -386,12 +415,12 @@ export default function TourDetails() {
             <div
               style={{
                 ...styles.heroTopBar,
-                top: isSmallScreen ? 14 : 18,
-                left: isSmallScreen ? 14 : 18,
-                right: isSmallScreen ? 14 : 18,
+                top: isMobile ? 14 : 18,
+                left: isMobile ? 14 : 18,
+                right: isMobile ? 14 : 18,
               }}
             >
-              {isSmallScreen ? (
+              {isMobile ? (
                 <button style={styles.glassBtn} onClick={() => navigate(-1)}>
                   ← Back
                 </button>
@@ -401,28 +430,35 @@ export default function TourDetails() {
 
               <div style={styles.heroTopRight}>
                 <div style={styles.heroGlassTag}>
-                  ⛰️ {tour.activity || "Outdoor tour"}
+                  {training ? "🎓" : "⛰️"} {tour.activity || "Outdoor tour"}
                 </div>
                 <div style={styles.heroGlassTag}>
                   🌍 {tour.country || "Unknown country"}
                 </div>
+                {training && (
+                  <div style={{ ...styles.heroGlassTag, ...styles.trainingHeroTag }}>
+                    🏫 Training / School
+                  </div>
+                )}
               </div>
             </div>
 
             <div
               style={{
                 ...styles.heroContent,
-                left: isSmallScreen ? 14 : 20,
-                right: isSmallScreen ? 14 : 20,
-                bottom: isSmallScreen ? 14 : 20,
+                left: isMobile ? 14 : 20,
+                right: isMobile ? 14 : 20,
+                bottom: isMobile ? 14 : 20,
               }}
             >
-              <div style={styles.heroBadge}>🧭 PREMIUM OUTDOOR EXPERIENCE</div>
+              <div style={styles.heroBadge}>
+                {training ? "🎓 PREMIUM TRAINING EXPERIENCE" : "🧭 PREMIUM OUTDOOR EXPERIENCE"}
+              </div>
 
               <h1
                 style={{
                   ...styles.heroTitle,
-                  fontSize: isSmallScreen ? 32 : 48,
+                  fontSize: isMobile ? 32 : 48,
                 }}
               >
                 {tour.title}
@@ -442,7 +478,7 @@ export default function TourDetails() {
               <div
                 style={{
                   ...styles.heroStatsGrid,
-                  gridTemplateColumns: isSmallScreen
+                  gridTemplateColumns: isMobile
                     ? "repeat(2, 1fr)"
                     : "repeat(4, 1fr)",
                 }}
@@ -476,12 +512,12 @@ export default function TourDetails() {
         <div
           style={{
             ...styles.layout,
-            gridTemplateColumns: isSmallScreen
+            gridTemplateColumns: isMobile
               ? "1fr"
               : "minmax(0, 1.8fr) minmax(0, 1.2fr)",
-            gap: isSmallScreen ? 14 : 18,
-            marginTop: isSmallScreen ? 14 : 18,
-            padding: isSmallScreen ? "0 14px" : 0,
+            gap: isMobile ? 14 : 18,
+            marginTop: isMobile ? 14 : 18,
+            padding: isMobile ? "0 14px" : 0,
           }}
         >
           <div style={styles.column}>
@@ -532,7 +568,7 @@ export default function TourDetails() {
 
               <div style={styles.pillRow}>
                 <div style={styles.pill}>
-                  🗓 {tour.date_start} → {tour.date_end}
+                  🗓 {formatDate(tour.date_start)} → {formatDate(tour.date_end)}
                 </div>
                 <div style={styles.pill}>
                   💶 {tour.price ? `${tour.price} € per person` : "Free tour"}
@@ -546,6 +582,32 @@ export default function TourDetails() {
                 {tour.is_legal_entity && (
                   <div style={styles.pill}>🏢 Organized by a legal entity</div>
                 )}
+
+                {training && <div style={styles.pill}>🎓 Training mode</div>}
+                {training && tour.skill_level && (
+                  <div style={styles.pill}>
+                    🎯 {String(tour.skill_level).replaceAll("_", " ")}
+                  </div>
+                )}
+                {training && tour.training_language && (
+                  <div style={styles.pill}>🗣 {tour.training_language}</div>
+                )}
+                {training && tour.duration_label && (
+                  <div style={styles.pill}>⏱ {tour.duration_label}</div>
+                )}
+                {training && tour.equipment_included && (
+                  <div style={styles.pill}>🧰 Equipment included</div>
+                )}
+                {training && tour.certificate_included && (
+                  <div style={styles.pill}>📜 Certificate included</div>
+                )}
+                {training &&
+                  tour.training_spots_left !== null &&
+                  tour.training_spots_left !== undefined && (
+                    <div style={styles.pill}>
+                      🎟 {tour.training_spots_left} spots left
+                    </div>
+                  )}
               </div>
 
               {(tour.application_start || tour.application_deadline) && (
@@ -590,7 +652,7 @@ export default function TourDetails() {
                     alt="Tour"
                     style={{
                       ...styles.galleryMainImage,
-                      height: isSmallScreen ? 260 : 320,
+                      height: isMobile ? 260 : 320,
                     }}
                   />
                 </div>
@@ -662,7 +724,7 @@ export default function TourDetails() {
                     preload="metadata"
                     style={{
                       ...styles.video,
-                      height: isSmallScreen ? 230 : 300,
+                      height: isMobile ? 230 : 300,
                     }}
                   />
                 </div>
@@ -685,7 +747,7 @@ export default function TourDetails() {
                       zoom={12}
                       scrollWheelZoom={true}
                       style={{
-                        height: isSmallScreen ? "250px" : "310px",
+                        height: isMobile ? "250px" : "310px",
                         width: "100%",
                       }}
                     >
@@ -725,7 +787,11 @@ export default function TourDetails() {
                       disabled={isFull || loading}
                       onClick={joinTour}
                     >
-                      {isFull ? "Tour is full" : "Join tour"}
+                      {isFull
+                        ? "Tour is full"
+                        : training
+                        ? "Join training"
+                        : "Join tour"}
                     </button>
                   ) : (
                     <button
@@ -786,7 +852,7 @@ export default function TourDetails() {
               <div
                 style={{
                   ...styles.quickSummaryGrid,
-                  gridTemplateColumns: isSmallScreen ? "1fr" : "1fr 1fr",
+                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
                 }}
               >
                 <div style={styles.pill}>🏷️ {tour.title || "Tour title"}</div>
@@ -824,8 +890,27 @@ export default function TourDetails() {
                 </div>
 
                 <div style={styles.pill}>
-                  🕒 {tour.date_start} → {tour.date_end}
+                  🕒 {formatDate(tour.date_start)} → {formatDate(tour.date_end)}
                 </div>
+
+                {training && <div style={styles.pill}>🎓 Training mode</div>}
+                {training && tour.skill_level && (
+                  <div style={styles.pill}>
+                    🎯 {String(tour.skill_level).replaceAll("_", " ")}
+                  </div>
+                )}
+                {training && tour.training_language && (
+                  <div style={styles.pill}>🗣 {tour.training_language}</div>
+                )}
+                {training && tour.duration_label && (
+                  <div style={styles.pill}>⏱ {tour.duration_label}</div>
+                )}
+                {training && tour.equipment_included && (
+                  <div style={styles.pill}>🧰 Equipment included</div>
+                )}
+                {training && tour.certificate_included && (
+                  <div style={styles.pill}>📜 Certificate included</div>
+                )}
               </div>
 
               <div style={styles.tipBox}>
@@ -893,7 +978,7 @@ export default function TourDetails() {
           </div>
         </div>
 
-        {isSmallScreen && !isCreator && (
+        {isMobile && !isCreator && (
           <div style={styles.stickyBar}>
             <div style={styles.stickyTop}>
               <div style={{ minWidth: 0 }}>
@@ -920,7 +1005,7 @@ export default function TourDetails() {
                 disabled={isFull || loading}
                 onClick={joinTour}
               >
-                {isFull ? "Tour is full" : "Join tour"}
+                {isFull ? "Tour is full" : training ? "Join training" : "Join tour"}
               </button>
             ) : (
               <div style={styles.stickyActionGrid}>
@@ -978,7 +1063,8 @@ const styles = {
     background:
       "radial-gradient(circle at top, #081b16 0%, #04100d 28%, #02060b 58%, #000000 100%)",
     color: "#eafff5",
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily:
+      'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
 
   container: {
@@ -1155,6 +1241,12 @@ const styles = {
     fontWeight: 800,
     backdropFilter: "blur(10px)",
     color: "#fff",
+  },
+
+  trainingHeroTag: {
+    background: "rgba(124,77,255,0.18)",
+    border: "1px solid rgba(170,130,255,0.34)",
+    color: "#efe4ff",
   },
 
   heroContent: {
@@ -1644,8 +1736,8 @@ const styles = {
     position: "fixed",
     left: 10,
     right: 10,
-    bottom: 10,
-    zIndex: 9999,
+    bottom: "calc(72px + env(safe-area-inset-bottom))",
+    zIndex: 40,
     borderRadius: 20,
     background: "rgba(4,12,9,0.88)",
     border: "1px solid rgba(255,255,255,0.08)",
