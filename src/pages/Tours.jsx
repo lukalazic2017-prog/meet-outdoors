@@ -649,29 +649,6 @@ export default function Tours() {
               })}
             </div>
           </div>
-
-          <div style={styles.desktopFilterShell}>
-            <div style={styles.desktopFilterTopRow}>
-              <div style={styles.desktopFilterTitle}>Advanced filters</div>
-              <div style={styles.desktopFilterMeta}>
-                {loading ? "Loading..." : `${filteredTours.length} shown`}
-              </div>
-            </div>
-
-            {advancedFilters}
-
-            {activeFilterCount > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <button
-                  type="button"
-                  onClick={resetAllFilters}
-                  style={styles.clearBtnInline}
-                >
-                  Reset all filters ({activeFilterCount})
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
         {isMobile && (
