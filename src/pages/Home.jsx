@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 
@@ -11,7 +11,6 @@ const FALLBACK_TOUR_IMAGE =
 const FALLBACK_EVENT_IMAGE =
   "https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg";
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
 
 function useIsMobile(breakpoint = 768) {
   const getValue = useCallback(() => {
