@@ -11,17 +11,23 @@ const FALLBACK_TOUR_IMAGE =
 const FALLBACK_EVENT_IMAGE =
   "https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg";
 
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+
 function useIsMobile(breakpoint = 768) {
-  const getValue = () =>
-    typeof window !== "undefined" ? window.innerWidth <= breakpoint : false;
+  const getValue = useCallback(() => {
+    return typeof window !== "undefined"
+      ? window.innerWidth <= breakpoint
+      : false;
+  }, [breakpoint]);
 
   const [isMobile, setIsMobile] = useState(getValue);
 
   useEffect(() => {
     const onResize = () => setIsMobile(getValue());
+
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [breakpoint]);
+  }, [getValue]);
 
   return isMobile;
 }
@@ -227,7 +233,7 @@ export default function Home() {
   const popularTours = tours.slice(4, 8);
   const trendingTours = tours.slice(8, 12);
   const featuredTour = newTours[0] || tours[0] || null;
-  const featuredEvent = events[0] || null;
+
 
   const stats = useMemo(
     () => [
@@ -1308,7 +1314,7 @@ export default function Home() {
         height: isMobile ? MOBILE_BOTTOM_NAV_HEIGHT + 36 : 120,
       },
     };
-  }, [events.length, heroParallax, isMobile, loaded, tours.length]);
+  }, [heroParallax, isMobile, loaded]);
 
   const getActivityLabel = (item) =>
     item.activity_type ||
