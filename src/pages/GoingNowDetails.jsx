@@ -18,11 +18,47 @@ export default function GoingNowDetails() {
   const [joinBusy, setJoinBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const cardStyle = {
-    borderRadius: 22,
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.09)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+  const shellBg =
+    "radial-gradient(circle at top, rgba(103,232,249,0.16), transparent 18%), radial-gradient(circle at 82% 16%, rgba(167,243,208,0.15), transparent 18%), radial-gradient(circle at 18% 72%, rgba(96,165,250,0.12), transparent 20%), linear-gradient(180deg, #031019 0%, #081b28 40%, #0b2330 100%)";
+
+  const glassPanel = {
+    borderRadius: 28,
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045))",
+    border: "1px solid rgba(157,229,219,0.14)",
+    boxShadow:
+      "0 20px 55px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.08)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
+  };
+
+  const softCard = {
+    borderRadius: 20,
+    background: "rgba(255,255,255,0.055)",
+    border: "1px solid rgba(125,211,252,0.12)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+  };
+
+  const miniPill = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "10px 14px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    fontWeight: 850,
+    color: "#effffd",
+  };
+
+  const labelStyle = {
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: "0.12em",
+    color: "rgba(225,247,255,0.58)",
   };
 
   const formatDateTime = (value) => {
@@ -53,7 +89,8 @@ export default function GoingNowDetails() {
   };
 
   const getDisplayName = (p) =>
-    p?.profiles?.full_name?.trim() || `Explorer ${String(p.user_id).slice(0, 6)}`;
+    p?.profiles?.full_name?.trim() ||
+    `Explorer ${String(p.user_id).slice(0, 6)}`;
 
   const refreshParticipants = async (goingNowId) => {
     const { data, error } = await supabase
@@ -124,21 +161,22 @@ export default function GoingNowDetails() {
         return;
       }
 
-      const { data: participantsData, error: participantsError } = await supabase
-        .from("going_now_participants")
-        .select(`
-          id,
-          user_id,
-          joined_at,
-          status,
-          profiles (
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq("going_now_id", id)
-        .eq("status", "joined")
-        .order("joined_at", { ascending: true });
+      const { data: participantsData, error: participantsError } =
+        await supabase
+          .from("going_now_participants")
+          .select(`
+            id,
+            user_id,
+            joined_at,
+            status,
+            profiles (
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq("going_now_id", id)
+          .eq("status", "joined")
+          .order("joined_at", { ascending: true });
 
       if (participantsError) {
         console.error("participants error:", participantsError);
@@ -212,7 +250,9 @@ export default function GoingNowDetails() {
   const joinedCount = participants.length;
   const spotsTotal = item?.spots_total || 0;
   const spotsLeft = Math.max(spotsTotal - joinedCount, 0);
-  const expired = item?.expires_at ? new Date(item.expires_at).getTime() <= Date.now() : false;
+  const expired = item?.expires_at
+    ? new Date(item.expires_at).getTime() <= Date.now()
+    : false;
   const isFull = joinedCount >= spotsTotal && spotsTotal > 0;
 
   const activeStatus = useMemo(() => {
@@ -229,8 +269,8 @@ export default function GoingNowDetails() {
     return diff > 0 && diff <= 1000 * 60 * 90;
   })();
 
-  const canJoin = !!user?.id && !isOwner && !isJoined && !isFull && activeStatus === "active";
- 
+  const canJoin =
+    !!user?.id && !isOwner && !isJoined && !isFull && activeStatus === "active";
 
   const handleJoin = async () => {
     if (!user?.id) {
@@ -292,11 +332,27 @@ export default function GoingNowDetails() {
     navigate(`/going-now/${id}/chat`);
   };
 
+  const heroImage = item?.image_url || item?.cover_image || FALLBACK_IMAGE;
+
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#020807", color: "#fff", padding: "32px 20px" }}>
-        <div style={{ maxWidth: 980, margin: "0 auto" }}>
-          <div style={{ ...cardStyle, padding: 24, fontSize: 18, fontWeight: 800 }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: shellBg,
+          color: "#fff",
+          padding: "22px 14px 92px",
+        }}
+      >
+        <div style={{ maxWidth: 1220, margin: "0 auto" }}>
+          <div
+            style={{
+              ...glassPanel,
+              padding: 24,
+              fontSize: 18,
+              fontWeight: 900,
+            }}
+          >
             Loading live plan...
           </div>
         </div>
@@ -306,27 +362,51 @@ export default function GoingNowDetails() {
 
   if (!item) {
     return (
-      <div style={{ minHeight: "100vh", background: "#020807", color: "#fff", padding: "32px 20px" }}>
-        <div style={{ maxWidth: 980, margin: "0 auto" }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: shellBg,
+          color: "#fff",
+          padding: "22px 14px 92px",
+        }}
+      >
+        <div style={{ maxWidth: 1220, margin: "0 auto" }}>
           <button
             onClick={() => navigate(-1)}
             style={{
-              marginBottom: 20,
+              marginBottom: 18,
               border: "1px solid rgba(255,255,255,0.14)",
-              background: "rgba(255,255,255,0.05)",
+              background: "rgba(255,255,255,0.06)",
               color: "#fff",
               borderRadius: 999,
-              padding: "10px 14px",
+              padding: "11px 15px",
               cursor: "pointer",
-              fontWeight: 800,
+              fontWeight: 900,
+              backdropFilter: "blur(10px)",
             }}
           >
             ← Back
           </button>
 
-          <div style={{ ...cardStyle, padding: 28 }}>
-            <h1 style={{ fontSize: 34, margin: "0 0 10px" }}>Plan not found</h1>
-            <p style={{ color: "rgba(255,255,255,0.72)", margin: 0 }}>
+          <div style={{ ...glassPanel, padding: 28 }}>
+            <h1
+              style={{
+                margin: "0 0 10px",
+                fontSize: 34,
+                lineHeight: 1,
+                fontWeight: 950,
+                letterSpacing: "-0.04em",
+              }}
+            >
+              Plan not found
+            </h1>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.72)",
+                margin: 0,
+                fontSize: 15,
+              }}
+            >
               This going now plan does not exist or is no longer available.
             </p>
           </div>
@@ -335,54 +415,110 @@ export default function GoingNowDetails() {
     );
   }
 
+  const topActionTitle = !user?.id
+    ? "Login to join"
+    : isOwner
+    ? "You started this"
+    : isJoined
+    ? "You're in"
+    : activeStatus === "ended"
+    ? "Plan ended"
+    : activeStatus === "cancelled"
+    ? "Plan cancelled"
+    : activeStatus === "full"
+    ? "Plan is full"
+    : "Jump in now";
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top, rgba(0,255,186,0.08), transparent 22%), linear-gradient(to bottom, rgba(2,8,7,0.94), rgba(2,8,7,0.99))",
         color: "#fff",
-        padding: "24px 16px 90px",
+        marginTop: -120,
+        background: shellBg,
+        padding: "16px 12px 108px",
       }}
     >
-      <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <button
-          onClick={() => navigate(-1)}
+      <div style={{ maxWidth: 1220, margin: "0 auto" }}>
+        <div
           style={{
-            marginBottom: 18,
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(255,255,255,0.05)",
-            color: "#fff",
-            borderRadius: 999,
-            padding: "10px 14px",
-            cursor: "pointer",
-            fontWeight: 800,
-            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 14,
+            flexWrap: "wrap",
           }}
         >
-          ← Back
-        </button>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.05)",
+              color: "#fff",
+              borderRadius: 999,
+              padding: "11px 15px",
+              cursor: "pointer",
+              fontWeight: 900,
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            }}
+          >
+            ← Back
+          </button>
+
+          <div
+            style={{
+              ...miniPill,
+              background:
+                activeStatus === "cancelled"
+                  ? "rgba(255,90,90,0.12)"
+                  : "rgba(255,255,255,0.06)",
+              border:
+                activeStatus === "cancelled"
+                  ? "1px solid rgba(255,90,90,0.22)"
+                  : "1px solid rgba(255,255,255,0.12)",
+              color:
+                activeStatus === "cancelled"
+                  ? "#ffd7d7"
+                  : "rgba(242,253,255,0.92)",
+            }}
+          >
+            {activeStatus === "active" && "LIVE PLAN"}
+            {activeStatus === "full" && "FULL"}
+            {activeStatus === "ended" && "ENDED"}
+            {activeStatus === "cancelled" && "CANCELLED"}
+          </div>
+        </div>
 
         <div
           style={{
             overflow: "hidden",
-            borderRadius: 30,
-            border: "1px solid rgba(255,255,255,0.10)",
+            borderRadius: 34,
+            border: "1px solid rgba(255,255,255,0.09)",
             background:
-              "linear-gradient(155deg, rgba(9,15,14,0.88), rgba(4,10,9,0.98))",
+              "linear-gradient(160deg, rgba(10,18,20,0.92), rgba(8,16,20,0.98))",
             boxShadow:
-              "0 24px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)",
+              "0 26px 90px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06)",
           }}
         >
-          <div style={{ position: "relative", height: 320 }}>
+          <div
+            style={{
+              position: "relative",
+              minHeight: 560,
+              borderBottom: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
             <img
-              src={FALLBACK_IMAGE}
+              src={heroImage}
               alt={item.title || "Going now"}
               style={{
+                position: "absolute",
+                inset: 0,
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                filter: "saturate(1.05) contrast(1.02)",
+                filter: "saturate(1.08) contrast(1.05) brightness(0.90)",
               }}
             />
 
@@ -391,108 +527,113 @@ export default function GoingNowDetails() {
                 position: "absolute",
                 inset: 0,
                 background:
-                  "linear-gradient(to top, rgba(2,8,7,0.98), rgba(2,8,7,0.24) 48%, rgba(2,8,7,0.10))",
+                  "linear-gradient(to top, rgba(4,10,14,0.98) 8%, rgba(4,10,14,0.76) 34%, rgba(4,10,14,0.34) 58%, rgba(4,10,14,0.14) 100%)",
               }}
             />
 
             <div
               style={{
                 position: "absolute",
-                left: 22,
-                right: 22,
+                inset: 0,
+                background:
+                  "radial-gradient(circle at 74% 22%, rgba(103,232,249,0.24), transparent 20%), radial-gradient(circle at 26% 26%, rgba(167,243,208,0.18), transparent 18%), radial-gradient(circle at 52% 18%, rgba(255,205,130,0.14), transparent 18%)",
+              }}
+            />
+
+            <div
+              style={{
+                position: "absolute",
+                left: 18,
+                right: 18,
                 top: 18,
                 display: "flex",
-                gap: 10,
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 12,
                 flexWrap: "wrap",
               }}
             >
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 12px",
-                  borderRadius: 999,
-                  background: "rgba(0,255,186,0.92)",
-                  color: "#03261d",
-                  fontWeight: 900,
-                  fontSize: 12,
-                  boxShadow: "0 0 18px rgba(0,255,186,0.24)",
-                }}
-              >
-                🔥 Going now
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 14px",
+                    borderRadius: 999,
+                    background:
+                      "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)",
+                    color: "#06252e",
+                    fontWeight: 950,
+                    fontSize: 12,
+                    letterSpacing: "0.03em",
+                    boxShadow: "0 16px 36px rgba(103,232,249,0.28)",
+                  }}
+                >
+                  🔥 Going now
+                </div>
+
+                {startsSoon && activeStatus === "active" ? (
+                  <div style={miniPill}>🌙 Starting soon</div>
+                ) : null}
+
+                {activeStatus === "full" ? <div style={miniPill}>Full</div> : null}
+                {activeStatus === "ended" ? <div style={miniPill}>Ended</div> : null}
+
+                {activeStatus === "cancelled" ? (
+                  <div
+                    style={{
+                      ...miniPill,
+                      background: "rgba(255,90,90,0.12)",
+                      border: "1px solid rgba(255,90,90,0.22)",
+                      color: "#ffd0d0",
+                    }}
+                  >
+                    Cancelled
+                  </div>
+                ) : null}
               </div>
 
-              {startsSoon && activeStatus === "active" ? (
+              {joinedCount > 0 ? (
                 <div
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    padding: "8px 12px",
+                    padding: "8px 10px 8px 10px",
                     borderRadius: 999,
-                    background: "rgba(255,255,255,0.10)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: "#fff",
-                    fontWeight: 800,
-                    fontSize: 12,
-                    backdropFilter: "blur(8px)",
+                    background: "rgba(255,255,255,0.07)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
                   }}
                 >
-                  Starting soon
-                </div>
-              ) : null}
-
-              {activeStatus === "full" ? (
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "8px 12px",
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.10)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: "#fff",
-                    fontWeight: 800,
-                    fontSize: 12,
-                  }}
-                >
-                  Full
-                </div>
-              ) : null}
-
-              {activeStatus === "ended" ? (
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "8px 12px",
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.10)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: "#fff",
-                    fontWeight: 800,
-                    fontSize: 12,
-                  }}
-                >
-                  Ended
-                </div>
-              ) : null}
-
-              {activeStatus === "cancelled" ? (
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "8px 12px",
-                    borderRadius: 999,
-                    background: "rgba(255,90,90,0.12)",
-                    border: "1px solid rgba(255,90,90,0.22)",
-                    color: "#ffd0d0",
-                    fontWeight: 800,
-                    fontSize: 12,
-                  }}
-                >
-                  Cancelled
+                  {participants.slice(0, 5).map((p, index) => (
+                    <img
+                      key={p.id}
+                      src={p.profiles?.avatar_url || FALLBACK_AVATAR}
+                      alt={getDisplayName(p)}
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "2px solid rgba(7,17,22,0.96)",
+                        marginLeft: index === 0 ? 0 : -9,
+                        background: "#0b1418",
+                      }}
+                    />
+                  ))}
+                  <span
+                    style={{
+                      marginLeft: 10,
+                      fontSize: 12,
+                      fontWeight: 850,
+                      color: "#f2fffd",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {joinedCount} going
+                  </span>
                 </div>
               ) : null}
             </div>
@@ -500,202 +641,213 @@ export default function GoingNowDetails() {
             <div
               style={{
                 position: "absolute",
-                left: 22,
-                right: 22,
-                bottom: 22,
+                left: 18,
+                right: 18,
+                bottom: 18,
               }}
             >
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: 48,
-                  lineHeight: 0.96,
-                  fontWeight: 950,
-                  letterSpacing: "-0.04em",
-                  maxWidth: 700,
-                  textShadow: "0 10px 30px rgba(0,0,0,0.35)",
-                }}
-              >
-                {item.title || "Untitled plan"}
-              </h1>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 10,
-                  marginTop: 14,
-                }}
-              >
+              <div style={{ maxWidth: 860 }}>
                 <div
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 8,
+                    marginBottom: 12,
                     padding: "9px 12px",
                     borderRadius: 999,
                     background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    backdropFilter: "blur(8px)",
-                    fontWeight: 800,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    fontWeight: 850,
+                    fontSize: 12,
                   }}
                 >
-                  📍 {item.location_text || "Location soon"}
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background:
+                        activeStatus === "active"
+                          ? "#67e8f9"
+                          : "rgba(255,255,255,0.44)",
+                      boxShadow:
+                        activeStatus === "active"
+                          ? "0 0 16px rgba(103,232,249,0.75)"
+                          : "none",
+                    }}
+                  />
+                  {item.vibe || item.difficulty || "Social vibe"}
+                </div>
+
+                <h1
+                  style={{
+                    margin: 0,
+                    fontSize: "clamp(38px, 7vw, 74px)",
+                    lineHeight: 0.95,
+                    fontWeight: 950,
+                    letterSpacing: "-0.06em",
+                    textShadow: "0 16px 44px rgba(0,0,0,0.42)",
+                    maxWidth: 760,
+                  }}
+                >
+                  {item.title || "Untitled plan"}
+                </h1>
+
+                <div
+                  style={{
+                    marginTop: 14,
+                    color: "rgba(238,251,255,0.84)",
+                    fontSize: "clamp(15px, 2vw, 18px)",
+                    fontWeight: 650,
+                    lineHeight: 1.55,
+                    maxWidth: 700,
+                  }}
+                >
+                  {item.description
+                    ? item.description
+                    : "Fast plan, real people, natural vibe. Show up if it feels right."}
                 </div>
 
                 <div
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "9px 12px",
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    backdropFilter: "blur(8px)",
-                    fontWeight: 800,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    marginTop: 18,
                   }}
                 >
-                  ⏰ {formatDateTime(item.starts_at)}
+                  <div style={miniPill}>📍 {item.location_text || "Location soon"}</div>
+                  <div style={miniPill}>⏰ {formatDateTime(item.starts_at)}</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div style={{ padding: 22 }}>
-            <div
-              className="going-now-details-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.2fr 0.8fr",
-                gap: 18,
-              }}
-            >
-              <div style={{ display: "grid", gap: 18 }}>
-                <div style={{ ...cardStyle, padding: 18 }}>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                      gap: 12,
-                    }}
-                  >
-                    <div
-                      style={{
-                        padding: 14,
-                        borderRadius: 18,
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.07)",
-                      }}
-                    >
-                      <div style={{ fontSize: 12, opacity: 0.68, marginBottom: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                        Spots
-                      </div>
-                      <div style={{ fontWeight: 900, fontSize: 20 }}>
-                        {joinedCount}/{spotsTotal}
-                      </div>
-                      <div style={{ fontSize: 13, opacity: 0.72, marginTop: 3 }}>
-                        people going
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        padding: 14,
-                        borderRadius: 18,
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.07)",
-                      }}
-                    >
-                      <div style={{ fontSize: 12, opacity: 0.68, marginBottom: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                        Spots left
-                      </div>
-                      <div style={{ fontWeight: 900, fontSize: 20 }}>{spotsLeft}</div>
-                      <div style={{ fontSize: 13, opacity: 0.72, marginTop: 3 }}>
-                        open right now
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        padding: 14,
-                        borderRadius: 18,
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.07)",
-                      }}
-                    >
-                      <div style={{ fontSize: 12, opacity: 0.68, marginBottom: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                        Vibe
-                      </div>
-                      <div style={{ fontWeight: 900, fontSize: 20 }}>
-                        {item.vibe || item.difficulty || "Social"}
-                      </div>
-                      <div style={{ fontSize: 13, opacity: 0.72, marginTop: 3 }}>
-                        how this feels
-                      </div>
-                    </div>
+          <div style={{ padding: 16 }}>
+            <div className="going-details-layout">
+              <div className="going-main-column">
+                <div
+                  style={{
+                    ...glassPanel,
+                    padding: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <div className="going-stats-grid">
+                    <StatCard
+                      icon="🔥"
+                      label="Going"
+                      value={`${joinedCount}/${spotsTotal}`}
+                      sub="people in right now"
+                    />
+                    <StatCard
+                      icon="🪑"
+                      label="Spots left"
+                      value={spotsLeft}
+                      sub="available right now"
+                    />
+                    <StatCard
+                      icon="🌿"
+                      label="Vibe"
+                      value={item.vibe || item.difficulty || "Social"}
+                      sub="how this plan feels"
+                    />
                   </div>
                 </div>
 
-                {item.description ? (
-                  <div style={{ ...cardStyle, padding: 18 }}>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        opacity: 0.72,
-                        marginBottom: 10,
-                        fontWeight: 800,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.10em",
-                      }}
-                    >
-                      About this plan
-                    </div>
+                <div className="mobile-top-cta">
+                  <ActionPanel
+                    glassPanel={glassPanel}
+                    softCard={softCard}
+                    item={item}
+                    id={id}
+                    user={user}
+                    isOwner={isOwner}
+                    isJoined={isJoined}
+                    joinBusy={joinBusy}
+                    activeStatus={activeStatus}
+                    canJoin={canJoin}
+                    topActionTitle={topActionTitle}
+                    joinedCount={joinedCount}
+                    spotsLeft={spotsLeft}
+                    errorMsg={errorMsg}
+                    navigate={navigate}
+                    handleJoin={handleJoin}
+                    handleLeave={handleLeave}
+                    openChat={openChat}
+                    formatDateTime={formatDateTime}
+                  />
+                </div>
 
-                    <div
-                      style={{
-                        color: "rgba(238,250,245,0.92)",
-                        lineHeight: 1.65,
-                        fontSize: 16,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {item.description}
-                    </div>
+                <div
+                  style={{
+                    ...glassPanel,
+                    padding: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <div style={{ ...labelStyle, marginBottom: 8 }}>About this plan</div>
+                  <div
+                    style={{
+                      color: "rgba(238,251,255,0.90)",
+                      lineHeight: 1.7,
+                      fontSize: 15.5,
+                      fontWeight: 650,
+                    }}
+                  >
+                    {item.description || "No description yet."}
                   </div>
-                ) : null}
+                </div>
 
-                <div style={{ ...cardStyle, padding: 18 }}>
+                <div
+                  style={{
+                    ...glassPanel,
+                    padding: 16,
+                    marginBottom: 16,
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       gap: 12,
-                      marginBottom: 14,
                       flexWrap: "wrap",
+                      marginBottom: 14,
                     }}
                   >
-                    <div style={{ fontSize: 22, fontWeight: 950, letterSpacing: "-0.02em" }}>
-                      Going ({joinedCount})
+                    <div>
+                      <div style={{ ...labelStyle, marginBottom: 6 }}>People</div>
+                      <div
+                        style={{
+                          fontSize: 28,
+                          lineHeight: 1,
+                          fontWeight: 950,
+                          letterSpacing: "-0.04em",
+                        }}
+                      >
+                        Going now
+                      </div>
                     </div>
 
-                    {joinedCount > 0 ? (
+                    {participants.length > 0 ? (
                       <div style={{ display: "flex", alignItems: "center" }}>
-                        {participants.slice(0, 5).map((p, index) => (
+                        {participants.slice(0, 6).map((p, index) => (
                           <img
                             key={p.id}
                             src={p.profiles?.avatar_url || FALLBACK_AVATAR}
                             alt={getDisplayName(p)}
                             style={{
-                              width: 36,
-                              height: 36,
+                              width: 40,
+                              height: 40,
                               borderRadius: "50%",
                               objectFit: "cover",
-                              border: "2px solid #07100f",
+                              border: "2px solid rgba(7,17,22,0.96)",
                               marginLeft: index === 0 ? 0 : -10,
-                              boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
-                              background: "#0d1715",
+                              background: "#0c171c",
+                              boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
                             }}
                           />
                         ))}
@@ -706,12 +858,10 @@ export default function GoingNowDetails() {
                   {participants.length === 0 ? (
                     <div
                       style={{
-                        padding: 16,
-                        borderRadius: 16,
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                        color: "rgba(255,255,255,0.72)",
-                        fontWeight: 600,
+                        ...softCard,
+                        padding: 18,
+                        color: "rgba(235,249,255,0.74)",
+                        fontWeight: 650,
                       }}
                     >
                       Nobody joined yet. Be the first one in.
@@ -722,14 +872,12 @@ export default function GoingNowDetails() {
                         <div
                           key={p.id}
                           style={{
+                            ...softCard,
+                            padding: 12,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
                             gap: 12,
-                            padding: 12,
-                            borderRadius: 16,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.06)",
                           }}
                         >
                           <div
@@ -744,12 +892,12 @@ export default function GoingNowDetails() {
                               src={p.profiles?.avatar_url || FALLBACK_AVATAR}
                               alt={getDisplayName(p)}
                               style={{
-                                width: 46,
-                                height: 46,
+                                width: 48,
+                                height: 48,
                                 borderRadius: "50%",
                                 objectFit: "cover",
                                 border: "2px solid rgba(255,255,255,0.08)",
-                                background: "#0c1513",
+                                background: "#0b1518",
                               }}
                             />
 
@@ -758,7 +906,7 @@ export default function GoingNowDetails() {
                                 style={{
                                   fontWeight: 900,
                                   fontSize: 15,
-                                  color: "#f2fffb",
+                                  color: "#f2fffd",
                                   whiteSpace: "nowrap",
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
@@ -770,9 +918,9 @@ export default function GoingNowDetails() {
                               <div
                                 style={{
                                   fontSize: 12,
-                                  color: "rgba(255,255,255,0.66)",
-                                  marginTop: 3,
-                                  fontWeight: 600,
+                                  color: "rgba(232,247,255,0.64)",
+                                  marginTop: 4,
+                                  fontWeight: 650,
                                 }}
                               >
                                 Joined {formatJoinedTime(p.joined_at)}
@@ -783,11 +931,11 @@ export default function GoingNowDetails() {
                           {user?.id === p.user_id ? (
                             <div
                               style={{
-                                padding: "7px 10px",
+                                padding: "8px 10px",
                                 borderRadius: 999,
-                                background: "rgba(0,255,186,0.12)",
-                                border: "1px solid rgba(0,255,186,0.24)",
-                                color: "#baffea",
+                                background: "rgba(103,232,249,0.12)",
+                                border: "1px solid rgba(103,232,249,0.20)",
+                                color: "#d8fbff",
                                 fontWeight: 900,
                                 fontSize: 11,
                                 whiteSpace: "nowrap",
@@ -801,227 +949,56 @@ export default function GoingNowDetails() {
                     </div>
                   )}
                 </div>
-              </div>
 
-              <div style={{ display: "grid", gap: 18 }}>
                 <div
                   style={{
-                    ...cardStyle,
-                    padding: 18,
-                    position: "sticky",
-                    top: 96,
+                    ...glassPanel,
+                    padding: 16,
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: 13,
-                      opacity: 0.72,
-                      marginBottom: 10,
-                      fontWeight: 800,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.10em",
-                    }}
-                  >
-                    Join this plan
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: 28,
-                      lineHeight: 1,
-                      fontWeight: 950,
-                      letterSpacing: "-0.04em",
-                      marginBottom: 8,
-                    }}
-                  >
-                    {!user?.id
-                      ? "Login to join"
-                      : isOwner
-                      ? "You started this"
-                      : isJoined
-                      ? "You're in"
-                      : activeStatus === "ended"
-                      ? "Plan ended"
-                      : activeStatus === "cancelled"
-                      ? "Plan cancelled"
-                      : activeStatus === "full"
-                      ? "Plan is full"
-                      : "Jump in now"}
-                  </div>
-
-                  <div
-                    style={{
-                      color: "rgba(255,255,255,0.72)",
-                      lineHeight: 1.55,
-                      marginBottom: 16,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Fast plan, real people, zero overthinking. If the vibe feels right,
-                    join and move.
-                  </div>
-
-                  {!user?.id ? (
-                    <button
-                      type="button"
-                      onClick={() => navigate("/login")}
-                      style={{
-                        width: "100%",
-                        border: "none",
-                        borderRadius: 18,
-                        padding: "15px 18px",
-                        background: "linear-gradient(135deg, #00ffba, #00d694 50%, #00a871 100%)",
-                        color: "#03271d",
-                        fontWeight: 900,
-                        fontSize: 15,
-                        cursor: "pointer",
-                        marginBottom: 12,
-                        boxShadow: "0 16px 34px rgba(0,255,186,0.16)",
-                      }}
-                    >
-                      Login to join
-                    </button>
-                  ) : isOwner ? (
-                    <div
-                      style={{
-                        padding: "14px 16px",
-                        borderRadius: 18,
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.10)",
-                        fontWeight: 800,
-                        marginBottom: 12,
-                      }}
-                    >
-                      You started this plan.
-                    </div>
-                  ) : isJoined ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={openChat}
-                        style={{
-                          width: "100%",
-                          border: "none",
-                          borderRadius: 18,
-                          padding: "15px 18px",
-                          background: "linear-gradient(135deg, #00ffba, #00d694 50%, #00a871 100%)",
-                          color: "#03271d",
-                          fontWeight: 900,
-                          fontSize: 15,
-                          cursor: "pointer",
-                          marginBottom: 10,
-                          boxShadow: "0 16px 34px rgba(0,255,186,0.16)",
-                        }}
-                      >
-                        Open chat
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleLeave}
-                        disabled={joinBusy}
-                        style={{
-                          width: "100%",
-                          border: "none",
-                          borderRadius: 18,
-                          padding: "15px 18px",
-                          background: "rgba(255,255,255,0.10)",
-                          color: "#fff",
-                          fontWeight: 900,
-                          fontSize: 15,
-                          cursor: "pointer",
-                          marginBottom: 12,
-                        }}
-                      >
-                        {joinBusy ? "Leaving..." : "Leave plan"}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleJoin}
-                      disabled={joinBusy || !canJoin}
-                      style={{
-                        width: "100%",
-                        border: "none",
-                        borderRadius: 18,
-                        padding: "15px 18px",
-                        background: canJoin
-                          ? "linear-gradient(135deg, #00ffba, #00d694 50%, #00a871 100%)"
-                          : "rgba(255,255,255,0.10)",
-                        color: canJoin ? "#03271d" : "rgba(255,255,255,0.58)",
-                        fontWeight: 900,
-                        fontSize: 15,
-                        cursor: canJoin ? "pointer" : "not-allowed",
-                        marginBottom: 12,
-                        boxShadow: canJoin ? "0 16px 34px rgba(0,255,186,0.16)" : "none",
-                      }}
-                    >
-                      {activeStatus === "ended"
-                        ? "Ended"
-                        : activeStatus === "cancelled"
-                        ? "Cancelled"
-                        : activeStatus === "full"
-                        ? "Full"
-                        : joinBusy
-                        ? "Joining..."
-                        : "Join now"}
-                    </button>
-                  )}
-
+                  <div style={{ ...labelStyle, marginBottom: 10 }}>Quick details</div>
                   <div style={{ display: "grid", gap: 10 }}>
-                    <div
-                      style={{
-                        padding: "12px 14px",
-                        borderRadius: 16,
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.07)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      👥 {joinedCount} going now
-                    </div>
-
-                    <div
-                      style={{
-                        padding: "12px 14px",
-                        borderRadius: 16,
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.07)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      🪑 {spotsLeft} spots left
-                    </div>
-
-                    <div
-                      style={{
-                        padding: "12px 14px",
-                        borderRadius: 16,
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.07)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      📍 {item.location_text || "Location soon"}
-                    </div>
+                    <InfoRow
+                      label="Location"
+                      value={item.location_text || "Location soon"}
+                    />
+                    <InfoRow label="Starts" value={formatDateTime(item.starts_at)} />
+                    <InfoRow
+                      label="Status"
+                      value={activeStatus}
+                      capitalize
+                    />
+                    <InfoRow
+                      label="Capacity"
+                      value={`${joinedCount}/${spotsTotal}`}
+                    />
                   </div>
+                </div>
+              </div>
 
-                  {errorMsg ? (
-                    <div
-                      style={{
-                        marginTop: 14,
-                        color: "#ffb4b4",
-                        background: "rgba(255,80,80,0.08)",
-                        border: "1px solid rgba(255,80,80,0.22)",
-                        padding: 12,
-                        borderRadius: 14,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {errorMsg}
-                    </div>
-                  ) : null}
+              <div className="going-side-column">
+                <div className="desktop-side-cta">
+                  <ActionPanel
+                    glassPanel={glassPanel}
+                    softCard={softCard}
+                    item={item}
+                    id={id}
+                    user={user}
+                    isOwner={isOwner}
+                    isJoined={isJoined}
+                    joinBusy={joinBusy}
+                    activeStatus={activeStatus}
+                    canJoin={canJoin}
+                    topActionTitle={topActionTitle}
+                    joinedCount={joinedCount}
+                    spotsLeft={spotsLeft}
+                    errorMsg={errorMsg}
+                    navigate={navigate}
+                    handleJoin={handleJoin}
+                    handleLeave={handleLeave}
+                    openChat={openChat}
+                    formatDateTime={formatDateTime}
+                  />
                 </div>
               </div>
             </div>
@@ -1030,12 +1007,437 @@ export default function GoingNowDetails() {
       </div>
 
       <style>{`
-        @media (max-width: 860px) {
-          .going-now-details-grid {
-            grid-template-columns: 1fr !important;
+        .going-details-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1.14fr) minmax(320px, 0.86fr);
+          gap: 16px;
+          align-items: start;
+        }
+
+        .going-main-column,
+        .going-side-column {
+          min-width: 0;
+        }
+
+        .going-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .mobile-top-cta {
+          display: none;
+        }
+
+        .desktop-side-cta {
+          display: block;
+        }
+
+        @media (max-width: 980px) {
+          .going-details-layout {
+            grid-template-columns: 1fr;
+          }
+
+          .mobile-top-cta {
+            display: block;
+            margin-bottom: 16px;
+          }
+
+          .desktop-side-cta {
+            display: none;
+          }
+        }
+
+        @media (max-width: 720px) {
+          .going-stats-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
     </div>
   );
 }
+
+function ActionPanel({
+  glassPanel,
+  softCard,
+  item,
+  id,
+  user,
+  isOwner,
+  isJoined,
+  joinBusy,
+  activeStatus,
+  canJoin,
+  topActionTitle,
+  joinedCount,
+  spotsLeft,
+  errorMsg,
+  navigate,
+  handleJoin,
+  handleLeave,
+  openChat,
+  formatDateTime,
+}) {
+  return (
+    <div
+      style={{
+        ...glassPanel,
+        padding: 18,
+        position: "sticky",
+        top: 18,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: -90,
+          right: -80,
+          width: 220,
+          height: 220,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(103,232,249,0.20), transparent 68%)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: -80,
+          left: -60,
+          width: 180,
+          height: 180,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(167,243,208,0.16), transparent 68%)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          fontSize: 12,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          fontWeight: 800,
+          color: "rgba(225,247,255,0.58)",
+          marginBottom: 10,
+        }}
+      >
+        Join this plan
+      </div>
+
+      <div
+        style={{
+          position: "relative",
+          fontSize: 36,
+          lineHeight: 0.95,
+          fontWeight: 950,
+          letterSpacing: "-0.05em",
+          marginBottom: 10,
+          color: "#f2fffd",
+        }}
+      >
+        {topActionTitle}
+      </div>
+
+      <div
+        style={{
+          position: "relative",
+          color: "rgba(235,249,255,0.74)",
+          lineHeight: 1.58,
+          marginBottom: 18,
+          fontWeight: 650,
+          fontSize: 15,
+        }}
+      >
+        Fast plan, real people, no overthinking. Join if the vibe feels right and move.
+      </div>
+
+      {!user?.id ? (
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          style={primaryButtonStyle}
+        >
+          Login to join
+        </button>
+      ) : isOwner ? (
+        <>
+          <div
+            style={{
+              ...softCard,
+              padding: "14px 15px",
+              fontWeight: 800,
+              marginBottom: 10,
+              color: "#effffd",
+            }}
+          >
+            You started this plan.
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate(`/going-now/${id}/edit`)}
+            style={secondaryButtonStyle}
+          >
+            Edit plan
+          </button>
+
+          <button
+            type="button"
+            onClick={openChat}
+            style={{ ...primaryButtonStyle, marginTop: 10 }}
+          >
+            Open chat
+          </button>
+        </>
+      ) : isJoined ? (
+        <>
+          <button
+            type="button"
+            onClick={openChat}
+            style={primaryButtonStyle}
+          >
+            Open chat
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLeave}
+            disabled={joinBusy}
+            style={{ ...secondaryButtonStyle, marginTop: 10 }}
+          >
+            {joinBusy ? "Leaving..." : "Leave plan"}
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={handleJoin}
+          disabled={joinBusy || !canJoin}
+          style={{
+            ...primaryButtonStyle,
+            background: canJoin
+              ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
+              : "rgba(255,255,255,0.10)",
+            color: canJoin ? "#06232c" : "rgba(255,255,255,0.58)",
+            cursor: canJoin ? "pointer" : "not-allowed",
+            boxShadow: canJoin
+              ? "0 18px 40px rgba(103,232,249,0.20)"
+              : "none",
+          }}
+        >
+          {activeStatus === "ended"
+            ? "Ended"
+            : activeStatus === "cancelled"
+            ? "Cancelled"
+            : activeStatus === "full"
+            ? "Full"
+            : joinBusy
+            ? "Joining..."
+            : "Join now"}
+        </button>
+      )}
+
+      <div
+        style={{
+          marginTop: 14,
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        <MiniInfo value={`🔥 ${joinedCount} going now`} />
+        <MiniInfo value={`🪑 ${spotsLeft} spots left`} />
+        <MiniInfo value={`📍 ${item.location_text || "Location soon"}`} />
+        <MiniInfo value={`⏰ ${formatDateTime(item.starts_at)}`} />
+      </div>
+
+      {errorMsg ? (
+        <div
+          style={{
+            marginTop: 14,
+            color: "#ffd0d0",
+            background: "rgba(255,80,80,0.08)",
+            border: "1px solid rgba(255,80,80,0.20)",
+            padding: 12,
+            borderRadius: 16,
+            fontWeight: 750,
+          }}
+        >
+          {errorMsg}
+        </div>
+      ) : null}
+
+      <div
+        style={{
+          marginTop: 16,
+          paddingTop: 16,
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={openChat}
+          style={{
+            width: "100%",
+            border: "1px solid rgba(125,211,252,0.14)",
+            borderRadius: 18,
+            padding: "14px 16px",
+            background: "rgba(255,255,255,0.06)",
+            color: "#effffd",
+            fontWeight: 850,
+            fontSize: 14,
+            cursor: "pointer",
+          }}
+        >
+          💬 Start a group chat for this plan
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, sub }) {
+  return (
+    <div
+      style={{
+        borderRadius: 22,
+        padding: 16,
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(125,211,252,0.12)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          opacity: 0.62,
+          marginBottom: 10,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: "0.10em",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          color: "rgba(225,247,255,0.78)",
+        }}
+      >
+        <span>{icon}</span>
+        <span>{label}</span>
+      </div>
+
+      <div
+        style={{
+          fontWeight: 950,
+          fontSize: 26,
+          lineHeight: 1,
+          letterSpacing: "-0.04em",
+          color: "#f2fffd",
+          marginBottom: 6,
+        }}
+      >
+        {value}
+      </div>
+
+      <div
+        style={{
+          fontSize: 13,
+          opacity: 0.72,
+          fontWeight: 650,
+          color: "rgba(230,247,255,0.82)",
+        }}
+      >
+        {sub}
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value, capitalize = false }) {
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        padding: "13px 14px",
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(125,211,252,0.12)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 800,
+          letterSpacing: "0.10em",
+          textTransform: "uppercase",
+          color: "rgba(225,247,255,0.56)",
+        }}
+      >
+        {label}
+      </div>
+
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 800,
+          color: "#f2fffd",
+          textTransform: capitalize ? "capitalize" : "none",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function MiniInfo({ value }) {
+  return (
+    <div
+      style={{
+        padding: "12px 14px",
+        borderRadius: 16,
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(125,211,252,0.12)",
+        fontWeight: 750,
+        color: "rgba(242,255,253,0.94)",
+      }}
+    >
+      {value}
+    </div>
+  );
+}
+
+const primaryButtonStyle = {
+  width: "100%",
+  border: "none",
+  borderRadius: 20,
+  padding: "16px 18px",
+  background:
+    "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)",
+  color: "#06232c",
+  fontWeight: 950,
+  fontSize: 15,
+  cursor: "pointer",
+  boxShadow: "0 18px 40px rgba(103,232,249,0.20)",
+};
+
+const secondaryButtonStyle = {
+  width: "100%",
+  border: "1px solid rgba(125,211,252,0.14)",
+  borderRadius: 20,
+  padding: "16px 18px",
+  background: "rgba(255,255,255,0.06)",
+  color: "#effffd",
+  fontWeight: 900,
+  fontSize: 15,
+  cursor: "pointer",
+};

@@ -37,6 +37,9 @@ import ApplyCreator from "./pages/ApplyCreator";
 import AdminCreatorRequests from "./pages/AdminCreatorRequests";
 import GoingNowDetails from "./pages/GoingNowDetails";
 import GoingNowChat from "./pages/GoingNowChat";
+import CreateGoingNow from "./pages/CreateGoingNow";
+import GoingNow from "./pages/GoingNow";
+import EditGoingNow from "./pages/EditGoingNow";
 
 
 
@@ -86,6 +89,10 @@ function App() {
           <Route path="/admin/creator-requests" element={<AdminCreatorRequests />} />
           <Route path="/going-now/:id" element={<GoingNowDetails />} />
           <Route path="/going-now/:id/chat" element={<GoingNowChat />} />
+          <Route path="/going-now/create" element={<CreateGoingNow />} />
+          <Route path="/going-now" element={<GoingNow />} />
+          <Route path="/going-now/:id/edit" element={<EditGoingNow />} />
+
           
           {/* AUTH */}
           <Route path="/login" element={<Login />} />

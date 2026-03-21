@@ -234,140 +234,121 @@ export default function GoingNowChat() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#020807",
-          color: "#fff",
-          padding: 20,
-        }}
-      >
-        <div style={{ maxWidth: 980, margin: "0 auto" }}>Loading chat...</div>
-      </div>
+      <PageShell>
+        <div style={{ ...glassCard, padding: 24, fontWeight: 900, fontSize: 18 }}>
+          Loading chat...
+        </div>
+      </PageShell>
     );
   }
 
   if (accessDenied) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#020807",
-          color: "#fff",
-          padding: 20,
-        }}
-      >
-        <div style={{ maxWidth: 980, margin: "0 auto" }}>
-          <button
-            onClick={() => navigate(-1)}
-            style={{
-              marginBottom: 18,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "rgba(255,255,255,0.05)",
-              color: "#fff",
-              borderRadius: 999,
-              padding: "10px 14px",
-              cursor: "pointer",
-              fontWeight: 800,
-            }}
-          >
+      <PageShell>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 14,
+            flexWrap: "wrap",
+          }}
+        >
+          <button onClick={() => navigate(-1)} style={backBtn}>
             ← Back
           </button>
 
+          <div style={topMiniPill}>🔒 Private access</div>
+        </div>
+
+        <div style={{ ...glassPanel, padding: 24 }}>
+          <div style={eyebrowStyle}>💬 Group chat</div>
+
+          <h1 style={titleStyle}>Chat locked</h1>
+
+          <p style={mutedText}>
+            You need to be logged in and joined to this plan to enter the group chat.
+          </p>
+
           <div
             style={{
-              borderRadius: 24,
-              padding: 24,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.10)",
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              marginTop: 18,
             }}
           >
-            <h1 style={{ marginTop: 0, fontSize: 34 }}>Chat locked</h1>
-            <p style={{ color: "rgba(255,255,255,0.72)", lineHeight: 1.6 }}>
-              You need to be logged in and joined to this plan to enter the
-              chat.
-            </p>
-
             {!user?.id ? (
-              <button
-                onClick={() => navigate("/login")}
-                style={{
-                  border: "none",
-                  borderRadius: 16,
-                  padding: "14px 18px",
-                  background:
-                    "linear-gradient(135deg, #00ffba, #00d694 50%, #00a871 100%)",
-                  color: "#03271d",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={() => navigate("/login")} style={primaryBtn}>
                 Login
               </button>
             ) : (
               <button
                 onClick={() => navigate(`/going-now/${id}`)}
-                style={{
-                  border: "none",
-                  borderRadius: 16,
-                  padding: "14px 18px",
-                  background: "rgba(255,255,255,0.10)",
-                  color: "#fff",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
+                style={ghostBtn}
               >
                 Back to details
               </button>
             )}
           </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top, rgba(0,255,186,0.08), transparent 22%), linear-gradient(to bottom, rgba(2,8,7,0.94), rgba(2,8,7,0.99))",
-        color: "#fff",
-        padding: "20px 14px 90px",
-      }}
-    >
-      <div style={{ maxWidth: 960, margin: "0 auto" }}>
-        <button
-          onClick={() => navigate(`/going-now/${id}`)}
-          style={{
-            marginBottom: 16,
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(255,255,255,0.05)",
-            color: "#fff",
-            borderRadius: 999,
-            padding: "10px 14px",
-            cursor: "pointer",
-            fontWeight: 800,
-          }}
-        >
+    <PageShell>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 14,
+          flexWrap: "wrap",
+        }}
+      >
+        <button onClick={() => navigate(`/going-now/${id}`)} style={backBtn}>
           ← Back
         </button>
 
-        <div
-          style={{
-            borderRadius: 28,
-            overflow: "hidden",
-            border: "1px solid rgba(255,255,255,0.10)",
-            background:
-              "linear-gradient(155deg, rgba(9,15,14,0.88), rgba(4,10,9,0.98))",
-            boxShadow:
-              "0 24px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)",
-          }}
-        >
+        <div style={topMiniPill}>💬 Live group chat</div>
+      </div>
+
+      <div style={chatShellStyle}>
+        <div style={chatHeaderStyle}>
           <div
             style={{
-              padding: 18,
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              position: "absolute",
+              top: -90,
+              right: -80,
+              width: 220,
+              height: 220,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, rgba(103,232,249,0.18), transparent 68%)",
+              pointerEvents: "none",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              bottom: -80,
+              left: -70,
+              width: 200,
+              height: 200,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, rgba(167,243,208,0.16), transparent 68%)",
+              pointerEvents: "none",
+            }}
+          />
+
+          <div
+            style={{
+              position: "relative",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -375,30 +356,17 @@ export default function GoingNowChat() {
               flexWrap: "wrap",
             }}
           >
-            <div>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "7px 11px",
-                  borderRadius: 999,
-                  background: "rgba(0,255,186,0.10)",
-                  border: "1px solid rgba(0,255,186,0.20)",
-                  color: "#baffea",
-                  fontWeight: 900,
-                  fontSize: 11,
-                  marginBottom: 10,
-                }}
-              >
-                💬 Group chat
-              </div>
+            <div style={{ maxWidth: 640 }}>
+              <div style={eyebrowStyle}>💬 Group chat</div>
 
               <div
                 style={{
-                  fontSize: 30,
+                  fontSize: "clamp(28px, 5vw, 42px)",
+                  lineHeight: 0.96,
                   fontWeight: 950,
-                  letterSpacing: "-0.04em",
+                  letterSpacing: "-0.05em",
+                  color: "#fff",
+                  marginBottom: 10,
                 }}
               >
                 {item?.title || "Going now chat"}
@@ -406,17 +374,46 @@ export default function GoingNowChat() {
 
               <div
                 style={{
-                  color: "rgba(255,255,255,0.68)",
-                  marginTop: 6,
+                  color: "rgba(235,249,255,0.72)",
                   fontWeight: 600,
+                  lineHeight: 1.6,
+                  marginBottom: 14,
                 }}
               >
-                {participants.length} member
-                {participants.length === 1 ? "" : "s"}
+                Chat with people who joined this plan and keep the vibe moving.
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <HeroMiniStat
+                  label="Members"
+                  value={`${participants.length}`}
+                />
+                <HeroMiniStat
+                  label="Status"
+                  value={item?.status || "active"}
+                />
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "10px 12px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                maxWidth: "100%",
+              }}
+            >
               {participants.slice(0, 6).map((p, index) => (
                 <img
                   key={p.id}
@@ -427,42 +424,40 @@ export default function GoingNowChat() {
                     height: 40,
                     borderRadius: "50%",
                     objectFit: "cover",
-                    border: "2px solid #07100f",
+                    border: "2px solid rgba(8,17,22,0.96)",
                     marginLeft: index === 0 ? 0 : -10,
                     boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
                     background: "#0d1715",
                   }}
                 />
               ))}
-            </div>
-          </div>
-
-          <div
-            ref={listRef}
-            style={{
-              height: "58vh",
-              overflowY: "auto",
-              padding: 18,
-              display: "grid",
-              gap: 12,
-            }}
-          >
-            {messages.length === 0 ? (
-              <div
+              <span
                 style={{
-                  padding: 18,
-                  borderRadius: 18,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.72)",
-                  fontWeight: 600,
+                  marginLeft: 10,
+                  color: "#effffd",
+                  fontWeight: 850,
+                  fontSize: 12,
+                  whiteSpace: "nowrap",
                 }}
               >
+                {participants.length} member{participants.length === 1 ? "" : "s"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style={chatBodyWrap}>
+          <div ref={listRef} style={messagesWrapStyle}>
+            {messages.length === 0 ? (
+              <div style={emptyMessageCard}>
                 No messages yet. Start the vibe.
               </div>
             ) : (
-              messages.map((msg) => {
+              messages.map((msg, index) => {
                 const mine = user?.id === msg.user_id;
+                const prev = messages[index - 1];
+                const showAvatar =
+                  !prev || prev.user_id !== msg.user_id;
 
                 return (
                   <div
@@ -474,40 +469,55 @@ export default function GoingNowChat() {
                   >
                     <div
                       style={{
-                        maxWidth: "78%",
+                        maxWidth: "82%",
                         display: "flex",
                         gap: 10,
                         flexDirection: mine ? "row-reverse" : "row",
                         alignItems: "flex-end",
                       }}
                     >
-                      <img
-                        src={msg.profiles?.avatar_url || FALLBACK_AVATAR}
-                        alt={getDisplayName(msg)}
+                      <div
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                          background: "#0d1715",
-                          border: "1px solid rgba(255,255,255,0.08)",
+                          width: 38,
+                          display: "flex",
+                          alignItems: "flex-end",
+                          justifyContent: "center",
+                          flexShrink: 0,
                         }}
-                      />
+                      >
+                        {showAvatar ? (
+                          <img
+                            src={msg.profiles?.avatar_url || FALLBACK_AVATAR}
+                            alt={getDisplayName(msg)}
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: "50%",
+                              objectFit: "cover",
+                              background: "#0d1715",
+                              border: "1px solid rgba(255,255,255,0.08)",
+                            }}
+                          />
+                        ) : null}
+                      </div>
 
                       <div
                         style={{
                           padding: "12px 14px",
-                          borderRadius: 18,
+                          borderRadius: mine
+                            ? "20px 20px 8px 20px"
+                            : "20px 20px 20px 8px",
                           background: mine
-                            ? "linear-gradient(135deg, #00ffba, #00d694 50%, #00a871 100%)"
+                            ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
                             : "rgba(255,255,255,0.06)",
-                          color: mine ? "#03271d" : "#f4fffb",
+                          color: mine ? "#06232c" : "#f4fffb",
                           border: mine
                             ? "none"
                             : "1px solid rgba(255,255,255,0.08)",
                           boxShadow: mine
-                            ? "0 14px 30px rgba(0,255,186,0.14)"
+                            ? "0 14px 30px rgba(103,232,249,0.16)"
                             : "none",
+                          minWidth: 0,
                         }}
                       >
                         <div
@@ -515,7 +525,7 @@ export default function GoingNowChat() {
                             fontSize: 12,
                             fontWeight: 900,
                             marginBottom: 6,
-                            opacity: mine ? 0.9 : 0.8,
+                            opacity: mine ? 0.92 : 0.8,
                           }}
                         >
                           {mine ? "You" : getDisplayName(msg)}
@@ -524,7 +534,7 @@ export default function GoingNowChat() {
                         <div
                           style={{
                             fontSize: 15,
-                            lineHeight: 1.55,
+                            lineHeight: 1.58,
                             fontWeight: 600,
                             whiteSpace: "pre-wrap",
                             wordBreak: "break-word",
@@ -536,8 +546,8 @@ export default function GoingNowChat() {
                         <div
                           style={{
                             fontSize: 11,
-                            marginTop: 7,
-                            opacity: mine ? 0.75 : 0.6,
+                            marginTop: 8,
+                            opacity: mine ? 0.76 : 0.62,
                             fontWeight: 700,
                           }}
                         >
@@ -554,52 +564,16 @@ export default function GoingNowChat() {
             )}
           </div>
 
-          <div
-            style={{
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-              padding: 14,
-              background: "rgba(0,0,0,0.10)",
-            }}
-          >
-            {errorMsg ? (
-              <div
-                style={{
-                  marginBottom: 10,
-                  color: "#ffb4b4",
-                  background: "rgba(255,80,80,0.08)",
-                  border: "1px solid rgba(255,80,80,0.22)",
-                  padding: 10,
-                  borderRadius: 12,
-                  fontWeight: 700,
-                }}
-              >
-                {errorMsg}
-              </div>
-            ) : null}
+          <div style={composerWrapStyle}>
+            {errorMsg ? <div style={errorStyle}>{errorMsg}</div> : null}
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: 10,
-              }}
-            >
+            <div className="going-chat-composer">
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Write a message..."
                 rows={2}
-                style={{
-                  resize: "none",
-                  borderRadius: 16,
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  background: "rgba(255,255,255,0.05)",
-                  color: "#fff",
-                  padding: "14px 14px",
-                  outline: "none",
-                  fontSize: 15,
-                  lineHeight: 1.5,
-                }}
+                style={composerTextareaStyle}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -613,18 +587,15 @@ export default function GoingNowChat() {
                 onClick={sendMessage}
                 disabled={!canSend}
                 style={{
-                  alignSelf: "stretch",
-                  minWidth: 110,
-                  border: "none",
-                  borderRadius: 16,
-                  padding: "0 18px",
+                  ...sendBtnStyle,
                   background: canSend
-                    ? "linear-gradient(135deg, #00ffba, #00d694 50%, #00a871 100%)"
+                    ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
                     : "rgba(255,255,255,0.10)",
-                  color: canSend ? "#03271d" : "rgba(255,255,255,0.58)",
-                  fontWeight: 900,
-                  fontSize: 15,
+                  color: canSend ? "#06232c" : "rgba(255,255,255,0.58)",
                   cursor: canSend ? "pointer" : "not-allowed",
+                  boxShadow: canSend
+                    ? "0 14px 34px rgba(103,232,249,0.16)"
+                    : "none",
                 }}
               >
                 {sending ? "Sending..." : "Send"}
@@ -633,6 +604,254 @@ export default function GoingNowChat() {
           </div>
         </div>
       </div>
+
+      <style>{`
+        .going-chat-composer {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: stretch;
+        }
+
+        @media (max-width: 720px) {
+          .going-chat-composer {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+    </PageShell>
+  );
+}
+
+function PageShell({ children }) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top, rgba(103,232,249,0.16), transparent 18%), radial-gradient(circle at 82% 16%, rgba(167,243,208,0.15), transparent 18%), radial-gradient(circle at 18% 72%, rgba(96,165,250,0.12), transparent 20%), linear-gradient(180deg, #031019 0%, #081b28 40%, #0b2330 100%)",
+        color: "#fff",
+        padding: "16px 12px 108px",
+      }}
+    >
+      <div style={{ maxWidth: 980, margin: "0 auto" }}>{children}</div>
     </div>
   );
 }
+
+function HeroMiniStat({ label, value }) {
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        padding: "12px 14px",
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(125,211,252,0.12)",
+        minWidth: 100,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: "0.10em",
+          color: "rgba(225,247,255,0.56)",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 22,
+          lineHeight: 1,
+          fontWeight: 950,
+          letterSpacing: "-0.04em",
+          color: "#f2fffd",
+          textTransform: "capitalize",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+const glassPanel = {
+  borderRadius: 30,
+  overflow: "hidden",
+  border: "1px solid rgba(255,255,255,0.10)",
+  background:
+    "linear-gradient(160deg, rgba(10,18,20,0.92), rgba(8,16,20,0.98))",
+  boxShadow:
+    "0 26px 90px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06)",
+};
+
+const glassCard = {
+  borderRadius: 24,
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045))",
+  border: "1px solid rgba(157,229,219,0.14)",
+  boxShadow:
+    "0 20px 55px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.08)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+};
+
+const chatShellStyle = glassPanel;
+
+const chatHeaderStyle = {
+  position: "relative",
+  padding: "20px 18px 18px",
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
+  overflow: "hidden",
+};
+
+const chatBodyWrap = {
+  display: "grid",
+  gridTemplateRows: "1fr auto",
+  minHeight: "68vh",
+};
+
+const messagesWrapStyle = {
+  height: "58vh",
+  overflowY: "auto",
+  padding: 18,
+  display: "grid",
+  gap: 12,
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.00))",
+};
+
+const composerWrapStyle = {
+  borderTop: "1px solid rgba(255,255,255,0.08)",
+  padding: 14,
+  background: "rgba(0,0,0,0.10)",
+};
+
+const composerTextareaStyle = {
+  resize: "none",
+  borderRadius: 18,
+  border: "1px solid rgba(125,211,252,0.14)",
+  background: "rgba(255,255,255,0.06)",
+  color: "#fff",
+  padding: "14px 14px",
+  outline: "none",
+  fontSize: 15,
+  lineHeight: 1.5,
+  minHeight: 58,
+  boxSizing: "border-box",
+  width: "100%",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+};
+
+const sendBtnStyle = {
+  alignSelf: "stretch",
+  minWidth: 116,
+  border: "none",
+  borderRadius: 18,
+  padding: "0 18px",
+  fontWeight: 900,
+  fontSize: 15,
+};
+
+const emptyMessageCard = {
+  padding: 18,
+  borderRadius: 18,
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  color: "rgba(255,255,255,0.72)",
+  fontWeight: 600,
+};
+
+const eyebrowStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 12px",
+  borderRadius: 999,
+  background:
+    "linear-gradient(135deg, rgba(167,243,208,0.18), rgba(103,232,249,0.18))",
+  border: "1px solid rgba(103,232,249,0.14)",
+  color: "#dffeff",
+  fontWeight: 900,
+  fontSize: 11,
+  marginBottom: 12,
+  letterSpacing: "0.03em",
+};
+
+const primaryBtn = {
+  border: "none",
+  borderRadius: 18,
+  padding: "15px 22px",
+  background:
+    "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)",
+  color: "#06232c",
+  fontWeight: 950,
+  fontSize: 15,
+  cursor: "pointer",
+  boxShadow: "0 18px 40px rgba(103,232,249,0.20)",
+};
+
+const ghostBtn = {
+  border: "1px solid rgba(125,211,252,0.14)",
+  borderRadius: 18,
+  padding: "15px 22px",
+  background: "rgba(255,255,255,0.06)",
+  color: "#effffd",
+  fontWeight: 900,
+  fontSize: 15,
+  cursor: "pointer",
+};
+
+const backBtn = {
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.05)",
+  color: "#fff",
+  borderRadius: 999,
+  padding: "11px 15px",
+  cursor: "pointer",
+  fontWeight: 900,
+  backdropFilter: "blur(10px)",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+};
+
+const topMiniPill = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "10px 14px",
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.08)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  fontWeight: 850,
+  color: "#effffd",
+};
+
+const titleStyle = {
+  fontSize: 34,
+  margin: "0 0 10px",
+  lineHeight: 1,
+  fontWeight: 950,
+  letterSpacing: "-0.04em",
+};
+
+const mutedText = {
+  color: "rgba(255,255,255,0.72)",
+  margin: 0,
+  lineHeight: 1.6,
+};
+
+const errorStyle = {
+  marginBottom: 10,
+  color: "#ffb4b4",
+  background: "rgba(255,80,80,0.08)",
+  border: "1px solid rgba(255,80,80,0.22)",
+  padding: 10,
+  borderRadius: 12,
+  fontWeight: 700,
+};
