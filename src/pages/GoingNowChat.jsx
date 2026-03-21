@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -21,18 +27,23 @@ export default function GoingNowChat() {
 
   const listRef = useRef(null);
 
-  const scrollToBottom = (smooth = true) => {
+  const scrollToBottom = useCallback((smooth = true) => {
     if (!listRef.current) return;
+
     listRef.current.scrollTo({
       top: listRef.current.scrollHeight,
       behavior: smooth ? "smooth" : "auto",
     });
-  };
+  }, []);
 
-  const getDisplayName = (obj) =>
-    obj?.profiles?.full_name?.trim() || `Explorer ${String(obj?.user_id || "").slice(0, 6)}`;
+  const getDisplayName = useCallback(
+    (obj) =>
+      obj?.profiles?.full_name?.trim() ||
+      `Explorer ${String(obj?.user_id || "").slice(0, 6)}`,
+    []
+  );
 
-  const loadParticipants = async (goingNowId) => {
+  const loadParticipants = useCallback(async (goingNowId) => {
     const { data, error } = await supabase
       .from("going_now_participants")
       .select(`
@@ -56,33 +67,36 @@ export default function GoingNowChat() {
 
     setParticipants(data || []);
     return data || [];
-  };
+  }, []);
 
-  const loadMessages = async (goingNowId) => {
-    const { data, error } = await supabase
-      .from("going_now_messages")
-      .select(`
-        id,
-        going_now_id,
-        user_id,
-        text,
-        created_at,
-        profiles (
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq("going_now_id", goingNowId)
-      .order("created_at", { ascending: true });
+  const loadMessages = useCallback(
+    async (goingNowId) => {
+      const { data, error } = await supabase
+        .from("going_now_messages")
+        .select(`
+          id,
+          going_now_id,
+          user_id,
+          text,
+          created_at,
+          profiles (
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq("going_now_id", goingNowId)
+        .order("created_at", { ascending: true });
 
-    if (error) {
-      console.error("messages load error:", error);
-      return;
-    }
+      if (error) {
+        console.error("messages load error:", error);
+        return;
+      }
 
-    setMessages(data || []);
-    setTimeout(() => scrollToBottom(false), 50);
-  };
+      setMessages(data || []);
+      setTimeout(() => scrollToBottom(false), 50);
+    },
+    [scrollToBottom]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -144,7 +158,7 @@ export default function GoingNowChat() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, loadMessages, loadParticipants]);
 
   useEffect(() => {
     if (!id || accessDenied) return;
@@ -185,7 +199,7 @@ export default function GoingNowChat() {
       supabase.removeChannel(msgChannel);
       supabase.removeChannel(participantChannel);
     };
-  }, [id, accessDenied]);
+  }, [id, accessDenied, loadMessages, loadParticipants]);
 
   const canSend = useMemo(() => {
     return !!user?.id && text.trim().length > 0 && !sending && !accessDenied;
@@ -220,7 +234,14 @@ export default function GoingNowChat() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#020807", color: "#fff", padding: 20 }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#020807",
+          color: "#fff",
+          padding: 20,
+        }}
+      >
         <div style={{ maxWidth: 980, margin: "0 auto" }}>Loading chat...</div>
       </div>
     );
@@ -228,7 +249,14 @@ export default function GoingNowChat() {
 
   if (accessDenied) {
     return (
-      <div style={{ minHeight: "100vh", background: "#020807", color: "#fff", padding: 20 }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#020807",
+          color: "#fff",
+          padding: 20,
+        }}
+      >
         <div style={{ maxWidth: 980, margin: "0 auto" }}>
           <button
             onClick={() => navigate(-1)}
@@ -256,7 +284,8 @@ export default function GoingNowChat() {
           >
             <h1 style={{ marginTop: 0, fontSize: 34 }}>Chat locked</h1>
             <p style={{ color: "rgba(255,255,255,0.72)", lineHeight: 1.6 }}>
-              You need to be logged in and joined to this plan to enter the chat.
+              You need to be logged in and joined to this plan to enter the
+              chat.
             </p>
 
             {!user?.id ? (
@@ -266,7 +295,8 @@ export default function GoingNowChat() {
                   border: "none",
                   borderRadius: 16,
                   padding: "14px 18px",
-                  background: "linear-gradient(135deg, #00ffba, #00d694 50%, #00a871 100%)",
+                  background:
+                    "linear-gradient(135deg, #00ffba, #00d694 50%, #00a871 100%)",
                   color: "#03271d",
                   fontWeight: 900,
                   cursor: "pointer",
@@ -364,12 +394,25 @@ export default function GoingNowChat() {
                 💬 Group chat
               </div>
 
-              <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: "-0.04em" }}>
+              <div
+                style={{
+                  fontSize: 30,
+                  fontWeight: 950,
+                  letterSpacing: "-0.04em",
+                }}
+              >
                 {item?.title || "Going now chat"}
               </div>
 
-              <div style={{ color: "rgba(255,255,255,0.68)", marginTop: 6, fontWeight: 600 }}>
-                {participants.length} member{participants.length === 1 ? "" : "s"}
+              <div
+                style={{
+                  color: "rgba(255,255,255,0.68)",
+                  marginTop: 6,
+                  fontWeight: 600,
+                }}
+              >
+                {participants.length} member
+                {participants.length === 1 ? "" : "s"}
               </div>
             </div>
 

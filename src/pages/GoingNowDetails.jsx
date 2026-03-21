@@ -230,7 +230,7 @@ export default function GoingNowDetails() {
   })();
 
   const canJoin = !!user?.id && !isOwner && !isJoined && !isFull && activeStatus === "active";
-  const canLeave = !!user?.id && isJoined && !joinBusy;
+ 
 
   const handleJoin = async () => {
     if (!user?.id) {
