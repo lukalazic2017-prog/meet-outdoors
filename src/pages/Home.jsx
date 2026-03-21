@@ -142,6 +142,7 @@ export default function Home() {
   const [tours, setTours] = useState([]);
   const [events, setEvents] = useState([]);
   const [loadingContent, setLoadingContent] = useState(true);
+  const [goingNow, setGoingNow] = useState([]);
 
   const [typedTop, setTypedTop] = useState("");
   const [typedBrand, setTypedBrand] = useState("");
@@ -155,22 +156,37 @@ export default function Home() {
     async function loadContent() {
       setLoadingContent(true);
 
-      const [{ data: toursData }, { data: eventsData }] = await Promise.all([
-        supabase
-          .from("tours")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(12),
-        supabase
-          .from("events")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(8),
-      ]);
+ const [
+  { data: toursData, error: toursError },
+  { data: eventsData, error: eventsError },
+  { data: goingNowData, error: goingNowError },
+] = await Promise.all([
+  supabase
+    .from("tours")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(12),
+  supabase
+    .from("events")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(8),
+  supabase
+    .from("going_now_overview")
+    .select("*")
+    .order("starts_at", { ascending: true })
+    .limit(8),
+]);
+
+console.log("toursError:", toursError);
+console.log("eventsError:", eventsError);
+console.log("goingNowError:", goingNowError);
+console.log("goingNowData:", goingNowData);
 
       setTours(toursData || []);
-      setEvents(eventsData || []);
-      setLoadingContent(false);
+setEvents(eventsData || []);
+setGoingNow(goingNowData || []);
+setLoadingContent(false);
     }
 
     loadContent();
@@ -229,9 +245,10 @@ export default function Home() {
   const heroParallax = prefersReducedMotion ? 0 : scrollY * 0.16;
 
   const newTours = tours.slice(0, 4);
-  const popularTours = tours.slice(4, 8);
-  const trendingTours = tours.slice(8, 12);
-  const featuredTour = newTours[0] || tours[0] || null;
+const popularTours = tours.slice(4, 8);
+const trendingTours = tours.slice(8, 12);
+const featuredTour = newTours[0] || tours[0] || null;
+const liveGoingNow = goingNow.slice(0, 8);
 
 
   const stats = useMemo(
@@ -1346,7 +1363,19 @@ export default function Home() {
       year: "numeric",
     });
   };
+const getGoingNowTimeLabel = (item) => {
+  if (!item?.starts_at) return "Starting soon";
 
+  const d = new Date(item.starts_at);
+  if (Number.isNaN(d.getTime())) return "Starting soon";
+
+  return d.toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
   const cardHoverStyle = {
     transform: "translateY(-7px) scale(1.012)",
     boxShadow:
@@ -1523,7 +1552,63 @@ export default function Home() {
       </div>
     </div>
   );
+const renderGoingNowCard = (item) => (
+  <div
+    key={item.id}
+    style={styles.card}
+    onClick={() => navigate(`/going-now/${item.id}`)}
+    onMouseEnter={handleCardEnter}
+    onMouseLeave={handleCardLeave}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        navigate(`/going-now/${item.id}`);
+      }
+    }}
+    aria-label={`Open going now ${item.title || "plan"}`}
+  >
+    <div data-card-shine style={styles.cardShine} />
 
+    <div style={styles.cardMediaWrapper}>
+      <img
+        src={FALLBACK_EVENT_IMAGE}
+        alt={item.title || "Going now"}
+        style={styles.cardImg}
+        data-card-image
+      />
+      <div style={styles.cardImageTopFade} />
+      <div style={styles.cardImageBottomFade} />
+
+      <div style={styles.cardTopRow}>
+        <div style={styles.badge}>🔥 Going now</div>
+        <div style={styles.priceTag}>
+          {item.is_full ? "Full" : `${item.spots_left} spots left`}
+        </div>
+      </div>
+    </div>
+
+    <div style={styles.cardBody}>
+      <div style={styles.cardTitle}>{item.title || "Untitled plan"}</div>
+
+      <div style={styles.cardLocationRow}>
+        <span>📍</span>
+        <span>{item.location_text || "Location soon"}</span>
+      </div>
+
+      <div style={styles.cardMetaRow}>
+        <div style={styles.chipRow}>
+          <span style={styles.chip}>{getGoingNowTimeLabel(item)}</span>
+          <span style={styles.chip}>{item.vibe || "Social"}</span>
+        </div>
+
+        <span style={styles.metaRight}>
+          👥 {item.joined_count}/{item.spots_total}
+        </span>
+      </div>
+    </div>
+  </div>
+);
   return (
     <>
       <style>{`
@@ -1841,6 +1926,37 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+       <section style={styles.sectionWrapper}>
+  <SectionHeader
+    styles={styles}
+    eyebrow="Live plans"
+    title="Going now 🔥"
+    subtitle="Instant plans happening soon. Fast energy, real people, zero overthinking."
+    actionLabel="See all"
+    onAction={() => navigate("/going-now")}
+  />
+
+  {loadingContent ? (
+    <div style={styles.emptyCard}>
+      <div style={styles.emptyTitle}>Loading live plans...</div>
+      <div style={styles.emptyText}>
+        We are checking if anyone is going out right now.
+      </div>
+    </div>
+  ) : liveGoingNow.length === 0 ? (
+    <div style={styles.emptyCard}>
+      <div style={styles.emptyTitle}>No live plans yet</div>
+      <div style={styles.emptyText}>
+        Going now is connected, but there are no visible live plans at the moment.
+      </div>
+    </div>
+  ) : (
+    <div style={styles.grid} className="hide-scrollbar">
+      {liveGoingNow.map(renderGoingNowCard)}
+    </div>
+  )}
+</section>
 
         {newTours.length > 0 && (
           <section style={styles.sectionWrapper}>

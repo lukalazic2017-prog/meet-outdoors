@@ -35,6 +35,8 @@ import Events from "./pages/Events";
 import SavedTours from "./pages/SavedTours";
 import ApplyCreator from "./pages/ApplyCreator";
 import AdminCreatorRequests from "./pages/AdminCreatorRequests";
+import GoingNowDetails from "./pages/GoingNowDetails";
+import GoingNowChat from "./pages/GoingNowChat";
 
 
 
@@ -81,7 +83,9 @@ function App() {
           <Route path ="/event/:id" element={<EventDetails />} />
           <Route path="/saved-tours" element={<SavedTours />} />
           <Route path="/apply-creator" element={<ApplyCreator />} />
-<Route path="/admin/creator-requests" element={<AdminCreatorRequests />} />
+          <Route path="/admin/creator-requests" element={<AdminCreatorRequests />} />
+          <Route path="/going-now/:id" element={<GoingNowDetails />} />
+          <Route path="/going-now/:id/chat" element={<GoingNowChat />} />
           
           {/* AUTH */}
           <Route path="/login" element={<Login />} />
