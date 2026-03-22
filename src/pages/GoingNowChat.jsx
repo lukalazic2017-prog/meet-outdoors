@@ -410,7 +410,7 @@ export default function GoingNowChat() {
     return !!user?.id && !!item?.user_id && user.id === item.user_id;
   }, [user, item]);
 
-  const joinedCount = participants.length;
+  
   const statusMeta = useMemo(() => getStatusMeta(item), [item]);
 
   const sendMessage = async () => {
