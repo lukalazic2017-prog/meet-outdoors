@@ -9,7 +9,7 @@ const QUICK_MESSAGES = [
   "Where exactly? 📍",
   "Running a bit late 🙏",
 ];
-const CHAT_BUCKET = "going-now-chat-media";
+const CHAT_BUCKET = "going-now-media";
 
 function formatTime(value) {
   if (!value) return "";
