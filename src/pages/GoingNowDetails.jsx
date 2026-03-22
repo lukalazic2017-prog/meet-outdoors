@@ -408,7 +408,6 @@ export default function GoingNowDetails() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showMedia, setShowMedia] = useState(false);
-  const [setTick] = useState(Date.now());
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
@@ -607,13 +606,6 @@ export default function GoingNowDetails() {
     };
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTick(Date.now());
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const channel1 = supabase
