@@ -6,6 +6,212 @@ const FALLBACK_IMAGE =
   "https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg";
 const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=12";
 
+function formatDateTime(value) {
+  if (!value) return "Time soon";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "Time soon";
+
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatJoinedTime(value) {
+  if (!value) return "Just joined";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "Just joined";
+
+  return d.toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getCategoryEmoji(category) {
+  switch ((category || "").toLowerCase()) {
+    case "outdoor":
+      return "🌿";
+    case "chill":
+      return "☕";
+    case "night":
+      return "🌙";
+    case "sport":
+      return "🏀";
+    case "trip":
+      return "🚗";
+    case "activity":
+      return "⚡";
+    default:
+      return "🔥";
+  }
+}
+
+function getVibeEmoji(vibe) {
+  switch ((vibe || "").toLowerCase()) {
+    case "chill":
+      return "🫶";
+    case "social":
+      return "👋";
+    case "active":
+      return "💪";
+    case "party":
+      return "🎉";
+    case "adventurous":
+      return "🏕️";
+    default:
+      return "✨";
+  }
+}
+
+function getDifficultyEmoji(difficulty) {
+  switch ((difficulty || "").toLowerCase()) {
+    case "easy":
+      return "🟢";
+    case "moderate":
+      return "🟡";
+    case "hard":
+      return "🔵";
+    default:
+      return "🎯";
+  }
+}
+
+function getStatusMeta(item, expired, isFull) {
+  if (!item) {
+    return {
+      key: "loading",
+      label: "Loading",
+      pill: {
+        background: "rgba(255,255,255,0.10)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#fff",
+      },
+    };
+  }
+
+  if (item.status === "cancelled") {
+    return {
+      key: "cancelled",
+      label: "Cancelled",
+      pill: {
+        background: "rgba(255,90,90,0.12)",
+        border: "1px solid rgba(255,90,90,0.22)",
+        color: "#ffd7d7",
+      },
+    };
+  }
+
+  if (expired || item.status === "ended") {
+    return {
+      key: "ended",
+      label: "Ended",
+      pill: {
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#eef7fb",
+      },
+    };
+  }
+
+  if (isFull || item.status === "full") {
+    return {
+      key: "full",
+      label: "Full",
+      pill: {
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#ffffff",
+      },
+    };
+  }
+
+  return {
+    key: "active",
+    label: "Live now",
+    pill: {
+      background:
+        "linear-gradient(135deg, rgba(167,243,208,0.94), rgba(103,232,249,0.94), rgba(96,165,250,0.94))",
+      border: "1px solid rgba(103,232,249,0.16)",
+      color: "#06252e",
+    },
+  };
+}
+
+function getDisplayName(p) {
+  return (
+    p?.profiles?.full_name?.trim() ||
+    `Explorer ${String(p.user_id || "").slice(0, 6)}`
+  );
+}
+
+function HeroMedia({ item }) {
+  const fallback = item?.image_url || item?.cover_image || FALLBACK_IMAGE;
+  const mediaUrl = item?.media_url || null;
+  const mediaType = item?.media_type || null;
+
+  if (mediaUrl && mediaType === "video") {
+    return (
+      <video
+        src={mediaUrl}
+        muted
+        playsInline
+        loop
+        autoPlay
+        preload="metadata"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          filter: "saturate(1.08) contrast(1.05) brightness(0.90)",
+          display: "block",
+        }}
+      />
+    );
+  }
+
+  if (mediaUrl) {
+    return (
+      <img
+        src={mediaUrl}
+        alt={item?.title || "Going now"}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          filter: "saturate(1.08) contrast(1.05) brightness(0.90)",
+          display: "block",
+        }}
+      />
+    );
+  }
+
+  return (
+    <img
+      src={fallback}
+      alt={item?.title || "Going now"}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        filter: "saturate(1.08) contrast(1.05) brightness(0.90)",
+        display: "block",
+      }}
+    />
+  );
+}
+
 export default function GoingNowDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -60,37 +266,6 @@ export default function GoingNowDetails() {
     letterSpacing: "0.12em",
     color: "rgba(225,247,255,0.58)",
   };
-
-  const formatDateTime = (value) => {
-    if (!value) return "Time soon";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "Time soon";
-
-    return d.toLocaleString(undefined, {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatJoinedTime = (value) => {
-    if (!value) return "Just joined";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "Just joined";
-
-    return d.toLocaleString(undefined, {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getDisplayName = (p) =>
-    p?.profiles?.full_name?.trim() ||
-    `Explorer ${String(p.user_id).slice(0, 6)}`;
 
   const refreshParticipants = async (goingNowId) => {
     const { data, error } = await supabase
@@ -255,22 +430,22 @@ export default function GoingNowDetails() {
     : false;
   const isFull = joinedCount >= spotsTotal && spotsTotal > 0;
 
-  const activeStatus = useMemo(() => {
-    if (!item) return "loading";
-    if (item.status === "cancelled") return "cancelled";
-    if (expired) return "ended";
-    if (isFull) return "full";
-    return "active";
+  const statusMeta = useMemo(() => {
+    return getStatusMeta(item, expired, isFull);
   }, [item, expired, isFull]);
 
-  const startsSoon = (() => {
+  const startsSoon = useMemo(() => {
     if (!item?.starts_at) return false;
     const diff = new Date(item.starts_at).getTime() - Date.now();
     return diff > 0 && diff <= 1000 * 60 * 90;
-  })();
+  }, [item]);
 
   const canJoin =
-    !!user?.id && !isOwner && !isJoined && !isFull && activeStatus === "active";
+    !!user?.id &&
+    !isOwner &&
+    !isJoined &&
+    !isFull &&
+    statusMeta.key === "active";
 
   const handleJoin = async () => {
     if (!user?.id) {
@@ -332,13 +507,12 @@ export default function GoingNowDetails() {
     navigate(`/going-now/${id}/chat`);
   };
 
-  const heroImage = item?.image_url || item?.cover_image || FALLBACK_IMAGE;
-
   if (loading) {
     return (
       <div
         style={{
           minHeight: "100vh",
+          marginTop: -120,
           background: shellBg,
           color: "#fff",
           padding: "22px 14px 92px",
@@ -421,11 +595,11 @@ export default function GoingNowDetails() {
     ? "You started this"
     : isJoined
     ? "You're in"
-    : activeStatus === "ended"
+    : statusMeta.key === "ended"
     ? "Plan ended"
-    : activeStatus === "cancelled"
+    : statusMeta.key === "cancelled"
     ? "Plan cancelled"
-    : activeStatus === "full"
+    : statusMeta.key === "full"
     ? "Plan is full"
     : "Jump in now";
 
@@ -439,7 +613,7 @@ export default function GoingNowDetails() {
         padding: "16px 12px 108px",
       }}
     >
-      <div style={{ maxWidth: 1220, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1240, margin: "0 auto" }}>
         <div
           style={{
             display: "flex",
@@ -469,25 +643,21 @@ export default function GoingNowDetails() {
 
           <div
             style={{
-              ...miniPill,
-              background:
-                activeStatus === "cancelled"
-                  ? "rgba(255,90,90,0.12)"
-                  : "rgba(255,255,255,0.06)",
-              border:
-                activeStatus === "cancelled"
-                  ? "1px solid rgba(255,90,90,0.22)"
-                  : "1px solid rgba(255,255,255,0.12)",
-              color:
-                activeStatus === "cancelled"
-                  ? "#ffd7d7"
-                  : "rgba(242,253,255,0.92)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 14px",
+              borderRadius: 999,
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              fontWeight: 850,
+              ...statusMeta.pill,
             }}
           >
-            {activeStatus === "active" && "LIVE PLAN"}
-            {activeStatus === "full" && "FULL"}
-            {activeStatus === "ended" && "ENDED"}
-            {activeStatus === "cancelled" && "CANCELLED"}
+            {statusMeta.key === "active" && "LIVE PLAN"}
+            {statusMeta.key === "full" && "FULL"}
+            {statusMeta.key === "ended" && "ENDED"}
+            {statusMeta.key === "cancelled" && "CANCELLED"}
           </div>
         </div>
 
@@ -505,22 +675,11 @@ export default function GoingNowDetails() {
           <div
             style={{
               position: "relative",
-              minHeight: 560,
+              minHeight: 580,
               borderBottom: "1px solid rgba(255,255,255,0.06)",
             }}
           >
-            <img
-              src={heroImage}
-              alt={item.title || "Going now"}
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                filter: "saturate(1.08) contrast(1.05) brightness(0.90)",
-              }}
-            />
+            <HeroMedia item={item} />
 
             <div
               style={{
@@ -573,14 +732,18 @@ export default function GoingNowDetails() {
                   🔥 Going now
                 </div>
 
-                {startsSoon && activeStatus === "active" ? (
-                  <div style={miniPill}>🌙 Starting soon</div>
+                {item.media_type === "video" ? (
+                  <div style={miniPill}>🎬 Video preview</div>
                 ) : null}
 
-                {activeStatus === "full" ? <div style={miniPill}>Full</div> : null}
-                {activeStatus === "ended" ? <div style={miniPill}>Ended</div> : null}
+                {startsSoon && statusMeta.key === "active" ? (
+                  <div style={miniPill}>⚡ Starting soon</div>
+                ) : null}
 
-                {activeStatus === "cancelled" ? (
+                {statusMeta.key === "full" ? <div style={miniPill}>Full</div> : null}
+                {statusMeta.key === "ended" ? <div style={miniPill}>Ended</div> : null}
+
+                {statusMeta.key === "cancelled" ? (
                   <div
                     style={{
                       ...miniPill,
@@ -599,7 +762,7 @@ export default function GoingNowDetails() {
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    padding: "8px 10px 8px 10px",
+                    padding: "8px 10px",
                     borderRadius: 999,
                     background: "rgba(255,255,255,0.07)",
                     border: "1px solid rgba(255,255,255,0.10)",
@@ -646,39 +809,30 @@ export default function GoingNowDetails() {
                 bottom: 18,
               }}
             >
-              <div style={{ maxWidth: 860 }}>
+              <div style={{ maxWidth: 880 }}>
                 <div
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
+                    display: "flex",
                     gap: 8,
+                    flexWrap: "wrap",
                     marginBottom: 12,
-                    padding: "9px 12px",
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    backdropFilter: "blur(12px)",
-                    WebkitBackdropFilter: "blur(12px)",
-                    fontWeight: 850,
-                    fontSize: 12,
                   }}
                 >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background:
-                        activeStatus === "active"
-                          ? "#67e8f9"
-                          : "rgba(255,255,255,0.44)",
-                      boxShadow:
-                        activeStatus === "active"
-                          ? "0 0 16px rgba(103,232,249,0.75)"
-                          : "none",
-                    }}
-                  />
-                  {item.vibe || item.difficulty || "Social vibe"}
+                  {item.category ? (
+                    <span style={chipStyle}>
+                      {getCategoryEmoji(item.category)} {item.category}
+                    </span>
+                  ) : null}
+                  {item.vibe ? (
+                    <span style={chipStyle}>
+                      {getVibeEmoji(item.vibe)} {item.vibe}
+                    </span>
+                  ) : null}
+                  {item.difficulty ? (
+                    <span style={chipStyle}>
+                      {getDifficultyEmoji(item.difficulty)} {item.difficulty}
+                    </span>
+                  ) : null}
                 </div>
 
                 <h1
@@ -702,7 +856,7 @@ export default function GoingNowDetails() {
                     fontSize: "clamp(15px, 2vw, 18px)",
                     fontWeight: 650,
                     lineHeight: 1.55,
-                    maxWidth: 700,
+                    maxWidth: 720,
                   }}
                 >
                   {item.description
@@ -720,6 +874,9 @@ export default function GoingNowDetails() {
                 >
                   <div style={miniPill}>📍 {item.location_text || "Location soon"}</div>
                   <div style={miniPill}>⏰ {formatDateTime(item.starts_at)}</div>
+                  <div style={miniPill}>
+                    👥 {joinedCount}/{spotsTotal || 0}
+                  </div>
                 </div>
               </div>
             </div>
@@ -767,7 +924,7 @@ export default function GoingNowDetails() {
                     isOwner={isOwner}
                     isJoined={isJoined}
                     joinBusy={joinBusy}
-                    activeStatus={activeStatus}
+                    statusMeta={statusMeta}
                     canJoin={canJoin}
                     topActionTitle={topActionTitle}
                     joinedCount={joinedCount}
@@ -777,7 +934,6 @@ export default function GoingNowDetails() {
                     handleJoin={handleJoin}
                     handleLeave={handleLeave}
                     openChat={openChat}
-                    formatDateTime={formatDateTime}
                   />
                 </div>
 
@@ -792,7 +948,7 @@ export default function GoingNowDetails() {
                   <div
                     style={{
                       color: "rgba(238,251,255,0.90)",
-                      lineHeight: 1.7,
+                      lineHeight: 1.72,
                       fontSize: 15.5,
                       fontWeight: 650,
                     }}
@@ -963,15 +1119,21 @@ export default function GoingNowDetails() {
                       value={item.location_text || "Location soon"}
                     />
                     <InfoRow label="Starts" value={formatDateTime(item.starts_at)} />
-                    <InfoRow
-                      label="Status"
-                      value={activeStatus}
-                      capitalize
-                    />
-                    <InfoRow
-                      label="Capacity"
-                      value={`${joinedCount}/${spotsTotal}`}
-                    />
+                    <InfoRow label="Status" value={statusMeta.label} />
+                    <InfoRow label="Capacity" value={`${joinedCount}/${spotsTotal}`} />
+                    {item.category ? (
+                      <InfoRow label="Category" value={item.category} capitalize />
+                    ) : null}
+                    {item.vibe ? (
+                      <InfoRow label="Vibe" value={item.vibe} capitalize />
+                    ) : null}
+                    {item.difficulty ? (
+                      <InfoRow
+                        label="Difficulty"
+                        value={item.difficulty}
+                        capitalize
+                      />
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -987,7 +1149,7 @@ export default function GoingNowDetails() {
                     isOwner={isOwner}
                     isJoined={isJoined}
                     joinBusy={joinBusy}
-                    activeStatus={activeStatus}
+                    statusMeta={statusMeta}
                     canJoin={canJoin}
                     topActionTitle={topActionTitle}
                     joinedCount={joinedCount}
@@ -997,7 +1159,6 @@ export default function GoingNowDetails() {
                     handleJoin={handleJoin}
                     handleLeave={handleLeave}
                     openChat={openChat}
-                    formatDateTime={formatDateTime}
                   />
                 </div>
               </div>
@@ -1067,7 +1228,7 @@ function ActionPanel({
   isOwner,
   isJoined,
   joinBusy,
-  activeStatus,
+  statusMeta,
   canJoin,
   topActionTitle,
   joinedCount,
@@ -1077,7 +1238,6 @@ function ActionPanel({
   handleJoin,
   handleLeave,
   openChat,
-  formatDateTime,
 }) {
   return (
     <div
@@ -1232,11 +1392,11 @@ function ActionPanel({
               : "none",
           }}
         >
-          {activeStatus === "ended"
+          {statusMeta.key === "ended"
             ? "Ended"
-            : activeStatus === "cancelled"
+            : statusMeta.key === "cancelled"
             ? "Cancelled"
-            : activeStatus === "full"
+            : statusMeta.key === "full"
             ? "Full"
             : joinBusy
             ? "Joining..."
@@ -1339,6 +1499,7 @@ function StatCard({ icon, label, value, sub }) {
           letterSpacing: "-0.04em",
           color: "#f2fffd",
           marginBottom: 6,
+          textTransform: "capitalize",
         }}
       >
         {value}
@@ -1415,6 +1576,21 @@ function MiniInfo({ value }) {
     </div>
   );
 }
+
+const chipStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "8px 11px",
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.08)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  color: "#ecfaf6",
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: "capitalize",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+};
 
 const primaryButtonStyle = {
   width: "100%",

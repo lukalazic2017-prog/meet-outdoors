@@ -9,6 +9,172 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=12";
+const FALLBACK_IMAGE =
+  "https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg";
+
+function formatDateTime(value) {
+  if (!value) return "Time soon";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "Time soon";
+
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatTimeOnly(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getCategoryEmoji(category) {
+  switch ((category || "").toLowerCase()) {
+    case "outdoor":
+      return "🌿";
+    case "chill":
+      return "☕";
+    case "night":
+      return "🌙";
+    case "sport":
+      return "🏀";
+    case "trip":
+      return "🚗";
+    case "activity":
+      return "⚡";
+    default:
+      return "🔥";
+  }
+}
+
+function getVibeEmoji(vibe) {
+  switch ((vibe || "").toLowerCase()) {
+    case "chill":
+      return "🫶";
+    case "social":
+      return "👋";
+    case "active":
+      return "💪";
+    case "party":
+      return "🎉";
+    case "adventurous":
+      return "🏕️";
+    default:
+      return "✨";
+  }
+}
+
+function getStatusMeta(item) {
+  if (!item) {
+    return {
+      label: "Loading",
+      pill: {
+        background: "rgba(255,255,255,0.10)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#fff",
+      },
+    };
+  }
+
+  const expired = item.expires_at
+    ? new Date(item.expires_at).getTime() <= Date.now()
+    : false;
+
+  if (item.status === "cancelled") {
+    return {
+      label: "Cancelled",
+      pill: {
+        background: "rgba(255,90,90,0.12)",
+        border: "1px solid rgba(255,90,90,0.22)",
+        color: "#ffd7d7",
+      },
+    };
+  }
+
+  if (expired || item.status === "ended") {
+    return {
+      label: "Ended",
+      pill: {
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#eef7fb",
+      },
+    };
+  }
+
+  if (item.status === "full") {
+    return {
+      label: "Full",
+      pill: {
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#ffffff",
+      },
+    };
+  }
+
+  return {
+    label: "Live",
+    pill: {
+      background:
+        "linear-gradient(135deg, rgba(167,243,208,0.94), rgba(103,232,249,0.94), rgba(96,165,250,0.94))",
+      border: "1px solid rgba(103,232,249,0.16)",
+      color: "#06252e",
+    },
+  };
+}
+
+function RoomHeroMedia({ item }) {
+  const fallback =
+    item?.media_url ||
+    item?.image_url ||
+    item?.cover_image ||
+    FALLBACK_IMAGE;
+
+  if (item?.media_url && item?.media_type === "video") {
+    return (
+      <video
+        src={item.media_url}
+        muted
+        playsInline
+        loop
+        autoPlay
+        preload="metadata"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          filter: "saturate(1.06) contrast(1.04) brightness(0.85)",
+        }}
+      />
+    );
+  }
+
+  return (
+    <img
+      src={fallback}
+      alt={item?.title || "Going now"}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        filter: "saturate(1.06) contrast(1.04) brightness(0.85)",
+      }}
+    />
+  );
+}
 
 export default function GoingNowChat() {
   const { id } = useParams();
@@ -26,6 +192,7 @@ export default function GoingNowChat() {
   const [errorMsg, setErrorMsg] = useState("");
 
   const listRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const scrollToBottom = useCallback((smooth = true) => {
     if (!listRef.current) return;
@@ -97,6 +264,22 @@ export default function GoingNowChat() {
     },
     [scrollToBottom]
   );
+
+  const loadItem = useCallback(async (goingNowId) => {
+    const { data, error } = await supabase
+      .from("going_now_overview")
+      .select("*")
+      .eq("id", goingNowId)
+      .single();
+
+    if (error) {
+      console.error("chat item refresh error:", error);
+      return null;
+    }
+
+    setItem(data || null);
+    return data || null;
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -191,6 +374,23 @@ export default function GoingNowChat() {
         },
         async () => {
           await loadParticipants(id);
+          await loadItem(id);
+        }
+      )
+      .subscribe();
+
+    const itemChannel = supabase
+      .channel(`going-now-chat-item-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "going_now",
+          filter: `id=eq.${id}`,
+        },
+        async () => {
+          await loadItem(id);
         }
       )
       .subscribe();
@@ -198,12 +398,20 @@ export default function GoingNowChat() {
     return () => {
       supabase.removeChannel(msgChannel);
       supabase.removeChannel(participantChannel);
+      supabase.removeChannel(itemChannel);
     };
-  }, [id, accessDenied, loadMessages, loadParticipants]);
+  }, [id, accessDenied, loadMessages, loadParticipants, loadItem]);
 
   const canSend = useMemo(() => {
     return !!user?.id && text.trim().length > 0 && !sending && !accessDenied;
   }, [user, text, sending, accessDenied]);
+
+  const isOwner = useMemo(() => {
+    return !!user?.id && !!item?.user_id && user.id === item.user_id;
+  }, [user, item]);
+
+  const joinedCount = participants.length;
+  const statusMeta = useMemo(() => getStatusMeta(item), [item]);
 
   const sendMessage = async () => {
     const clean = text.trim();
@@ -226,10 +434,17 @@ export default function GoingNowChat() {
       }
 
       setText("");
+      if (textareaRef.current) textareaRef.current.style.height = "58px";
       setTimeout(() => scrollToBottom(), 80);
     } finally {
       setSending(false);
     }
+  };
+
+  const autoResize = (el) => {
+    if (!el) return;
+    el.style.height = "58px";
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   };
 
   if (loading) {
@@ -316,57 +531,83 @@ export default function GoingNowChat() {
         <div style={topMiniPill}>💬 Live group chat</div>
       </div>
 
-      <div style={chatShellStyle}>
-        <div style={chatHeaderStyle}>
+      <div style={roomHeroStyle}>
+        <div style={{ position: "relative", minHeight: 290 }}>
+          <RoomHeroMedia item={item} />
+
           <div
             style={{
               position: "absolute",
-              top: -90,
-              right: -80,
-              width: 220,
-              height: 220,
-              borderRadius: "50%",
+              inset: 0,
               background:
-                "radial-gradient(circle, rgba(103,232,249,0.18), transparent 68%)",
-              pointerEvents: "none",
+                "linear-gradient(to top, rgba(4,10,14,0.98) 10%, rgba(4,10,14,0.78) 36%, rgba(4,10,14,0.26) 62%, rgba(4,10,14,0.12) 100%)",
             }}
           />
 
           <div
             style={{
               position: "absolute",
-              bottom: -80,
-              left: -70,
-              width: 200,
-              height: 200,
-              borderRadius: "50%",
+              inset: 0,
               background:
-                "radial-gradient(circle, rgba(167,243,208,0.16), transparent 68%)",
-              pointerEvents: "none",
+                "radial-gradient(circle at 76% 20%, rgba(103,232,249,0.22), transparent 20%), radial-gradient(circle at 22% 26%, rgba(167,243,208,0.16), transparent 18%), radial-gradient(circle at 48% 18%, rgba(255,205,130,0.10), transparent 18%)",
             }}
           />
 
           <div
             style={{
-              position: "relative",
+              position: "absolute",
+              top: 18,
+              left: 18,
+              right: 18,
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               justifyContent: "space-between",
-              gap: 16,
+              gap: 12,
               flexWrap: "wrap",
             }}
           >
-            <div style={{ maxWidth: 640 }}>
-              <div style={eyebrowStyle}>💬 Group chat</div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div style={heroLiveBadge}>💬 Chat room</div>
+              {item?.media_type === "video" ? (
+                <div style={topMiniPill}>🎬 Video plan</div>
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 14px",
+                borderRadius: 999,
+                fontWeight: 850,
+                ...statusMeta.pill,
+              }}
+            >
+              {statusMeta.label}
+            </div>
+          </div>
+
+          <div
+            style={{
+              position: "absolute",
+              left: 18,
+              right: 18,
+              bottom: 18,
+            }}
+          >
+            <div style={{ maxWidth: 760 }}>
+              <div style={eyebrowOverlayStyle}>💬 Live conversation</div>
 
               <div
                 style={{
-                  fontSize: "clamp(28px, 5vw, 42px)",
-                  lineHeight: 0.96,
+                  fontSize: "clamp(30px, 6vw, 54px)",
+                  lineHeight: 0.95,
                   fontWeight: 950,
-                  letterSpacing: "-0.05em",
+                  letterSpacing: "-0.055em",
                   color: "#fff",
                   marginBottom: 10,
+                  textShadow: "0 16px 34px rgba(0,0,0,0.34)",
                 }}
               >
                 {item?.title || "Going now chat"}
@@ -374,13 +615,15 @@ export default function GoingNowChat() {
 
               <div
                 style={{
-                  color: "rgba(235,249,255,0.72)",
-                  fontWeight: 600,
+                  color: "rgba(238,250,245,0.84)",
                   lineHeight: 1.6,
+                  fontWeight: 650,
+                  fontSize: 15.5,
                   marginBottom: 14,
+                  maxWidth: 680,
                 }}
               >
-                Chat with people who joined this plan and keep the vibe moving.
+                Chat with people who actually joined. Fast coordination, real energy, no dead forum feel.
               </div>
 
               <div
@@ -390,227 +633,368 @@ export default function GoingNowChat() {
                   flexWrap: "wrap",
                 }}
               >
-                <HeroMiniStat
-                  label="Members"
-                  value={`${participants.length}`}
-                />
-                <HeroMiniStat
-                  label="Status"
-                  value={item?.status || "active"}
-                />
+                <HeroMiniStat label="Members" value={`${participants.length}`} />
+                <HeroMiniStat label="Messages" value={`${messages.length}`} />
+                <HeroMiniStat label="Status" value={statusMeta.label} />
               </div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "10px 12px",
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                maxWidth: "100%",
-              }}
-            >
-              {participants.slice(0, 6).map((p, index) => (
-                <img
-                  key={p.id}
-                  src={p.profiles?.avatar_url || FALLBACK_AVATAR}
-                  alt={getDisplayName(p)}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "2px solid rgba(8,17,22,0.96)",
-                    marginLeft: index === 0 ? 0 : -10,
-                    boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
-                    background: "#0d1715",
-                  }}
-                />
-              ))}
-              <span
-                style={{
-                  marginLeft: 10,
-                  color: "#effffd",
-                  fontWeight: 850,
-                  fontSize: 12,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {participants.length} member{participants.length === 1 ? "" : "s"}
-              </span>
             </div>
           </div>
         </div>
+      </div>
 
-        <div style={chatBodyWrap}>
-          <div ref={listRef} style={messagesWrapStyle}>
-            {messages.length === 0 ? (
-              <div style={emptyMessageCard}>
-                No messages yet. Start the vibe.
+      <div style={{ height: 16 }} />
+
+      <div className="going-chat-layout" style={chatLayoutStyle}>
+        <div className="going-chat-main">
+          <div style={chatShellStyle}>
+            <div style={chatTopStripStyle}>
+              <div style={{ minWidth: 0 }}>
+                <div style={miniLabel}>Room context</div>
+                <div
+                  style={{
+                    color: "#f2fffd",
+                    fontWeight: 900,
+                    fontSize: 18,
+                    lineHeight: 1.1,
+                    marginBottom: 8,
+                  }}
+                >
+                  {item?.title || "Live room"}
+                </div>
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {item?.category ? (
+                    <span style={chipStyle}>
+                      {getCategoryEmoji(item.category)} {item.category}
+                    </span>
+                  ) : null}
+                  {item?.vibe ? (
+                    <span style={chipStyle}>
+                      {getVibeEmoji(item.vibe)} {item.vibe}
+                    </span>
+                  ) : null}
+                  <span style={chipStyle}>📍 {item?.location_text || "Location soon"}</span>
+                  <span style={chipStyle}>⏰ {formatDateTime(item?.starts_at)}</span>
+                </div>
               </div>
-            ) : (
-              messages.map((msg, index) => {
-                const mine = user?.id === msg.user_id;
-                const prev = messages[index - 1];
-                const showAvatar =
-                  !prev || prev.user_id !== msg.user_id;
 
-                return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: mine ? "flex-end" : "flex-start",
-                    }}
-                  >
+              <button
+                type="button"
+                onClick={() => navigate(`/going-now/${id}`)}
+                style={headerGhostBtn}
+              >
+                View plan
+              </button>
+            </div>
+
+            <div ref={listRef} style={messagesWrapStyle}>
+              {messages.length === 0 ? (
+                <div style={emptyWrapStyle}>
+                  <div style={emptyIconStyle}>💬</div>
+                  <div style={emptyTitleStyle}>No messages yet</div>
+                  <div style={emptyTextStyle}>
+                    Kick things off. Ask where people are, when they are arriving, or drop the vibe.
+                  </div>
+                </div>
+              ) : (
+                messages.map((msg, index) => {
+                  const mine = user?.id === msg.user_id;
+                  const prev = messages[index - 1];
+                  const next = messages[index + 1];
+                  const showAvatar = !prev || prev.user_id !== msg.user_id;
+                  const compactBottom = next && next.user_id === msg.user_id;
+
+                  return (
                     <div
+                      key={msg.id}
                       style={{
-                        maxWidth: "82%",
                         display: "flex",
-                        gap: 10,
-                        flexDirection: mine ? "row-reverse" : "row",
-                        alignItems: "flex-end",
+                        justifyContent: mine ? "flex-end" : "flex-start",
+                        marginTop: showAvatar ? 8 : 2,
+                        marginBottom: compactBottom ? 2 : 8,
                       }}
                     >
                       <div
                         style={{
-                          width: 38,
+                          maxWidth: "84%",
                           display: "flex",
+                          gap: 10,
+                          flexDirection: mine ? "row-reverse" : "row",
                           alignItems: "flex-end",
-                          justifyContent: "center",
-                          flexShrink: 0,
                         }}
                       >
-                        {showAvatar ? (
-                          <img
-                            src={msg.profiles?.avatar_url || FALLBACK_AVATAR}
-                            alt={getDisplayName(msg)}
+                        <div
+                          style={{
+                            width: 38,
+                            display: "flex",
+                            alignItems: "flex-end",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {showAvatar ? (
+                            <img
+                              src={msg.profiles?.avatar_url || FALLBACK_AVATAR}
+                              alt={getDisplayName(msg)}
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                background: "#0d1715",
+                                border: "1px solid rgba(255,255,255,0.08)",
+                                boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+                              }}
+                            />
+                          ) : null}
+                        </div>
+
+                        <div
+                          style={{
+                            padding: "12px 14px",
+                            borderRadius: mine
+                              ? "20px 20px 8px 20px"
+                              : "20px 20px 20px 8px",
+                            background: mine
+                              ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
+                              : "rgba(255,255,255,0.06)",
+                            color: mine ? "#06232c" : "#f4fffb",
+                            border: mine
+                              ? "none"
+                              : "1px solid rgba(255,255,255,0.08)",
+                            boxShadow: mine
+                              ? "0 14px 30px rgba(103,232,249,0.16)"
+                              : "0 10px 24px rgba(0,0,0,0.08)",
+                            minWidth: 0,
+                            backdropFilter: mine ? "none" : "blur(10px)",
+                            WebkitBackdropFilter: mine ? "none" : "blur(10px)",
+                          }}
+                        >
+                          {showAvatar ? (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 900,
+                                marginBottom: 6,
+                                opacity: mine ? 0.92 : 0.8,
+                              }}
+                            >
+                              {mine ? "You" : getDisplayName(msg)}
+                            </div>
+                          ) : null}
+
+                          <div
                             style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: "50%",
-                              objectFit: "cover",
-                              background: "#0d1715",
-                              border: "1px solid rgba(255,255,255,0.08)",
+                              fontSize: 15,
+                              lineHeight: 1.58,
+                              fontWeight: 600,
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
                             }}
-                          />
-                        ) : null}
-                      </div>
+                          >
+                            {msg.text}
+                          </div>
 
-                      <div
-                        style={{
-                          padding: "12px 14px",
-                          borderRadius: mine
-                            ? "20px 20px 8px 20px"
-                            : "20px 20px 20px 8px",
-                          background: mine
-                            ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
-                            : "rgba(255,255,255,0.06)",
-                          color: mine ? "#06232c" : "#f4fffb",
-                          border: mine
-                            ? "none"
-                            : "1px solid rgba(255,255,255,0.08)",
-                          boxShadow: mine
-                            ? "0 14px 30px rgba(103,232,249,0.16)"
-                            : "none",
-                          minWidth: 0,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 900,
-                            marginBottom: 6,
-                            opacity: mine ? 0.92 : 0.8,
-                          }}
-                        >
-                          {mine ? "You" : getDisplayName(msg)}
-                        </div>
-
-                        <div
-                          style={{
-                            fontSize: 15,
-                            lineHeight: 1.58,
-                            fontWeight: 600,
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {msg.text}
-                        </div>
-
-                        <div
-                          style={{
-                            fontSize: 11,
-                            marginTop: 8,
-                            opacity: mine ? 0.76 : 0.62,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {new Date(msg.created_at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          <div
+                            style={{
+                              fontSize: 11,
+                              marginTop: 8,
+                              opacity: mine ? 0.76 : 0.62,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {formatTimeOnly(msg.created_at)}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
+
+            <div style={composerWrapStyle}>
+              {errorMsg ? <div style={errorStyle}>{errorMsg}</div> : null}
+
+              <div className="going-chat-composer">
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={(e) => {
+                    setText(e.target.value);
+                    autoResize(e.target);
+                  }}
+                  placeholder="Write a message..."
+                  rows={2}
+                  style={composerTextareaStyle}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (canSend) sendMessage();
+                    }
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={sendMessage}
+                  disabled={!canSend}
+                  style={{
+                    ...sendBtnStyle,
+                    background: canSend
+                      ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
+                      : "rgba(255,255,255,0.10)",
+                    color: canSend ? "#06232c" : "rgba(255,255,255,0.58)",
+                    cursor: canSend ? "pointer" : "not-allowed",
+                    boxShadow: canSend
+                      ? "0 14px 34px rgba(103,232,249,0.16)"
+                      : "none",
+                  }}
+                >
+                  {sending ? "Sending..." : "Send"}
+                </button>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div style={composerWrapStyle}>
-            {errorMsg ? <div style={errorStyle}>{errorMsg}</div> : null}
+        <div className="going-chat-side">
+          <div style={sidePanelStyle}>
+            <div style={miniLabel}>People in room</div>
 
-            <div className="going-chat-composer">
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Write a message..."
-                rows={2}
-                style={composerTextareaStyle}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (canSend) sendMessage();
-                  }
-                }}
-              />
+            <div
+              style={{
+                fontSize: 28,
+                lineHeight: 1,
+                fontWeight: 950,
+                letterSpacing: "-0.04em",
+                marginBottom: 12,
+                color: "#f2fffd",
+              }}
+            >
+              {participants.length} member{participants.length === 1 ? "" : "s"}
+            </div>
 
+            {participants.length === 0 ? (
+              <div style={sideEmptyStyle}>No members found yet.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {participants.map((p) => {
+                  const mine = user?.id === p.user_id;
+
+                  return (
+                    <div
+                      key={p.id}
+                      style={{
+                        ...sideMemberCardStyle,
+                        border: mine
+                          ? "1px solid rgba(103,232,249,0.18)"
+                          : "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          minWidth: 0,
+                        }}
+                      >
+                        <img
+                          src={p.profiles?.avatar_url || FALLBACK_AVATAR}
+                          alt={getDisplayName(p)}
+                          style={{
+                            width: 42,
+                            height: 42,
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            background: "#0d1715",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                          }}
+                        />
+
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontWeight: 900,
+                              fontSize: 14,
+                              color: "#f2fffd",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {mine ? "You" : getDisplayName(p)}
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "rgba(232,247,255,0.64)",
+                              marginTop: 4,
+                              fontWeight: 650,
+                            }}
+                          >
+                            Joined {formatDateTime(p.joined_at)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div
+              style={{
+                marginTop: 16,
+                paddingTop: 16,
+                borderTop: "1px solid rgba(255,255,255,0.08)",
+                display: "grid",
+                gap: 10,
+              }}
+            >
               <button
                 type="button"
-                onClick={sendMessage}
-                disabled={!canSend}
-                style={{
-                  ...sendBtnStyle,
-                  background: canSend
-                    ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
-                    : "rgba(255,255,255,0.10)",
-                  color: canSend ? "#06232c" : "rgba(255,255,255,0.58)",
-                  cursor: canSend ? "pointer" : "not-allowed",
-                  boxShadow: canSend
-                    ? "0 14px 34px rgba(103,232,249,0.16)"
-                    : "none",
-                }}
+                onClick={() => navigate(`/going-now/${id}`)}
+                style={sideGhostBtn}
               >
-                {sending ? "Sending..." : "Send"}
+                Open plan details
               </button>
+
+              {isOwner ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/going-now/${id}/edit`)}
+                  style={sidePrimaryBtn}
+                >
+                  Edit plan
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
       </div>
 
       <style>{`
+        .going-chat-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.42fr);
+          gap: 16px;
+          align-items: start;
+        }
+
         .going-chat-composer {
           display: grid;
           grid-template-columns: 1fr auto;
           gap: 10px;
           align-items: stretch;
+        }
+
+        @media (max-width: 980px) {
+          .going-chat-layout {
+            grid-template-columns: 1fr;
+          }
         }
 
         @media (max-width: 720px) {
@@ -628,13 +1012,14 @@ function PageShell({ children }) {
     <div
       style={{
         minHeight: "100vh",
+        marginTop: -120,
         background:
           "radial-gradient(circle at top, rgba(103,232,249,0.16), transparent 18%), radial-gradient(circle at 82% 16%, rgba(167,243,208,0.15), transparent 18%), radial-gradient(circle at 18% 72%, rgba(96,165,250,0.12), transparent 20%), linear-gradient(180deg, #031019 0%, #081b28 40%, #0b2330 100%)",
         color: "#fff",
         padding: "16px 12px 108px",
       }}
     >
-      <div style={{ maxWidth: 980, margin: "0 auto" }}>{children}</div>
+      <div style={{ maxWidth: 1180, margin: "0 auto" }}>{children}</div>
     </div>
   );
 }
@@ -699,19 +1084,26 @@ const glassCard = {
   WebkitBackdropFilter: "blur(20px)",
 };
 
-const chatShellStyle = glassPanel;
-
-const chatHeaderStyle = {
-  position: "relative",
-  padding: "20px 18px 18px",
-  borderBottom: "1px solid rgba(255,255,255,0.08)",
+const roomHeroStyle = {
+  ...glassPanel,
   overflow: "hidden",
 };
 
-const chatBodyWrap = {
-  display: "grid",
-  gridTemplateRows: "1fr auto",
-  minHeight: "68vh",
+const chatShellStyle = {
+  ...glassPanel,
+  overflow: "hidden",
+};
+
+const chatLayoutStyle = {};
+
+const chatTopStripStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 14,
+  flexWrap: "wrap",
+  padding: 16,
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
 };
 
 const messagesWrapStyle = {
@@ -719,7 +1111,7 @@ const messagesWrapStyle = {
   overflowY: "auto",
   padding: 18,
   display: "grid",
-  gap: 12,
+  gap: 4,
   background:
     "linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.00))",
 };
@@ -741,6 +1133,7 @@ const composerTextareaStyle = {
   fontSize: 15,
   lineHeight: 1.5,
   minHeight: 58,
+  maxHeight: 180,
   boxSizing: "border-box",
   width: "100%",
   backdropFilter: "blur(10px)",
@@ -757,13 +1150,33 @@ const sendBtnStyle = {
   fontSize: 15,
 };
 
-const emptyMessageCard = {
-  padding: 18,
-  borderRadius: 18,
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  color: "rgba(255,255,255,0.72)",
+const emptyWrapStyle = {
+  minHeight: "100%",
+  display: "grid",
+  placeItems: "center",
+  alignContent: "center",
+  textAlign: "center",
+  padding: 28,
+};
+
+const emptyIconStyle = {
+  fontSize: 42,
+  marginBottom: 10,
+};
+
+const emptyTitleStyle = {
+  fontSize: 24,
+  fontWeight: 950,
+  letterSpacing: "-0.03em",
+  color: "#f2fffd",
+  marginBottom: 8,
+};
+
+const emptyTextStyle = {
+  color: "rgba(235,249,255,0.72)",
+  lineHeight: 1.65,
   fontWeight: 600,
+  maxWidth: 460,
 };
 
 const eyebrowStyle = {
@@ -780,6 +1193,38 @@ const eyebrowStyle = {
   fontSize: 11,
   marginBottom: 12,
   letterSpacing: "0.03em",
+};
+
+const eyebrowOverlayStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 12px",
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.08)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  color: "#effffd",
+  fontWeight: 900,
+  fontSize: 11,
+  marginBottom: 12,
+  letterSpacing: "0.03em",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+};
+
+const heroLiveBadge = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "10px 14px",
+  borderRadius: 999,
+  background:
+    "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)",
+  color: "#06252e",
+  fontWeight: 950,
+  fontSize: 12,
+  letterSpacing: "0.03em",
+  boxShadow: "0 16px 36px rgba(103,232,249,0.28)",
 };
 
 const primaryBtn = {
@@ -803,6 +1248,43 @@ const ghostBtn = {
   color: "#effffd",
   fontWeight: 900,
   fontSize: 15,
+  cursor: "pointer",
+};
+
+const headerGhostBtn = {
+  border: "1px solid rgba(125,211,252,0.14)",
+  borderRadius: 14,
+  padding: "12px 14px",
+  background: "rgba(255,255,255,0.06)",
+  color: "#effffd",
+  fontWeight: 900,
+  fontSize: 14,
+  cursor: "pointer",
+};
+
+const sidePrimaryBtn = {
+  width: "100%",
+  border: "none",
+  borderRadius: 16,
+  padding: "14px 16px",
+  background:
+    "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)",
+  color: "#06232c",
+  fontWeight: 950,
+  fontSize: 14,
+  cursor: "pointer",
+  boxShadow: "0 14px 30px rgba(103,232,249,0.18)",
+};
+
+const sideGhostBtn = {
+  width: "100%",
+  border: "1px solid rgba(125,211,252,0.14)",
+  borderRadius: 16,
+  padding: "14px 16px",
+  background: "rgba(255,255,255,0.06)",
+  color: "#effffd",
+  fontWeight: 900,
+  fontSize: 14,
   cursor: "pointer",
 };
 
@@ -854,4 +1336,50 @@ const errorStyle = {
   padding: 10,
   borderRadius: 12,
   fontWeight: 700,
+};
+
+const miniLabel = {
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: "0.10em",
+  color: "rgba(225,247,255,0.58)",
+  marginBottom: 8,
+};
+
+const chipStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "8px 11px",
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.08)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  color: "#ecfaf6",
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: "capitalize",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+};
+
+const sidePanelStyle = {
+  ...glassPanel,
+  padding: 16,
+  position: "sticky",
+  top: 18,
+};
+
+const sideEmptyStyle = {
+  padding: 14,
+  borderRadius: 16,
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  color: "rgba(255,255,255,0.72)",
+  fontWeight: 650,
+};
+
+const sideMemberCardStyle = {
+  padding: 10,
+  borderRadius: 16,
+  background: "rgba(255,255,255,0.05)",
 };
