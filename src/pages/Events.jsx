@@ -721,7 +721,7 @@ const styles = {
     minHeight: "100vh",
     overflowX: "hidden",
     overflowY: "visible",
-    marginTop: -120,
+    marginTop: -100,
     padding: "72px 0 44px",
     background:
       "radial-gradient(circle at top, #0a1f19 0%, #05110e 26%, #02070b 58%, #000000 100%)",

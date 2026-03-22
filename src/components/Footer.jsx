@@ -1,307 +1,488 @@
 // src/components/Footer.jsx
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
+const COLORS = {
+  bgTop: "#07140f",
+  bgBottom: "#040b08",
+  mint: "#37f2c3",
+  mintBlue: "#2ee6ff",
+  mintSoft: "#8fffe0",
+  text: "#f4fff9",
+  textSoft: "rgba(228,255,247,0.78)",
+  textDim: "rgba(205,236,225,0.60)",
+  line: "rgba(111,255,218,0.14)",
+  lineStrong: "rgba(111,255,218,0.24)",
+};
+
+function FooterLink({ to, children }) {
+  return (
+    <Link
+      to={to}
+      style={{
+        color: COLORS.textSoft,
+        textDecoration: "none",
+        fontSize: 14,
+        fontWeight: 700,
+        lineHeight: 1.6,
+        transition: "all 0.18s ease",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = COLORS.text;
+        e.currentTarget.style.transform = "translateX(4px)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = COLORS.textSoft;
+        e.currentTarget.style.transform = "translateX(0px)";
+      }}
+    >
+      <span style={{ color: COLORS.mint }}>•</span>
+      <span>{children}</span>
+    </Link>
+  );
+}
+
+function FooterSection({ title, children }) {
+  return (
+    <div style={{ minWidth: 160 }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: COLORS.mintSoft,
+          marginBottom: 14,
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>{children}</div>
+    </div>
+  );
+}
 
 export default function Footer({ user, avatarUrl, unreadCount, logout }) {
+  const navigate = useNavigate();
+
   return (
     <footer
       style={{
+        position: "relative",
+        overflow: "hidden",
         marginTop: 0,
-        padding: "40px 20px 24px",
-        background:
-          "radial-gradient(circle at top, rgba(0,40,24,0.95), rgba(0,0,0,1))",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        color: "rgba(235,255,245,0.9)",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        padding: "0 16px 24px",
+        background: `
+          radial-gradient(circle at 14% 0%, rgba(55,242,195,0.12), transparent 28%),
+          radial-gradient(circle at 84% 0%, rgba(46,230,255,0.10), transparent 28%),
+          linear-gradient(180deg, ${COLORS.bgTop} 0%, ${COLORS.bgBottom} 100%)
+        `,
+        borderTop: `1px solid ${COLORS.lineStrong}`,
+        color: COLORS.text,
+        fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      {/* MAIN FOOTER CONTENT */}
       <div
         style={{
-          maxWidth: 1100,
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.02), transparent 18%)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: -80,
+          left: -50,
+          width: 240,
+          height: 240,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(55,242,195,0.12), transparent 68%)",
+          filter: "blur(26px)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          right: -70,
+          bottom: -90,
+          width: 280,
+          height: 280,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(46,230,255,0.10), transparent 68%)",
+          filter: "blur(32px)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        style={{
+          maxWidth: 1260,
           margin: "0 auto",
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          gap: 32,
+          position: "relative",
+          zIndex: 2,
+          paddingTop: 34,
         }}
       >
-        {/* Left block */}
-        <div style={{ maxWidth: 340 }}>
-          <div
-            style={{
-              fontSize: 18,
-              fontWeight: 800,
-              letterSpacing: 1.2,
-              textTransform: "uppercase",
-              marginBottom: 6,
-            }}
-          >
-            Meet
-            <span style={{ color: "#00ffb0" }}>Outdoors</span>
-          </div>
-          <div
-            style={{
-              fontSize: 13,
-              color: "rgba(240,255,245,0.8)",
-              lineHeight: 1.6,
-            }}
-          >
-            A platform for people who prefer cold air at 1,800m, wet
-            shoes by the river and real conversations around a campfire
-            over endless scrolling at home.
-          </div>
-        </div>
-
-        {/* Community */}
-        <div>
-          <div
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              marginBottom: 10,
-              color: "#00ffb0",
-            }}
-          >
-            Community
-          </div>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, fontSize: 13 }}>
-            <li style={{ marginBottom: 6 }}>
-              <Link
-                to="/activities"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                Activities
-              </Link>
-            </li>
-            <li style={{ marginBottom: 6 }}>
-              <Link
-                to="/tours"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                Explore Tours
-              </Link>
-            </li>
-            <li style={{ marginBottom: 6 }}>
-              <Link
-                to="/create-tour"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                Become a Host
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Company */}
-        <div>
-          <div
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              marginBottom: 10,
-              color: "#00ffb0",
-            }}
-          >
-            Company
-          </div>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, fontSize: 13 }}>
-            <li style={{ marginBottom: 6 }}>
-              <Link
-                to="/contact"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                Contact
-              </Link>
-            </li>
-            <li style={{ marginBottom: 6 }}>
-              
-            </li>
-            <li style={{ marginBottom: 6 }}>
-              <Link
-                to="/privacy-policy"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                Privacy Policy
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/terms-of-service"
-                style={{ color: "inherit", textDecoration: "none" }}
-              >
-                Terms of Service
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {/* USER BAR SECTION */}
-      {user && (
         <div
           style={{
-            marginTop: 40,
-            marginBottom: 30,
-            width: "100%",
-            padding: "20px 0",
-            borderTop: "1px solid rgba(255,255,255,0.08)",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-            display: "flex",
-            justifyContent: "center",
+            borderRadius: 30,
+            padding: "26px 20px",
+            background:
+              "linear-gradient(145deg, rgba(8,24,18,0.78), rgba(7,17,13,0.94))",
+            border: `1px solid ${COLORS.lineStrong}`,
+            boxShadow:
+              "0 24px 64px rgba(0,0,0,0.28), 0 0 0 1px rgba(55,242,195,0.05), inset 0 1px 0 rgba(255,255,255,0.03)",
           }}
         >
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 30,
-              padding: "10px 25px",
-              borderRadius: 20,
-              background:
-                "linear-gradient(180deg, rgba(0,30,18,0.4), rgba(0,0,0,0.5))",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 0 18px rgba(0,255,160,0.08)",
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1.2fr) repeat(3, minmax(140px, 0.65fr))",
+              gap: 24,
+              alignItems: "start",
             }}
+            className="footer-grid-main"
           >
-            {/* 🔔 Notifications */}
-            <div
-              style={{
-                position: "relative",
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.18)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                fontSize: 22,
-                color: "white",
-              }}
-            >
-              🔔
-
-              {unreadCount > 0 && (
+            <div style={{ minWidth: 0 }}>
+              <div
+                onClick={() => navigate("/")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 12,
+                  cursor: "pointer",
+                  marginBottom: 16,
+                }}
+              >
                 <div
                   style={{
-                    position: "absolute",
-                    top: -3,
-                    right: -3,
-                    background: "#ff3030",
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
+                    width: 52,
+                    height: 52,
+                    borderRadius: 18,
+                    background:
+                      "radial-gradient(circle at 30% 20%, #37f2c3 0, #2ee6ff 42%, #08382d 100%)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 11,
-                    color: "white",
-                    boxShadow: "0 0 6px red",
+                    boxShadow:
+                      "0 0 22px rgba(55,242,195,0.38), 0 16px 28px rgba(0,0,0,0.22)",
+                    flexShrink: 0,
                   }}
                 >
-                  {unreadCount}
+                  <span style={{ fontSize: 28 }}>🏔️</span>
                 </div>
-              )}
+
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 1000,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      lineHeight: 1,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span style={{ color: COLORS.text }}>Meet</span>
+                    <span
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+                        WebkitBackgroundClip: "text",
+                        color: "transparent",
+                        textShadow: "0 0 22px rgba(55,242,195,0.20)",
+                      }}
+                    >
+                      Outdoors
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 11,
+                      letterSpacing: "0.16em",
+                      textTransform: "uppercase",
+                      color: COLORS.textDim,
+                      fontWeight: 800,
+                    }}
+                  >
+                    Explore • Connect • Adventure
+                  </div>
+                </div>
+              </div>
+
+              <p
+                style={{
+                  margin: 0,
+                  maxWidth: 520,
+                  color: COLORS.textSoft,
+                  lineHeight: 1.78,
+                  fontSize: 15,
+                  fontWeight: 600,
+                }}
+              >
+                MeetOutdoors is for people who would rather chase real moments than
+                keep scrolling. Find tours, events and spontaneous plans with people
+                who actually want to get outside.
+              </p>
+
+              <div
+                style={{
+                  marginTop: 18,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 10,
+                }}
+              >
+                {[
+                  "🌿 Outdoor-first",
+                  "⚡ Going Now",
+                  "👥 Real community",
+                  "🧭 Explore nearby",
+                ].map((chip) => (
+                  <span
+                    key={chip}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "9px 12px",
+                      borderRadius: 999,
+                      background: "rgba(255,255,255,0.04)",
+                      border: `1px solid ${COLORS.line}`,
+                      color: COLORS.text,
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            {/* 🧍 AVATAR */}
+            <FooterSection title="Explore">
+              <FooterLink to="/going-now">Going Now</FooterLink>
+              <FooterLink to="/tours">Explore tours</FooterLink>
+              <FooterLink to="/events">Events</FooterLink>
+              <FooterLink to="/timeline">Timeline</FooterLink>
+            </FooterSection>
+
+            <FooterSection title="Create">
+              <FooterLink to="/create-going-now">Create live plan</FooterLink>
+              <FooterLink to="/create-tour">Create tour</FooterLink>
+              <FooterLink to="/create-event">Create event</FooterLink>
+              <FooterLink to="/profile">Your profile</FooterLink>
+            </FooterSection>
+
+            <FooterSection title="Support">
+              <FooterLink to="/contact">Contact</FooterLink>
+              <FooterLink to="/privacy-policy">Privacy policy</FooterLink>
+              <FooterLink to="/terms-of-service">Terms of service</FooterLink>
+              {!user ? <FooterLink to="/register">Join MeetOutdoors</FooterLink> : null}
+            </FooterSection>
+          </div>
+
+          {user ? (
             <div
               style={{
-                width: 58,
-                height: 58,
-                borderRadius: "50%",
-                border: "2px solid #00ffb0",
-                overflow: "hidden",
-                boxShadow: "0 0 14px rgba(0,255,160,0.45)",
-                cursor: "pointer",
+                marginTop: 24,
+                paddingTop: 22,
+                borderTop: `1px solid ${COLORS.line}`,
               }}
             >
-              <img
-                src={avatarUrl || "https://i.pravatar.cc/300"}
-                alt="avatar"
+              <div
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
+                  borderRadius: 24,
+                  padding: "16px 16px",
+                  background:
+                    "linear-gradient(145deg, rgba(8,24,18,0.72), rgba(7,17,13,0.92))",
+                  border: `1px solid ${COLORS.lineStrong}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 14,
+                  flexWrap: "wrap",
                 }}
-              />
-            </div>
+                className="footer-user-bar"
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    minWidth: 0,
+                    flex: 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      border: `2px solid ${COLORS.mint}`,
+                      boxShadow: "0 0 18px rgba(55,242,195,0.34)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src={avatarUrl || "https://i.pravatar.cc/300"}
+                      alt="avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
 
-            {/* 🔴 LOGOUT */}
-            <button
-              onClick={logout}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 14,
-                border: "1px solid rgba(255,60,60,0.5)",
-                background: "rgba(255,40,40,0.15)",
-                color: "#ff7070",
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: "pointer",
-                boxShadow: "0 0 14px rgba(255,80,80,0.35)",
-              }}
-            >
-              Logout
-            </button>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 900,
+                        color: COLORS.text,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      You’re signed in
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 5,
+                        fontSize: 13,
+                        color: COLORS.textSoft,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 10,
+                      }}
+                    >
+                      <span>🔔 {unreadCount || 0} unread notifications</span>
+                      <span>🌿 Ready for your next plan</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/profile/${user.id}`)}
+                    style={{
+                      border: `1px solid ${COLORS.lineStrong}`,
+                      background: "rgba(255,255,255,0.05)",
+                      color: COLORS.text,
+                      padding: "12px 16px",
+                      borderRadius: 999,
+                      fontWeight: 900,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Open profile
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={logout}
+                    style={{
+                      border: "1px solid rgba(255,110,110,0.28)",
+                      background: "rgba(255,70,70,0.10)",
+                      color: "#ffb0b0",
+                      padding: "12px 16px",
+                      borderRadius: 999,
+                      fontWeight: 900,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            marginTop: 18,
+            borderRadius: 24,
+            padding: "18px 18px",
+            background:
+              "linear-gradient(135deg, rgba(55,242,195,0.10), rgba(46,230,255,0.08))",
+            border: `1px solid ${COLORS.lineStrong}`,
+            boxShadow:
+              "0 18px 44px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.04)",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              color: COLORS.text,
+              lineHeight: 1.7,
+              maxWidth: 920,
+              margin: "0 auto",
+            }}
+          >
+            🚧 <strong>MeetOutdoors is currently in Beta.</strong> Explore every
+            feature freely, test the experience, and send feedback whenever you spot
+            something that could be even better.
           </div>
         </div>
-      )}
-      {/* BETA NOTICE */}
-<div
-  style={{
-    maxWidth: 900,
-    margin: "40px auto 0",
-    padding: "18px 22px",
-    borderRadius: 16,
-    background:
-      "linear-gradient(135deg, rgba(0,255,176,0.12), rgba(0,120,90,0.08))",
-    border: "1px solid rgba(0,255,176,0.35)",
-    boxShadow:
-      "0 0 20px rgba(0,255,176,0.18), inset 0 0 20px rgba(0,0,0,0.4)",
-    textAlign: "center",
-    color: "rgba(235,255,245,0.95)",
-    fontSize: 14,
-    fontWeight: 600,
-    lineHeight: 1.6,
-  }}
->
-  🚧 <strong>MeetOutdoors is currently in Beta.</strong>  
-  <br />
-  This application is currently in beta and free to use.
 
-Feel free to explore all features and use the platform freely.
-If you have any feedback, ideas, or notice anything that could be improved,
-we would love to hear from you.
-
-Our contact email is available in the Contact section.
-</div>
-
-      {/* bottom line */}
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "24px auto 0",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          paddingTop: 10,
-          fontSize: 12,
-          color: "rgba(210,230,220,0.75)",
-          display: "flex",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 8,
-        }}
-      >
-        <span>
-          © {new Date().getFullYear()} MeetOutdoors. All rights reserved.
-        </span>
-        <span style={{ opacity: 0.85 }}>
-          Made for explorers. Not for endless scrolling.
-        </span>
+        <div
+          style={{
+            marginTop: 18,
+            padding: "14px 2px 0",
+            borderTop: `1px solid ${COLORS.line}`,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+            color: COLORS.textDim,
+            fontSize: 12,
+            fontWeight: 700,
+          }}
+        >
+          <span>© {new Date().getFullYear()} MeetOutdoors. All rights reserved.</span>
+          <span style={{ color: COLORS.textSoft }}>
+            Made for explorers. Not for endless scrolling.
+          </span>
+        </div>
       </div>
+
+      <style>{`
+        @media (max-width: 980px) {
+          .footer-grid-main {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
+
+        @media (max-width: 700px) {
+          .footer-grid-main {
+            grid-template-columns: 1fr !important;
+          }
+
+          .footer-user-bar {
+            align-items: flex-start !important;
+          }
+        }
+      `}</style>
     </footer>
   );
 }

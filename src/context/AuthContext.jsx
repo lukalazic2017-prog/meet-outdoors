@@ -8,34 +8,53 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // Prvo učitavanje korisnika
-    const loadUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (!error) setUser(data.user || null);
-      setAuthLoading(false);
+    let mounted = true;
+
+    const loadSession = async () => {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        if (error) {
+          console.error("AuthContext getSession error:", error);
+          setUser(null);
+          setAuthLoading(false);
+          return;
+        }
+
+        setUser(session?.user || null);
+        setAuthLoading(false);
+      } catch (err) {
+        console.error("AuthContext loadSession error:", err);
+        if (!mounted) return;
+        setUser(null);
+        setAuthLoading(false);
+      }
     };
 
-    loadUser();
+    loadSession();
 
-    // Slušaj promene (login / logout / refresh)
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user || null);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setUser(session?.user || null);
+      setAuthLoading(false);
+    });
 
     return () => {
-      sub.subscription.unsubscribe();
+      mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
-  const value = { user, authLoading };
+  const value = { user, authLoading, setUser };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

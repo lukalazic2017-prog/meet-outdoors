@@ -726,8 +726,9 @@ export default function Timeline() {
 
   const pageStyle = {
     minHeight: "100vh",
+
     padding: isMobile ? "16px 12px 120px" : "28px 18px 40px",
-    marginTop: -112,
+    marginTop: -20,
     background:
       "radial-gradient(circle at top, #081b16 0%, #03100c 30%, #010409 65%, #000000 100%)",
     color: "#ffffff",
