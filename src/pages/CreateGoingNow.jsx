@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
@@ -319,6 +320,19 @@ export default function CreateGoingNow() {
         console.error("create going now error:", error);
         setErrorMsg(error.message || "Could not create plan.");
         return;
+      }
+
+      const { error: participantError } = await supabase
+        .from("going_now_participants")
+        .insert({
+          going_now_id: data.id,
+          user_id: user.id,
+          status: "joined",
+          joined_at: new Date().toISOString(),
+        });
+
+      if (participantError) {
+        console.error("creator auto join error:", participantError);
       }
 
       navigate(`/going-now/${data.id}`);

@@ -1,3 +1,4 @@
+
 import React, {
   useCallback,
   useEffect,
@@ -203,38 +204,61 @@ export default function GoingNowChat() {
     });
   }, []);
 
+  const openProfile = useCallback(
+    (userId) => {
+      if (!userId) return;
+      navigate(`/profile/${userId}`);
+    },
+    [navigate]
+  );
+
   const getDisplayName = useCallback(
     (obj) =>
       obj?.profiles?.full_name?.trim() ||
+      obj?.profiles?.username?.trim() ||
       `Explorer ${String(obj?.user_id || "").slice(0, 6)}`,
     []
   );
 
-  const loadParticipants = useCallback(async (goingNowId) => {
-    const { data, error } = await supabase
-      .from("going_now_participants")
-      .select(`
-        id,
-        user_id,
-        joined_at,
-        status,
-        profiles (
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq("going_now_id", goingNowId)
-      .eq("status", "joined")
-      .order("joined_at", { ascending: true });
+  const loadParticipants = useCallback(
+    async (goingNowId, ownerId = null) => {
+      const { data, error } = await supabase
+        .from("going_now_participants")
+        .select(`
+          id,
+          user_id,
+          joined_at,
+          status,
+          profiles (
+            full_name,
+            username,
+            avatar_url,
+            is_verified
+          )
+        `)
+        .eq("going_now_id", goingNowId)
+        .eq("status", "joined")
+        .order("joined_at", { ascending: true });
 
-    if (error) {
-      console.error("participants load error:", error);
-      return [];
-    }
+      if (error) {
+        console.error("participants load error:", error);
+        return [];
+      }
 
-    setParticipants(data || []);
-    return data || [];
-  }, []);
+      const resolvedOwnerId = ownerId || item?.user_id || null;
+      const sorted = [...(data || [])].sort((a, b) => {
+        if (resolvedOwnerId) {
+          if (a.user_id === resolvedOwnerId) return -1;
+          if (b.user_id === resolvedOwnerId) return 1;
+        }
+        return new Date(a.joined_at) - new Date(b.joined_at);
+      });
+
+      setParticipants(sorted);
+      return sorted;
+    },
+    [item]
+  );
 
   const loadMessages = useCallback(
     async (goingNowId) => {
@@ -248,7 +272,9 @@ export default function GoingNowChat() {
           created_at,
           profiles (
             full_name,
-            avatar_url
+            username,
+            avatar_url,
+            is_verified
           )
         `)
         .eq("going_now_id", goingNowId)
@@ -304,22 +330,15 @@ export default function GoingNowChat() {
 
       setUser(authUser);
 
-      const { data: itemData, error: itemError } = await supabase
-        .from("going_now_overview")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const itemData = await loadItem(id);
 
-      if (itemError || !itemData) {
-        console.error("chat item error:", itemError);
+      if (!itemData) {
         setErrorMsg("Could not load this chat.");
         setLoading(false);
         return;
       }
 
-      setItem(itemData);
-
-      const participantRows = await loadParticipants(id);
+      const participantRows = await loadParticipants(id, itemData.user_id);
 
       const isOwner = authUser.id === itemData.user_id;
       const isJoined = participantRows.some((p) => p.user_id === authUser.id);
@@ -341,7 +360,7 @@ export default function GoingNowChat() {
     return () => {
       mounted = false;
     };
-  }, [id, loadMessages, loadParticipants]);
+  }, [id, loadItem, loadMessages, loadParticipants]);
 
   useEffect(() => {
     if (!id || accessDenied) return;
@@ -373,8 +392,8 @@ export default function GoingNowChat() {
           filter: `going_now_id=eq.${id}`,
         },
         async () => {
-          await loadParticipants(id);
-          await loadItem(id);
+          const refreshedItem = await loadItem(id);
+          await loadParticipants(id, refreshedItem?.user_id);
         }
       )
       .subscribe();
@@ -390,7 +409,8 @@ export default function GoingNowChat() {
           filter: `id=eq.${id}`,
         },
         async () => {
-          await loadItem(id);
+          const refreshedItem = await loadItem(id);
+          await loadParticipants(id, refreshedItem?.user_id);
         }
       )
       .subscribe();
@@ -410,7 +430,6 @@ export default function GoingNowChat() {
     return !!user?.id && !!item?.user_id && user.id === item.user_id;
   }, [user, item]);
 
-  
   const statusMeta = useMemo(() => getStatusMeta(item), [item]);
 
   const sendMessage = async () => {
@@ -703,6 +722,8 @@ export default function GoingNowChat() {
                   const next = messages[index + 1];
                   const showAvatar = !prev || prev.user_id !== msg.user_id;
                   const compactBottom = next && next.user_id === msg.user_id;
+                  const isCreator = msg.user_id === item?.user_id;
+                  const isVerified = !!msg?.profiles?.is_verified;
 
                   return (
                     <div
@@ -736,6 +757,7 @@ export default function GoingNowChat() {
                             <img
                               src={msg.profiles?.avatar_url || FALLBACK_AVATAR}
                               alt={getDisplayName(msg)}
+                              onClick={() => openProfile(msg.user_id)}
                               style={{
                                 width: 36,
                                 height: 36,
@@ -744,6 +766,7 @@ export default function GoingNowChat() {
                                 background: "#0d1715",
                                 border: "1px solid rgba(255,255,255,0.08)",
                                 boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+                                cursor: "pointer",
                               }}
                             />
                           ) : null}
@@ -757,10 +780,14 @@ export default function GoingNowChat() {
                               : "20px 20px 20px 8px",
                             background: mine
                               ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
+                              : isCreator
+                              ? "linear-gradient(135deg, rgba(167,243,208,0.16), rgba(103,232,249,0.16), rgba(96,165,250,0.16))"
                               : "rgba(255,255,255,0.06)",
                             color: mine ? "#06232c" : "#f4fffb",
                             border: mine
                               ? "none"
+                              : isCreator
+                              ? "1px solid rgba(103,232,249,0.22)"
                               : "1px solid rgba(255,255,255,0.08)",
                             boxShadow: mine
                               ? "0 14px 30px rgba(103,232,249,0.16)"
@@ -773,13 +800,63 @@ export default function GoingNowChat() {
                           {showAvatar ? (
                             <div
                               style={{
-                                fontSize: 12,
-                                fontWeight: 900,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                flexWrap: "wrap",
                                 marginBottom: 6,
-                                opacity: mine ? 0.92 : 0.8,
                               }}
                             >
-                              {mine ? "You" : getDisplayName(msg)}
+                              <button
+                                type="button"
+                                onClick={() => openProfile(msg.user_id)}
+                                style={{
+                                  border: "none",
+                                  background: "transparent",
+                                  padding: 0,
+                                  margin: 0,
+                                  cursor: "pointer",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                  opacity: mine ? 0.92 : 0.9,
+                                  color: mine ? "#06232c" : "#effffd",
+                                }}
+                              >
+                                {mine ? "You" : getDisplayName(msg)}
+                              </button>
+
+                              {isCreator ? (
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    padding: "2px 8px",
+                                    borderRadius: 999,
+                                    background: mine
+                                      ? "rgba(6,35,44,0.14)"
+                                      : "linear-gradient(135deg,#00ffc3,#00b4ff)",
+                                    color: mine ? "#06232c" : "#00211a",
+                                    fontWeight: 900,
+                                  }}
+                                >
+                                  CREATOR
+                                </span>
+                              ) : null}
+
+                              {isVerified ? (
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    padding: "2px 8px",
+                                    borderRadius: 999,
+                                    background: "rgba(255,255,255,0.12)",
+                                    color: mine ? "#06232c" : "#e7fbff",
+                                    fontWeight: 900,
+                                    border: "1px solid rgba(255,255,255,0.16)",
+                                  }}
+                                >
+                                  VERIFIED
+                                </span>
+                              ) : null}
                             </div>
                           ) : null}
 
@@ -881,6 +958,8 @@ export default function GoingNowChat() {
               <div style={{ display: "grid", gap: 10 }}>
                 {participants.map((p) => {
                   const mine = user?.id === p.user_id;
+                  const isCreator = p.user_id === item?.user_id;
+                  const isVerified = !!p?.profiles?.is_verified;
 
                   return (
                     <div
@@ -889,6 +968,8 @@ export default function GoingNowChat() {
                         ...sideMemberCardStyle,
                         border: mine
                           ? "1px solid rgba(103,232,249,0.18)"
+                          : isCreator
+                          ? "1px solid rgba(103,232,249,0.22)"
                           : "1px solid rgba(255,255,255,0.08)",
                       }}
                     >
@@ -903,6 +984,7 @@ export default function GoingNowChat() {
                         <img
                           src={p.profiles?.avatar_url || FALLBACK_AVATAR}
                           alt={getDisplayName(p)}
+                          onClick={() => openProfile(p.user_id)}
                           style={{
                             width: 42,
                             height: 42,
@@ -910,21 +992,69 @@ export default function GoingNowChat() {
                             objectFit: "cover",
                             background: "#0d1715",
                             border: "1px solid rgba(255,255,255,0.08)",
+                            cursor: "pointer",
                           }}
                         />
 
-                        <div style={{ minWidth: 0 }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
                           <div
                             style={{
-                              fontWeight: 900,
-                              fontSize: 14,
-                              color: "#f2fffd",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              flexWrap: "wrap",
                             }}
                           >
-                            {mine ? "You" : getDisplayName(p)}
+                            <button
+                              type="button"
+                              onClick={() => openProfile(p.user_id)}
+                              style={{
+                                border: "none",
+                                background: "transparent",
+                                padding: 0,
+                                margin: 0,
+                                cursor: "pointer",
+                                fontWeight: 900,
+                                fontSize: 14,
+                                color: "#f2fffd",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {mine ? "You" : getDisplayName(p)}
+                            </button>
+
+                            {isCreator ? (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  padding: "2px 8px",
+                                  borderRadius: 999,
+                                  background: "linear-gradient(135deg,#00ffc3,#00b4ff)",
+                                  color: "#00211a",
+                                  fontWeight: 900,
+                                }}
+                              >
+                                CREATOR
+                              </span>
+                            ) : null}
+
+                            {isVerified ? (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  padding: "2px 8px",
+                                  borderRadius: 999,
+                                  background: "rgba(255,255,255,0.10)",
+                                  color: "#e7fbff",
+                                  fontWeight: 900,
+                                  border: "1px solid rgba(255,255,255,0.14)",
+                                }}
+                              >
+                                VERIFIED
+                              </span>
+                            ) : null}
                           </div>
 
                           <div
