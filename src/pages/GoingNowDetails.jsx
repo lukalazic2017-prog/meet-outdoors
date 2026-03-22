@@ -714,7 +714,7 @@ export default function GoingNowDetails() {
     return creatorProfile?.username?.trim() || "";
   }, [creatorProfile]);
 
-  const statusLabel = useMemo(() => getStatusLabel(item), [item, tick]);
+  const statusLabel = useMemo(() => getStatusLabel(item), [item]);
   const statusStyle = useMemo(() => statusTone(statusLabel), [statusLabel]);
 
   const mediaSrc = item?.media_url || FALLBACK_IMAGE;

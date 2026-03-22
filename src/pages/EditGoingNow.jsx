@@ -280,7 +280,7 @@ export default function EditGoingNow() {
   const [locationText, setLocationText] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
-  const [resolvedLocation, setResolvedLocation] = useState("");
+  
 
   const [category, setCategory] = useState("chill");
   const [vibe, setVibe] = useState("social");
@@ -383,7 +383,7 @@ export default function EditGoingNow() {
   }, [id, navigate]);
 
   useEffect(() => {
-    setLocationText(getResolvedLocationText(meetingPoint, city, country, locationText));
+    setLocationText(getResolvedLocationText(meetingPoint, city, country));
   }, [meetingPoint, city, country]);
 
   useEffect(() => {
