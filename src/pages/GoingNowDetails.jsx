@@ -434,7 +434,7 @@ export default function GoingNowDetails() {
       supabase.removeChannel(participantsChannel);
       supabase.removeChannel(goingNowChannel);
     };
-  }, [id]);
+  }, [id, refreshItem, refreshParticipants]);
 
   const isOwner = useMemo(() => {
     return !!user?.id && !!item?.user_id && user.id === item.user_id;
