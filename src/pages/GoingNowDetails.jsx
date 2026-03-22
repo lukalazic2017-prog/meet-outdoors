@@ -1,5 +1,4 @@
-
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -144,11 +143,18 @@ function getStatusMeta(item, expired, isFull) {
   };
 }
 
-function getDisplayName(p) {
+function getDisplayNameFromProfile(profile, fallbackUserId = "") {
   return (
-    p?.profiles?.full_name?.trim() ||
-    p?.profiles?.username?.trim() ||
-    `Explorer ${String(p.user_id || "").slice(0, 6)}`
+    profile?.full_name?.trim() ||
+    profile?.username?.trim() ||
+    `Explorer ${String(fallbackUserId || "").slice(0, 6)}`
+  );
+}
+
+function getDisplayName(participantLike) {
+  return getDisplayNameFromProfile(
+    participantLike?.profiles || null,
+    participantLike?.user_id || ""
   );
 }
 
@@ -220,6 +226,7 @@ export default function GoingNowDetails() {
 
   const [item, setItem] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [creatorProfile, setCreatorProfile] = useState(null);
   const [user, setUser] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -269,132 +276,157 @@ export default function GoingNowDetails() {
     color: "rgba(225,247,255,0.58)",
   };
 
-  const openProfile = (userId) => {
-    if (!userId) return;
-    navigate(`/profile/${userId}`);
-  };
+  const openProfile = useCallback(
+    (userId) => {
+      if (!userId) return;
+      navigate(`/profile/${userId}`);
+    },
+    [navigate]
+  );
 
-  const sortParticipants = (rows, ownerId) => {
+  const sortParticipants = useCallback((rows, ownerId) => {
     return [...(rows || [])].sort((a, b) => {
       if (ownerId) {
         if (a.user_id === ownerId) return -1;
         if (b.user_id === ownerId) return 1;
       }
-      return new Date(a.joined_at) - new Date(b.joined_at);
+
+      const aTime = new Date(a.joined_at || 0).getTime();
+      const bTime = new Date(b.joined_at || 0).getTime();
+      return aTime - bTime;
     });
-  };
+  }, []);
 
-  const refreshParticipants = async (goingNowId, ownerId = null) => {
-    const { data, error } = await supabase
-      .from("going_now_participants")
-      .select(`
-        id,
-        user_id,
-        joined_at,
-        status,
-        profiles (
-          full_name,
-          username,
-          avatar_url,
-          is_verified
-        )
-      `)
-      .eq("going_now_id", goingNowId)
-      .eq("status", "joined")
-      .order("joined_at", { ascending: true });
-
-    if (error) {
-      console.error("refresh participants error:", error);
-      return;
-    }
-
-    setParticipants(sortParticipants(data || [], ownerId || item?.user_id || null));
-  };
-
-  const refreshItem = async (goingNowId) => {
-    const { data, error } = await supabase
-      .from("going_now_overview")
-      .select("*")
-      .eq("id", goingNowId)
-      .single();
-
-    if (error) {
-      console.error("refresh item error:", error);
+  const fetchCreatorProfile = useCallback(async (ownerId) => {
+    if (!ownerId) {
+      setCreatorProfile(null);
       return null;
     }
 
-    setItem(data || null);
-    return data || null;
-  };
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("full_name, username, avatar_url, is_verified")
+      .eq("id", ownerId)
+      .single();
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadPage() {
-      setLoading(true);
-      setErrorMsg("");
-
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
-
-      if (!mounted) return;
-      setUser(authUser || null);
-
-      const { data: itemData, error: itemError } = await supabase
-        .from("going_now_overview")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (itemError) {
-        console.error("going now details error:", itemError);
-        if (mounted) {
-          setErrorMsg("Could not load this plan.");
-          setLoading(false);
-        }
-        return;
-      }
-
-      const { data: participantsData, error: participantsError } =
-        await supabase
-          .from("going_now_participants")
-          .select(`
-            id,
-            user_id,
-            joined_at,
-            status,
-            profiles (
-              full_name,
-              username,
-              avatar_url,
-              is_verified
-            )
-          `)
-          .eq("going_now_id", id)
-          .eq("status", "joined")
-          .order("joined_at", { ascending: true });
-
-      if (participantsError) {
-        console.error("participants error:", participantsError);
-      }
-
-      if (!mounted) return;
-
-      setItem(itemData || null);
-      setParticipants(sortParticipants(participantsData || [], itemData?.user_id || null));
-      setLoading(false);
+    if (error) {
+      console.error("creator profile error:", error);
+      setCreatorProfile(null);
+      return null;
     }
 
-    loadPage();
+    setCreatorProfile(data || null);
+    return data || null;
+  }, []);
 
-    return () => {
-      mounted = false;
-    };
-  }, [id]);
+  const refreshItem = useCallback(
+    async (goingNowId) => {
+      if (!goingNowId) return null;
+
+      const { data, error } = await supabase
+        .from("going_now_overview")
+        .select("*")
+        .eq("id", goingNowId)
+        .single();
+
+      if (error) {
+        console.error("refresh item error:", error);
+        return null;
+      }
+
+      setItem(data || null);
+
+      if (data?.user_id) {
+        await fetchCreatorProfile(data.user_id);
+      } else {
+        setCreatorProfile(null);
+      }
+
+      return data || null;
+    },
+    [fetchCreatorProfile]
+  );
+
+  const refreshParticipants = useCallback(
+    async (goingNowId, ownerId = null) => {
+      if (!goingNowId) return [];
+
+      const { data, error } = await supabase
+        .from("going_now_participants")
+        .select(`
+          id,
+          user_id,
+          joined_at,
+          status,
+          profiles (
+            full_name,
+            username,
+            avatar_url,
+            is_verified
+          )
+        `)
+        .eq("going_now_id", goingNowId)
+        .eq("status", "joined")
+        .order("joined_at", { ascending: true });
+
+      if (error) {
+        console.error("refresh participants error:", error);
+        return [];
+      }
+
+      const sorted = sortParticipants(data || [], ownerId || null);
+      setParticipants(sorted);
+      return sorted;
+    },
+    [sortParticipants]
+  );
+
+  const loadPage = useCallback(async () => {
+    if (!id) return;
+
+    setLoading(true);
+    setErrorMsg("");
+
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+
+    setUser(authUser || null);
+
+    const itemData = await refreshItem(id);
+
+    if (!itemData) {
+      setErrorMsg("Could not load this plan.");
+      setLoading(false);
+      return;
+    }
+
+    await refreshParticipants(id, itemData?.user_id || null);
+    setLoading(false);
+  }, [id, refreshItem, refreshParticipants]);
 
   useEffect(() => {
-    if (!id) return;
+    let active = true;
+
+    const run = async () => {
+      if (!active) return;
+      await loadPage();
+    };
+
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [loadPage]);
+
+  useEffect(() => {
+    if (!id) return undefined;
+
+    const refreshAll = async () => {
+      const refreshedItem = await refreshItem(id);
+      await refreshParticipants(id, refreshedItem?.user_id || null);
+    };
 
     const participantsChannel = supabase
       .channel(`going-now-participants-${id}`)
@@ -406,10 +438,7 @@ export default function GoingNowDetails() {
           table: "going_now_participants",
           filter: `going_now_id=eq.${id}`,
         },
-        async () => {
-          const refreshedItem = await refreshItem(id);
-          await refreshParticipants(id, refreshedItem?.user_id || null);
-        }
+        refreshAll
       )
       .subscribe();
 
@@ -423,10 +452,7 @@ export default function GoingNowDetails() {
           table: "going_now",
           filter: `id=eq.${id}`,
         },
-        async () => {
-          const refreshedItem = await refreshItem(id);
-          await refreshParticipants(id, refreshedItem?.user_id || null);
-        }
+        refreshAll
       )
       .subscribe();
 
@@ -447,16 +473,26 @@ export default function GoingNowDetails() {
 
   const creator = useMemo(() => {
     if (!item?.user_id) return null;
-    return participants.find((p) => p.user_id === item.user_id) || null;
-  }, [participants, item]);
+
+    const creatorParticipant =
+      participants.find((p) => p.user_id === item.user_id) || null;
+
+    if (creatorParticipant) return creatorParticipant;
+
+    return {
+      user_id: item.user_id,
+      joined_at: item.created_at || item.starts_at || null,
+      profiles: creatorProfile || null,
+    };
+  }, [participants, item, creatorProfile]);
 
   const joinedCount = participants.length;
-  const spotsTotal = item?.spots_total || 0;
+  const spotsTotal = Number(item?.spots_total || 0);
   const spotsLeft = Math.max(spotsTotal - joinedCount, 0);
   const expired = item?.expires_at
     ? new Date(item.expires_at).getTime() <= Date.now()
     : false;
-  const isFull = joinedCount >= spotsTotal && spotsTotal > 0;
+  const isFull = spotsTotal > 0 ? joinedCount >= spotsTotal : false;
 
   const statusMeta = useMemo(() => {
     return getStatusMeta(item, expired, isFull);
@@ -475,11 +511,12 @@ export default function GoingNowDetails() {
     !isFull &&
     statusMeta.key === "active";
 
-  const handleJoin = async () => {
+  const handleJoin = useCallback(async () => {
     if (!user?.id) {
       navigate("/login");
       return;
     }
+
     if (!item?.id || joinBusy || !canJoin) return;
 
     try {
@@ -499,7 +536,7 @@ export default function GoingNowDetails() {
         );
 
       if (error) {
-        console.error(error);
+        console.error("join error:", error);
         setErrorMsg(error.message || "Could not join.");
         return;
       }
@@ -509,9 +546,17 @@ export default function GoingNowDetails() {
     } finally {
       setJoinBusy(false);
     }
-  };
+  }, [
+    user,
+    navigate,
+    item,
+    joinBusy,
+    canJoin,
+    refreshItem,
+    refreshParticipants,
+  ]);
 
-  const handleLeave = async () => {
+  const handleLeave = useCallback(async () => {
     if (!user?.id || !item?.id || joinBusy || !isJoined) return;
 
     try {
@@ -525,7 +570,7 @@ export default function GoingNowDetails() {
         .eq("user_id", user.id);
 
       if (error) {
-        console.error(error);
+        console.error("leave error:", error);
         setErrorMsg(error.message || "Could not leave.");
         return;
       }
@@ -535,30 +580,38 @@ export default function GoingNowDetails() {
     } finally {
       setJoinBusy(false);
     }
-  };
+  }, [user, item, joinBusy, isJoined, refreshItem, refreshParticipants]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!isOwner || !item?.id) return;
+
     const ok = window.confirm("Delete this plan?");
     if (!ok) return;
 
     try {
       setJoinBusy(true);
-      const { error } = await supabase.from("going_now").delete().eq("id", item.id);
+      setErrorMsg("");
+
+      const { error } = await supabase
+        .from("going_now")
+        .delete()
+        .eq("id", item.id);
+
       if (error) {
-        console.error(error);
+        console.error("delete error:", error);
         setErrorMsg(error.message || "Could not delete plan.");
         return;
       }
+
       navigate("/going-now");
     } finally {
       setJoinBusy(false);
     }
-  };
+  }, [isOwner, item, navigate]);
 
-  const openChat = () => {
+  const openChat = useCallback(() => {
     navigate(`/going-now/${id}/chat`);
-  };
+  }, [navigate, id]);
 
   if (loading) {
     return (
@@ -634,7 +687,7 @@ export default function GoingNowDetails() {
                 fontSize: 15,
               }}
             >
-              This going now plan does not exist or is no longer available.
+              {errorMsg || "This going now plan does not exist or is no longer available."}
             </p>
           </div>
         </div>
@@ -812,7 +865,7 @@ export default function GoingNowDetails() {
                 >
                   {participants.slice(0, 5).map((p, index) => (
                     <img
-                      key={p.id}
+                      key={p.id || `${p.user_id}-${index}`}
                       src={p.profiles?.avatar_url || FALLBACK_AVATAR}
                       alt={getDisplayName(p)}
                       onClick={() => openProfile(p.user_id)}
@@ -1094,7 +1147,7 @@ export default function GoingNowDetails() {
                       <div style={{ display: "flex", alignItems: "center" }}>
                         {participants.slice(0, 6).map((p, index) => (
                           <img
-                            key={p.id}
+                            key={p.id || `${p.user_id}-${index}`}
                             src={p.profiles?.avatar_url || FALLBACK_AVATAR}
                             alt={getDisplayName(p)}
                             onClick={() => openProfile(p.user_id)}
@@ -1128,13 +1181,13 @@ export default function GoingNowDetails() {
                     </div>
                   ) : (
                     <div style={{ display: "grid", gap: 10 }}>
-                      {participants.map((p) => {
+                      {participants.map((p, index) => {
                         const isCreator = p.user_id === item.user_id;
                         const isVerified = !!p?.profiles?.is_verified;
 
                         return (
                           <div
-                            key={p.id}
+                            key={p.id || `${p.user_id}-${index}`}
                             style={{
                               ...softCard,
                               padding: 12,
@@ -1536,11 +1589,7 @@ function ActionPanel({
         </>
       ) : isJoined ? (
         <>
-          <button
-            type="button"
-            onClick={openChat}
-            style={primaryButtonStyle}
-          >
+          <button type="button" onClick={openChat} style={primaryButtonStyle}>
             Open chat
           </button>
 
