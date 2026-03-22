@@ -458,11 +458,16 @@ export default function GoingNowDetails() {
       setJoinBusy(true);
       setErrorMsg("");
 
-      const { error } = await supabase.from("going_now_participants").insert({
-        going_now_id: item.id,
-        user_id: user.id,
-        status: "joined",
-      });
+      const { error } = await supabase
+  .from("going_now_participants")
+  .upsert(
+    {
+      going_now_id: item.id,
+      user_id: user.id,
+      status: "joined",
+    },
+    { onConflict: "going_now_id,user_id" }
+  );
 
       if (error) {
         console.error(error);
