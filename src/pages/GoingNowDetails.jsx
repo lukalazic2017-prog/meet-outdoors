@@ -408,7 +408,7 @@ export default function GoingNowDetails() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showMedia, setShowMedia] = useState(false);
-  const [tick, setTick] = useState(Date.now());
+  const [setTick] = useState(Date.now());
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
 

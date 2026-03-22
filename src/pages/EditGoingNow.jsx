@@ -383,7 +383,7 @@ export default function EditGoingNow() {
   }, [id, navigate]);
 
   useEffect(() => {
-    setLocationText(getResolvedLocationText(meetingPoint, city, country, locationText));
+    setLocationText(getResolvedLocationText(meetingPoint, city, country));
   }, [meetingPoint, city, country]);
 
   useEffect(() => {
