@@ -290,9 +290,6 @@ export default function CreateGoingNow() {
         setUploadingMedia(false);
       }
 
-      const finalTitle =
-        title.trim() ||
-        `${CATEGORY_OPTIONS.find((x) => x.value === category)?.label || "Plan"} now`;
 
   const { data, error } = await supabase
   .from("going_now")
