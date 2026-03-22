@@ -165,11 +165,7 @@ export default function GoingNowDetails() {
         }, {
           onConflict: "going_now_id,user_id",
         });
-{isOwner ? (
-  <button onClick={() => navigate(`/going-now/${id}/edit`)}>
-    Edit
-  </button>
-) : null}
+
       await loadParticipants();
     } catch (err) {
       console.error(err);
@@ -201,6 +197,12 @@ export default function GoingNowDetails() {
       setLeaveBusy(false);
     }
   };
+
+  {isOwner ? (
+  <button onClick={() => navigate(`/going-now/${id}/edit`)}>
+    Edit
+  </button>
+) : null}
 
   /* ================= CHAT ================= */
 
