@@ -158,13 +158,16 @@ export default function GoingNowDetails() {
 
       await supabase
         .from("going_now_participants")
-        .upsert({
-          going_now_id: id,
-          user_id: user.id,
-          status: "joined",
-        }, {
-          onConflict: "going_now_id,user_id",
-        });
+        .upsert(
+          {
+            going_now_id: id,
+            user_id: user.id,
+            status: "joined",
+          },
+          {
+            onConflict: "going_now_id,user_id",
+          }
+        );
 
       await loadParticipants();
     } catch (err) {
@@ -198,12 +201,6 @@ export default function GoingNowDetails() {
     }
   };
 
-  {isOwner ? (
-  <button onClick={() => navigate(`/going-now/${id}/edit`)}>
-    Edit
-  </button>
-) : null}
-
   /* ================= CHAT ================= */
 
   const openChat = () => {
@@ -215,11 +212,10 @@ export default function GoingNowDetails() {
     navigate(`/going-now/${id}/chat`);
   };
 
-  /* ================= TEMP UI ================= */
+  /* ================= UI ================= */
 
-  if (loading) return <div>Loading...</div>;
-
-  if (!item) return <div>Not found</div>;
+  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
+  if (!item) return <div style={{ padding: 20 }}>Not found</div>;
 
   return (
     <div style={{ padding: 20 }}>
@@ -232,17 +228,27 @@ export default function GoingNowDetails() {
       {errorMsg && <p>{errorMsg}</p>}
 
       <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={handleJoin} disabled={joinBusy}>
-          Join
-        </button>
-
-        <button onClick={handleLeave} disabled={leaveBusy}>
-          Leave
-        </button>
+        {!isOwner ? (
+          !hasJoined ? (
+            <button onClick={handleJoin} disabled={joinBusy}>
+              {joinBusy ? "Joining..." : "Join"}
+            </button>
+          ) : (
+            <button onClick={handleLeave} disabled={leaveBusy}>
+              {leaveBusy ? "Leaving..." : "Leave"}
+            </button>
+          )
+        ) : null}
 
         <button onClick={openChat}>
           Chat
         </button>
+
+        {isOwner && (
+          <button onClick={() => navigate(`/going-now/${id}/edit`)}>
+            Edit
+          </button>
+        )}
       </div>
     </div>
   );
