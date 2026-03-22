@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
+const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=12";
 const FALLBACK_IMAGE =
   "https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg";
-const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=12";
 
 function formatDateTime(value) {
   if (!value) return "Time soon";
@@ -20,16 +20,23 @@ function formatDateTime(value) {
   });
 }
 
-function formatJoinedTime(value) {
-  if (!value) return "Just joined";
+function formatTimeOnly(value) {
+  if (!value) return "";
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "Just joined";
-
-  return d.toLocaleString(undefined, {
-    day: "numeric",
-    month: "short",
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+function formatCompactDate(value) {
+  if (!value) return "Recently";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "Recently";
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -69,23 +76,42 @@ function getVibeEmoji(vibe) {
   }
 }
 
-function getDifficultyEmoji(difficulty) {
-  switch ((difficulty || "").toLowerCase()) {
+function getDifficultyMeta(diff) {
+  switch ((diff || "").toLowerCase()) {
     case "easy":
-      return "🟢";
+      return {
+        label: "Easy",
+        bg: "rgba(167,243,208,0.14)",
+        border: "1px solid rgba(167,243,208,0.24)",
+        color: "#d6fff0",
+      };
     case "moderate":
-      return "🟡";
+      return {
+        label: "Moderate",
+        bg: "rgba(103,232,249,0.14)",
+        border: "1px solid rgba(103,232,249,0.24)",
+        color: "#dcfbff",
+      };
     case "hard":
-      return "🔵";
+      return {
+        label: "Hard",
+        bg: "rgba(96,165,250,0.14)",
+        border: "1px solid rgba(96,165,250,0.24)",
+        color: "#e9f0ff",
+      };
     default:
-      return "🎯";
+      return {
+        label: "Open",
+        bg: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#eef7fb",
+      };
   }
 }
 
-function getStatusMeta(item, expired, isFull) {
+function getStatusMeta(item) {
   if (!item) {
     return {
-      key: "loading",
       label: "Loading",
       pill: {
         background: "rgba(255,255,255,0.10)",
@@ -95,9 +121,12 @@ function getStatusMeta(item, expired, isFull) {
     };
   }
 
+  const expired = item.expires_at
+    ? new Date(item.expires_at).getTime() <= Date.now()
+    : false;
+
   if (item.status === "cancelled") {
     return {
-      key: "cancelled",
       label: "Cancelled",
       pill: {
         background: "rgba(255,90,90,0.12)",
@@ -109,7 +138,6 @@ function getStatusMeta(item, expired, isFull) {
 
   if (expired || item.status === "ended") {
     return {
-      key: "ended",
       label: "Ended",
       pill: {
         background: "rgba(255,255,255,0.08)",
@@ -119,9 +147,8 @@ function getStatusMeta(item, expired, isFull) {
     };
   }
 
-  if (isFull || item.status === "full") {
+  if (item.status === "full") {
     return {
-      key: "full",
       label: "Full",
       pill: {
         background: "rgba(255,255,255,0.08)",
@@ -132,8 +159,7 @@ function getStatusMeta(item, expired, isFull) {
   }
 
   return {
-    key: "active",
-    label: "Live now",
+    label: "Live",
     pill: {
       background:
         "linear-gradient(135deg, rgba(167,243,208,0.94), rgba(103,232,249,0.94), rgba(96,165,250,0.94))",
@@ -143,7 +169,52 @@ function getStatusMeta(item, expired, isFull) {
   };
 }
 
-function getDisplayNameFromProfile(profile, fallbackUserId = "") {
+function getRelativeTimeLabel(startsAt, expiresAt, status) {
+  const now = Date.now();
+  const start = startsAt ? new Date(startsAt).getTime() : null;
+  const end = expiresAt ? new Date(expiresAt).getTime() : null;
+
+  if (status === "cancelled") return "This plan was cancelled.";
+  if (end && end <= now) return "This live plan has ended.";
+
+  if (start && start > now) {
+    const diff = start - now;
+    const mins = Math.max(1, Math.round(diff / 60000));
+    if (mins < 60) return `Starts in ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return rem ? `Starts in ${hours}h ${rem}m` : `Starts in ${hours}h`;
+  }
+
+  if (start && start <= now) {
+    const diff = now - start;
+    const mins = Math.max(1, Math.round(diff / 60000));
+    if (mins < 60) return `Started ${mins} min ago`;
+    const hours = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return rem ? `Started ${hours}h ${rem}m ago` : `Started ${hours}h ago`;
+  }
+
+  return "Live now";
+}
+
+function getTimeLeftLabel(expiresAt) {
+  if (!expiresAt) return "No end time set";
+  const now = Date.now();
+  const end = new Date(expiresAt).getTime();
+  if (Number.isNaN(end)) return "No end time set";
+  if (end <= now) return "Ended";
+
+  const diff = end - now;
+  const mins = Math.max(1, Math.round(diff / 60000));
+  if (mins < 60) return `Ends in ${mins} min`;
+
+  const hours = Math.floor(mins / 60);
+  const rem = mins % 60;
+  return rem ? `Ends in ${hours}h ${rem}m` : `Ends in ${hours}h`;
+}
+
+function getDisplayName(profile, fallbackUserId = "") {
   return (
     profile?.full_name?.trim() ||
     profile?.username?.trim() ||
@@ -151,53 +222,28 @@ function getDisplayNameFromProfile(profile, fallbackUserId = "") {
   );
 }
 
-function getDisplayName(participantLike) {
-  return getDisplayNameFromProfile(
-    participantLike?.profiles || null,
-    participantLike?.user_id || ""
-  );
-}
+function HeroMedia({ item, onOpen }) {
+  const fallback =
+    item?.media_url || item?.image_url || item?.cover_image || FALLBACK_IMAGE;
 
-function HeroMedia({ item }) {
-  const fallback = item?.image_url || item?.cover_image || FALLBACK_IMAGE;
-  const mediaUrl = item?.media_url || null;
-  const mediaType = item?.media_type || null;
-
-  if (mediaUrl && mediaType === "video") {
+  if (item?.media_url && item?.media_type === "video") {
     return (
       <video
-        src={mediaUrl}
+        src={item.media_url}
         muted
-        playsInline
-        loop
         autoPlay
+        loop
+        playsInline
         preload="metadata"
+        onClick={onOpen}
         style={{
           position: "absolute",
           inset: 0,
           width: "100%",
           height: "100%",
           objectFit: "cover",
-          filter: "saturate(1.08) contrast(1.05) brightness(0.90)",
-          display: "block",
-        }}
-      />
-    );
-  }
-
-  if (mediaUrl) {
-    return (
-      <img
-        src={mediaUrl}
-        alt={item?.title || "Going now"}
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          filter: "saturate(1.08) contrast(1.05) brightness(0.90)",
-          display: "block",
+          cursor: "pointer",
+          filter: "saturate(1.08) contrast(1.06) brightness(0.82)",
         }}
       />
     );
@@ -207,16 +253,227 @@ function HeroMedia({ item }) {
     <img
       src={fallback}
       alt={item?.title || "Going now"}
+      onClick={onOpen}
       style={{
         position: "absolute",
         inset: 0,
         width: "100%",
         height: "100%",
         objectFit: "cover",
-        filter: "saturate(1.08) contrast(1.05) brightness(0.90)",
-        display: "block",
+        cursor: "pointer",
+        filter: "saturate(1.08) contrast(1.06) brightness(0.82)",
       }}
     />
+  );
+}
+
+function HeroMiniStat({ label, value }) {
+  return (
+    <div
+      style={{
+        padding: "10px 12px",
+        borderRadius: 16,
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        minWidth: 96,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: "rgba(227,247,242,0.66)",
+          fontWeight: 800,
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          color: "#f5fffd",
+          fontWeight: 900,
+          fontSize: 15,
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ParticipantStack({ participants, onOpenProfile }) {
+  const visible = participants.slice(0, 6);
+  const extra = Math.max(0, participants.length - visible.length);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
+        {visible.map((p, index) => (
+          <img
+            key={p.id || `${p.user_id}-${index}`}
+            src={p?.profiles?.avatar_url || FALLBACK_AVATAR}
+            alt={getDisplayName(p?.profiles, p?.user_id)}
+            onClick={() => onOpenProfile?.(p?.user_id)}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              objectFit: "cover",
+              border: "2px solid rgba(3,10,14,0.95)",
+              marginLeft: index === 0 ? 0 : -10,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+              cursor: "pointer",
+              background: "#0d1715",
+            }}
+          />
+        ))}
+      </div>
+
+      <div>
+        <div style={{ color: "#f3fffc", fontWeight: 900, fontSize: 15 }}>
+          {participants.length} going now
+        </div>
+        <div style={{ color: "rgba(227,247,242,0.68)", fontSize: 13 }}>
+          {extra > 0 ? `+${extra} more joined` : "Tap avatars to open profiles"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MediaFullscreen({ open, item, onClose }) {
+  if (!open) return null;
+
+  const src =
+    item?.media_url || item?.image_url || item?.cover_image || FALLBACK_IMAGE;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(2,8,12,0.92)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 18,
+      }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          width: 46,
+          height: 46,
+          borderRadius: "50%",
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(255,255,255,0.08)",
+          color: "#fff",
+          fontSize: 22,
+          cursor: "pointer",
+        }}
+      >
+        ×
+      </button>
+
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "min(1200px, 100%)",
+          maxHeight: "90vh",
+          borderRadius: 26,
+          overflow: "hidden",
+          border: "1px solid rgba(255,255,255,0.10)",
+          boxShadow: "0 30px 80px rgba(0,0,0,0.34)",
+          background: "#050b0f",
+        }}
+      >
+        {item?.media_url && item?.media_type === "video" ? (
+          <video
+            src={src}
+            controls
+            autoPlay
+            playsInline
+            style={{
+              width: "100%",
+              maxHeight: "90vh",
+              display: "block",
+              background: "#000",
+            }}
+          />
+        ) : (
+          <img
+            src={src}
+            alt={item?.title || "Media"}
+            style={{
+              width: "100%",
+              maxHeight: "90vh",
+              objectFit: "contain",
+              display: "block",
+              background: "#000",
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SectionTitle({ eyebrow, title, sub }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {eyebrow ? (
+        <div
+          style={{
+            fontSize: 11,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "rgba(181,245,235,0.72)",
+            fontWeight: 900,
+            marginBottom: 8,
+          }}
+        >
+          {eyebrow}
+        </div>
+      ) : null}
+
+      <div
+        style={{
+          color: "#f3fffc",
+          fontWeight: 950,
+          fontSize: 24,
+          lineHeight: 1.02,
+          letterSpacing: "-0.03em",
+          marginBottom: sub ? 8 : 0,
+        }}
+      >
+        {title}
+      </div>
+
+      {sub ? (
+        <div
+          style={{
+            color: "rgba(227,247,242,0.70)",
+            lineHeight: 1.6,
+            fontSize: 14,
+          }}
+        >
+          {sub}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -226,55 +483,223 @@ export default function GoingNowDetails() {
 
   const [item, setItem] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [creatorProfile, setCreatorProfile] = useState(null);
   const [user, setUser] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [joinBusy, setJoinBusy] = useState(false);
+  const [leaveBusy, setLeaveBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [showFullMedia, setShowFullMedia] = useState(false);
+  const [readMore, setReadMore] = useState(false);
+  const [tick, setTick] = useState(Date.now());
 
-  const shellBg =
-    "radial-gradient(circle at top, rgba(103,232,249,0.16), transparent 18%), radial-gradient(circle at 82% 16%, rgba(167,243,208,0.15), transparent 18%), radial-gradient(circle at 18% 72%, rgba(96,165,250,0.12), transparent 20%), linear-gradient(180deg, #031019 0%, #081b28 40%, #0b2330 100%)";
+  const loadItem = useCallback(async (goingNowId) => {
+    const { data, error } = await supabase
+      .from("going_now_overview")
+      .select("*")
+      .eq("id", goingNowId)
+      .single();
 
-  const glassPanel = {
-    borderRadius: 28,
-    background:
-      "linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045))",
-    border: "1px solid rgba(157,229,219,0.14)",
-    boxShadow:
-      "0 20px 55px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.08)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-  };
+    if (error) {
+      console.error("load item error:", error);
+      return null;
+    }
 
-  const softCard = {
-    borderRadius: 20,
-    background: "rgba(255,255,255,0.055)",
-    border: "1px solid rgba(125,211,252,0.12)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-  };
+    setItem(data || null);
+    return data || null;
+  }, []);
 
-  const miniPill = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "10px 14px",
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.08)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    fontWeight: 850,
-    color: "#effffd",
-  };
+  const loadParticipants = useCallback(async (goingNowId, ownerId = null) => {
+    const { data, error } = await supabase
+      .from("going_now_participants")
+      .select(`
+        id,
+        user_id,
+        joined_at,
+        status,
+        profiles (
+          full_name,
+          username,
+          avatar_url,
+          is_verified
+        )
+      `)
+      .eq("going_now_id", goingNowId)
+      .eq("status", "joined")
+      .order("joined_at", { ascending: true });
 
-  const labelStyle = {
-    fontSize: 12,
-    fontWeight: 800,
-    textTransform: "uppercase",
-    letterSpacing: "0.12em",
-    color: "rgba(225,247,255,0.58)",
-  };
+    if (error) {
+      console.error("load participants error:", error);
+      return [];
+    }
+
+    const resolvedOwnerId = ownerId || null;
+    const sorted = [...(data || [])].sort((a, b) => {
+      if (resolvedOwnerId) {
+        if (a.user_id === resolvedOwnerId) return -1;
+        if (b.user_id === resolvedOwnerId) return 1;
+      }
+      return new Date(a.joined_at) - new Date(b.joined_at);
+    });
+
+    setParticipants(sorted);
+    return sorted;
+  }, []);
+
+  const refreshAll = useCallback(async () => {
+    setErrorMsg("");
+
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+
+    setUser(authUser || null);
+
+    const itemData = await loadItem(id);
+
+    if (!itemData) {
+      setItem(null);
+      setParticipants([]);
+      return;
+    }
+
+    await loadParticipants(id, itemData.user_id);
+  }, [id, loadItem, loadParticipants]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadPage() {
+      setLoading(true);
+      await refreshAll();
+      if (!mounted) return;
+      setLoading(false);
+    }
+
+    loadPage();
+
+    return () => {
+      mounted = false;
+    };
+  }, [refreshAll]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick(Date.now());
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const itemChannel = supabase
+      .channel(`going-now-details-item-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "going_now",
+          filter: `id=eq.${id}`,
+        },
+        async () => {
+          const fresh = await loadItem(id);
+          await loadParticipants(id, fresh?.user_id);
+        }
+      )
+      .subscribe();
+
+    const participantChannel = supabase
+      .channel(`going-now-details-participants-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "going_now_participants",
+          filter: `going_now_id=eq.${id}`,
+        },
+        async () => {
+          const fresh = await loadItem(id);
+          await loadParticipants(id, fresh?.user_id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(itemChannel);
+      supabase.removeChannel(participantChannel);
+    };
+  }, [id, loadItem, loadParticipants]);
+
+  const isOwner = useMemo(() => {
+    return !!user?.id && !!item?.user_id && user.id === item.user_id;
+  }, [user, item]);
+
+  const hasJoined = useMemo(() => {
+    return !!user?.id && participants.some((p) => p.user_id === user.id);
+  }, [participants, user]);
+
+  const creatorProfile = useMemo(() => {
+    const ownerParticipant = participants.find((p) => p.user_id === item?.user_id);
+    return ownerParticipant?.profiles || null;
+  }, [participants, item]);
+
+  const creatorName = useMemo(() => {
+    return getDisplayName(creatorProfile, item?.user_id);
+  }, [creatorProfile, item]);
+
+  const creatorUsername = useMemo(() => {
+    return creatorProfile?.username?.trim() || "";
+  }, [creatorProfile]);
+
+  const creatorAvatar = useMemo(() => {
+    return creatorProfile?.avatar_url || FALLBACK_AVATAR;
+  }, [creatorProfile]);
+
+  const creatorVerified = useMemo(() => {
+    return !!creatorProfile?.is_verified;
+  }, [creatorProfile]);
+
+  const statusMeta = useMemo(() => getStatusMeta(item), [item, tick]);
+  const difficultyMeta = useMemo(
+    () => getDifficultyMeta(item?.difficulty),
+    [item?.difficulty]
+  );
+
+  const relativeTimeLabel = useMemo(
+    () => getRelativeTimeLabel(item?.starts_at, item?.expires_at, item?.status),
+    [item, tick]
+  );
+
+  const timeLeftLabel = useMemo(
+    () => getTimeLeftLabel(item?.expires_at),
+    [item?.expires_at, tick]
+  );
+
+  const canJoin = useMemo(() => {
+    if (!item) return false;
+    if (!user?.id) return true;
+    if (hasJoined) return false;
+    if (item.status === "cancelled" || item.status === "ended" || item.status === "full")
+      return false;
+
+    if (item.expires_at && new Date(item.expires_at).getTime() <= Date.now()) {
+      return false;
+    }
+
+    return true;
+  }, [item, user, hasJoined]);
+
+  const isEnded = useMemo(() => {
+    if (!item) return false;
+    if (item.status === "cancelled" || item.status === "ended") return true;
+    if (item.expires_at && new Date(item.expires_at).getTime() <= Date.now()) return true;
+    return false;
+  }, [item, tick]);
 
   const openProfile = useCallback(
     (userId) => {
@@ -284,283 +709,43 @@ export default function GoingNowDetails() {
     [navigate]
   );
 
-  const sortParticipants = useCallback((rows, ownerId) => {
-    return [...(rows || [])].sort((a, b) => {
-      if (ownerId) {
-        if (a.user_id === ownerId) return -1;
-        if (b.user_id === ownerId) return 1;
-      }
-
-      const aTime = new Date(a.joined_at || 0).getTime();
-      const bTime = new Date(b.joined_at || 0).getTime();
-      return aTime - bTime;
-    });
-  }, []);
-
-  const fetchCreatorProfile = useCallback(async (ownerId) => {
-    if (!ownerId) {
-      setCreatorProfile(null);
-      return null;
-    }
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("full_name, username, avatar_url, is_verified")
-      .eq("id", ownerId)
-      .single();
-
-    if (error) {
-      console.error("creator profile error:", error);
-      setCreatorProfile(null);
-      return null;
-    }
-
-    setCreatorProfile(data || null);
-    return data || null;
-  }, []);
-
-  const refreshItem = useCallback(
-    async (goingNowId) => {
-      if (!goingNowId) return null;
-
-      const { data, error } = await supabase
-        .from("going_now_overview")
-        .select("*")
-        .eq("id", goingNowId)
-        .single();
-
-      if (error) {
-        console.error("refresh item error:", error);
-        return null;
-      }
-
-      setItem(data || null);
-
-      if (data?.user_id) {
-        await fetchCreatorProfile(data.user_id);
-      } else {
-        setCreatorProfile(null);
-      }
-
-      return data || null;
-    },
-    [fetchCreatorProfile]
-  );
-
-  const refreshParticipants = useCallback(
-    async (goingNowId, ownerId = null) => {
-      if (!goingNowId) return [];
-
-      const { data, error } = await supabase
-        .from("going_now_participants")
-        .select(`
-          id,
-          user_id,
-          joined_at,
-          status,
-          profiles (
-            full_name,
-            username,
-            avatar_url,
-            is_verified
-          )
-        `)
-        .eq("going_now_id", goingNowId)
-        .eq("status", "joined")
-        .order("joined_at", { ascending: true });
-
-      if (error) {
-        console.error("refresh participants error:", error);
-        return [];
-      }
-
-      const sorted = sortParticipants(data || [], ownerId || null);
-      setParticipants(sorted);
-      return sorted;
-    },
-    [sortParticipants]
-  );
-
-  const loadPage = useCallback(async () => {
-    if (!id) return;
-
-    setLoading(true);
-    setErrorMsg("");
-
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    setUser(authUser || null);
-
-    const itemData = await refreshItem(id);
-
-    if (!itemData) {
-      setErrorMsg("Could not load this plan.");
-      setLoading(false);
-      return;
-    }
-
-    await refreshParticipants(id, itemData?.user_id || null);
-    setLoading(false);
-  }, [id, refreshItem, refreshParticipants]);
-
-  useEffect(() => {
-    let active = true;
-
-    const run = async () => {
-      if (!active) return;
-      await loadPage();
-    };
-
-    run();
-
-    return () => {
-      active = false;
-    };
-  }, [loadPage]);
-
-  useEffect(() => {
-    if (!id) return undefined;
-
-    const refreshAll = async () => {
-      const refreshedItem = await refreshItem(id);
-      await refreshParticipants(id, refreshedItem?.user_id || null);
-    };
-
-    const participantsChannel = supabase
-      .channel(`going-now-participants-${id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "going_now_participants",
-          filter: `going_now_id=eq.${id}`,
-        },
-        refreshAll
-      )
-      .subscribe();
-
-    const goingNowChannel = supabase
-      .channel(`going-now-item-${id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "going_now",
-          filter: `id=eq.${id}`,
-        },
-        refreshAll
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(participantsChannel);
-      supabase.removeChannel(goingNowChannel);
-    };
-  }, [id, refreshItem, refreshParticipants]);
-
-  const isOwner = useMemo(() => {
-    return !!user?.id && !!item?.user_id && user.id === item.user_id;
-  }, [user, item]);
-
-  const isJoined = useMemo(() => {
-    if (!user?.id) return false;
-    return participants.some((p) => p.user_id === user.id);
-  }, [participants, user]);
-
-  const creator = useMemo(() => {
-    if (!item?.user_id) return null;
-
-    const creatorParticipant =
-      participants.find((p) => p.user_id === item.user_id) || null;
-
-    if (creatorParticipant) return creatorParticipant;
-
-    return {
-      user_id: item.user_id,
-      joined_at: item.created_at || item.starts_at || null,
-      profiles: creatorProfile || null,
-    };
-  }, [participants, item, creatorProfile]);
-
-  const joinedCount = participants.length;
-  const spotsTotal = Number(item?.spots_total || 0);
-  const spotsLeft = Math.max(spotsTotal - joinedCount, 0);
-  const expired = item?.expires_at
-    ? new Date(item.expires_at).getTime() <= Date.now()
-    : false;
-  const isFull = spotsTotal > 0 ? joinedCount >= spotsTotal : false;
-
-  const statusMeta = useMemo(() => {
-    return getStatusMeta(item, expired, isFull);
-  }, [item, expired, isFull]);
-
-  const startsSoon = useMemo(() => {
-    if (!item?.starts_at) return false;
-    const diff = new Date(item.starts_at).getTime() - Date.now();
-    return diff > 0 && diff <= 1000 * 60 * 90;
-  }, [item]);
-
-  const canJoin =
-    !!user?.id &&
-    !isOwner &&
-    !isJoined &&
-    !isFull &&
-    statusMeta.key === "active";
-
-  const handleJoin = useCallback(async () => {
+  const handleJoin = async () => {
     if (!user?.id) {
       navigate("/login");
       return;
     }
 
-    if (!item?.id || joinBusy || !canJoin) return;
+    if (!item?.id || joinBusy || hasJoined || isEnded) return;
 
     try {
       setJoinBusy(true);
       setErrorMsg("");
 
-      const { error } = await supabase
-        .from("going_now_participants")
-        .upsert(
-          {
-            going_now_id: item.id,
-            user_id: user.id,
-            status: "joined",
-            joined_at: new Date().toISOString(),
-          },
-          { onConflict: "going_now_id,user_id" }
-        );
+      const { error } = await supabase.from("going_now_participants").insert({
+        going_now_id: item.id,
+        user_id: user.id,
+        status: "joined",
+        joined_at: new Date().toISOString(),
+      });
 
       if (error) {
         console.error("join error:", error);
-        setErrorMsg(error.message || "Could not join.");
+        setErrorMsg(error.message || "Could not join this live plan.");
         return;
       }
 
-      const refreshedItem = await refreshItem(item.id);
-      await refreshParticipants(item.id, refreshedItem?.user_id || null);
+      const fresh = await loadItem(item.id);
+      await loadParticipants(item.id, fresh?.user_id);
     } finally {
       setJoinBusy(false);
     }
-  }, [
-    user,
-    navigate,
-    item,
-    joinBusy,
-    canJoin,
-    refreshItem,
-    refreshParticipants,
-  ]);
+  };
 
-  const handleLeave = useCallback(async () => {
-    if (!user?.id || !item?.id || joinBusy || !isJoined) return;
+  const handleLeave = async () => {
+    if (!user?.id || !item?.id || leaveBusy || !hasJoined) return;
 
     try {
-      setJoinBusy(true);
+      setLeaveBusy(true);
       setErrorMsg("");
 
       const { error } = await supabase
@@ -571,1276 +756,1006 @@ export default function GoingNowDetails() {
 
       if (error) {
         console.error("leave error:", error);
-        setErrorMsg(error.message || "Could not leave.");
+        setErrorMsg(error.message || "Could not leave this live plan.");
         return;
       }
 
-      const refreshedItem = await refreshItem(item.id);
-      await refreshParticipants(item.id, refreshedItem?.user_id || null);
+      const fresh = await loadItem(item.id);
+      await loadParticipants(item.id, fresh?.user_id);
     } finally {
-      setJoinBusy(false);
+      setLeaveBusy(false);
     }
-  }, [user, item, joinBusy, isJoined, refreshItem, refreshParticipants]);
+  };
 
-  const handleDelete = useCallback(async () => {
-    if (!isOwner || !item?.id) return;
-
-    const ok = window.confirm("Delete this plan?");
-    if (!ok) return;
-
+  const handleShare = async () => {
     try {
-      setJoinBusy(true);
-      setErrorMsg("");
+      const url = `${window.location.origin}/going-now/${id}`;
 
-      const { error } = await supabase
-        .from("going_now")
-        .delete()
-        .eq("id", item.id);
-
-      if (error) {
-        console.error("delete error:", error);
-        setErrorMsg(error.message || "Could not delete plan.");
+      if (navigator.share) {
+        await navigator.share({
+          title: item?.title || "Going now",
+          text: item?.description || "Join this live plan",
+          url,
+        });
         return;
       }
 
-      navigate("/going-now");
-    } finally {
-      setJoinBusy(false);
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      console.error("share error:", err);
     }
-  }, [isOwner, item, navigate]);
+  };
 
-  const openChat = useCallback(() => {
+  const openChat = () => {
+    if (!user?.id) {
+      navigate("/login");
+      return;
+    }
     navigate(`/going-now/${id}/chat`);
-  }, [navigate, id]);
+  };
+
+  const descriptionText = item?.description?.trim() || "";
+  const longDescription = descriptionText.length > 220;
+  const shownDescription =
+    !longDescription || readMore
+      ? descriptionText
+      : `${descriptionText.slice(0, 220).trim()}...`;
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          marginTop: -120,
-          background: shellBg,
-          color: "#fff",
-          padding: "22px 14px 92px",
-        }}
-      >
-        <div style={{ maxWidth: 1220, margin: "0 auto" }}>
-          <div
-            style={{
-              ...glassPanel,
-              padding: 24,
-              fontSize: 18,
-              fontWeight: 900,
-            }}
-          >
-            Loading live plan...
-          </div>
+      <PageShell>
+        <div style={{ ...glassCard, padding: 24, fontSize: 18, fontWeight: 900 }}>
+          Loading live plan...
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (!item) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: shellBg,
-          color: "#fff",
-          padding: "22px 14px 92px",
-        }}
-      >
-        <div style={{ maxWidth: 1220, margin: "0 auto" }}>
-          <button
-            onClick={() => navigate(-1)}
-            style={{
-              marginBottom: 18,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "rgba(255,255,255,0.06)",
-              color: "#fff",
-              borderRadius: 999,
-              padding: "11px 15px",
-              cursor: "pointer",
-              fontWeight: 900,
-              backdropFilter: "blur(10px)",
-            }}
-          >
+      <PageShell>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+          <button onClick={() => navigate(-1)} style={backBtn}>
             ← Back
           </button>
-
-          <div style={{ ...glassPanel, padding: 28 }}>
-            <h1
-              style={{
-                margin: "0 0 10px",
-                fontSize: 34,
-                lineHeight: 1,
-                fontWeight: 950,
-                letterSpacing: "-0.04em",
-              }}
-            >
-              Plan not found
-            </h1>
-            <p
-              style={{
-                color: "rgba(255,255,255,0.72)",
-                margin: 0,
-                fontSize: 15,
-              }}
-            >
-              {errorMsg || "This going now plan does not exist or is no longer available."}
-            </p>
-          </div>
         </div>
-      </div>
+
+        <div style={{ ...glassCard, padding: 24 }}>
+          <SectionTitle
+            eyebrow="Going now"
+            title="This live plan was not found"
+            sub="It may have been removed, expired, or never existed."
+          />
+          <button onClick={() => navigate("/going-now")} style={primaryBtn}>
+            Explore Going Now
+          </button>
+        </div>
+      </PageShell>
     );
   }
 
-  const topActionTitle = !user?.id
-    ? "Login to join"
-    : isOwner
-    ? "You started this"
-    : isJoined
-    ? "You're in"
-    : statusMeta.key === "ended"
-    ? "Plan ended"
-    : statusMeta.key === "cancelled"
-    ? "Plan cancelled"
-    : statusMeta.key === "full"
-    ? "Plan is full"
-    : "Jump in now";
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        color: "#fff",
-        marginTop: -120,
-        background: shellBg,
-        padding: "16px 12px 108px",
-      }}
-    >
-      <div style={{ maxWidth: 1240, margin: "0 auto" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            marginBottom: 14,
-            flexWrap: "wrap",
-          }}
-        >
-          <button
-            onClick={() => navigate(-1)}
-            style={{
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "rgba(255,255,255,0.05)",
-              color: "#fff",
-              borderRadius: 999,
-              padding: "11px 15px",
-              cursor: "pointer",
-              fontWeight: 900,
-              backdropFilter: "blur(10px)",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-            }}
-          >
-            ← Back
+    <PageShell>
+      <MediaFullscreen
+        open={showFullMedia}
+        item={item}
+        onClose={() => setShowFullMedia(false)}
+      />
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 14,
+          flexWrap: "wrap",
+        }}
+      >
+        <button onClick={() => navigate(-1)} style={backBtn}>
+          ← Back
+        </button>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button type="button" onClick={handleShare} style={ghostBtn}>
+            {copied ? "Copied link" : "Share"}
           </button>
 
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "10px 14px",
-              borderRadius: 999,
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              fontWeight: 850,
-              ...statusMeta.pill,
-            }}
-          >
-            {statusMeta.key === "active" && "LIVE PLAN"}
-            {statusMeta.key === "full" && "FULL"}
-            {statusMeta.key === "ended" && "ENDED"}
-            {statusMeta.key === "cancelled" && "CANCELLED"}
-          </div>
-        </div>
-
-        <div
-          style={{
-            overflow: "hidden",
-            borderRadius: 34,
-            border: "1px solid rgba(255,255,255,0.09)",
-            background:
-              "linear-gradient(160deg, rgba(10,18,20,0.92), rgba(8,16,20,0.98))",
-            boxShadow:
-              "0 26px 90px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06)",
-          }}
-        >
-          <div
-            style={{
-              position: "relative",
-              minHeight: 580,
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
-            <HeroMedia item={item} />
-
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "linear-gradient(to top, rgba(4,10,14,0.98) 8%, rgba(4,10,14,0.76) 34%, rgba(4,10,14,0.34) 58%, rgba(4,10,14,0.14) 100%)",
-              }}
-            />
-
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "radial-gradient(circle at 74% 22%, rgba(103,232,249,0.24), transparent 20%), radial-gradient(circle at 26% 26%, rgba(167,243,208,0.18), transparent 18%), radial-gradient(circle at 52% 18%, rgba(255,205,130,0.14), transparent 18%)",
-              }}
-            />
-
-            <div
-              style={{
-                position: "absolute",
-                left: 18,
-                right: 18,
-                top: 18,
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
+          {isOwner ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/going-now/${id}/edit`)}
+              style={ghostBtn}
             >
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 14px",
-                    borderRadius: 999,
-                    background:
-                      "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)",
-                    color: "#06252e",
-                    fontWeight: 950,
-                    fontSize: 12,
-                    letterSpacing: "0.03em",
-                    boxShadow: "0 16px 36px rgba(103,232,249,0.28)",
-                  }}
-                >
-                  🔥 Going now
-                </div>
+              Edit
+            </button>
+          ) : null}
+        </div>
+      </div>
 
-                {item.media_type === "video" ? (
-                  <div style={miniPill}>🎬 Video preview</div>
-                ) : null}
+      <div style={heroWrapStyle}>
+        <div style={{ position: "relative", minHeight: 440 }}>
+          <HeroMedia item={item} onOpen={() => setShowFullMedia(true)} />
 
-                {startsSoon && statusMeta.key === "active" ? (
-                  <div style={miniPill}>⚡ Starting soon</div>
-                ) : null}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to top, rgba(4,10,14,0.98) 6%, rgba(4,10,14,0.82) 28%, rgba(4,10,14,0.42) 56%, rgba(4,10,14,0.18) 100%)",
+            }}
+          />
 
-                {statusMeta.key === "full" ? <div style={miniPill}>Full</div> : null}
-                {statusMeta.key === "ended" ? <div style={miniPill}>Ended</div> : null}
-              </div>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(circle at 78% 18%, rgba(103,232,249,0.22), transparent 18%), radial-gradient(circle at 20% 24%, rgba(167,243,208,0.18), transparent 18%), radial-gradient(circle at 46% 16%, rgba(255,214,125,0.08), transparent 18%)",
+            }}
+          />
 
-              {joinedCount > 0 ? (
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "8px 10px",
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.07)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    backdropFilter: "blur(12px)",
-                    WebkitBackdropFilter: "blur(12px)",
-                  }}
-                >
-                  {participants.slice(0, 5).map((p, index) => (
-                    <img
-                      key={p.id || `${p.user_id}-${index}`}
-                      src={p.profiles?.avatar_url || FALLBACK_AVATAR}
-                      alt={getDisplayName(p)}
-                      onClick={() => openProfile(p.user_id)}
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        border: "2px solid rgba(7,17,22,0.96)",
-                        marginLeft: index === 0 ? 0 : -9,
-                        background: "#0b1418",
-                        cursor: "pointer",
-                      }}
-                    />
-                  ))}
-                  <span
-                    style={{
-                      marginLeft: 10,
-                      fontSize: 12,
-                      fontWeight: 850,
-                      color: "#f2fffd",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {joinedCount} going
-                  </span>
-                </div>
-              ) : null}
+          <div
+            style={{
+              position: "absolute",
+              top: 18,
+              left: 18,
+              right: 18,
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              alignItems: "flex-start",
+            }}
+          >
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div style={heroBadgeStyle}>⚡ Going now</div>
+              {item?.media_type === "video" ? (
+                <div style={heroGhostBadge}>🎬 Video cover</div>
+              ) : (
+                <div style={heroGhostBadge}>🖼️ Image cover</div>
+              )}
             </div>
 
             <div
               style={{
-                position: "absolute",
-                left: 18,
-                right: 18,
-                bottom: 18,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 14px",
+                borderRadius: 999,
+                fontWeight: 900,
+                ...statusMeta.pill,
               }}
             >
-              <div style={{ maxWidth: 880 }}>
-                {creator ? (
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 12,
-                      marginBottom: 14,
-                      padding: "10px 14px",
-                      borderRadius: 999,
-                      background: "rgba(255,255,255,0.08)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      width: "fit-content",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => openProfile(creator.user_id)}
-                  >
-                    <img
-                      src={creator.profiles?.avatar_url || FALLBACK_AVATAR}
-                      alt={getDisplayName(creator)}
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                      }}
-                    />
-                    <div style={{ fontWeight: 900, color: "#f2fffd" }}>
-                      {getDisplayName(creator)}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        padding: "2px 8px",
-                        borderRadius: 999,
-                        background: "linear-gradient(135deg,#00ffc3,#00b4ff)",
-                        color: "#00211a",
-                        fontWeight: 900,
-                      }}
-                    >
-                      👑 CREATOR
-                    </div>
-                    {creator.profiles?.is_verified ? (
-                      <div
-                        style={{
-                          fontSize: 10,
-                          padding: "2px 8px",
-                          borderRadius: 999,
-                          background: "rgba(255,255,255,0.12)",
-                          color: "#effffd",
-                          fontWeight: 900,
-                          border: "1px solid rgba(255,255,255,0.16)",
-                        }}
-                      >
-                        VERIFIED
-                      </div>
-                    ) : null}
-                  </div>
+              {statusMeta.label}
+            </div>
+          </div>
+
+          <div
+            style={{
+              position: "absolute",
+              left: 18,
+              right: 18,
+              bottom: 18,
+            }}
+          >
+            <div style={{ maxWidth: 920 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginBottom: 12,
+                }}
+              >
+                {item?.category ? (
+                  <span style={chipStyle}>
+                    {getCategoryEmoji(item.category)} {item.category}
+                  </span>
                 ) : null}
 
-                <div
+                {item?.vibe ? (
+                  <span style={chipStyle}>
+                    {getVibeEmoji(item.vibe)} {item.vibe}
+                  </span>
+                ) : null}
+
+                <span
                   style={{
-                    display: "flex",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    marginBottom: 12,
+                    ...chipStyle,
+                    background: difficultyMeta.bg,
+                    border: difficultyMeta.border,
+                    color: difficultyMeta.color,
                   }}
                 >
-                  {item.category ? (
-                    <span style={chipStyle}>
-                      {getCategoryEmoji(item.category)} {item.category}
-                    </span>
-                  ) : null}
-                  {item.vibe ? (
-                    <span style={chipStyle}>
-                      {getVibeEmoji(item.vibe)} {item.vibe}
-                    </span>
-                  ) : null}
-                  {item.difficulty ? (
-                    <span style={chipStyle}>
-                      {getDifficultyEmoji(item.difficulty)} {item.difficulty}
-                    </span>
-                  ) : null}
+                  🧭 {difficultyMeta.label}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  color: "#fff",
+                  fontWeight: 950,
+                  fontSize: "clamp(30px, 6vw, 58px)",
+                  lineHeight: 0.94,
+                  letterSpacing: "-0.055em",
+                  marginBottom: 12,
+                  textShadow: "0 18px 34px rgba(0,0,0,0.36)",
+                }}
+              >
+                {item?.title || "Live plan"}
+              </div>
+
+              <div
+                style={{
+                  color: "rgba(235,250,245,0.88)",
+                  lineHeight: 1.65,
+                  fontWeight: 650,
+                  fontSize: 15.5,
+                  maxWidth: 760,
+                  marginBottom: 16,
+                }}
+              >
+                {relativeTimeLabel} · {timeLeftLabel}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  marginBottom: 16,
+                }}
+              >
+                <HeroMiniStat label="Location" value={item?.location_text || "Soon"} />
+                <HeroMiniStat
+                  label="Going"
+                  value={`${participants.length}${item?.spots_total ? ` / ${item.spots_total}` : ""}`}
+                />
+                <HeroMiniStat
+                  label="Starts"
+                  value={formatTimeOnly(item?.starts_at) || "Soon"}
+                />
+                <HeroMiniStat
+                  label="Ends"
+                  value={formatTimeOnly(item?.expires_at) || "Open"}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                {!hasJoined ? (
+                  <button
+                    type="button"
+                    onClick={handleJoin}
+                    disabled={!canJoin || joinBusy}
+                    style={{
+                      ...primaryBtn,
+                      cursor: !canJoin || joinBusy ? "not-allowed" : "pointer",
+                      opacity: !canJoin || joinBusy ? 0.7 : 1,
+                    }}
+                  >
+                    {joinBusy ? "Joining..." : !user?.id ? "Login to join" : "Join now"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleLeave}
+                    disabled={leaveBusy}
+                    style={{
+                      ...secondaryDangerBtn,
+                      cursor: leaveBusy ? "not-allowed" : "pointer",
+                      opacity: leaveBusy ? 0.7 : 1,
+                    }}
+                  >
+                    {leaveBusy ? "Leaving..." : "Leave plan"}
+                  </button>
+                )}
+
+                <button type="button" onClick={openChat} style={ghostBrightBtn}>
+                  Open live chat
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowFullMedia(true)}
+                  style={ghostBtn}
+                >
+                  View media
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {errorMsg ? <div style={errorStyle}>{errorMsg}</div> : null}
+
+      <div style={{ height: 16 }} />
+
+      <div className="going-details-grid" style={detailsGridStyle}>
+        <div>
+          <div style={{ ...glassCard, padding: 18, marginBottom: 16 }}>
+            <SectionTitle
+              eyebrow="Live summary"
+              title="What this plan looks like right now"
+              sub="Fast context before people decide to join."
+            />
+
+            <div className="going-quick-grid" style={quickGridStyle}>
+              <InfoCard
+                icon="📍"
+                label="Location"
+                value={item?.location_text || "Location coming soon"}
+              />
+              <InfoCard
+                icon="👥"
+                label="People going"
+                value={`${participants.length}${item?.spots_total ? ` / ${item.spots_total}` : ""}`}
+              />
+              <InfoCard
+                icon="⏰"
+                label="Starts"
+                value={formatDateTime(item?.starts_at)}
+              />
+              <InfoCard
+                icon="⌛"
+                label="Ends"
+                value={formatDateTime(item?.expires_at)}
+              />
+              <InfoCard
+                icon="✨"
+                label="Vibe"
+                value={item?.vibe || "Open vibe"}
+              />
+              <InfoCard
+                icon="🧭"
+                label="Difficulty"
+                value={difficultyMeta.label}
+              />
+            </div>
+          </div>
+
+          <div style={{ ...glassCard, padding: 18, marginBottom: 16 }}>
+            <SectionTitle
+              eyebrow="Description"
+              title="What the creator says"
+              sub="Keep it clear, fast, and easy to trust."
+            />
+
+            {descriptionText ? (
+              <>
+                <div
+                  style={{
+                    color: "rgba(239,251,247,0.86)",
+                    lineHeight: 1.8,
+                    fontSize: 15.5,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {shownDescription}
                 </div>
 
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: "clamp(38px, 7vw, 74px)",
-                    lineHeight: 0.95,
-                    fontWeight: 950,
-                    letterSpacing: "-0.06em",
-                    textShadow: "0 16px 44px rgba(0,0,0,0.42)",
-                    maxWidth: 760,
-                  }}
-                >
-                  {item.title || "Untitled plan"}
-                </h1>
+                {longDescription ? (
+                  <button
+                    type="button"
+                    onClick={() => setReadMore((v) => !v)}
+                    style={{
+                      marginTop: 14,
+                      background: "transparent",
+                      border: "none",
+                      color: "#9cf4ea",
+                      fontWeight: 900,
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    {readMore ? "Show less" : "Read more"}
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <div style={emptyTextStyle}>
+                No description yet. The title and timing still make this discoverable.
+              </div>
+            )}
+          </div>
+
+          <div style={{ ...glassCard, padding: 18 }}>
+            <SectionTitle
+              eyebrow="People going"
+              title="Who already joined"
+              sub="Social proof matters. Let people see energy before they commit."
+            />
+
+            {participants.length > 0 ? (
+              <>
+                <ParticipantStack
+                  participants={participants}
+                  onOpenProfile={openProfile}
+                />
 
                 <div
                   style={{
-                    marginTop: 14,
-                    color: "rgba(238,251,255,0.84)",
-                    fontSize: "clamp(15px, 2vw, 18px)",
-                    fontWeight: 650,
-                    lineHeight: 1.55,
-                    maxWidth: 720,
-                  }}
-                >
-                  {item.description
-                    ? item.description
-                    : "Fast plan, real people, natural vibe. Show up if it feels right."}
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
+                    display: "grid",
                     gap: 10,
                     marginTop: 18,
                   }}
                 >
-                  <div style={miniPill}>📍 {item.location_text || "Location soon"}</div>
-                  <div style={miniPill}>⏰ {formatDateTime(item.starts_at)}</div>
-                  <div style={miniPill}>
-                    👥 {joinedCount}/{spotsTotal || 0}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ padding: 16 }}>
-            <div className="going-details-layout">
-              <div className="going-main-column">
-                <div
-                  style={{
-                    ...glassPanel,
-                    padding: 16,
-                    marginBottom: 16,
-                  }}
-                >
-                  <div className="going-stats-grid">
-                    <StatCard
-                      icon="🔥"
-                      label="Going"
-                      value={`${joinedCount}/${spotsTotal}`}
-                      sub="people in right now"
-                    />
-                    <StatCard
-                      icon="🪑"
-                      label="Spots left"
-                      value={spotsLeft}
-                      sub="available right now"
-                    />
-                    <StatCard
-                      icon="🌿"
-                      label="Vibe"
-                      value={item.vibe || item.difficulty || "Social"}
-                      sub="how this plan feels"
-                    />
-                  </div>
-                </div>
-
-                <div className="mobile-top-cta">
-                  <ActionPanel
-                    glassPanel={glassPanel}
-                    softCard={softCard}
-                    item={item}
-                    id={id}
-                    user={user}
-                    isOwner={isOwner}
-                    isJoined={isJoined}
-                    joinBusy={joinBusy}
-                    statusMeta={statusMeta}
-                    canJoin={canJoin}
-                    topActionTitle={topActionTitle}
-                    joinedCount={joinedCount}
-                    spotsLeft={spotsLeft}
-                    errorMsg={errorMsg}
-                    navigate={navigate}
-                    handleJoin={handleJoin}
-                    handleLeave={handleLeave}
-                    handleDelete={handleDelete}
-                    openChat={openChat}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    ...glassPanel,
-                    padding: 16,
-                    marginBottom: 16,
-                  }}
-                >
-                  <div style={{ ...labelStyle, marginBottom: 8 }}>About this plan</div>
-                  <div
-                    style={{
-                      color: "rgba(238,251,255,0.90)",
-                      lineHeight: 1.72,
-                      fontSize: 15.5,
-                      fontWeight: 650,
-                    }}
-                  >
-                    {item.description || "No description yet."}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    ...glassPanel,
-                    padding: 16,
-                    marginBottom: 16,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      flexWrap: "wrap",
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div>
-                      <div style={{ ...labelStyle, marginBottom: 6 }}>People</div>
-                      <div
-                        style={{
-                          fontSize: 28,
-                          lineHeight: 1,
-                          fontWeight: 950,
-                          letterSpacing: "-0.04em",
-                        }}
+                  {participants.map((p) => {
+                    const name = getDisplayName(p?.profiles, p?.user_id);
+                    const username = p?.profiles?.username?.trim();
+                    const isCreator = p.user_id === item?.user_id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => openProfile(p.user_id)}
+                        style={participantRowStyle}
                       >
-                        Going now
-                      </div>
-                    </div>
-
-                    {participants.length > 0 ? (
-                      <div style={{ display: "flex", alignItems: "center" }}>
-                        {participants.slice(0, 6).map((p, index) => (
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <img
-                            key={p.id || `${p.user_id}-${index}`}
-                            src={p.profiles?.avatar_url || FALLBACK_AVATAR}
-                            alt={getDisplayName(p)}
-                            onClick={() => openProfile(p.user_id)}
-                            style={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: "50%",
-                              objectFit: "cover",
-                              border: "2px solid rgba(7,17,22,0.96)",
-                              marginLeft: index === 0 ? 0 : -10,
-                              background: "#0c171c",
-                              boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
-                              cursor: "pointer",
-                            }}
+                            src={p?.profiles?.avatar_url || FALLBACK_AVATAR}
+                            alt={name}
+                            style={participantAvatarStyle}
                           />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
 
-                  {participants.length === 0 ? (
-                    <div
-                      style={{
-                        ...softCard,
-                        padding: 18,
-                        color: "rgba(235,249,255,0.74)",
-                        fontWeight: 650,
-                      }}
-                    >
-                      Nobody joined yet. Be the first one in.
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gap: 10 }}>
-                      {participants.map((p, index) => {
-                        const isCreator = p.user_id === item.user_id;
-                        const isVerified = !!p?.profiles?.is_verified;
-
-                        return (
-                          <div
-                            key={p.id || `${p.user_id}-${index}`}
-                            style={{
-                              ...softCard,
-                              padding: 12,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: 12,
-                              border: isCreator
-                                ? "1px solid rgba(103,232,249,0.24)"
-                                : "1px solid rgba(125,211,252,0.12)",
-                            }}
-                          >
+                          <div style={{ textAlign: "left", minWidth: 0 }}>
                             <div
                               style={{
                                 display: "flex",
                                 alignItems: "center",
-                                gap: 12,
-                                minWidth: 0,
+                                gap: 8,
+                                flexWrap: "wrap",
                               }}
                             >
-                              <img
-                                src={p.profiles?.avatar_url || FALLBACK_AVATAR}
-                                alt={getDisplayName(p)}
-                                onClick={() => openProfile(p.user_id)}
+                              <span
                                 style={{
-                                  width: 48,
-                                  height: 48,
-                                  borderRadius: "50%",
-                                  objectFit: "cover",
-                                  border: "2px solid rgba(255,255,255,0.08)",
-                                  background: "#0b1518",
-                                  cursor: "pointer",
-                                }}
-                              />
-
-                              <div style={{ minWidth: 0 }}>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => openProfile(p.user_id)}
-                                    style={{
-                                      border: "none",
-                                      background: "transparent",
-                                      padding: 0,
-                                      margin: 0,
-                                      cursor: "pointer",
-                                      fontWeight: 900,
-                                      fontSize: 15,
-                                      color: "#f2fffd",
-                                      whiteSpace: "nowrap",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                    }}
-                                  >
-                                    {getDisplayName(p)}
-                                  </button>
-
-                                  {isCreator ? (
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        padding: "2px 8px",
-                                        borderRadius: 999,
-                                        background:
-                                          "linear-gradient(135deg,#00ffc3,#00b4ff)",
-                                        color: "#00211a",
-                                        fontWeight: 900,
-                                      }}
-                                    >
-                                      👑 CREATOR
-                                    </span>
-                                  ) : null}
-
-                                  {isVerified ? (
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        padding: "2px 8px",
-                                        borderRadius: 999,
-                                        background: "rgba(255,255,255,0.10)",
-                                        color: "#e7fbff",
-                                        fontWeight: 900,
-                                        border: "1px solid rgba(255,255,255,0.14)",
-                                      }}
-                                    >
-                                      VERIFIED
-                                    </span>
-                                  ) : null}
-                                </div>
-
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    color: "rgba(232,247,255,0.64)",
-                                    marginTop: 4,
-                                    fontWeight: 650,
-                                  }}
-                                >
-                                  Joined {formatJoinedTime(p.joined_at)}
-                                </div>
-                              </div>
-                            </div>
-
-                            {user?.id === p.user_id ? (
-                              <div
-                                style={{
-                                  padding: "8px 10px",
-                                  borderRadius: 999,
-                                  background: "rgba(103,232,249,0.12)",
-                                  border: "1px solid rgba(103,232,249,0.20)",
-                                  color: "#d8fbff",
+                                  color: "#f4fffb",
                                   fontWeight: 900,
-                                  fontSize: 11,
-                                  whiteSpace: "nowrap",
+                                  fontSize: 15,
                                 }}
                               >
-                                You
-                              </div>
-                            ) : null}
+                                {name}
+                              </span>
+
+                              {p?.profiles?.is_verified ? (
+                                <span style={verifiedBadgeStyle}>Verified</span>
+                              ) : null}
+
+                              {isCreator ? (
+                                <span style={creatorBadgeStyle}>Creator</span>
+                              ) : null}
+                            </div>
+
+                            <div
+                              style={{
+                                color: "rgba(227,247,242,0.64)",
+                                fontSize: 13,
+                                marginTop: 3,
+                              }}
+                            >
+                              {username ? `@${username}` : "Explorer"} · Joined{" "}
+                              {formatCompactDate(p.joined_at)}
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        </div>
+
+                        <span style={participantArrowStyle}>›</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div style={emptyTextStyle}>
+                No participants shown yet. Be the first one to join this live plan.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ ...glassCard, padding: 18, marginBottom: 16 }}>
+            <SectionTitle
+              eyebrow="Creator"
+              title="Who created this live plan"
+              sub="Trust starts with seeing the person behind the activity."
+            />
+
+            <button
+              type="button"
+              onClick={() => openProfile(item?.user_id)}
+              style={creatorCardStyle}
+            >
+              <img
+                src={creatorAvatar}
+                alt={creatorName}
+                style={{
+                  width: 74,
+                  height: 74,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "2px solid rgba(255,255,255,0.12)",
+                  boxShadow: "0 12px 30px rgba(0,0,0,0.24)",
+                  background: "#0d1715",
+                  flexShrink: 0,
+                }}
+              />
+
+              <div style={{ minWidth: 0, textAlign: "left", flex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    marginBottom: 6,
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "#f4fffb",
+                      fontWeight: 950,
+                      fontSize: 20,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {creatorName}
+                  </span>
+
+                  {creatorVerified ? (
+                    <span style={verifiedBadgeStyle}>Verified</span>
+                  ) : null}
                 </div>
 
                 <div
                   style={{
-                    ...glassPanel,
-                    padding: 16,
+                    color: "rgba(227,247,242,0.68)",
+                    fontSize: 14,
+                    marginBottom: 10,
                   }}
                 >
-                  <div style={{ ...labelStyle, marginBottom: 10 }}>Quick details</div>
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <InfoRow
-                      label="Location"
-                      value={item.location_text || "Location soon"}
-                    />
-                    <InfoRow label="Starts" value={formatDateTime(item.starts_at)} />
-                    <InfoRow label="Status" value={statusMeta.label} />
-                    <InfoRow label="Capacity" value={`${joinedCount}/${spotsTotal}`} />
-                    {item.category ? (
-                      <InfoRow label="Category" value={item.category} capitalize />
-                    ) : null}
-                    {item.vibe ? (
-                      <InfoRow label="Vibe" value={item.vibe} capitalize />
-                    ) : null}
-                    {item.difficulty ? (
-                      <InfoRow
-                        label="Difficulty"
-                        value={item.difficulty}
-                        capitalize
-                      />
-                    ) : null}
-                  </div>
+                  {creatorUsername ? `@${creatorUsername}` : "Explorer profile"}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span style={chipStyle}>⚡ Created this live plan</span>
+                  <span style={chipStyle}>👥 {participants.length} people joined</span>
                 </div>
               </div>
 
-              <div className="going-side-column">
-                <div className="desktop-side-cta">
-                  <ActionPanel
-                    glassPanel={glassPanel}
-                    softCard={softCard}
-                    item={item}
-                    id={id}
-                    user={user}
-                    isOwner={isOwner}
-                    isJoined={isJoined}
-                    joinBusy={joinBusy}
-                    statusMeta={statusMeta}
-                    canJoin={canJoin}
-                    topActionTitle={topActionTitle}
-                    joinedCount={joinedCount}
-                    spotsLeft={spotsLeft}
-                    errorMsg={errorMsg}
-                    navigate={navigate}
-                    handleJoin={handleJoin}
-                    handleLeave={handleLeave}
-                    handleDelete={handleDelete}
-                    openChat={openChat}
-                  />
-                </div>
-              </div>
+              <span style={participantArrowStyle}>›</span>
+            </button>
+          </div>
+
+          <div style={{ ...glassCard, padding: 18, marginBottom: 16 }}>
+            <SectionTitle
+              eyebrow="Actions"
+              title="What you can do next"
+              sub="Fast actions make this page feel alive."
+            />
+
+            <div style={{ display: "grid", gap: 10 }}>
+              {!hasJoined ? (
+                <button
+                  type="button"
+                  onClick={handleJoin}
+                  disabled={!canJoin || joinBusy}
+                  style={{
+                    ...primaryBtn,
+                    width: "100%",
+                    justifyContent: "center",
+                    opacity: !canJoin || joinBusy ? 0.7 : 1,
+                    cursor: !canJoin || joinBusy ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {joinBusy ? "Joining..." : !user?.id ? "Login to join" : "Join now"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLeave}
+                  disabled={leaveBusy}
+                  style={{
+                    ...secondaryDangerBtn,
+                    width: "100%",
+                    justifyContent: "center",
+                    opacity: leaveBusy ? 0.7 : 1,
+                    cursor: leaveBusy ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {leaveBusy ? "Leaving..." : "Leave plan"}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={openChat}
+                style={{ ...ghostBrightBtn, width: "100%", justifyContent: "center" }}
+              >
+                Open live chat
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShare}
+                style={{ ...ghostBtn, width: "100%", justifyContent: "center" }}
+              >
+                {copied ? "Copied link" : "Share this plan"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowFullMedia(true)}
+                style={{ ...ghostBtn, width: "100%", justifyContent: "center" }}
+              >
+                Open cover media
+              </button>
+            </div>
+          </div>
+
+          <div style={{ ...glassCard, padding: 18 }}>
+            <SectionTitle
+              eyebrow="Live timing"
+              title="Time status"
+              sub="Useful at a glance on mobile too."
+            />
+
+            <div style={{ display: "grid", gap: 10 }}>
+              <TimingPill icon="🔥" text={relativeTimeLabel} />
+              <TimingPill icon="⌛" text={timeLeftLabel} />
+              <TimingPill
+                icon="🗓️"
+                text={`Starts ${formatDateTime(item?.starts_at)}`}
+              />
+              <TimingPill
+                icon="🏁"
+                text={`Ends ${formatDateTime(item?.expires_at)}`}
+              />
             </div>
           </div>
         </div>
       </div>
 
       <style>{`
-        .going-details-layout {
+        .going-details-grid {
           display: grid;
-          grid-template-columns: minmax(0, 1.14fr) minmax(320px, 0.86fr);
+          grid-template-columns: 1.2fr 0.8fr;
           gap: 16px;
-          align-items: start;
         }
 
-        .going-main-column,
-        .going-side-column {
-          min-width: 0;
-        }
-
-        .going-stats-grid {
+        .going-quick-grid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 12px;
         }
 
-        .mobile-top-cta {
-          display: none;
-        }
-
-        .desktop-side-cta {
-          display: block;
-        }
-
         @media (max-width: 980px) {
-          .going-details-layout {
+          .going-details-grid {
             grid-template-columns: 1fr;
           }
-
-          .mobile-top-cta {
-            display: block;
-            margin-bottom: 16px;
-          }
-
-          .desktop-side-cta {
-            display: none;
-          }
         }
 
-        @media (max-width: 720px) {
-          .going-stats-grid {
+        @media (max-width: 640px) {
+          .going-quick-grid {
             grid-template-columns: 1fr;
           }
         }
       `}</style>
-    </div>
+    </PageShell>
   );
 }
 
-function ActionPanel({
-  glassPanel,
-  softCard,
-  item,
-  id,
-  user,
-  isOwner,
-  isJoined,
-  joinBusy,
-  statusMeta,
-  canJoin,
-  topActionTitle,
-  joinedCount,
-  spotsLeft,
-  errorMsg,
-  navigate,
-  handleJoin,
-  handleLeave,
-  handleDelete,
-  openChat,
-}) {
+/* ================= SMALL COMPONENTS ================= */
+
+function InfoCard({ icon, label, value }) {
   return (
     <div
       style={{
-        ...glassPanel,
-        padding: 18,
-        position: "sticky",
-        top: 18,
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          top: -90,
-          right: -80,
-          width: 220,
-          height: 220,
-          borderRadius: "50%",
-          background:
-            "radial-gradient(circle, rgba(103,232,249,0.20), transparent 68%)",
-          pointerEvents: "none",
-        }}
-      />
-
-      <div
-        style={{
-          position: "absolute",
-          bottom: -80,
-          left: -60,
-          width: 180,
-          height: 180,
-          borderRadius: "50%",
-          background:
-            "radial-gradient(circle, rgba(167,243,208,0.16), transparent 68%)",
-          pointerEvents: "none",
-        }}
-      />
-
-      <div
-        style={{
-          position: "relative",
-          fontSize: 12,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          fontWeight: 800,
-          color: "rgba(225,247,255,0.58)",
-          marginBottom: 10,
-        }}
-      >
-        Join this plan
-      </div>
-
-      <div
-        style={{
-          position: "relative",
-          fontSize: 36,
-          lineHeight: 0.95,
-          fontWeight: 950,
-          letterSpacing: "-0.05em",
-          marginBottom: 10,
-          color: "#f2fffd",
-        }}
-      >
-        {topActionTitle}
-      </div>
-
-      <div
-        style={{
-          position: "relative",
-          color: "rgba(235,249,255,0.74)",
-          lineHeight: 1.58,
-          marginBottom: 18,
-          fontWeight: 650,
-          fontSize: 15,
-        }}
-      >
-        Fast plan, real people, no overthinking. Join if the vibe feels right and move.
-      </div>
-
-      {!user?.id ? (
-        <button
-          type="button"
-          onClick={() => navigate("/login")}
-          style={primaryButtonStyle}
-        >
-          Login to join
-        </button>
-      ) : isOwner ? (
-        <>
-          <div
-            style={{
-              ...softCard,
-              padding: "14px 15px",
-              fontWeight: 800,
-              marginBottom: 10,
-              color: "#effffd",
-            }}
-          >
-            You started this plan.
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate(`/going-now/${id}/edit`)}
-            style={secondaryButtonStyle}
-          >
-            Edit plan
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={joinBusy}
-            style={{
-              ...secondaryButtonStyle,
-              marginTop: 10,
-              border: "1px solid rgba(255,90,90,0.25)",
-              color: "#ffd9d9",
-            }}
-          >
-            {joinBusy ? "Working..." : "Delete plan"}
-          </button>
-
-          <button
-            type="button"
-            onClick={openChat}
-            style={{ ...primaryButtonStyle, marginTop: 10 }}
-          >
-            Open chat
-          </button>
-        </>
-      ) : isJoined ? (
-        <>
-          <button type="button" onClick={openChat} style={primaryButtonStyle}>
-            Open chat
-          </button>
-
-          <button
-            type="button"
-            onClick={handleLeave}
-            disabled={joinBusy}
-            style={{ ...secondaryButtonStyle, marginTop: 10 }}
-          >
-            {joinBusy ? "Leaving..." : "Leave plan"}
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          onClick={handleJoin}
-          disabled={joinBusy || !canJoin}
-          style={{
-            ...primaryButtonStyle,
-            background: canJoin
-              ? "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)"
-              : "rgba(255,255,255,0.10)",
-            color: canJoin ? "#06232c" : "rgba(255,255,255,0.58)",
-            cursor: canJoin ? "pointer" : "not-allowed",
-            boxShadow: canJoin
-              ? "0 18px 40px rgba(103,232,249,0.20)"
-              : "none",
-          }}
-        >
-          {statusMeta.key === "ended"
-            ? "Ended"
-            : statusMeta.key === "cancelled"
-            ? "Cancelled"
-            : statusMeta.key === "full"
-            ? "Full"
-            : joinBusy
-            ? "Joining..."
-            : "Join now"}
-        </button>
-      )}
-
-      <div
-        style={{
-          marginTop: 14,
-          display: "grid",
-          gap: 10,
-        }}
-      >
-        <MiniInfo value={`🔥 ${joinedCount} going now`} />
-        <MiniInfo value={`🪑 ${spotsLeft} spots left`} />
-        <MiniInfo value={`📍 ${item.location_text || "Location soon"}`} />
-        <MiniInfo value={`⏰ ${formatDateTime(item.starts_at)}`} />
-      </div>
-
-      {errorMsg ? (
-        <div
-          style={{
-            marginTop: 14,
-            color: "#ffd0d0",
-            background: "rgba(255,80,80,0.08)",
-            border: "1px solid rgba(255,80,80,0.20)",
-            padding: 12,
-            borderRadius: 16,
-            fontWeight: 750,
-          }}
-        >
-          {errorMsg}
-        </div>
-      ) : null}
-
-      <div
-        style={{
-          marginTop: 16,
-          paddingTop: 16,
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-        }}
-      >
-        <button
-          type="button"
-          onClick={openChat}
-          style={{
-            width: "100%",
-            border: "1px solid rgba(125,211,252,0.14)",
-            borderRadius: 18,
-            padding: "14px 16px",
-            background: "rgba(255,255,255,0.06)",
-            color: "#effffd",
-            fontWeight: 850,
-            fontSize: 14,
-            cursor: "pointer",
-          }}
-        >
-          💬 Start a group chat for this plan
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, sub }) {
-  return (
-    <div
-      style={{
-        borderRadius: 22,
-        padding: 16,
+        padding: 14,
+        borderRadius: 18,
         background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(125,211,252,0.12)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
       <div
         style={{
           fontSize: 12,
-          opacity: 0.62,
-          marginBottom: 10,
-          fontWeight: 800,
+          color: "rgba(227,247,242,0.60)",
+          fontWeight: 900,
+          marginBottom: 8,
           textTransform: "uppercase",
-          letterSpacing: "0.10em",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          color: "rgba(225,247,255,0.78)",
+          letterSpacing: "0.08em",
         }}
       >
-        <span>{icon}</span>
-        <span>{label}</span>
+        {icon} {label}
       </div>
-
       <div
         style={{
-          fontWeight: 950,
-          fontSize: 26,
-          lineHeight: 1,
-          letterSpacing: "-0.04em",
-          color: "#f2fffd",
-          marginBottom: 6,
-          textTransform: "capitalize",
+          color: "#f4fffb",
+          fontWeight: 850,
+          fontSize: 15,
+          lineHeight: 1.45,
         }}
       >
         {value}
       </div>
-
-      <div
-        style={{
-          fontSize: 13,
-          opacity: 0.72,
-          fontWeight: 650,
-          color: "rgba(230,247,255,0.82)",
-        }}
-      >
-        {sub}
-      </div>
     </div>
   );
 }
 
-function InfoRow({ label, value, capitalize = false }) {
+function TimingPill({ icon, text }) {
   return (
     <div
       style={{
-        borderRadius: 18,
-        padding: "13px 14px",
-        background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(125,211,252,0.12)",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        flexWrap: "wrap",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: "0.10em",
-          textTransform: "uppercase",
-          color: "rgba(225,247,255,0.56)",
-        }}
-      >
-        {label}
-      </div>
-
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 800,
-          color: "#f2fffd",
-          textTransform: capitalize ? "capitalize" : "none",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function MiniInfo({ value }) {
-  return (
-    <div
-      style={{
+        gap: 10,
         padding: "12px 14px",
         borderRadius: 16,
         background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(125,211,252,0.12)",
-        fontWeight: 750,
-        color: "rgba(242,255,253,0.94)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        color: "#effffb",
+        fontWeight: 800,
       }}
     >
-      {value}
+      <span>{icon}</span>
+      <span>{text}</span>
     </div>
   );
 }
+
+/* ================= BASE UI ================= */
+
+function PageShell({ children }) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top left, rgba(17,40,35,0.9), rgba(5,9,12,1) 38%), linear-gradient(180deg, #061116 0%, #08151b 100%)",
+        padding: "18px 14px 40px",
+      }}
+    >
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>{children}</div>
+    </div>
+  );
+}
+
+/* ================= STYLES ================= */
+
+const glassCard = {
+  background: "rgba(255,255,255,0.055)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 28,
+  boxShadow: "0 20px 50px rgba(0,0,0,0.16)",
+  backdropFilter: "blur(18px)",
+  WebkitBackdropFilter: "blur(18px)",
+};
+
+const heroWrapStyle = {
+  ...glassCard,
+  overflow: "hidden",
+};
+
+const heroBadgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "10px 14px",
+  borderRadius: 999,
+  background:
+    "linear-gradient(135deg, rgba(167,243,208,0.96), rgba(103,232,249,0.96), rgba(96,165,250,0.96))",
+  color: "#06242d",
+  fontWeight: 950,
+  fontSize: 13,
+  boxShadow: "0 16px 34px rgba(103,232,249,0.18)",
+};
+
+const heroGhostBadge = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "10px 14px",
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.08)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  color: "#f4fffb",
+  fontWeight: 850,
+  fontSize: 13,
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+};
+
+const detailsGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1.2fr 0.8fr",
+  gap: 16,
+};
+
+const quickGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 12,
+};
 
 const chipStyle = {
   display: "inline-flex",
   alignItems: "center",
-  padding: "8px 11px",
+  gap: 8,
+  padding: "9px 12px",
   borderRadius: 999,
-  background: "rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.07)",
   border: "1px solid rgba(255,255,255,0.10)",
-  color: "#ecfaf6",
-  fontSize: 12,
+  color: "#f3fffc",
   fontWeight: 800,
-  textTransform: "capitalize",
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
+  fontSize: 13,
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
 };
 
-const primaryButtonStyle = {
-  width: "100%",
+const backBtn = {
+  border: "1px solid rgba(255,255,255,0.10)",
+  background: "rgba(255,255,255,0.06)",
+  color: "#f4fffb",
+  fontWeight: 900,
+  padding: "12px 16px",
+  borderRadius: 16,
+  cursor: "pointer",
+};
+
+const primaryBtn = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "14px 18px",
+  borderRadius: 16,
   border: "none",
-  borderRadius: 20,
-  padding: "16px 18px",
-  background:
-    "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)",
-  color: "#06232c",
+  background: "linear-gradient(135deg, #a7f3d0 0%, #67e8f9 50%, #60a5fa 100%)",
+  color: "#06252e",
   fontWeight: 950,
   fontSize: 15,
+  boxShadow: "0 18px 38px rgba(103,232,249,0.20)",
   cursor: "pointer",
-  boxShadow: "0 18px 40px rgba(103,232,249,0.20)",
 };
 
-const secondaryButtonStyle = {
-  width: "100%",
-  border: "1px solid rgba(125,211,252,0.14)",
-  borderRadius: 20,
-  padding: "16px 18px",
+const ghostBtn = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "14px 18px",
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.10)",
   background: "rgba(255,255,255,0.06)",
-  color: "#effffd",
+  color: "#effffb",
   fontWeight: 900,
   fontSize: 15,
   cursor: "pointer",
+};
+
+const ghostBrightBtn = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "14px 18px",
+  borderRadius: 16,
+  border: "1px solid rgba(103,232,249,0.16)",
+  background:
+    "linear-gradient(135deg, rgba(167,243,208,0.12), rgba(103,232,249,0.12), rgba(96,165,250,0.12))",
+  color: "#effffb",
+  fontWeight: 900,
+  fontSize: 15,
+  cursor: "pointer",
+};
+
+const secondaryDangerBtn = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "14px 18px",
+  borderRadius: 16,
+  border: "1px solid rgba(255,120,120,0.16)",
+  background: "rgba(255,120,120,0.08)",
+  color: "#ffdede",
+  fontWeight: 900,
+  fontSize: 15,
+  cursor: "pointer",
+};
+
+const errorStyle = {
+  marginTop: 14,
+  marginBottom: 14,
+  padding: "14px 16px",
+  borderRadius: 16,
+  background: "rgba(255,90,90,0.10)",
+  border: "1px solid rgba(255,90,90,0.18)",
+  color: "#ffd7d7",
+  fontWeight: 800,
+};
+
+const emptyTextStyle = {
+  color: "rgba(227,247,242,0.66)",
+  lineHeight: 1.7,
+  fontSize: 15,
+};
+
+const participantRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  width: "100%",
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.04)",
+  padding: "12px 14px",
+  borderRadius: 18,
+  cursor: "pointer",
+};
+
+const participantAvatarStyle = {
+  width: 48,
+  height: 48,
+  borderRadius: "50%",
+  objectFit: "cover",
+  background: "#0d1715",
+  border: "1px solid rgba(255,255,255,0.08)",
+};
+
+const participantArrowStyle = {
+  color: "rgba(227,247,242,0.62)",
+  fontSize: 26,
+  lineHeight: 1,
+};
+
+const creatorCardStyle = {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+  borderRadius: 22,
+  padding: 14,
+  background:
+    "linear-gradient(135deg, rgba(167,243,208,0.08), rgba(103,232,249,0.08), rgba(96,165,250,0.08))",
+  border: "1px solid rgba(103,232,249,0.14)",
+  cursor: "pointer",
+};
+
+const verifiedBadgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "6px 10px",
+  borderRadius: 999,
+  background: "rgba(103,232,249,0.14)",
+  border: "1px solid rgba(103,232,249,0.24)",
+  color: "#dffcff",
+  fontWeight: 900,
+  fontSize: 12,
+};
+
+const creatorBadgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "6px 10px",
+  borderRadius: 999,
+  background: "rgba(167,243,208,0.14)",
+  border: "1px solid rgba(167,243,208,0.24)",
+  color: "#d7fff1",
+  fontWeight: 900,
+  fontSize: 12,
 };
