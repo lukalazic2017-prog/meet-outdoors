@@ -748,7 +748,7 @@ function ActionButtons({ authUser, isMyVote, busy, pollActive, onVote, onRemove,
   return (
     <>
       <PrimaryButton fullWidth={fullWidth} disabled={!pollActive || busy} onClick={onVote}>
-        {busy ? "Čuvanje..." : isMyVote ? "Glasato" : "Glasaj"}
+        {busy ? "Čuvanje..." : isMyVote ? "Glasali ste" : "Glasaj"}
       </PrimaryButton>
       {isMyVote ? (
         <SecondaryButton fullWidth={fullWidth} disabled={!pollActive || busy} onClick={onRemove}>
