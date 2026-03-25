@@ -106,16 +106,23 @@ export default function Navbar() {
 
   const [headerOffset, setHeaderOffset] = useState(isMobile ? HEADER_MOBILE : HEADER_DESKTOP);
 
-  const navItems = useMemo(
-    () => [
-      { key: "home", label: "Home", path: "/" },
-      { key: "going-now", label: "Going Now", path: "/going-now", live: true },
-      { key: "tours", label: "Tours", path: "/tours" },
-      { key: "events", label: "Events", path: "/events" },
-      { key: "timeline", label: "Timeline", path: "/timeline" },
-    ],
-    []
-  );
+ const navItems = useMemo(
+  () => [
+    { key: "home", label: "Home", path: "/" },
+    { key: "going-now", label: "Going Now", path: "/going-now", live: true },
+    { key: "tours", label: "Tours", path: "/tours" },
+    { key: "events", label: "Events", path: "/events" },
+    { key: "timeline", label: "Timeline", path: "/timeline" },
+
+    { 
+      key: "vote", 
+      label: "Glasaj za grad", 
+      path: "/vote-city", 
+      special: true 
+    },
+  ],
+  []
+);
 
   const quickMenuItems = useMemo(
     () => [
@@ -504,33 +511,42 @@ export default function Navbar() {
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
   };
 
-  const desktopNavItem = (active, live = false) => ({
-    height: 44,
-    padding: live ? "0 16px" : "0 14px",
-    borderRadius: 999,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    textDecoration: "none",
-    color: active ? "#052018" : COLORS.text,
-    background: active
-      ? `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`
-      : live
-      ? "linear-gradient(135deg, rgba(55,242,195,0.12), rgba(46,230,255,0.10))"
-      : "transparent",
-    border: active
-      ? "1px solid rgba(255,255,255,0.08)"
-      : live
-      ? `1px solid ${COLORS.lineStrong}`
-      : "1px solid transparent",
-    boxShadow: active ? "0 12px 28px rgba(55,242,195,0.24)" : "none",
-    fontWeight: active ? 950 : 820,
-    fontSize: 14,
-    whiteSpace: "nowrap",
-    transition: "all 160ms ease",
-  });
+  const desktopNavItem = (active, live = false, special = false) => ({
+  height: special ? 46 : 44,
+  padding: special ? "0 18px" : live ? "0 16px" : "0 14px",
+  borderRadius: 999,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  textDecoration: "none",
+  color: active ? "#052018" : COLORS.text,
 
+  background: active
+    ? `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`
+    : special
+    ? "linear-gradient(135deg, rgba(55,242,195,0.18), rgba(46,230,255,0.16))"
+    : live
+    ? "linear-gradient(135deg, rgba(55,242,195,0.12), rgba(46,230,255,0.10))"
+    : "transparent",
+
+  border: special
+    ? `1px solid ${COLORS.lineStrong}`
+    : active
+    ? "1px solid rgba(255,255,255,0.08)"
+    : "1px solid transparent",
+
+  boxShadow: special
+    ? "0 0 22px rgba(55,242,195,0.22)"
+    : active
+    ? "0 12px 28px rgba(55,242,195,0.24)"
+    : "none",
+
+  fontWeight: special ? 950 : active ? 950 : 820,
+  fontSize: special ? 14 : 14,
+  whiteSpace: "nowrap",
+  transition: "all 160ms ease",
+});
   const topIconButton = (active = false, special = false) => ({
     width: isMobile ? 40 : 44,
     height: isMobile ? 40 : 44,
@@ -652,9 +668,10 @@ export default function Navbar() {
                 {navItems.map((item) => {
                   const active = isActive(item.path);
                   return (
-                    <Link key={item.key} to={item.path} style={desktopNavItem(active, item.live)}>
-                      {item.live ? <LiveDot /> : null}
-                      <span>{item.label}</span>
+                    <Link key={item.key} to={item.path} style={desktopNavItem(active, item.live, item.special)}>
+                      {item.special ? <LiveDot /> : null}
+{item.live && !item.special ? <LiveDot /> : null}
+<span>{item.label}</span>
                     </Link>
                   );
                 })}

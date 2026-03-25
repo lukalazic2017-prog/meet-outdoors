@@ -40,6 +40,7 @@ import GoingNowChat from "./pages/GoingNowChat";
 import CreateGoingNow from "./pages/CreateGoingNow";
 import GoingNow from "./pages/GoingNow";
 import EditGoingNow from "./pages/EditGoingNow";
+import CityVoting from "./pages/CityVoting";
 
 
 
@@ -92,6 +93,7 @@ function App() {
           <Route path="/going-now/create" element={<CreateGoingNow />} />
           <Route path="/going-now" element={<GoingNow />} />
           <Route path="/going-now/:id/edit" element={<EditGoingNow />} />
+          <Route path="/vote-city" element={<CityVoting />} />
 
           
           {/* AUTH */}

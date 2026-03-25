@@ -253,6 +253,80 @@ function ExploreCard({ item, styles, image, badge, price, title, location, chips
   );
 }
 
+function VotingBanner({ styles, leaderName, leaderVotes, countdown, onOpenVoting }) {
+  return (
+    <div style={styles.votingBanner}>
+      <div style={styles.votingGlowA} />
+      <div style={styles.votingGlowB} />
+
+      <div style={styles.votingBannerTop}>
+        <div style={styles.votingEyebrow}>
+          <span style={styles.liveDotSmall} />
+          <span>Live city voting</span>
+        </div>
+
+        <div style={styles.votingStatusChip}>
+          <span>🏆</span>
+          <span>Trenutno vodi: {leaderName}</span>
+        </div>
+      </div>
+
+      <div style={styles.votingBannerGrid}>
+        <div style={styles.votingContent}>
+          <h2 style={styles.votingTitle}>Glasaj za svoj grad</h2>
+          <p style={styles.votingText}>
+            Grad sa najviše glasova dobija <strong>IZAĐI NAPOLJE EVENT #1</strong>.
+            Učesnici pobedničkog eventa ulaze u izbor za <strong>3 nagrade</strong>:
+            glavna nagrada je <strong>tandem skok padobranom</strong>, a još dve nagrade su
+            <strong> let avionom</strong>.
+          </p>
+
+          <div style={styles.votingActionRow}>
+            <button type="button" style={styles.votingPrimaryBtn} onClick={onOpenVoting}>
+              Otvori glasanje
+            </button>
+            <div style={styles.votingCountdownChip}>
+              <span>⏳</span>
+              <span>{countdown}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.votingStatsWrap}>
+          <div style={styles.votingStatCard}>
+            <div style={styles.votingStatLabel}>Vodeći grad</div>
+            <div style={styles.votingStatValue}>{leaderName}</div>
+            <div style={styles.votingStatSub}>Grad u vođstvu u ovom trenutku</div>
+          </div>
+
+          <div style={styles.votingStatCard}>
+            <div style={styles.votingStatLabel}>Broj glasova</div>
+            <div style={styles.votingStatValue}>{leaderVotes}</div>
+            <div style={styles.votingStatSub}>Live prikaz rezultata</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatNumber(num) {
+  if (!num && num !== 0) return "0";
+  return new Intl.NumberFormat("sr-RS").format(num);
+}
+
+function formatCountdown(seconds) {
+  const total = Math.max(0, Number(seconds || 0));
+
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const isMobile = useIsMobile(768);
@@ -263,6 +337,8 @@ export default function Home() {
   const [goingNow, setGoingNow] = useState([]);
   const [loadingContent, setLoadingContent] = useState(true);
   const [liveFilter, setLiveFilter] = useState("all");
+  const [voteSummary, setVoteSummary] = useState(null);
+  const [votePoll, setVotePoll] = useState(null);
 
   const liveRailRef = useRef(null);
   const soonRailRef = useRef(null);
@@ -275,15 +351,31 @@ export default function Home() {
     async function loadContent() {
       setLoadingContent(true);
 
-      const [{ data: toursData }, { data: eventsData }, { data: goingNowData }] = await Promise.all([
+      const [
+        { data: toursData },
+        { data: eventsData },
+        { data: goingNowData },
+        { data: voteSummaryData },
+        { data: votePollData },
+      ] = await Promise.all([
         supabase.from("tours").select("*").order("created_at", { ascending: false }).limit(8),
         supabase.from("events").select("*").order("created_at", { ascending: false }).limit(8),
         supabase.from("going_now_overview").select("*").order("starts_at", { ascending: true }).limit(16),
+        supabase.from("city_vote_summary").select("*").limit(1).maybeSingle(),
+        supabase
+          .from("city_poll_status")
+          .select("*")
+          .eq("status", "active")
+          .order("starts_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       setTours(toursData || []);
       setEvents(eventsData || []);
       setGoingNow(goingNowData || []);
+      setVoteSummary(voteSummaryData || null);
+      setVotePoll(votePollData || null);
       setLoadingContent(false);
     }
 
@@ -344,6 +436,11 @@ export default function Home() {
       return value.includes(liveFilter);
     });
   }, [liveNowItems, liveFilter]);
+
+ const voteCountdown = useMemo(() => {
+  if (!votePoll?.seconds_left) return "Glasanje je aktivno";
+  return `Još ${formatCountdown(votePoll.seconds_left)}`;
+}, [votePoll]);
 
   const styles = useMemo(
     () => ({
@@ -526,6 +623,166 @@ export default function Home() {
         gap: 8,
         cursor: "pointer",
         whiteSpace: "nowrap",
+      },
+      votingBanner: {
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: isMobile ? 26 : 30,
+        border: `1px solid ${COLORS.lineStrong}`,
+        background:
+          "linear-gradient(145deg, rgba(8,24,18,0.86), rgba(7,17,13,0.94))",
+        boxShadow: "0 22px 60px rgba(0,0,0,0.24)",
+        padding: isMobile ? 18 : 22,
+        marginTop: -36,
+      },
+      votingGlowA: {
+        position: "absolute",
+        width: 220,
+        height: 220,
+        right: -60,
+        top: -80,
+        borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(46,230,255,0.18), transparent 70%)",
+        pointerEvents: "none",
+      },
+      votingGlowB: {
+        position: "absolute",
+        width: 220,
+        height: 220,
+        left: -70,
+        bottom: -90,
+        borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(55,242,195,0.16), transparent 70%)",
+        pointerEvents: "none",
+      },
+      votingBannerTop: {
+        position: "relative",
+        zIndex: 1,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+        marginBottom: 14,
+      },
+      votingEyebrow: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 12px",
+        borderRadius: 999,
+        background: "rgba(8, 28, 21, 0.52)",
+        border: `1px solid ${COLORS.lineStrong}`,
+        color: COLORS.mintSoft,
+        fontSize: 11,
+        fontWeight: 900,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+      },
+      votingStatusChip: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 12px",
+        borderRadius: 999,
+        background: "linear-gradient(135deg, rgba(55,242,195,0.18), rgba(46,230,255,0.14))",
+        border: `1px solid ${COLORS.lineStrong}`,
+        color: COLORS.text,
+        fontSize: 12,
+        fontWeight: 900,
+      },
+      votingBannerGrid: {
+        position: "relative",
+        zIndex: 1,
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1.3fr 0.9fr",
+        gap: 16,
+        alignItems: "stretch",
+      },
+      votingContent: {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+      },
+      votingTitle: {
+        margin: 0,
+        fontSize: isMobile ? 30 : 42,
+        lineHeight: 1.02,
+        fontWeight: 950,
+        letterSpacing: "-0.05em",
+        color: COLORS.text,
+      },
+      votingText: {
+        marginTop: 12,
+        marginBottom: 0,
+        maxWidth: 760,
+        fontSize: isMobile ? 14 : 15,
+        lineHeight: 1.72,
+        color: COLORS.textSoft,
+        fontWeight: 600,
+      },
+      votingActionRow: {
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        gap: 10,
+        marginTop: 18,
+        alignItems: isMobile ? "stretch" : "center",
+      },
+      votingPrimaryBtn: {
+        appearance: "none",
+        border: "none",
+        padding: isMobile ? "15px 18px" : "14px 20px",
+        borderRadius: 999,
+        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+        color: "#052018",
+        fontWeight: 950,
+        fontSize: 14,
+        cursor: "pointer",
+        boxShadow: "0 18px 38px rgba(55,242,195,0.20)",
+      },
+      votingCountdownChip: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "12px 14px",
+        borderRadius: 999,
+        background: "rgba(8, 28, 21, 0.52)",
+        border: `1px solid ${COLORS.line}`,
+        color: COLORS.text,
+        fontSize: 12,
+        fontWeight: 800,
+        whiteSpace: "nowrap",
+      },
+      votingStatsWrap: {
+        display: "grid",
+        gap: 12,
+      },
+      votingStatCard: {
+        padding: 16,
+        borderRadius: 22,
+        background: "rgba(8, 24, 18, 0.56)",
+        border: `1px solid ${COLORS.line}`,
+        backdropFilter: "blur(10px)",
+      },
+      votingStatLabel: {
+        fontSize: 11,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: COLORS.textDim,
+        fontWeight: 900,
+        marginBottom: 8,
+      },
+      votingStatValue: {
+        fontSize: isMobile ? 22 : 26,
+        lineHeight: 1.04,
+        fontWeight: 950,
+        color: COLORS.text,
+        marginBottom: 8,
+      },
+      votingStatSub: {
+        fontSize: 13,
+        lineHeight: 1.6,
+        color: COLORS.textSoft,
       },
       liveFilters: {
         display: "flex",
@@ -892,6 +1149,16 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section style={styles.section}>
+        <VotingBanner
+          styles={styles}
+          leaderName={voteSummary?.leading_name || "Beograd"}
+          leaderVotes={formatNumber(voteSummary?.leading_votes || 0)}
+          countdown={voteCountdown}
+          onOpenVoting={() => navigate("/vote-city")}
+        />
       </section>
 
       <section style={styles.section}>
