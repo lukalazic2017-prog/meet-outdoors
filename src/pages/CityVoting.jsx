@@ -574,7 +574,11 @@ function HeroSection({ leader, poll, pollActive, isMobile, onScrollToVote }) {
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
             <PrimaryButton onClick={onScrollToVote}>Glasaj odmah</PrimaryButton>
             <SecondaryButton>
-              {pollActive ? `Glasanje traje još ${formatCountdown(poll?.seconds_left)}` : "Glasanje je završeno"}
+              {poll?.status === "scheduled"
+                ? `Glasanje počinje za ${formatCountdown(poll?.seconds_left)}`
+                : pollActive
+                ? `Glasanje traje još ${formatCountdown(poll?.seconds_left)}`
+                : "Glasanje je završeno"}
             </SecondaryButton>
           </div>
 
@@ -1157,7 +1161,6 @@ export default function CityVoting() {
       supabase
         .from("city_poll_status")
         .select("*")
-        .eq("status", "active")
         .order("starts_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -1211,6 +1214,10 @@ export default function CityVoting() {
   }, [poll?.seconds_left]);
 
   const pollActive = poll?.status === "active" && Number(poll?.seconds_left || 0) > 0;
+  const pollScheduled = poll?.status === "scheduled" && Number(poll?.seconds_left || 0) > 0;
+  const pollFinished =
+    poll?.status === "finished" ||
+    (poll && Number(poll?.seconds_left || 0) <= 0 && poll?.status !== "scheduled");
   const myCityId = myVote?.local_unit_id || myVote?.city_id || null;
 
   const filteredResults = useMemo(() => {
@@ -1339,9 +1346,23 @@ export default function CityVoting() {
           }}
         >
           <StatCard
-            label="Vreme do kraja"
-            value={pollActive ? formatCountdown(poll?.seconds_left) : "Završeno"}
-            sub={poll?.ends_at ? `Kraj: ${new Date(poll.ends_at).toLocaleString()}` : null}
+            label={poll?.status === "scheduled" ? "Početak glasanja" : "Vreme do kraja"}
+            value={
+              poll?.status === "scheduled"
+                ? formatCountdown(poll?.seconds_left)
+                : pollActive
+                ? formatCountdown(poll?.seconds_left)
+                : "Završeno"
+            }
+            sub={
+              poll?.status === "scheduled"
+                ? poll?.starts_at
+                  ? `Start: ${new Date(poll.starts_at).toLocaleString()}`
+                  : null
+                : poll?.ends_at
+                ? `Kraj: ${new Date(poll.ends_at).toLocaleString()}`
+                : null
+            }
             isMobile={isMobile}
           />
           <StatCard
@@ -1439,7 +1460,13 @@ export default function CityVoting() {
                 Glasanje gradova
               </div>
               <div style={{ fontSize: 14, color: COLORS.textSoft }}>
-                Podrži svoj grad i pomozi da baš on dobije IZAĐI NAPOLJE EVENT #1.
+                {pollScheduled
+                  ? "Glasanje je zakazano. Gradovi su vidljivi, a glasanje kreće uskoro."
+                  : pollActive
+                  ? "Podrži svoj grad i pomozi da baš on dobije IZAĐI NAPOLJE EVENT #1."
+                  : pollFinished
+                  ? "Glasanje je završeno. Rezultati ostaju vidljivi."
+                  : "Podrži svoj grad i pomozi da baš on dobije IZAĐI NAPOLJE EVENT #1."}
               </div>
             </div>
 

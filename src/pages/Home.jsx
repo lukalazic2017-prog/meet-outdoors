@@ -364,11 +364,10 @@ export default function Home() {
         supabase.from("city_vote_summary").select("*").limit(1).maybeSingle(),
         supabase
           .from("city_poll_status")
-          .select("*")
-          .eq("status", "active")
-          .order("starts_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+.select("*")
+.order("starts_at", { ascending: false })
+.limit(1)
+.maybeSingle()
       ]);
 
       setTours(toursData || []);
@@ -437,9 +436,18 @@ export default function Home() {
     });
   }, [liveNowItems, liveFilter]);
 
- const voteCountdown = useMemo(() => {
-  if (!votePoll?.seconds_left) return "Glasanje je aktivno";
-  return `Još ${formatCountdown(votePoll.seconds_left)}`;
+const voteCountdown = useMemo(() => {
+  if (!votePoll) return "Uskoro";
+
+  if (votePoll.status === "scheduled") {
+    return `Počinje za ${formatCountdown(votePoll.seconds_left)}`;
+  }
+
+  if (votePoll.status === "active") {
+    return `Još ${formatCountdown(votePoll.seconds_left)}`;
+  }
+
+  return "Glasanje završeno";
 }, [votePoll]);
 
   const styles = useMemo(
