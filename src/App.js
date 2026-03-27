@@ -41,6 +41,7 @@ import CreateGoingNow from "./pages/CreateGoingNow";
 import GoingNow from "./pages/GoingNow";
 import EditGoingNow from "./pages/EditGoingNow";
 import CityVoting from "./pages/CityVoting";
+import VotingControlCenter from "./pages/VotingControlCenter";
 
 
 
@@ -94,6 +95,7 @@ function App() {
           <Route path="/going-now" element={<GoingNow />} />
           <Route path="/going-now/:id/edit" element={<EditGoingNow />} />
           <Route path="/vote-city" element={<CityVoting />} />
+          <Route path="/voting-control-center" element={<VotingControlCenter />} />
 
           
           {/* AUTH */}
