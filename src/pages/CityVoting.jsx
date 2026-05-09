@@ -220,8 +220,6 @@ function SponsorChip({ icon, title, sub }) {
 }
 
 
-function EdenLogoMark({ isMobile }) {
-  const [failed, setFailed] = useState(false);
 
   return (
     <div
@@ -288,7 +286,6 @@ function EdenLogoMark({ isMobile }) {
       )}
     </div>
   );
-}
 
 function VictoryWowCard({ isMobile }) {
   return (
