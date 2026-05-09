@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const FALLBACK_HERO = "/cities/beograd.jpg";
 const FALLBACK_CITY = "/cities/default.jpg";
-const EDEN_LOGO = "/eden-logo.png";
+
 
 const COLORS = {
   bg: "#06100f",
@@ -219,73 +219,6 @@ function SponsorChip({ icon, title, sub }) {
   );
 }
 
-
-
-  return (
-    <div
-      style={{
-        width: isMobile ? 90 : 118,
-        height: isMobile ? 90 : 118,
-        borderRadius: isMobile ? 24 : 30,
-        padding: 10,
-        display: "grid",
-        placeItems: "center",
-        background: "linear-gradient(145deg, #ffffff 0%, #f7fff8 100%)",
-        border: "2px solid rgba(255,255,255,0.72)",
-        boxShadow:
-          "0 0 0 1px rgba(120,255,215,0.24), 0 0 46px rgba(120,255,215,0.26), 0 18px 50px rgba(0,0,0,0.42)",
-        position: "relative",
-        overflow: "hidden",
-        flex: "0 0 auto",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: 4,
-          borderRadius: isMobile ? 20 : 26,
-          border: "1px solid rgba(7,86,62,0.16)",
-          pointerEvents: "none",
-        }}
-      />
-
-      {!failed ? (
-        <img
-          src={EDEN_LOGO}
-          alt="Rafting Camp Eden"
-          onError={() => setFailed(true)}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            display: "block",
-            filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.16))",
-            position: "relative",
-            zIndex: 2,
-          }}
-        />
-      ) : (
-        <div
-          style={{
-            position: "relative",
-            zIndex: 2,
-            textAlign: "center",
-            color: "#07543d",
-            fontWeight: 950,
-            lineHeight: 1.05,
-            fontSize: isMobile ? 12 : 15,
-            letterSpacing: "-0.03em",
-          }}
-        >
-          EDEN
-          <br />
-          RAFTING
-          <br />
-          CAMP
-        </div>
-      )}
-    </div>
-  );
 
 function VictoryWowCard({ isMobile }) {
   return (
