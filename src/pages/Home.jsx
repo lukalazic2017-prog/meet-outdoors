@@ -273,12 +273,11 @@ function VotingBanner({ styles, leaderName, leaderVotes, countdown, onOpenVoting
 
       <div style={styles.votingBannerGrid}>
         <div style={styles.votingContent}>
-          <h2 style={styles.votingTitle}>Glasaj za svoj grad</h2>
+          <h2 style={styles.votingTitle}>GLASAJ ZA SVOJ GRAD !</h2>
           <p style={styles.votingText}>
-            Grad sa najviše glasova dobija <strong>IZAĐI NAPOLJE EVENT #1</strong>.
-            Učesnici pobedničkog eventa ulaze u izbor za <strong>3 nagrade</strong>:
-            glavna nagrada je <strong>tandem skok padobranom</strong>, a još dve nagrade su
-            <strong> let avionom</strong>.
+            Grad sa najviše glasova postaje domaćin najvećeg outdoor izazova <strong>IZAĐI NAPOLJE EVENT #2</strong>.
+            Pobednički tim osvaja rafting avanturu na Tari u partnerstvu sa <strong>RAFTING CAMP EDEN.</strong> 
+            <strong>GLASAJ, UČESTVUJ I POBEDI</strong>.
           </p>
 
           <div style={styles.votingActionRow}>
