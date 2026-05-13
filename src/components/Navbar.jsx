@@ -20,7 +20,7 @@ const COLORS = {
 
 const FALLBACK_AVATAR = "https://i.pravatar.cc/160?img=12";
 const HEADER_DESKTOP = 84;
-const HEADER_MOBILE = 104;
+const HEADER_MOBILE = 96;
 
 function useIsMobile(breakpoint = 960) {
   const getValue = useCallback(() => {
@@ -43,8 +43,8 @@ function BrandMark({ mobile = false }) {
   return (
     <div
       style={{
-        width: mobile ? 42 : 50,
-        height: mobile ? 42 : 50,
+        width: mobile ? 38 : 50,
+        height: mobile ? 38 : 50,
         borderRadius: mobile ? 16 : 18,
         background:
           "radial-gradient(circle at 28% 20%, rgba(255,255,255,0.95), rgba(143,255,224,0.95) 18%, rgba(55,242,195,1) 42%, rgba(46,230,255,0.92) 72%, rgba(4,27,23,1) 100%)",
@@ -55,7 +55,7 @@ function BrandMark({ mobile = false }) {
         flexShrink: 0,
       }}
     >
-      <span style={{ fontSize: mobile ? 21 : 24, filter: "drop-shadow(0 8px 12px rgba(0,0,0,0.26))" }}>🏔️</span>
+      <span style={{ fontSize: mobile ? 19 : 24, filter: "drop-shadow(0 8px 12px rgba(0,0,0,0.26))" }}>🏔️</span>
     </div>
   );
 }
@@ -78,7 +78,7 @@ function LiveDot() {
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(1180);
 
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
@@ -422,11 +422,11 @@ export default function Navbar() {
 
   const topHeaderStyle = {
     position: "fixed",
-    top: isMobile ? 7 : 10,
-    left: isMobile ? 8 : 16,
-    right: isMobile ? 8 : 16,
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 1400,
-    borderRadius: isMobile ? 24 : 28,
+    borderRadius: 0,
     background: scrolled
       ? COLORS.bgSolid
       : isMobile
@@ -447,13 +447,13 @@ export default function Navbar() {
   const shellStyle = {
     maxWidth: 1460,
     margin: "0 auto",
-    padding: isMobile ? "9px 10px 9px" : "12px 18px 12px",
+    padding: isMobile ? "8px 10px 8px" : "12px 18px 12px",
     display: "grid",
-    gap: isMobile ? 8 : 0,
+    gap: isMobile ? 7 : 0,
   };
 
   const topRowStyle = {
-    minHeight: isMobile ? 50 : 58,
+    minHeight: isMobile ? 48 : 58,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -471,9 +471,9 @@ export default function Navbar() {
 
   const brandTitleStyle = {
     fontWeight: 1000,
-    letterSpacing: isMobile ? "0.055em" : "0.09em",
+    letterSpacing: isMobile ? "0.035em" : "0.09em",
     textTransform: "uppercase",
-    fontSize: isMobile ? 17 : 20,
+    fontSize: isMobile ? 15 : 20,
     lineHeight: 1,
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -549,9 +549,9 @@ export default function Navbar() {
   };
 
   const topIconButton = (active = false, special = false) => ({
-    width: isMobile ? 42 : 46,
-    height: isMobile ? 42 : 46,
-    borderRadius: isMobile ? 16 : 17,
+    width: isMobile ? 38 : 46,
+    height: isMobile ? 38 : 46,
+    borderRadius: isMobile ? 14 : 17,
     border: active
       ? `1px solid ${COLORS.lineStrong}`
       : special
@@ -611,22 +611,22 @@ export default function Navbar() {
   };
 
   const mobileTabsWrap = {
-    display: "flex",
-    gap: 8,
-    overflowX: "auto",
-    padding: "2px 2px 3px",
-    scrollbarWidth: "none",
-    WebkitOverflowScrolling: "touch",
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: 7,
+    overflow: "hidden",
+    padding: "2px 1px 3px",
   };
 
   const mobileTab = (active, live = false, special = false) => ({
-    height: 40,
-    padding: special ? "0 15px" : live ? "0 13px" : "0 12px",
+    height: 38,
+    minWidth: 0,
+    padding: "0 6px",
     borderRadius: 999,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
+    gap: 5,
     textDecoration: "none",
     color: active ? "#052018" : COLORS.text,
     background: active
@@ -643,9 +643,9 @@ export default function Navbar() {
       : `1px solid ${COLORS.line}`,
     boxShadow: active ? "0 12px 26px rgba(55,242,195,0.22)" : "none",
     fontWeight: active ? 950 : 820,
-    fontSize: 13,
+    fontSize: 12,
     whiteSpace: "nowrap",
-    flex: "0 0 auto",
+    overflow: "hidden",
   });
 
   const avatarButtonStyle =
@@ -946,16 +946,25 @@ export default function Navbar() {
 
           {isMobile ? (
             <div style={mobileTabsWrap}>
-              {navItems.map((item) => {
-                const active = isActive(item.path);
-                return (
-                  <Link key={item.key} to={item.path} style={mobileTab(active, item.live, item.special)}>
-                    <span style={{ fontSize: 14 }}>{item.icon}</span>
-                    {item.live && !item.special ? <LiveDot /> : null}
-                    <span>{item.special ? "Glasaj" : item.label}</span>
-                  </Link>
-                );
-              })}
+              {navItems
+                .filter((item) => ["home", "going-now", "tours", "vote"].includes(item.key))
+                .map((item) => {
+                  const active = isActive(item.path);
+                  const shortLabel =
+                    item.key === "going-now"
+                      ? "Going"
+                      : item.key === "vote"
+                      ? "Glasaj"
+                      : item.label;
+
+                  return (
+                    <Link key={item.key} to={item.path} style={mobileTab(active, item.live, item.special)}>
+                      <span style={{ fontSize: 14 }}>{item.icon}</span>
+                      {item.live && !item.special ? <LiveDot /> : null}
+                      <span>{shortLabel}</span>
+                    </Link>
+                  );
+                })}
             </div>
           ) : null}
         </div>
