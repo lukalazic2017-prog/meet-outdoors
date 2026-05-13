@@ -70,7 +70,7 @@ function HorizontalRail({ styles, railRef, children, isMobile }) {
         <button
           type="button"
           style={{ ...styles.railArrow, left: 0 }}
-          onClick={() => railRef.current?.scrollBy({ left: -340, behavior: "smooth" })}
+          onClick={() => railRef.current?.scrollBy({ left: -360, behavior: "smooth" })}
         >
           ←
         </button>
@@ -84,11 +84,65 @@ function HorizontalRail({ styles, railRef, children, isMobile }) {
         <button
           type="button"
           style={{ ...styles.railArrow, right: 0 }}
-          onClick={() => railRef.current?.scrollBy({ left: 340, behavior: "smooth" })}
+          onClick={() => railRef.current?.scrollBy({ left: 360, behavior: "smooth" })}
         >
           →
         </button>
       ) : null}
+    </div>
+  );
+}
+
+function CreateActionPanel({ styles, navigate }) {
+  const actions = [
+    {
+      label: "Create live plan",
+      text: "Start something spontaneous right now.",
+      icon: "⚡",
+      path: "/going-now/create",
+      primary: true,
+    },
+    {
+      label: "Create tour",
+      text: "Build a guided outdoor experience.",
+      icon: "🥾",
+      path: "/create-tour",
+    },
+    {
+      label: "Create event",
+      text: "Invite people to a bigger outdoor moment.",
+      icon: "🎟️",
+      path: "/create-event",
+    },
+  ];
+
+  return (
+    <div style={styles.createPanel}>
+      <div style={styles.createPanelCopy}>
+        <div style={styles.createPanelEyebrow}>Start the movement</div>
+        <h2 style={styles.createPanelTitle}>Create the next thing people join.</h2>
+        <p style={styles.createPanelText}>
+          One clear place for live plans, tours and events — without hiding creation inside menus.
+        </p>
+      </div>
+
+      <div style={styles.createActionGrid}>
+        {actions.map((action) => (
+          <button
+            key={action.path}
+            type="button"
+            style={{ ...styles.createActionCard, ...(action.primary ? styles.createActionCardPrimary : {}) }}
+            onClick={() => navigate(action.path)}
+          >
+            <span style={styles.createActionIcon}>{action.icon}</span>
+            <span style={styles.createActionBody}>
+              <strong style={styles.createActionTitle}>{action.label}</strong>
+              <span style={styles.createActionText}>{action.text}</span>
+            </span>
+            <span style={styles.createActionArrow}>→</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -119,7 +173,7 @@ function GoingNowMainCard({ item, styles, onClick }) {
       <div style={styles.liveFeaturedContent}>
         <div style={styles.liveFeaturedTopRow}>
           <div style={styles.liveUrgentBadge}>
-            <span style={styles.liveDotSmall} />
+            <span style={styles.liveDotSmallDark} />
             <span>Live now</span>
           </div>
           <div style={styles.liveStatusPill}>{timeLabel}</div>
@@ -191,7 +245,7 @@ function GoingNowSwipeCard({ item, styles, onClick, compact = false }) {
 
       <div style={styles.goingCardTop}>
         <div style={styles.goingLivePill}>
-          <span style={styles.liveDotSmall} />
+          <span style={styles.liveDotSmallDark} />
           <span>{compact ? "Soon" : "Live"}</span>
         </div>
         <div style={styles.goingGhostPill}>{timeLabel}</div>
@@ -259,50 +313,34 @@ function VotingBanner({ styles, leaderName, leaderVotes, countdown, onOpenVoting
       <div style={styles.votingGlowA} />
       <div style={styles.votingGlowB} />
 
-      <div style={styles.votingBannerTop}>
+      <div style={styles.votingLeft}>
         <div style={styles.votingEyebrow}>
           <span style={styles.liveDotSmall} />
-          <span>Live city voting</span>
+          <span>City voting live</span>
         </div>
-
-        <div style={styles.votingStatusChip}>
-          <span>🏆</span>
-          <span>Trenutno vodi: {leaderName}</span>
+        <div style={styles.votingTitle}>Izađi napolje #2</div>
+        <div style={styles.votingText}>
+          Glasaj za grad. Grad koji pobedi dobija outdoor izazov, a pobednički tim osvaja rafting avanturu na Tari.
         </div>
       </div>
 
-      <div style={styles.votingBannerGrid}>
-        <div style={styles.votingContent}>
-          <h2 style={styles.votingTitle}>GLASAJ ZA SVOJ GRAD !</h2>
-          <p style={styles.votingText}>
-            Grad sa najviše glasova postaje domaćin najvećeg outdoor izazova <strong>IZAĐI NAPOLJE EVENT #2</strong>.
-            Pobednički tim osvaja rafting avanturu na Tari u partnerstvu sa <strong>RAFTING CAMP EDEN.</strong> 
-            <strong>GLASAJ, UČESTVUJ I POBEDI</strong>.
-          </p>
-
-          <div style={styles.votingActionRow}>
-            <button type="button" style={styles.votingPrimaryBtn} onClick={onOpenVoting}>
-              Otvori glasanje
-            </button>
-            <div style={styles.votingCountdownChip}>
-              <span>⏳</span>
-              <span>{countdown}</span>
-            </div>
+      <div style={styles.votingRight}>
+        <div style={styles.votingMiniStats}>
+          <div style={styles.votingMiniCard}>
+            <span style={styles.votingMiniLabel}>Vodi</span>
+            <strong style={styles.votingMiniValue}>{leaderName}</strong>
+          </div>
+          <div style={styles.votingMiniCard}>
+            <span style={styles.votingMiniLabel}>Glasovi</span>
+            <strong style={styles.votingMiniValue}>{leaderVotes}</strong>
           </div>
         </div>
 
-        <div style={styles.votingStatsWrap}>
-          <div style={styles.votingStatCard}>
-            <div style={styles.votingStatLabel}>Vodeći grad</div>
-            <div style={styles.votingStatValue}>{leaderName}</div>
-            <div style={styles.votingStatSub}>Grad u vođstvu u ovom trenutku</div>
-          </div>
-
-          <div style={styles.votingStatCard}>
-            <div style={styles.votingStatLabel}>Broj glasova</div>
-            <div style={styles.votingStatValue}>{leaderVotes}</div>
-            <div style={styles.votingStatSub}>Live prikaz rezultata</div>
-          </div>
+        <div style={styles.votingActionRow}>
+          <div style={styles.votingCountdownChip}>⏳ {countdown}</div>
+          <button type="button" style={styles.votingPrimaryBtn} onClick={onOpenVoting}>
+            Open voting
+          </button>
         </div>
       </div>
     </div>
@@ -363,10 +401,10 @@ export default function Home() {
         supabase.from("city_vote_summary").select("*").limit(1).maybeSingle(),
         supabase
           .from("city_poll_status")
-.select("*")
-.order("starts_at", { ascending: false })
-.limit(1)
-.maybeSingle()
+          .select("*")
+          .order("starts_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       setTours(toursData || []);
@@ -435,19 +473,19 @@ export default function Home() {
     });
   }, [liveNowItems, liveFilter]);
 
-const voteCountdown = useMemo(() => {
-  if (!votePoll) return "Uskoro";
+  const voteCountdown = useMemo(() => {
+    if (!votePoll) return "Uskoro";
 
-  if (votePoll.status === "scheduled") {
-    return `Počinje za ${formatCountdown(votePoll.seconds_left)}`;
-  }
+    if (votePoll.status === "scheduled") {
+      return `Počinje za ${formatCountdown(votePoll.seconds_left)}`;
+    }
 
-  if (votePoll.status === "active") {
-    return `Još ${formatCountdown(votePoll.seconds_left)}`;
-  }
+    if (votePoll.status === "active") {
+      return `Još ${formatCountdown(votePoll.seconds_left)}`;
+    }
 
-  return "Glasanje završeno";
-}, [votePoll]);
+    return "Glasanje završeno";
+  }, [votePoll]);
 
   const styles = useMemo(
     () => ({
@@ -455,16 +493,17 @@ const voteCountdown = useMemo(() => {
         minHeight: "100vh",
         color: COLORS.text,
         background: `
-        radial-gradient(circle at 12% 10%, rgba(46,230,255,0.10), transparent 22%),
-        radial-gradient(circle at 80% 8%, rgba(55,242,195,0.10), transparent 24%),
-        linear-gradient(180deg, #04100c 0%, #07130f 32%, #081611 65%, #091712 100%)
-      `,
+          radial-gradient(circle at 18% 8%, rgba(46,230,255,0.10), transparent 24%),
+          radial-gradient(circle at 84% 2%, rgba(55,242,195,0.12), transparent 25%),
+          linear-gradient(180deg, #020806 0%, #06110d 42%, #081611 100%)
+        `,
         fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         paddingBottom: isMobile ? MOBILE_BOTTOM_NAV_HEIGHT + 24 : 72,
+        overflowX: "hidden",
       },
       hero: {
         position: "relative",
-        minHeight: isMobile ? "72vh" : "76vh",
+        minHeight: isMobile ? "86vh" : "92vh",
         marginTop: -30,
         display: "flex",
         alignItems: "flex-end",
@@ -476,14 +515,17 @@ const voteCountdown = useMemo(() => {
         width: "100%",
         height: "100%",
         objectFit: "cover",
-        transform: loaded ? "scale(1.02)" : "scale(1.06)",
-        transition: "transform 1.4s ease",
+        transform: loaded ? "scale(1.01)" : "scale(1.06)",
+        transition: "transform 1.5s ease",
+        filter: "saturate(1.04) contrast(1.02)",
       },
       heroOverlay: {
         position: "absolute",
         inset: 0,
-        background:
-          "linear-gradient(to bottom, rgba(4,14,10,0.10) 0%, rgba(4,14,10,0.20) 22%, rgba(4,14,10,0.62) 58%, rgba(4,14,10,0.96) 100%)",
+        background: `
+          radial-gradient(circle at 50% 28%, rgba(55,242,195,0.12), transparent 26%),
+          linear-gradient(to bottom, rgba(2,8,6,0.06) 0%, rgba(2,8,6,0.20) 32%, rgba(2,8,6,0.76) 72%, rgba(2,8,6,0.98) 100%)
+        `,
       },
       heroInner: {
         position: "relative",
@@ -491,7 +533,7 @@ const voteCountdown = useMemo(() => {
         width: "100%",
         maxWidth: 1280,
         margin: "0 auto",
-        padding: isMobile ? "110px 16px 96px" : "118px 24px 120px",
+        padding: isMobile ? "120px 16px 104px" : "132px 24px 132px",
       },
       heroContent: {
         maxWidth: 760,
@@ -502,34 +544,43 @@ const voteCountdown = useMemo(() => {
       heroEyebrow: {
         display: "inline-flex",
         alignItems: "center",
-        gap: 8,
+        gap: 9,
         padding: "9px 13px",
         borderRadius: 999,
-        background: "rgba(6, 28, 21, 0.42)",
+        background: "rgba(3, 15, 11, 0.34)",
         border: `1px solid ${COLORS.lineStrong}`,
         color: COLORS.mintSoft,
         fontSize: isMobile ? 10 : 11,
-        fontWeight: 900,
+        fontWeight: 950,
         letterSpacing: "0.14em",
         textTransform: "uppercase",
         marginBottom: 18,
-        backdropFilter: "blur(12px)",
+        backdropFilter: "blur(14px)",
       },
       liveDotSmall: {
         width: 8,
         height: 8,
         borderRadius: 999,
         background: COLORS.mint,
-        boxShadow: "0 0 14px rgba(55,242,195,0.62)",
+        boxShadow: "0 0 14px rgba(55,242,195,0.70)",
+        flex: "0 0 auto",
+      },
+      liveDotSmallDark: {
+        width: 8,
+        height: 8,
+        borderRadius: 999,
+        background: "#052018",
+        boxShadow: "0 0 14px rgba(5,32,24,0.34)",
+        flex: "0 0 auto",
       },
       heroTitle: {
         margin: 0,
-        fontSize: isMobile ? 42 : 78,
-        lineHeight: isMobile ? 0.96 : 0.9,
+        fontSize: isMobile ? 48 : 90,
+        lineHeight: isMobile ? 0.92 : 0.86,
         fontWeight: 950,
-        letterSpacing: "-0.065em",
+        letterSpacing: "-0.075em",
         color: "#effff8",
-        textShadow: "0 12px 30px rgba(0,0,0,0.28)",
+        textShadow: "0 18px 44px rgba(0,0,0,0.34)",
       },
       heroTitleAccent: {
         background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
@@ -537,50 +588,75 @@ const voteCountdown = useMemo(() => {
         color: "transparent",
       },
       heroSubtitle: {
-        marginTop: 16,
+        marginTop: 18,
         marginBottom: 0,
-        maxWidth: 620,
-        fontSize: isMobile ? 15 : 19,
-        lineHeight: 1.62,
-        color: "rgba(229,255,246,0.84)",
-        fontWeight: 600,
+        maxWidth: 560,
+        fontSize: isMobile ? 15 : 20,
+        lineHeight: 1.55,
+        color: "rgba(236,255,249,0.86)",
+        fontWeight: 650,
       },
       heroActions: {
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
         gap: 12,
-        marginTop: 24,
+        marginTop: 26,
         width: isMobile ? "100%" : "auto",
         maxWidth: isMobile ? 420 : "none",
       },
       heroPrimaryBtn: {
         appearance: "none",
         border: "none",
-        padding: isMobile ? "16px 18px" : "16px 24px",
+        padding: isMobile ? "17px 18px" : "17px 25px",
         borderRadius: 999,
         background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
         color: "#052018",
         fontWeight: 950,
         fontSize: 15,
         cursor: "pointer",
-        boxShadow: "0 18px 38px rgba(55,242,195,0.24)",
+        boxShadow: "0 22px 46px rgba(55,242,195,0.25)",
       },
       heroGhostBtn: {
         appearance: "none",
         border: `1px solid ${COLORS.lineStrong}`,
-        padding: isMobile ? "15px 18px" : "15px 22px",
+        padding: isMobile ? "16px 18px" : "16px 23px",
         borderRadius: 999,
-        background: "rgba(8, 26, 20, 0.38)",
+        background: "rgba(3, 16, 12, 0.36)",
         color: COLORS.text,
-        fontWeight: 800,
+        fontWeight: 850,
         fontSize: 14,
         cursor: "pointer",
+        backdropFilter: "blur(14px)",
+      },
+      heroQuickStrip: {
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+        gap: 10,
+        marginTop: 22,
+        maxWidth: 760,
+      },
+      heroQuickItem: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "12px 14px",
+        borderRadius: 18,
+        background: "rgba(3, 16, 12, 0.34)",
+        border: `1px solid ${COLORS.line}`,
+        color: COLORS.textSoft,
+        fontSize: 12,
+        fontWeight: 800,
         backdropFilter: "blur(12px)",
       },
       section: {
         maxWidth: 1280,
         margin: "0 auto",
-        padding: isMobile ? "24px 16px 0" : "32px 24px 0",
+        padding: isMobile ? "28px 16px 0" : "38px 24px 0",
+      },
+      sectionTight: {
+        maxWidth: 1280,
+        margin: "0 auto",
+        padding: isMobile ? "18px 16px 0" : "24px 24px 0",
       },
       sectionHeader: {
         display: "flex",
@@ -597,22 +673,22 @@ const voteCountdown = useMemo(() => {
         letterSpacing: "0.16em",
         textTransform: "uppercase",
         color: COLORS.textDim,
-        fontWeight: 900,
+        fontWeight: 950,
         marginBottom: 8,
       },
       sectionEyebrowLive: { color: COLORS.mintSoft },
       sectionTitle: {
         margin: 0,
-        fontSize: isMobile ? 24 : 34,
-        lineHeight: 1.05,
-        fontWeight: 900,
-        letterSpacing: "-0.04em",
+        fontSize: isMobile ? 25 : 36,
+        lineHeight: 1.02,
+        fontWeight: 950,
+        letterSpacing: "-0.05em",
         color: COLORS.text,
       },
       sectionSubtitle: {
         marginTop: 8,
         marginBottom: 0,
-        maxWidth: 720,
+        maxWidth: 650,
         fontSize: isMobile ? 13 : 14,
         lineHeight: 1.6,
         color: COLORS.textSoft,
@@ -623,7 +699,7 @@ const voteCountdown = useMemo(() => {
         color: COLORS.text,
         padding: isMobile ? "10px 12px" : "10px 14px",
         borderRadius: 999,
-        fontWeight: 800,
+        fontWeight: 850,
         fontSize: isMobile ? 12 : 13,
         display: "inline-flex",
         alignItems: "center",
@@ -631,165 +707,239 @@ const voteCountdown = useMemo(() => {
         cursor: "pointer",
         whiteSpace: "nowrap",
       },
+      createPanel: {
+        position: "relative",
+        overflow: "hidden",
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "0.85fr 1.15fr",
+        gap: isMobile ? 16 : 22,
+        alignItems: "center",
+        borderRadius: isMobile ? 30 : 36,
+        border: `1px solid ${COLORS.lineStrong}`,
+        background: `
+          radial-gradient(circle at 10% 0%, rgba(55,242,195,0.18), transparent 36%),
+          linear-gradient(145deg, rgba(8,24,18,0.76), rgba(5,14,10,0.92))
+        `,
+        boxShadow: "0 24px 70px rgba(0,0,0,0.24)",
+        padding: isMobile ? 18 : 24,
+        marginTop: isMobile ? -64 : -86,
+        zIndex: 5,
+        backdropFilter: "blur(18px)",
+      },
+      createPanelCopy: {
+        padding: isMobile ? "2px 2px" : "8px 10px",
+      },
+      createPanelEyebrow: {
+        color: COLORS.mintSoft,
+        fontSize: 11,
+        fontWeight: 950,
+        letterSpacing: "0.15em",
+        textTransform: "uppercase",
+        marginBottom: 10,
+      },
+      createPanelTitle: {
+        margin: 0,
+        fontSize: isMobile ? 26 : 38,
+        lineHeight: 1.0,
+        letterSpacing: "-0.055em",
+        fontWeight: 950,
+      },
+      createPanelText: {
+        margin: "10px 0 0",
+        color: COLORS.textSoft,
+        fontSize: isMobile ? 13 : 14,
+        lineHeight: 1.6,
+        maxWidth: 430,
+        fontWeight: 650,
+      },
+      createActionGrid: {
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+        gap: 10,
+      },
+      createActionCard: {
+        appearance: "none",
+        border: `1px solid ${COLORS.line}`,
+        background: "rgba(255,255,255,0.045)",
+        color: COLORS.text,
+        borderRadius: 24,
+        padding: 15,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        textAlign: "left",
+        cursor: "pointer",
+        minHeight: isMobile ? 76 : 140,
+      },
+      createActionCardPrimary: {
+        background: "linear-gradient(145deg, rgba(55,242,195,0.18), rgba(46,230,255,0.12))",
+        border: `1px solid ${COLORS.lineStrong}`,
+      },
+      createActionIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 16,
+        display: "grid",
+        placeItems: "center",
+        background: "rgba(255,255,255,0.08)",
+        flex: "0 0 auto",
+        fontSize: 19,
+      },
+      createActionBody: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 5,
+        flex: 1,
+      },
+      createActionTitle: {
+        fontSize: 14,
+        lineHeight: 1.1,
+        fontWeight: 950,
+        color: COLORS.text,
+      },
+      createActionText: {
+        fontSize: 12,
+        lineHeight: 1.35,
+        color: COLORS.textSoft,
+        fontWeight: 650,
+      },
+      createActionArrow: {
+        color: COLORS.mintSoft,
+        fontWeight: 950,
+      },
       votingBanner: {
         position: "relative",
         overflow: "hidden",
-        borderRadius: isMobile ? 26 : 30,
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1.15fr 0.85fr",
+        gap: 16,
+        alignItems: "center",
+        borderRadius: isMobile ? 26 : 32,
         border: `1px solid ${COLORS.lineStrong}`,
-        background:
-          "linear-gradient(145deg, rgba(8,24,18,0.86), rgba(7,17,13,0.94))",
-        boxShadow: "0 22px 60px rgba(0,0,0,0.24)",
-        padding: isMobile ? 18 : 22,
-        marginTop: -36,
+        background: `
+          radial-gradient(circle at 85% 0%, rgba(46,230,255,0.18), transparent 34%),
+          linear-gradient(145deg, rgba(8,24,18,0.72), rgba(5,14,10,0.92))
+        `,
+        boxShadow: "0 18px 50px rgba(0,0,0,0.20)",
+        padding: isMobile ? 16 : 20,
       },
       votingGlowA: {
         position: "absolute",
         width: 220,
         height: 220,
-        right: -60,
-        top: -80,
+        right: -90,
+        top: -110,
         borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(46,230,255,0.18), transparent 70%)",
+        background: "radial-gradient(circle, rgba(46,230,255,0.20), transparent 70%)",
         pointerEvents: "none",
       },
       votingGlowB: {
         position: "absolute",
         width: 220,
         height: 220,
-        left: -70,
-        bottom: -90,
+        left: -90,
+        bottom: -110,
         borderRadius: "50%",
         background: "radial-gradient(circle, rgba(55,242,195,0.16), transparent 70%)",
         pointerEvents: "none",
       },
-      votingBannerTop: {
+      votingLeft: {
         position: "relative",
         zIndex: 1,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-        flexWrap: "wrap",
-        marginBottom: 14,
+      },
+      votingRight: {
+        position: "relative",
+        zIndex: 1,
+        display: "grid",
+        gap: 10,
       },
       votingEyebrow: {
         display: "inline-flex",
         alignItems: "center",
         gap: 8,
-        padding: "8px 12px",
+        padding: "7px 11px",
         borderRadius: 999,
         background: "rgba(8, 28, 21, 0.52)",
         border: `1px solid ${COLORS.lineStrong}`,
         color: COLORS.mintSoft,
-        fontSize: 11,
-        fontWeight: 900,
+        fontSize: 10,
+        fontWeight: 950,
         letterSpacing: "0.12em",
         textTransform: "uppercase",
-      },
-      votingStatusChip: {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "8px 12px",
-        borderRadius: 999,
-        background: "linear-gradient(135deg, rgba(55,242,195,0.18), rgba(46,230,255,0.14))",
-        border: `1px solid ${COLORS.lineStrong}`,
-        color: COLORS.text,
-        fontSize: 12,
-        fontWeight: 900,
-      },
-      votingBannerGrid: {
-        position: "relative",
-        zIndex: 1,
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1.3fr 0.9fr",
-        gap: 16,
-        alignItems: "stretch",
-      },
-      votingContent: {
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
+        marginBottom: 10,
       },
       votingTitle: {
-        margin: 0,
-        fontSize: isMobile ? 30 : 42,
-        lineHeight: 1.02,
+        fontSize: isMobile ? 25 : 34,
+        lineHeight: 1,
         fontWeight: 950,
-        letterSpacing: "-0.05em",
+        letterSpacing: "-0.055em",
         color: COLORS.text,
       },
       votingText: {
-        marginTop: 12,
-        marginBottom: 0,
-        maxWidth: 760,
-        fontSize: isMobile ? 14 : 15,
-        lineHeight: 1.72,
+        marginTop: 8,
         color: COLORS.textSoft,
-        fontWeight: 600,
+        fontSize: isMobile ? 13 : 14,
+        lineHeight: 1.55,
+        fontWeight: 650,
+      },
+      votingMiniStats: {
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 10,
+      },
+      votingMiniCard: {
+        padding: 13,
+        borderRadius: 20,
+        background: "rgba(255,255,255,0.045)",
+        border: `1px solid ${COLORS.line}`,
+      },
+      votingMiniLabel: {
+        display: "block",
+        color: COLORS.textDim,
+        fontSize: 10,
+        fontWeight: 950,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        marginBottom: 6,
+      },
+      votingMiniValue: {
+        display: "block",
+        color: COLORS.text,
+        fontSize: isMobile ? 18 : 21,
+        lineHeight: 1.05,
+        letterSpacing: "-0.03em",
       },
       votingActionRow: {
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
         gap: 10,
-        marginTop: 18,
-        alignItems: isMobile ? "stretch" : "center",
+        alignItems: "stretch",
       },
       votingPrimaryBtn: {
         appearance: "none",
         border: "none",
-        padding: isMobile ? "15px 18px" : "14px 20px",
+        padding: "13px 16px",
         borderRadius: 999,
         background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
         color: "#052018",
         fontWeight: 950,
-        fontSize: 14,
+        fontSize: 13,
         cursor: "pointer",
-        boxShadow: "0 18px 38px rgba(55,242,195,0.20)",
+        whiteSpace: "nowrap",
       },
       votingCountdownChip: {
         display: "inline-flex",
         alignItems: "center",
+        justifyContent: "center",
         gap: 8,
-        padding: "12px 14px",
+        padding: "12px 13px",
         borderRadius: 999,
         background: "rgba(8, 28, 21, 0.52)",
         border: `1px solid ${COLORS.line}`,
         color: COLORS.text,
         fontSize: 12,
-        fontWeight: 800,
+        fontWeight: 850,
         whiteSpace: "nowrap",
-      },
-      votingStatsWrap: {
-        display: "grid",
-        gap: 12,
-      },
-      votingStatCard: {
-        padding: 16,
-        borderRadius: 22,
-        background: "rgba(8, 24, 18, 0.56)",
-        border: `1px solid ${COLORS.line}`,
-        backdropFilter: "blur(10px)",
-      },
-      votingStatLabel: {
-        fontSize: 11,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase",
-        color: COLORS.textDim,
-        fontWeight: 900,
-        marginBottom: 8,
-      },
-      votingStatValue: {
-        fontSize: isMobile ? 22 : 26,
-        lineHeight: 1.04,
-        fontWeight: 950,
-        color: COLORS.text,
-        marginBottom: 8,
-      },
-      votingStatSub: {
-        fontSize: 13,
-        lineHeight: 1.6,
-        color: COLORS.textSoft,
       },
       liveFilters: {
         display: "flex",
@@ -814,13 +964,13 @@ const voteCountdown = useMemo(() => {
       liveFeaturedCard: {
         position: "relative",
         overflow: "hidden",
-        minHeight: isMobile ? 340 : 430,
-        borderRadius: isMobile ? 26 : 30,
+        minHeight: isMobile ? 390 : 520,
+        borderRadius: isMobile ? 30 : 38,
         border: `1px solid ${COLORS.lineStrong}`,
         background: "linear-gradient(145deg, rgba(8,24,18,0.72), rgba(7,17,13,0.92))",
-        boxShadow: "0 22px 60px rgba(0,0,0,0.24)",
+        boxShadow: "0 26px 76px rgba(0,0,0,0.30)",
         cursor: "pointer",
-        marginBottom: 16,
+        marginBottom: 18,
       },
       liveFeaturedImage: {
         position: "absolute",
@@ -833,13 +983,13 @@ const voteCountdown = useMemo(() => {
       liveFeaturedOverlay: {
         position: "absolute",
         inset: 0,
-        background: "linear-gradient(to top, rgba(4,14,10,0.98), rgba(4,14,10,0.20) 45%, rgba(4,14,10,0.05))",
+        background: "linear-gradient(to top, rgba(2,8,6,0.98), rgba(2,8,6,0.38) 48%, rgba(2,8,6,0.08))",
       },
       liveFeaturedContent: {
         position: "absolute",
-        left: isMobile ? 16 : 22,
-        right: isMobile ? 16 : 22,
-        bottom: isMobile ? 16 : 22,
+        left: isMobile ? 18 : 26,
+        right: isMobile ? 18 : 26,
+        bottom: isMobile ? 18 : 26,
       },
       liveFeaturedTopRow: {
         display: "flex",
@@ -847,7 +997,7 @@ const voteCountdown = useMemo(() => {
         justifyContent: "space-between",
         flexWrap: "wrap",
         gap: 8,
-        marginBottom: 10,
+        marginBottom: 12,
       },
       liveUrgentBadge: {
         display: "inline-flex",
@@ -872,22 +1022,22 @@ const voteCountdown = useMemo(() => {
         border: `1px solid ${COLORS.line}`,
         color: COLORS.text,
         fontSize: 11,
-        fontWeight: 800,
+        fontWeight: 850,
       },
       liveFeaturedTitle: {
         margin: 0,
-        fontSize: isMobile ? 30 : 46,
-        lineHeight: 1.0,
+        fontSize: isMobile ? 34 : 58,
+        lineHeight: 0.96,
         fontWeight: 950,
-        letterSpacing: "-0.05em",
+        letterSpacing: "-0.065em",
         color: COLORS.text,
-        maxWidth: 720,
+        maxWidth: 760,
       },
       liveMetaRow: {
         display: "flex",
         flexWrap: "wrap",
         gap: 8,
-        marginTop: 12,
+        marginTop: 14,
       },
       liveMetaChip: {
         display: "inline-flex",
@@ -899,13 +1049,13 @@ const voteCountdown = useMemo(() => {
         border: `1px solid ${COLORS.line}`,
         color: COLORS.text,
         fontSize: 12,
-        fontWeight: 700,
+        fontWeight: 750,
       },
       liveButtons: {
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
         gap: 10,
-        marginTop: 14,
+        marginTop: 16,
       },
       livePrimary: {
         border: "none",
@@ -923,7 +1073,7 @@ const voteCountdown = useMemo(() => {
         borderRadius: 999,
         background: "rgba(8, 26, 20, 0.38)",
         color: COLORS.text,
-        fontWeight: 800,
+        fontWeight: 850,
         fontSize: 14,
         cursor: "pointer",
       },
@@ -955,14 +1105,14 @@ const voteCountdown = useMemo(() => {
       goingCard: {
         position: "relative",
         overflow: "hidden",
-        minWidth: isMobile ? "82vw" : 320,
-        width: isMobile ? "82vw" : 320,
-        height: isMobile ? 360 : 380,
+        minWidth: isMobile ? "82vw" : 334,
+        width: isMobile ? "82vw" : 334,
+        height: isMobile ? 360 : 390,
         flex: "0 0 auto",
-        borderRadius: isMobile ? 26 : 28,
+        borderRadius: isMobile ? 28 : 30,
         border: `1px solid ${COLORS.lineStrong}`,
         background: "linear-gradient(145deg, rgba(8,24,18,0.74), rgba(7,17,13,0.92))",
-        boxShadow: "0 22px 54px rgba(0,0,0,0.20)",
+        boxShadow: "0 20px 54px rgba(0,0,0,0.22)",
         scrollSnapAlign: "start",
         cursor: "pointer",
       },
@@ -1003,24 +1153,24 @@ const voteCountdown = useMemo(() => {
         background: "rgba(8,28,21,0.54)",
         border: `1px solid ${COLORS.line}`,
         color: COLORS.text,
-        fontWeight: 800,
+        fontWeight: 850,
         fontSize: 11,
         whiteSpace: "nowrap",
       },
       goingCardBottom: { position: "absolute", left: 16, right: 16, bottom: 16 },
       goingCardTitle: {
         margin: 0,
-        fontSize: isMobile ? 24 : 28,
-        lineHeight: 1.03,
+        fontSize: isMobile ? 24 : 29,
+        lineHeight: 1.02,
         fontWeight: 950,
-        letterSpacing: "-0.04em",
+        letterSpacing: "-0.045em",
         color: COLORS.text,
       },
       goingCardMetaLine: {
         marginTop: 10,
         color: COLORS.textSoft,
         fontSize: 14,
-        fontWeight: 700,
+        fontWeight: 750,
         lineHeight: 1.55,
       },
       goingCardFooter: {
@@ -1038,7 +1188,7 @@ const voteCountdown = useMemo(() => {
         background: "rgba(8,28,21,0.52)",
         border: `1px solid ${COLORS.line}`,
         color: COLORS.text,
-        fontWeight: 800,
+        fontWeight: 850,
         fontSize: 12,
       },
       goingActionPill: {
@@ -1055,16 +1205,16 @@ const voteCountdown = useMemo(() => {
       card: {
         position: "relative",
         overflow: "hidden",
-        borderRadius: 24,
+        borderRadius: 26,
         background: "linear-gradient(155deg, rgba(8,24,18,0.74), rgba(7,17,13,0.90))",
         border: `1px solid ${COLORS.line}`,
         cursor: "pointer",
         boxShadow: "0 14px 34px rgba(0,0,0,0.18)",
-        minWidth: isMobile ? "82vw" : 300,
+        minWidth: isMobile ? "82vw" : 312,
         flex: "0 0 auto",
         scrollSnapAlign: "start",
       },
-      cardMedia: { position: "relative", width: "100%", height: isMobile ? 184 : 210, overflow: "hidden" },
+      cardMedia: { position: "relative", width: "100%", height: isMobile ? 190 : 222, overflow: "hidden" },
       cardImage: { width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.02)", transition: "transform 0.45s ease" },
       cardMediaOverlayTop: { position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0.18))" },
       cardMediaOverlayBottom: { position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(4,14,10,0.96), rgba(4,14,10,0.08) 48%)" },
@@ -1093,12 +1243,12 @@ const voteCountdown = useMemo(() => {
         background: "rgba(8, 28, 21, 0.54)",
         border: `1px solid ${COLORS.line}`,
         color: COLORS.text,
-        fontWeight: 700,
+        fontWeight: 750,
         fontSize: 11,
         whiteSpace: "nowrap",
       },
       cardBody: { padding: isMobile ? 14 : 16 },
-      cardTitle: { fontSize: isMobile ? 17 : 19, fontWeight: 900, lineHeight: 1.14, color: COLORS.text, marginBottom: 8 },
+      cardTitle: { fontSize: isMobile ? 18 : 20, fontWeight: 950, lineHeight: 1.12, color: COLORS.text, marginBottom: 8, letterSpacing: "-0.025em" },
       cardLocation: { display: "flex", alignItems: "center", gap: 7, fontSize: isMobile ? 12 : 13, color: COLORS.textSoft, marginBottom: 12 },
       cardBottomRow: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: isMobile ? 11 : 12, color: COLORS.textSoft },
       cardChips: { display: "flex", gap: 7, flexWrap: "wrap" },
@@ -1110,17 +1260,32 @@ const voteCountdown = useMemo(() => {
         background: "rgba(255,255,255,0.03)",
         border: `1px solid ${COLORS.line}`,
         color: COLORS.text,
-        fontWeight: 700,
+        fontWeight: 750,
       },
-      cardMetaRight: { whiteSpace: "nowrap", fontWeight: 700, color: COLORS.text },
+      cardMetaRight: { whiteSpace: "nowrap", fontWeight: 800, color: COLORS.text },
       emptyCard: {
-        borderRadius: 24,
-        padding: isMobile ? "18px" : "24px",
-        background: "linear-gradient(145deg, rgba(8,24,18,0.72), rgba(7,17,13,0.88))",
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: 28,
+        padding: isMobile ? "20px" : "26px",
+        background: `
+          radial-gradient(circle at 90% 0%, rgba(55,242,195,0.15), transparent 34%),
+          linear-gradient(145deg, rgba(8,24,18,0.72), rgba(7,17,13,0.88))
+        `,
         border: `1px solid ${COLORS.line}`,
       },
-      emptyTitle: { fontSize: isMobile ? 20 : 24, fontWeight: 900, marginBottom: 8, color: COLORS.text },
-      emptyText: { fontSize: isMobile ? 14 : 15, lineHeight: 1.6, color: COLORS.textSoft, maxWidth: 720 },
+      emptyTitle: { fontSize: isMobile ? 22 : 28, fontWeight: 950, marginBottom: 8, color: COLORS.text, letterSpacing: "-0.04em" },
+      emptyText: { fontSize: isMobile ? 14 : 15, lineHeight: 1.6, color: COLORS.textSoft, maxWidth: 720, marginBottom: 16 },
+      emptyButton: {
+        appearance: "none",
+        border: "none",
+        borderRadius: 999,
+        padding: "13px 17px",
+        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+        color: "#052018",
+        fontWeight: 950,
+        cursor: "pointer",
+      },
     }),
     [isMobile, loaded]
   );
@@ -1147,18 +1312,28 @@ const voteCountdown = useMemo(() => {
             </h1>
 
             <p style={styles.heroSubtitle}>
-              Hikes, trips and spontaneous plans with real people near you.
+              Join live plans, discover outdoor tours or create the next adventure people will actually show up for.
             </p>
 
             <div style={styles.heroActions}>
               <button type="button" style={styles.heroPrimaryBtn} onClick={() => navigate("/going-now")}>Open Going Now</button>
               <button type="button" style={styles.heroGhostBtn} onClick={() => navigate("/tours")}>Explore tours</button>
             </div>
+
+            <div style={styles.heroQuickStrip}>
+              <div style={styles.heroQuickItem}>⚡ Live plans near you</div>
+              <div style={styles.heroQuickItem}>🥾 Tours you can join</div>
+              <div style={styles.heroQuickItem}>🎟️ Events worth leaving home for</div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section style={styles.section}>
+      <section style={styles.sectionTight}>
+        <CreateActionPanel styles={styles} navigate={navigate} />
+      </section>
+
+      <section style={styles.sectionTight}>
         <VotingBanner
           styles={styles}
           leaderName={voteSummary?.leading_name || "Beograd"}
@@ -1172,8 +1347,8 @@ const voteCountdown = useMemo(() => {
         <SectionHeader
           styles={styles}
           eyebrow="Going now"
-          title="The heartbeat of the app"
-          subtitle="One strong featured live plan, then clean swipe rails for what matters most."
+          title="The heartbeat of MeetOutdoors"
+          subtitle="Live plans first. Less confusion, more action. This is where people instantly understand what to do."
           actionLabel="See all"
           onAction={() => navigate("/going-now")}
           live
@@ -1201,7 +1376,7 @@ const voteCountdown = useMemo(() => {
               styles={styles}
               eyebrow="Swipe live"
               title="Live now"
-              subtitle="The fastest way to discover what is happening right now."
+              subtitle="Quick cards for what is happening around people right now."
             />
             <HorizontalRail styles={styles} railRef={liveRailRef} isMobile={isMobile}>
               {(filteredLiveNow.length ? filteredLiveNow : liveNowItems).map((item) => (
@@ -1227,8 +1402,13 @@ const voteCountdown = useMemo(() => {
           </>
         ) : (
           <div style={styles.emptyCard}>
-            <div style={styles.emptyTitle}>No live plans yet</div>
-            <div style={styles.emptyText}>As soon as people start posting spontaneous meetups, this becomes the real-time heartbeat of the app.</div>
+            <div style={styles.emptyTitle}>Be the first to start something.</div>
+            <div style={styles.emptyText}>
+              No live plans yet — but the screen should still feel alive. Create a plan and make Going Now the heartbeat of the app.
+            </div>
+            <button type="button" style={styles.emptyButton} onClick={() => navigate("/create-going-now")}>
+              Create live plan
+            </button>
           </div>
         )}
       </section>
@@ -1238,7 +1418,7 @@ const voteCountdown = useMemo(() => {
           styles={styles}
           eyebrow="Tours"
           title="Fresh adventures"
-          subtitle="Clean discovery rail for tours without clutter."
+          subtitle="Discovery rail with premium image-first cards. Simple, scannable and clean."
           actionLabel="See all tours"
           onAction={() => navigate("/tours")}
         />
@@ -1263,8 +1443,11 @@ const voteCountdown = useMemo(() => {
           </HorizontalRail>
         ) : (
           <div style={styles.emptyCard}>
-            <div style={styles.emptyTitle}>No tours yet</div>
-            <div style={styles.emptyText}>Create the first tour and this rail becomes your main discovery point.</div>
+            <div style={styles.emptyTitle}>Create the first tour.</div>
+            <div style={styles.emptyText}>Your tours will appear here as a premium discovery rail.</div>
+            <button type="button" style={styles.emptyButton} onClick={() => navigate("/create-tour")}>
+              Create tour
+            </button>
           </div>
         )}
       </section>
@@ -1274,7 +1457,7 @@ const voteCountdown = useMemo(() => {
           styles={styles}
           eyebrow="Events"
           title="Upcoming outdoor events"
-          subtitle="Same premium layout, but calmer and easier to scan."
+          subtitle="Calmer, clean event cards that feel separate from tours but still part of the same premium system."
           actionLabel="All events"
           onAction={() => navigate("/events")}
         />
@@ -1299,8 +1482,11 @@ const voteCountdown = useMemo(() => {
           </HorizontalRail>
         ) : (
           <div style={styles.emptyCard}>
-            <div style={styles.emptyTitle}>No events yet</div>
+            <div style={styles.emptyTitle}>Create the first event.</div>
             <div style={styles.emptyText}>When events start landing, they’ll appear here in the same clean system.</div>
+            <button type="button" style={styles.emptyButton} onClick={() => navigate("/create-event")}>
+              Create event
+            </button>
           </div>
         )}
       </section>
