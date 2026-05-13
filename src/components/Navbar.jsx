@@ -976,7 +976,6 @@ export default function Navbar() {
             width: "auto",
             maxHeight: `calc(100vh - ${Math.max(8, headerOffset + 24)}px)`,
             overflowY: "auto",
-            right: 10,
           }}
         >
           {searchOpen ? (
