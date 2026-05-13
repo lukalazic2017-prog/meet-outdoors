@@ -684,25 +684,48 @@ export default function Navbar() {
             >
               {!isMobile ? <BrandMark mobile={isMobile} /> : null}
 
-              {isMobile ? (
-                <>
-                  <button
-                    type="button"
-                    style={topIconButton(menuOpen)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpen((p) => !p);
-                      setSearchOpen(false);
-                      setNotificationsOpen(false);
-                    }}
-                    title="Menu"
-                  >
-                    ☰
-                  </button>
-                  <BrandMark mobile />
-                </>
-              ) : null}
+             {isMobile ? (
+  <>
+    <div
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: 16,
+        position: "relative",
+        overflow: "hidden",
+        background:
+          "linear-gradient(145deg, rgba(55,242,195,1) 0%, rgba(46,230,255,1) 100%)",
+        boxShadow:
+          "0 0 0 1px rgba(255,255,255,0.12), 0 12px 30px rgba(46,230,255,0.34), 0 8px 18px rgba(55,242,195,0.24)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 1,
+          borderRadius: 15,
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02))",
+        }}
+      />
 
+      <span
+        style={{
+          position: "relative",
+          zIndex: 2,
+          fontSize: 22,
+          filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.35))",
+        }}
+      >
+        ⛰️
+      </span>
+    </div>
+  </>
+) : null}
               <div style={{ minWidth: 0 }}>
                 <div style={brandTitleStyle}>
                   MEET<span style={brandAccentStyle}>OUTDOORS</span>
