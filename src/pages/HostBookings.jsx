@@ -28,9 +28,6 @@ export default function HostBookings() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    loadBookings();
-  }, [hostId]);
 
   async function updateStatus(id, status) {
     const { error } = await supabase
