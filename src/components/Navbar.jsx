@@ -3,9 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 const COLORS = {
-  bg: "rgba(6, 17, 13, 0.72)",
   bgSolid: "rgba(6, 17, 13, 0.96)",
-  bgSoft: "rgba(8, 22, 17, 0.86)",
   line: "rgba(55, 242, 195, 0.16)",
   lineStrong: "rgba(55, 242, 195, 0.28)",
   lineBlue: "rgba(46, 230, 255, 0.22)",
@@ -55,7 +53,14 @@ function BrandMark({ mobile = false }) {
         flexShrink: 0,
       }}
     >
-      <span style={{ fontSize: mobile ? 19 : 24, filter: "drop-shadow(0 8px 12px rgba(0,0,0,0.26))" }}>🏔️</span>
+      <span
+        style={{
+          fontSize: mobile ? 19 : 24,
+          filter: "drop-shadow(0 8px 12px rgba(0,0,0,0.26))",
+        }}
+      >
+        🏔️
+      </span>
     </div>
   );
 }
@@ -68,7 +73,8 @@ function LiveDot() {
         height: 8,
         borderRadius: 999,
         background: COLORS.mint,
-        boxShadow: "0 0 0 5px rgba(55,242,195,0.10), 0 0 16px rgba(55,242,195,0.86)",
+        boxShadow:
+          "0 0 0 5px rgba(55,242,195,0.10), 0 0 16px rgba(55,242,195,0.86)",
         flexShrink: 0,
       }}
     />
@@ -83,6 +89,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [myHost, setMyHost] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(FALLBACK_AVATAR);
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -105,30 +112,86 @@ export default function Navbar() {
   const headerRef = useRef(null);
   const mobilePanelRef = useRef(null);
 
-  const [headerOffset, setHeaderOffset] = useState(isMobile ? HEADER_MOBILE : HEADER_DESKTOP);
+  const [headerOffset, setHeaderOffset] = useState(
+    isMobile ? HEADER_MOBILE : HEADER_DESKTOP
+  );
 
   const navItems = useMemo(
     () => [
       { key: "home", label: "Home", path: "/", icon: "⌂" },
-      { key: "going-now", label: "Going Now", path: "/going-now", live: true, icon: "ϟ" },
+      {
+        key: "going-now",
+        label: "Going Now",
+        path: "/going-now",
+        live: true,
+        icon: "ϟ",
+      },
       { key: "tours", label: "Tours", path: "/tours", icon: "♜" },
       { key: "events", label: "Events", path: "/events", icon: "▣" },
       { key: "timeline", label: "Timeline", path: "/timeline", icon: "⌁" },
-      { key: "vote", label: "Glasaj za grad", path: "/vote-city", special: true, icon: "🏆" },
     ],
     []
   );
 
   const quickMenuItems = useMemo(
     () => [
-      { label: "Create live plan", action: () => navigate(user ? "/going-now/create" : "/login"), icon: "⚡", sub: "Start something now" },
-      { label: "Create tour", action: () => navigate(user ? "/create-tour" : "/login"), icon: "🥾", sub: "Build an adventure" },
-      { label: "Create event", action: () => navigate(user ? "/create-event" : "/login"), icon: "🎟️", sub: "Organize a bigger moment" },
-      { label: "Saved tours", action: () => navigate(user ? "/saved-tours" : "/login"), icon: "🔖", sub: "Your saved adventures" },
-      { label: "Profile", action: () => navigate(user ? `/profile/${user.id}` : "/login"), icon: "👤", sub: "View your profile" },
-      { label: "Settings", action: () => navigate(user ? "/settings" : "/login"), icon: "⚙️", sub: "Account preferences" },
+      {
+        label: "Create live plan",
+        action: () => navigate(user ? "/going-now/create" : "/login"),
+        icon: "⚡",
+        sub: "Start something now",
+      },
+      {
+        label: "Create tour",
+        action: () => navigate(user ? "/create-tour" : "/login"),
+        icon: "🥾",
+        sub: "Build an adventure",
+      },
+      {
+        label: "Create event",
+        action: () => navigate(user ? "/create-event" : "/login"),
+        icon: "🎟️",
+        sub: "Organize a bigger moment",
+      },
+      {
+        label: "Saved tours",
+        action: () => navigate(user ? "/saved-tours" : "/login"),
+        icon: "🔖",
+        sub: "Your saved adventures",
+      },
+      {
+        label: "My bookings",
+        action: () => navigate(user ? "/my-bookings" : "/login"),
+        icon: "🎫",
+        sub: "Your reservations",
+      },
+      {
+        label: "Create host",
+        action: () => navigate(user ? "/create-host" : "/login"),
+        icon: "🏕️",
+        sub: "Start hosting experiences",
+      },
+      {
+        label: "Host dashboard",
+        action: () =>
+          navigate(user ? (myHost ? `/host-dashboard/${myHost.id}` : "/create-host") : "/login"),
+        icon: "📊",
+        sub: myHost ? "Manage your host profile" : "Create host first",
+      },
+      {
+        label: "Profile",
+        action: () => navigate(user ? `/profile/${user.id}` : "/login"),
+        icon: "👤",
+        sub: "View your profile",
+      },
+      {
+        label: "Settings",
+        action: () => navigate(user ? "/settings" : "/login"),
+        icon: "⚙️",
+        sub: "Account preferences",
+      },
     ],
-    [navigate, user]
+    [navigate, user, myHost]
   );
 
   const bestDisplayName = useMemo(() => {
@@ -145,21 +208,6 @@ export default function Navbar() {
     [location.pathname]
   );
 
-  useEffect(() => {
-    const updateHeaderOffset = () => {
-      if (!headerRef.current) {
-        setHeaderOffset(isMobile ? HEADER_MOBILE : HEADER_DESKTOP);
-        return;
-      }
-      const next = Math.ceil(headerRef.current.getBoundingClientRect().height) + (isMobile ? 4 : 2);
-      setHeaderOffset(next);
-    };
-
-    updateHeaderOffset();
-    window.addEventListener("resize", updateHeaderOffset);
-    return () => window.removeEventListener("resize", updateHeaderOffset);
-  }, [isMobile, scrolled, menuOpen, notificationsOpen, searchOpen, user]);
-
   const closePanels = useCallback(() => {
     setMenuOpen(false);
     setNotificationsOpen(false);
@@ -175,23 +223,35 @@ export default function Navbar() {
 
     if (!authUser) {
       setProfile(null);
+      setMyHost(null);
       setAvatarUrl(FALLBACK_AVATAR);
       setNotifications([]);
       setUnreadCount(0);
       return;
     }
 
-    const [{ data: profileData }, { data: notes }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", authUser.id).single(),
-      supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", authUser.id)
-        .order("created_at", { ascending: false })
-        .limit(30),
-    ]);
+    const [{ data: profileData }, { data: notes }, { data: hostData }] =
+      await Promise.all([
+        supabase.from("profiles").select("*").eq("id", authUser.id).single(),
+
+        supabase
+          .from("notifications")
+          .select("*")
+          .eq("user_id", authUser.id)
+          .order("created_at", { ascending: false })
+          .limit(30),
+
+        supabase
+          .from("experience_hosts")
+          .select("*")
+          .eq("owner_id", authUser.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
     setProfile(profileData || null);
+    setMyHost(hostData || null);
     setAvatarUrl(profileData?.avatar_url || FALLBACK_AVATAR);
 
     const safeNotes = notes || [];
@@ -277,6 +337,23 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    const updateHeaderOffset = () => {
+      if (!headerRef.current) {
+        setHeaderOffset(isMobile ? HEADER_MOBILE : HEADER_DESKTOP);
+        return;
+      }
+      const next =
+        Math.ceil(headerRef.current.getBoundingClientRect().height) +
+        (isMobile ? 4 : 2);
+      setHeaderOffset(next);
+    };
+
+    updateHeaderOffset();
+    window.addEventListener("resize", updateHeaderOffset);
+    return () => window.removeEventListener("resize", updateHeaderOffset);
+  }, [isMobile, scrolled, menuOpen, notificationsOpen, searchOpen, user]);
+
+  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 14);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -288,9 +365,15 @@ export default function Navbar() {
       const target = e.target;
       const insideMobilePanel = mobilePanelRef.current?.contains(target);
 
-      if (!insideMobilePanel && !searchRef.current?.contains(target)) setSearchOpen(false);
-      if (!insideMobilePanel && !notifRef.current?.contains(target)) setNotificationsOpen(false);
-      if (!insideMobilePanel && !menuRef.current?.contains(target)) setMenuOpen(false);
+      if (!insideMobilePanel && !searchRef.current?.contains(target)) {
+        setSearchOpen(false);
+      }
+      if (!insideMobilePanel && !notifRef.current?.contains(target)) {
+        setNotificationsOpen(false);
+      }
+      if (!insideMobilePanel && !menuRef.current?.contains(target)) {
+        setMenuOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", onDown);
@@ -326,6 +409,7 @@ export default function Navbar() {
     const q = searchQuery.trim();
     const t = setTimeout(async () => {
       setSearchLoading(true);
+
       const { data } = await supabase
         .from("profiles")
         .select("id, full_name, avatar_url, home_base")
@@ -377,7 +461,9 @@ export default function Navbar() {
       .eq("user_id", user.id)
       .or("read.eq.false,is_read.eq.false");
 
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true, is_read: true })));
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read: true, is_read: true }))
+    );
     setUnreadCount(0);
   };
 
@@ -390,7 +476,11 @@ export default function Navbar() {
 
   const openNotification = async (n) => {
     if (!(n.read || n.is_read)) {
-      await supabase.from("notifications").update({ read: true, is_read: true }).eq("id", n.id);
+      await supabase
+        .from("notifications")
+        .update({ read: true, is_read: true })
+        .eq("id", n.id);
+
       setNotifications((prev) =>
         prev.map((x) => (x.id === n.id ? { ...x, read: true, is_read: true } : x))
       );
@@ -405,6 +495,7 @@ export default function Navbar() {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    setMyHost(null);
     setAvatarUrl(FALLBACK_AVATAR);
     closePanels();
     navigate("/login");
@@ -603,7 +694,8 @@ export default function Navbar() {
     background:
       "radial-gradient(circle at top left, rgba(55,242,195,0.13), transparent 32%), radial-gradient(circle at top right, rgba(46,230,255,0.12), transparent 36%), linear-gradient(180deg, rgba(8,22,17,0.985), rgba(5,13,10,0.985))",
     border: `1px solid ${COLORS.lineStrong}`,
-    boxShadow: "0 30px 76px rgba(0,0,0,0.54), 0 0 0 1px rgba(55,242,195,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
+    boxShadow:
+      "0 30px 76px rgba(0,0,0,0.54), 0 0 0 1px rgba(55,242,195,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
     backdropFilter: "blur(24px) saturate(1.15)",
     WebkitBackdropFilter: "blur(24px) saturate(1.15)",
     zIndex: 1600,
@@ -654,7 +746,9 @@ export default function Navbar() {
           height: 48,
           padding: "0 12px 0 7px",
           borderRadius: 999,
-          border: menuOpen ? `1px solid ${COLORS.lineStrong}` : "1px solid rgba(255,255,255,0.12)",
+          border: menuOpen
+            ? `1px solid ${COLORS.lineStrong}`
+            : "1px solid rgba(255,255,255,0.12)",
           background: menuOpen
             ? "linear-gradient(135deg, rgba(55,242,195,0.14), rgba(46,230,255,0.10))"
             : "rgba(255,255,255,0.045)",
@@ -684,53 +778,54 @@ export default function Navbar() {
             >
               {!isMobile ? <BrandMark mobile={isMobile} /> : null}
 
-             {isMobile ? (
-  <>
-    <div
-      style={{
-        width: 46,
-        height: 46,
-        borderRadius: 16,
-        position: "relative",
-        overflow: "hidden",
-        background:
-          "linear-gradient(145deg, rgba(55,242,195,1) 0%, rgba(46,230,255,1) 100%)",
-        boxShadow:
-          "0 0 0 1px rgba(255,255,255,0.12), 0 12px 30px rgba(46,230,255,0.34), 0 8px 18px rgba(55,242,195,0.24)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: 1,
-          borderRadius: 15,
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02))",
-        }}
-      />
+              {isMobile ? (
+                <div
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 16,
+                    position: "relative",
+                    overflow: "hidden",
+                    background:
+                      "linear-gradient(145deg, rgba(55,242,195,1) 0%, rgba(46,230,255,1) 100%)",
+                    boxShadow:
+                      "0 0 0 1px rgba(255,255,255,0.12), 0 12px 30px rgba(46,230,255,0.34), 0 8px 18px rgba(55,242,195,0.24)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 1,
+                      borderRadius: 15,
+                      background:
+                        "linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02))",
+                    }}
+                  />
 
-      <span
-        style={{
-          position: "relative",
-          zIndex: 2,
-          fontSize: 22,
-          filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.35))",
-        }}
-      >
-        ⛰️
-      </span>
-    </div>
-  </>
-) : null}
+                  <span
+                    style={{
+                      position: "relative",
+                      zIndex: 2,
+                      fontSize: 22,
+                      filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.35))",
+                    }}
+                  >
+                    ⛰️
+                  </span>
+                </div>
+              ) : null}
+
               <div style={{ minWidth: 0 }}>
                 <div style={brandTitleStyle}>
                   MEET<span style={brandAccentStyle}>OUTDOORS</span>
                 </div>
-                {!isMobile ? <div style={brandSubStyle}>Explore • connect • adventure</div> : null}
+                {!isMobile ? (
+                  <div style={brandSubStyle}>Explore • connect • adventure</div>
+                ) : null}
               </div>
             </div>
 
@@ -738,8 +833,13 @@ export default function Navbar() {
               <div style={desktopNavWrap}>
                 {navItems.map((item) => {
                   const active = isActive(item.path);
+
                   return (
-                    <Link key={item.key} to={item.path} style={desktopNavItem(active, item.live, item.special)}>
+                    <Link
+                      key={item.key}
+                      to={item.path}
+                      style={desktopNavItem(active, item.live, item.special)}
+                    >
                       <span style={navIconStyle}>{item.icon}</span>
                       {item.live && !item.special ? <LiveDot /> : null}
                       <span>{item.label}</span>
@@ -749,7 +849,14 @@ export default function Navbar() {
               </div>
             ) : null}
 
-            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 7 : 9, flexShrink: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: isMobile ? 7 : 9,
+                flexShrink: 0,
+              }}
+            >
               <div ref={searchRef} style={{ position: "relative" }}>
                 <button
                   type="button"
@@ -890,7 +997,7 @@ export default function Navbar() {
                 </>
               ) : null}
 
-              {(user || isMobile) ? (
+              {user || isMobile ? (
                 <div ref={menuRef} style={{ position: "relative" }}>
                   {!isMobile ? (
                     <button
@@ -942,13 +1049,7 @@ export default function Navbar() {
                   ) : null}
 
                   {menuOpen && !isMobile ? (
-                    <div
-                      style={{
-                        ...panelBase,
-                        width: 380,
-                        right: 0,
-                      }}
-                    >
+                    <div style={{ ...panelBase, width: 380, right: 0 }}>
                       <MenuPanel
                         user={user}
                         avatarUrl={avatarUrl}
@@ -970,18 +1071,19 @@ export default function Navbar() {
           {isMobile ? (
             <div style={mobileTabsWrap}>
               {navItems
-                .filter((item) => ["home", "going-now", "tours", "vote"].includes(item.key))
+                .filter((item) =>
+                  ["home", "going-now", "tours", "events"].includes(item.key)
+                )
                 .map((item) => {
                   const active = isActive(item.path);
-                  const shortLabel =
-                    item.key === "going-now"
-                      ? "Going"
-                      : item.key === "vote"
-                      ? "Glasaj"
-                      : item.label;
+                  const shortLabel = item.key === "going-now" ? "Going" : item.label;
 
                   return (
-                    <Link key={item.key} to={item.path} style={mobileTab(active, item.live, item.special)}>
+                    <Link
+                      key={item.key}
+                      to={item.path}
+                      style={mobileTab(active, item.live, item.special)}
+                    >
                       <span style={{ fontSize: 14 }}>{item.icon}</span>
                       {item.live && !item.special ? <LiveDot /> : null}
                       <span>{shortLabel}</span>
@@ -1065,8 +1167,10 @@ function AvatarImage({ avatarUrl, size = 38, online = false }) {
         display: "inline-flex",
         flexShrink: 0,
         padding: 2,
-        background: "linear-gradient(135deg, rgba(55,242,195,0.95), rgba(46,230,255,0.65), rgba(255,255,255,0.18))",
-        boxShadow: "0 0 0 1px rgba(255,255,255,0.10), 0 0 22px rgba(55,242,195,0.18)",
+        background:
+          "linear-gradient(135deg, rgba(55,242,195,0.95), rgba(46,230,255,0.65), rgba(255,255,255,0.18))",
+        boxShadow:
+          "0 0 0 1px rgba(255,255,255,0.10), 0 0 22px rgba(55,242,195,0.18)",
       }}
     >
       <img
@@ -1151,7 +1255,9 @@ function SearchPanel({
       </div>
 
       <div style={{ marginTop: 13, maxHeight: 370, overflowY: "auto", paddingRight: 2 }}>
-        {searchLoading ? <EmptyInfo title="Searching..." text="Looking for explorers." /> : null}
+        {searchLoading ? (
+          <EmptyInfo title="Searching..." text="Looking for explorers." />
+        ) : null}
 
         {!searchLoading && searchQuery.trim().length > 0 && searchResults.length === 0 ? (
           <EmptyInfo title="No profiles found" text="Try another name or home base." />
@@ -1195,7 +1301,9 @@ function SearchPanel({
                 >
                   <AvatarImage avatarUrl={p.avatar_url || FALLBACK_AVATAR} size={48} />
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 950, fontSize: 14, color: COLORS.text }}>{name}</div>
+                    <div style={{ fontWeight: 950, fontSize: 14, color: COLORS.text }}>
+                      {name}
+                    </div>
                     <div
                       style={{
                         color: COLORS.textSoft,
@@ -1233,7 +1341,12 @@ function SearchPanel({
   );
 }
 
-function NotificationsPanel({ notifications, clearNotifications, openNotification, notificationIcon }) {
+function NotificationsPanel({
+  notifications,
+  clearNotifications,
+  openNotification,
+  notificationIcon,
+}) {
   return (
     <div>
       <PanelHeader
@@ -1296,8 +1409,17 @@ function NotificationsPanel({ notifications, clearNotifications, openNotificatio
                   {notificationIcon(n.type)}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 950, fontSize: 13 }}>{n.title || "Notification"}</div>
-                  <div style={{ fontSize: 12, lineHeight: 1.5, color: COLORS.textSoft, marginTop: 5 }}>
+                  <div style={{ fontWeight: 950, fontSize: 13 }}>
+                    {n.title || "Notification"}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      lineHeight: 1.5,
+                      color: COLORS.textSoft,
+                      marginTop: 5,
+                    }}
+                  >
                     {n.body || n.message || "No details available."}
                   </div>
                   <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 8 }}>
@@ -1313,7 +1435,17 @@ function NotificationsPanel({ notifications, clearNotifications, openNotificatio
   );
 }
 
-function MenuPanel({ user, avatarUrl, bestDisplayName, email, quickMenuItems, logout, navigate, close, isMobile }) {
+function MenuPanel({
+  user,
+  avatarUrl,
+  bestDisplayName,
+  email,
+  quickMenuItems,
+  logout,
+  navigate,
+  close,
+  isMobile,
+}) {
   return (
     <div>
       <div
@@ -1329,13 +1461,31 @@ function MenuPanel({ user, avatarUrl, bestDisplayName, email, quickMenuItems, lo
         <AvatarImage avatarUrl={avatarUrl || FALLBACK_AVATAR} size={58} online={Boolean(user)} />
 
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontWeight: 950, color: COLORS.text, fontSize: 16, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div
+            style={{
+              fontWeight: 950,
+              color: COLORS.text,
+              fontSize: 16,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {user ? bestDisplayName : "Guest explorer"}
           </div>
           <div style={{ fontSize: 12, color: COLORS.mintSoft, marginTop: 3, fontWeight: 850 }}>
             {user ? "Explorer" : "Not logged in"}
           </div>
-          <div style={{ fontSize: 12, color: COLORS.textSoft, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: COLORS.textSoft,
+              marginTop: 4,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {email}
           </div>
         </div>
@@ -1362,9 +1512,10 @@ function MenuPanel({ user, avatarUrl, bestDisplayName, email, quickMenuItems, lo
               padding: "12px 13px",
               borderRadius: 18,
               border: "1px solid rgba(255,255,255,0.08)",
-              background: item.label === "Create live plan"
-                ? "linear-gradient(135deg, rgba(55,242,195,0.15), rgba(46,230,255,0.10))"
-                : "rgba(255,255,255,0.045)",
+              background:
+                item.label === "Create live plan"
+                  ? "linear-gradient(135deg, rgba(55,242,195,0.15), rgba(46,230,255,0.10))"
+                  : "rgba(255,255,255,0.045)",
               color: COLORS.text,
               cursor: "pointer",
               fontWeight: 850,
@@ -1390,7 +1541,17 @@ function MenuPanel({ user, avatarUrl, bestDisplayName, email, quickMenuItems, lo
             </span>
             <span style={{ minWidth: 0 }}>
               <span style={{ display: "block", fontWeight: 950 }}>{item.label}</span>
-              <span style={{ display: "block", color: COLORS.textDim, fontSize: 11, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span
+                style={{
+                  display: "block",
+                  color: COLORS.textDim,
+                  fontSize: 11,
+                  marginTop: 3,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {item.sub}
               </span>
             </span>
@@ -1409,7 +1570,8 @@ function MenuPanel({ user, avatarUrl, bestDisplayName, email, quickMenuItems, lo
             padding: "13px 14px",
             borderRadius: 18,
             border: "1px solid rgba(255,140,140,0.22)",
-            background: "linear-gradient(135deg, rgba(255,140,140,0.10), rgba(255,90,110,0.05))",
+            background:
+              "linear-gradient(135deg, rgba(255,140,140,0.10), rgba(255,90,110,0.05))",
             color: COLORS.danger,
             cursor: "pointer",
             fontWeight: 950,
@@ -1497,23 +1659,24 @@ function PanelHeader({ eyebrow, title, close, right }) {
         </div>
       </div>
 
-      {right || (close ? (
-        <button
-          type="button"
-          onClick={close}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 13,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.05)",
-            color: COLORS.text,
-            cursor: "pointer",
-          }}
-        >
-          ✕
-        </button>
-      ) : null)}
+      {right ||
+        (close ? (
+          <button
+            type="button"
+            onClick={close}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 13,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.05)",
+              color: COLORS.text,
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+        ) : null)}
     </div>
   );
 }
@@ -1529,7 +1692,9 @@ function EmptyInfo({ title, text }) {
       }}
     >
       <div style={{ color: COLORS.text, fontWeight: 950, fontSize: 14 }}>{title}</div>
-      <div style={{ color: COLORS.textSoft, fontSize: 12, lineHeight: 1.55, marginTop: 6 }}>{text}</div>
+      <div style={{ color: COLORS.textSoft, fontSize: 12, lineHeight: 1.55, marginTop: 6 }}>
+        {text}
+      </div>
     </div>
   );
 }

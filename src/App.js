@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Navbar from "./components/Navbar";
+import SplashScreen from "./components/SplashScreen";
+
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Footer from "./components/Footer";
-
 
 // STRANICE
 import Home from "./pages/Home";
@@ -43,17 +45,36 @@ import EditGoingNow from "./pages/EditGoingNow";
 import CityVoting from "./pages/CityVoting";
 import VotingControlCenter from "./pages/VotingControlCenter";
 
-
-
+// BOOK EXPERIENCES
+import CreateHost from "./pages/CreateHost";
+import HostDashboard from "./pages/HostDashboard";
+import HostProfile from "./pages/HostProfile";
+import CreatePackage from "./pages/CreatePackage";
+import CreateDate from "./pages/CreateDate";
+import HostBookings from "./pages/HostBookings";
+import MyBookings from "./pages/MyBookings";
 
 // AUTH STRANICE
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-
 import Refund from "./pages/Refund";
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2200);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showSplash) {
+    return <SplashScreen />;
+  }
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -65,14 +86,15 @@ function App() {
           <Route path="/activities" element={<Activities />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/refund" element={<Refund />} />
+
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/followers" element={<FollowersList />} />
-          <Route path="/edit-tour/:id" element={<EditTour />} />  
+          <Route path="/edit-tour/:id" element={<EditTour />} />
           <Route path="/chat/:tourId" element={<Chat />} />
-          <Route path="/tour/:id" element={<TourDetails/>} />
-          <Route path="my-tours" element={<MyTours/>} />
-          <Route path="edit-profile" element={<EditProfile/>} />
-          <Route path="settings" element={<Settings/>} />
+          <Route path="/tour/:id" element={<TourDetails />} />
+          <Route path="/my-tours" element={<MyTours />} />
+          <Route path="/edit-profile" element={<EditProfile />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/safety-tips" element={<SafetyTips />} />
           <Route path="/host-guidelines" element={<HostGuidelines />} />
           <Route path="/about" element={<About />} />
@@ -81,30 +103,86 @@ function App() {
           <Route path="/add-post" element={<AddPost />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+
           <Route path="/create-event" element={<CreateEvent />} />
           <Route path="/event" element={<Event />} />
           <Route path="/event-details" element={<EventDetails />} />
-          <Route path ="/events" element={<Events />} />
-          <Route path ="/event/:id" element={<EventDetails />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/event/:id" element={<EventDetails />} />
+
           <Route path="/saved-tours" element={<SavedTours />} />
           <Route path="/apply-creator" element={<ApplyCreator />} />
           <Route path="/admin/creator-requests" element={<AdminCreatorRequests />} />
+
           <Route path="/going-now/:id" element={<GoingNowDetails />} />
           <Route path="/going-now/:id/chat" element={<GoingNowChat />} />
           <Route path="/going-now/create" element={<CreateGoingNow />} />
           <Route path="/going-now" element={<GoingNow />} />
           <Route path="/going-now/:id/edit" element={<EditGoingNow />} />
+
           <Route path="/vote-city" element={<CityVoting />} />
           <Route path="/voting-control-center" element={<VotingControlCenter />} />
 
-          
+          {/* BOOK EXPERIENCES */}
+          <Route path="/host/:slug" element={<HostProfile />} />
+
+          <Route
+            path="/my-bookings"
+            element={
+              <ProtectedRoute>
+                <MyBookings />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/create-host"
+            element={
+              <ProtectedRoute>
+                <CreateHost />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/host-dashboard/:id"
+            element={
+              <ProtectedRoute>
+                <HostDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/host-dashboard/:hostId/bookings"
+            element={
+              <ProtectedRoute>
+                <HostBookings />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/host-dashboard/:hostId/create-package"
+            element={
+              <ProtectedRoute>
+                <CreatePackage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/host-dashboard/:hostId/package/:packageId/create-date"
+            element={
+              <ProtectedRoute>
+                <CreateDate />
+              </ProtectedRoute>
+            }
+          />
+
           {/* AUTH */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
-          
-
-          
 
           {/* STRANICE ZA ULOGOVANE */}
           <Route
@@ -117,10 +195,6 @@ function App() {
           />
 
           <Route
-            
-          />
-
-          <Route
             path="/tours"
             element={
               <ProtectedRoute>
@@ -129,6 +203,7 @@ function App() {
             }
           />
         </Routes>
+
         <Footer />
       </BrowserRouter>
     </AuthProvider>

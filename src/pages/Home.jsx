@@ -11,18 +11,20 @@ const FALLBACK_TOUR_IMAGE =
   "https://images.pexels.com/photos/3324422/pexels-photo-3324422.jpeg";
 const FALLBACK_EVENT_IMAGE =
   "https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg";
+const FALLBACK_EXPERIENCE_IMAGE =
+  "https://images.pexels.com/photos/1732278/pexels-photo-1732278.jpeg";
 
 const COLORS = {
-  bg: "#06110d",
-  card: "rgba(8, 19, 15, 0.84)",
-  line: "rgba(111, 255, 218, 0.12)",
-  lineStrong: "rgba(111, 255, 218, 0.24)",
+  bg: "#020403",
+  line: "rgba(125, 255, 209, 0.13)",
+  lineStrong: "rgba(125, 255, 209, 0.28)",
   text: "#f4fff9",
-  textSoft: "rgba(228, 255, 247, 0.78)",
-  textDim: "rgba(205, 236, 225, 0.62)",
-  mint: "#37f2c3",
-  mintBlue: "#2ee6ff",
+  textSoft: "rgba(231, 255, 247, 0.78)",
+  textDim: "rgba(199, 236, 225, 0.58)",
+  mint: "#16f5a2",
+  mintBlue: "#40e7ff",
   mintSoft: "#8fffe0",
+  gold: "#f4d06f",
 };
 
 function useIsMobile(breakpoint = 768) {
@@ -70,7 +72,7 @@ function HorizontalRail({ styles, railRef, children, isMobile }) {
         <button
           type="button"
           style={{ ...styles.railArrow, left: 0 }}
-          onClick={() => railRef.current?.scrollBy({ left: -360, behavior: "smooth" })}
+          onClick={() => railRef.current?.scrollBy({ left: -420, behavior: "smooth" })}
         >
           ←
         </button>
@@ -84,7 +86,7 @@ function HorizontalRail({ styles, railRef, children, isMobile }) {
         <button
           type="button"
           style={{ ...styles.railArrow, right: 0 }}
-          onClick={() => railRef.current?.scrollBy({ left: 360, behavior: "smooth" })}
+          onClick={() => railRef.current?.scrollBy({ left: 420, behavior: "smooth" })}
         >
           →
         </button>
@@ -93,57 +95,106 @@ function HorizontalRail({ styles, railRef, children, isMobile }) {
   );
 }
 
-function CreateActionPanel({ styles, navigate }) {
+function PremiumQuickActions({ styles, navigate }) {
   const actions = [
     {
-      label: "Create live plan",
-      text: "Start something spontaneous right now.",
-      icon: "⚡",
-      path: "/going-now/create",
+      label: "Going Now",
+      text: "See what people are doing right now.",
+      icon: "LIVE",
+      path: "/going-now",
       primary: true,
     },
     {
-      label: "Create tour",
-      text: "Build a guided outdoor experience.",
-      icon: "🥾",
-      path: "/create-tour",
+      label: "Book Experiences",
+      text: "Reserve real host packages.",
+      icon: "BOOK",
+      path: "#experiences",
     },
     {
-      label: "Create event",
-      text: "Invite people to a bigger outdoor moment.",
-      icon: "🎟️",
-      path: "/create-event",
+      label: "Create",
+      text: "Start a live plan, tour or event.",
+      icon: "HOST",
+      path: "/going-now/create",
     },
   ];
 
   return (
-    <div style={styles.createPanel}>
-      <div style={styles.createPanelCopy}>
-        <div style={styles.createPanelEyebrow}>Start the movement</div>
-        <h2 style={styles.createPanelTitle}>Create the next thing people join.</h2>
-        <p style={styles.createPanelText}>
-          One clear place for live plans, tours and events — without hiding creation inside menus.
-        </p>
+    <div style={styles.quickPanel}>
+      {actions.map((action) => (
+        <button
+          key={action.label}
+          type="button"
+          style={{ ...styles.quickCard, ...(action.primary ? styles.quickCardPrimary : {}) }}
+          onClick={() => {
+            if (action.path === "#experiences") {
+              document.getElementById("experiences")?.scrollIntoView({ behavior: "smooth" });
+              return;
+            }
+            navigate(action.path);
+          }}
+        >
+          <span style={styles.quickIcon}>{action.icon}</span>
+          <span style={styles.quickBody}>
+            <strong style={styles.quickTitle}>{action.label}</strong>
+            <span style={styles.quickText}>{action.text}</span>
+          </span>
+          <span style={styles.quickArrow}>→</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ExperienceCard({ experience, styles, onClick }) {
+  return (
+    <button type="button" style={styles.bookingCard} onClick={onClick}>
+      <div style={styles.bookingMedia}>
+        <img src={experience.image} alt={experience.name} style={styles.bookingImage} />
+        <div style={styles.bookingOverlayTop} />
+        <div style={styles.bookingOverlayBottom} />
+
+        <div style={styles.bookingTopRow}>
+          <span style={styles.bookingBadge}>{experience.badge}</span>
+          <span style={styles.bookingPrice}>{experience.price}</span>
+        </div>
+
+        <div style={styles.bookingTitleWrap}>
+          <div style={styles.bookingType}>{experience.type}</div>
+          <h3 style={styles.bookingTitle}>{experience.name}</h3>
+          <div style={styles.bookingLocation}>📍 {experience.location}</div>
+        </div>
       </div>
 
-      <div style={styles.createActionGrid}>
-        {actions.map((action) => (
-          <button
-            key={action.path}
-            type="button"
-            style={{ ...styles.createActionCard, ...(action.primary ? styles.createActionCardPrimary : {}) }}
-            onClick={() => navigate(action.path)}
-          >
-            <span style={styles.createActionIcon}>{action.icon}</span>
-            <span style={styles.createActionBody}>
-              <strong style={styles.createActionTitle}>{action.label}</strong>
-              <span style={styles.createActionText}>{action.text}</span>
-            </span>
-            <span style={styles.createActionArrow}>→</span>
-          </button>
-        ))}
+      <div style={styles.bookingBody}>
+        <div style={styles.bookingBodyTop}>
+          <span style={styles.bookingBodyLabel}>Available dates</span>
+          <strong style={styles.bookingBodyValue}>{experience.freeSpots} spots</strong>
+        </div>
+
+        <div style={styles.dateList}>
+          {experience.dates.length ? (
+            experience.dates.slice(0, 3).map((date) => {
+              const isFull = date.free_spots <= 0 || date.closed;
+              return (
+                <div key={date.id} style={{ ...styles.dateRow, ...(isFull ? styles.dateRowFull : {}) }}>
+                  <span style={styles.dateLabel}>{date.label}</span>
+                  <span style={{ ...styles.dateSpots, ...(isFull ? styles.dateSpotsFull : {}) }}>
+                    {isFull ? "FULL" : `${date.free_spots}/${date.total_spots} free`}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <div style={styles.dateRow}>
+              <span style={styles.dateLabel}>Dates soon</span>
+              <span style={styles.dateSpots}>Ask host</span>
+            </div>
+          )}
+        </div>
+
+        <div style={styles.bookingButton}>Open booking page</div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -156,14 +207,15 @@ function GoingNowMainCard({ item, styles, onClick }) {
     "Unknown location";
   const participantsCount = item?.participants_count ?? 0;
   const startsAt = item?.starts_at ? new Date(item.starts_at) : null;
-  const timeLabel = startsAt && !Number.isNaN(startsAt.getTime())
-    ? startsAt.toLocaleString(undefined, {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "Starting soon";
+  const timeLabel =
+    startsAt && !Number.isNaN(startsAt.getTime())
+      ? startsAt.toLocaleString(undefined, {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Starting soon";
 
   return (
     <div style={styles.liveFeaturedCard} onClick={onClick} role="button" tabIndex={0}>
@@ -179,7 +231,10 @@ function GoingNowMainCard({ item, styles, onClick }) {
           <div style={styles.liveStatusPill}>{timeLabel}</div>
         </div>
 
-        <h3 style={styles.liveFeaturedTitle}>{item?.title || "Something real is happening right now"}</h3>
+        <h3 style={styles.liveFeaturedTitle}>
+          {item?.title || "Something real is happening right now"}
+        </h3>
+
         <div style={styles.liveMetaRow}>
           <span style={styles.liveMetaChip}>📍 {location}</span>
           <span style={styles.liveMetaChip}>👥 {participantsCount} inside</span>
@@ -197,16 +252,6 @@ function GoingNowMainCard({ item, styles, onClick }) {
           >
             Open live plan
           </button>
-          <button
-            type="button"
-            style={styles.liveGhost}
-            onClick={(e) => {
-              e.stopPropagation();
-              window.location.href = "/create-going-now";
-            }}
-          >
-            Create yours
-          </button>
         </div>
       </div>
     </div>
@@ -223,14 +268,15 @@ function GoingNowSwipeCard({ item, styles, onClick, compact = false }) {
 
   const participantsCount = item?.participants_count ?? 0;
   const startsAt = item?.starts_at ? new Date(item.starts_at) : null;
-  const timeLabel = startsAt && !Number.isNaN(startsAt.getTime())
-    ? startsAt.toLocaleString(undefined, {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "Starting soon";
+  const timeLabel =
+    startsAt && !Number.isNaN(startsAt.getTime())
+      ? startsAt.toLocaleString(undefined, {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Starting soon";
 
   return (
     <div
@@ -307,63 +353,6 @@ function ExploreCard({ item, styles, image, badge, price, title, location, chips
   );
 }
 
-function VotingBanner({ styles, leaderName, leaderVotes, countdown, onOpenVoting }) {
-  return (
-    <div style={styles.votingBanner}>
-      <div style={styles.votingGlowA} />
-      <div style={styles.votingGlowB} />
-
-      <div style={styles.votingLeft}>
-        <div style={styles.votingEyebrow}>
-          <span style={styles.liveDotSmall} />
-          <span>City voting live</span>
-        </div>
-        <div style={styles.votingTitle}>Izađi napolje #2</div>
-        <div style={styles.votingText}>
-          Glasaj za grad. Grad koji pobedi dobija outdoor izazov, a pobednički tim osvaja rafting avanturu na Tari.
-        </div>
-      </div>
-
-      <div style={styles.votingRight}>
-        <div style={styles.votingMiniStats}>
-          <div style={styles.votingMiniCard}>
-            <span style={styles.votingMiniLabel}>Vodi</span>
-            <strong style={styles.votingMiniValue}>{leaderName}</strong>
-          </div>
-          <div style={styles.votingMiniCard}>
-            <span style={styles.votingMiniLabel}>Glasovi</span>
-            <strong style={styles.votingMiniValue}>{leaderVotes}</strong>
-          </div>
-        </div>
-
-        <div style={styles.votingActionRow}>
-          <div style={styles.votingCountdownChip}>⏳ {countdown}</div>
-          <button type="button" style={styles.votingPrimaryBtn} onClick={onOpenVoting}>
-            Open voting
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function formatNumber(num) {
-  if (!num && num !== 0) return "0";
-  return new Intl.NumberFormat("sr-RS").format(num);
-}
-
-function formatCountdown(seconds) {
-  const total = Math.max(0, Number(seconds || 0));
-
-  const days = Math.floor(total / 86400);
-  const hours = Math.floor((total % 86400) / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
 export default function Home() {
   const navigate = useNavigate();
   const isMobile = useIsMobile(768);
@@ -372,15 +361,17 @@ export default function Home() {
   const [tours, setTours] = useState([]);
   const [events, setEvents] = useState([]);
   const [goingNow, setGoingNow] = useState([]);
+  const [hosts, setHosts] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [dates, setDates] = useState([]);
   const [loadingContent, setLoadingContent] = useState(true);
   const [liveFilter, setLiveFilter] = useState("all");
-  const [voteSummary, setVoteSummary] = useState(null);
-  const [votePoll, setVotePoll] = useState(null);
 
   const liveRailRef = useRef(null);
   const soonRailRef = useRef(null);
   const toursRailRef = useRef(null);
   const eventsRailRef = useRef(null);
+  const bookingRailRef = useRef(null);
 
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 120);
@@ -392,26 +383,58 @@ export default function Home() {
         { data: toursData },
         { data: eventsData },
         { data: goingNowData },
-        { data: voteSummaryData },
-        { data: votePollData },
+        { data: hostData },
       ] = await Promise.all([
         supabase.from("tours").select("*").order("created_at", { ascending: false }).limit(8),
         supabase.from("events").select("*").order("created_at", { ascending: false }).limit(8),
-        supabase.from("going_now_overview").select("*").order("starts_at", { ascending: true }).limit(16),
-        supabase.from("city_vote_summary").select("*").limit(1).maybeSingle(),
         supabase
-          .from("city_poll_status")
+          .from("going_now_overview")
           .select("*")
-          .order("starts_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+          .order("starts_at", { ascending: true })
+          .limit(16),
+        supabase
+          .from("experience_hosts")
+          .select("*")
+          .eq("active", true)
+          .order("created_at", { ascending: false })
+          .limit(10),
       ]);
+
+      const safeHosts = hostData || [];
+      let packageData = [];
+      let dateData = [];
+
+      if (safeHosts.length) {
+        const hostIds = safeHosts.map((host) => host.id);
+
+        const { data: packagesFromDb } = await supabase
+          .from("experience_packages")
+          .select("*")
+          .in("host_id", hostIds)
+          .eq("active", true)
+          .order("created_at", { ascending: false });
+
+        packageData = packagesFromDb || [];
+
+        if (packageData.length) {
+          const packageIds = packageData.map((pkg) => pkg.id);
+
+          const { data: datesFromDb } = await supabase
+            .from("experience_dates")
+            .select("*")
+            .in("package_id", packageIds)
+            .order("start_date", { ascending: true });
+
+          dateData = datesFromDb || [];
+        }
+      }
 
       setTours(toursData || []);
       setEvents(eventsData || []);
       setGoingNow(goingNowData || []);
-      setVoteSummary(voteSummaryData || null);
-      setVotePoll(votePollData || null);
+      setHosts(safeHosts);
+      setPackages(packageData);
+      setDates(dateData);
       setLoadingContent(false);
     }
 
@@ -447,7 +470,18 @@ export default function Home() {
     });
   };
 
+  const formatDate = (value) => {
+    if (!value) return "Date soon";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Date soon";
+    return date.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+    });
+  };
+
   const featuredLive = goingNow[0] || null;
+
   const liveNowItems = useMemo(() => {
     return goingNow.filter((item) => {
       if (item?.status === "ended" || item?.status === "cancelled") return false;
@@ -473,19 +507,74 @@ export default function Home() {
     });
   }, [liveNowItems, liveFilter]);
 
-  const voteCountdown = useMemo(() => {
-    if (!votePoll) return "Uskoro";
+  const experienceCards = useMemo(() => {
+    return hosts.map((host) => {
+      const hostPackages = packages.filter((pkg) => pkg.host_id === host.id);
+      const hostDates = dates.filter((date) =>
+        hostPackages.some((pkg) => pkg.id === date.package_id)
+      );
+      const firstPackage = hostPackages[0] || null;
+      const minPrice = hostPackages
+        .map((pkg) => Number(pkg.price || 0))
+        .filter((price) => price > 0)
+        .sort((a, b) => a - b)[0];
 
-    if (votePoll.status === "scheduled") {
-      return `Počinje za ${formatCountdown(votePoll.seconds_left)}`;
-    }
+      return {
+        id: host.id,
+        slug: host.slug,
+        name: host.name || "Experience host",
+        type: host.category || firstPackage?.title || "Outdoor experience",
+        location:
+          host.location ||
+          [host.city, host.country].filter(Boolean).join(", ") ||
+          "Outdoor location",
+        image: firstPackage?.cover_url || host.cover_url || FALLBACK_EXPERIENCE_IMAGE,
+        badge: host.verified ? "Verified host" : "Experience host",
+        price: minPrice ? `From ${minPrice} ${firstPackage?.currency || "EUR"}` : "Price on request",
+        freeSpots: hostDates.reduce((sum, date) => sum + Number(date.free_spots || 0), 0),
+        dates: hostDates.map((date) => ({
+          ...date,
+          label: `${formatDate(date.start_date)}${date.end_date ? ` - ${formatDate(date.end_date)}` : ""}`,
+        })),
+      };
+    });
+  }, [hosts, packages, dates]);
 
-    if (votePoll.status === "active") {
-      return `Još ${formatCountdown(votePoll.seconds_left)}`;
-    }
+  const fallbackExperiences = [
+    {
+      id: "demo-rafting-eden",
+      slug: null,
+      name: "Rafting Camp Eden",
+      type: "Rafting • Tara",
+      location: "Foča / Tara river",
+      image: FALLBACK_EXPERIENCE_IMAGE,
+      badge: "Partner package",
+      price: "From 89 EUR",
+      freeSpots: 11,
+      dates: [
+        { id: "a", label: "Jun 07 - Jun 09", free_spots: 8, total_spots: 12 },
+        { id: "b", label: "Jun 14 - Jun 16", free_spots: 3, total_spots: 12 },
+        { id: "c", label: "Jun 21 - Jun 23", free_spots: 0, total_spots: 12, closed: true },
+      ],
+    },
+    {
+      id: "demo-skydiving",
+      slug: null,
+      name: "Skydiving Serbia",
+      type: "Tandem jump",
+      location: "Paraćin, Serbia",
+      image: "https://images.pexels.com/photos/70361/pexels-photo-70361.jpeg",
+      badge: "Adrenaline",
+      price: "Request date",
+      freeSpots: 7,
+      dates: [
+        { id: "d", label: "Weekend slots", free_spots: 5, total_spots: 8 },
+        { id: "e", label: "Sunset jumps", free_spots: 2, total_spots: 6 },
+      ],
+    },
+  ];
 
-    return "Glasanje završeno";
-  }, [votePoll]);
+  const visibleExperiences = experienceCards.length ? experienceCards : fallbackExperiences;
 
   const styles = useMemo(
     () => ({
@@ -493,9 +582,9 @@ export default function Home() {
         minHeight: "100vh",
         color: COLORS.text,
         background: `
-          radial-gradient(circle at 18% 8%, rgba(46,230,255,0.10), transparent 24%),
-          radial-gradient(circle at 84% 2%, rgba(55,242,195,0.12), transparent 25%),
-          linear-gradient(180deg, #020806 0%, #06110d 42%, #081611 100%)
+          radial-gradient(circle at 50% -8%, rgba(22,245,162,0.16), transparent 32%),
+          radial-gradient(circle at 92% 10%, rgba(64,231,255,0.10), transparent 28%),
+          linear-gradient(180deg, #010302 0%, #04100c 36%, #071611 100%)
         `,
         fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         paddingBottom: isMobile ? MOBILE_BOTTOM_NAV_HEIGHT + 24 : 72,
@@ -503,7 +592,7 @@ export default function Home() {
       },
       hero: {
         position: "relative",
-        minHeight: isMobile ? "86vh" : "92vh",
+        minHeight: isMobile ? "88vh" : "94vh",
         marginTop: -30,
         display: "flex",
         alignItems: "flex-end",
@@ -515,31 +604,41 @@ export default function Home() {
         width: "100%",
         height: "100%",
         objectFit: "cover",
-        transform: loaded ? "scale(1.01)" : "scale(1.06)",
-        transition: "transform 1.5s ease",
-        filter: "saturate(1.04) contrast(1.02)",
+        transform: loaded ? "scale(1.015)" : "scale(1.08)",
+        transition: "transform 1.7s cubic-bezier(.17,.84,.32,1)",
+        filter: "saturate(1.08) contrast(1.08) brightness(.92)",
       },
       heroOverlay: {
         position: "absolute",
         inset: 0,
         background: `
-          radial-gradient(circle at 50% 28%, rgba(55,242,195,0.12), transparent 26%),
-          linear-gradient(to bottom, rgba(2,8,6,0.06) 0%, rgba(2,8,6,0.20) 32%, rgba(2,8,6,0.76) 72%, rgba(2,8,6,0.98) 100%)
+          radial-gradient(circle at 44% 26%, rgba(22,245,162,0.16), transparent 25%),
+          linear-gradient(to bottom, rgba(1,3,2,0.14) 0%, rgba(1,3,2,0.28) 34%, rgba(1,3,2,0.78) 74%, rgba(1,3,2,1) 100%),
+          linear-gradient(90deg, rgba(1,3,2,0.70), rgba(1,3,2,0.14))
         `,
+      },
+      heroGrid: {
+        position: "absolute",
+        inset: 0,
+        background:
+          "linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px)",
+        backgroundSize: "46px 46px",
+        maskImage: "linear-gradient(to bottom, transparent 0%, black 30%, transparent 78%)",
+        opacity: 0.38,
       },
       heroInner: {
         position: "relative",
         zIndex: 2,
         width: "100%",
-        maxWidth: 1280,
+        maxWidth: 1320,
         margin: "0 auto",
-        padding: isMobile ? "120px 16px 104px" : "132px 24px 132px",
+        padding: isMobile ? "126px 16px 112px" : "146px 28px 148px",
       },
       heroContent: {
-        maxWidth: 760,
+        maxWidth: 910,
         opacity: loaded ? 1 : 0,
-        transform: loaded ? "translateY(0px)" : "translateY(24px)",
-        transition: "opacity 0.85s ease, transform 0.85s ease",
+        transform: loaded ? "translateY(0px)" : "translateY(28px)",
+        transition: "opacity 0.9s ease, transform 0.9s cubic-bezier(.17,.84,.32,1)",
       },
       heroEyebrow: {
         display: "inline-flex",
@@ -547,22 +646,23 @@ export default function Home() {
         gap: 9,
         padding: "9px 13px",
         borderRadius: 999,
-        background: "rgba(3, 15, 11, 0.34)",
+        background: "rgba(3, 15, 11, 0.38)",
         border: `1px solid ${COLORS.lineStrong}`,
         color: COLORS.mintSoft,
         fontSize: isMobile ? 10 : 11,
         fontWeight: 950,
-        letterSpacing: "0.14em",
+        letterSpacing: "0.16em",
         textTransform: "uppercase",
         marginBottom: 18,
-        backdropFilter: "blur(14px)",
+        backdropFilter: "blur(16px)",
+        boxShadow: "0 0 34px rgba(22,245,162,.10)",
       },
       liveDotSmall: {
         width: 8,
         height: 8,
         borderRadius: 999,
         background: COLORS.mint,
-        boxShadow: "0 0 14px rgba(55,242,195,0.70)",
+        boxShadow: "0 0 16px rgba(22,245,162,0.80)",
         flex: "0 0 auto",
       },
       liveDotSmallDark: {
@@ -575,102 +675,112 @@ export default function Home() {
       },
       heroTitle: {
         margin: 0,
-        fontSize: isMobile ? 48 : 90,
-        lineHeight: isMobile ? 0.92 : 0.86,
+        fontSize: isMobile ? 49 : 98,
+        lineHeight: isMobile ? 0.91 : 0.84,
         fontWeight: 950,
-        letterSpacing: "-0.075em",
-        color: "#effff8",
-        textShadow: "0 18px 44px rgba(0,0,0,0.34)",
+        letterSpacing: "-0.082em",
+        color: "#f7fff9",
+        textShadow: "0 24px 70px rgba(0,0,0,0.42)",
       },
       heroTitleAccent: {
-        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+        background: "linear-gradient(135deg, #16f5a2 0%, #8fffe0 42%, #40e7ff 100%)",
         WebkitBackgroundClip: "text",
         color: "transparent",
+        filter: "drop-shadow(0 0 24px rgba(22,245,162,.18))",
       },
       heroSubtitle: {
-        marginTop: 18,
+        marginTop: 20,
         marginBottom: 0,
-        maxWidth: 560,
-        fontSize: isMobile ? 15 : 20,
+        maxWidth: 650,
+        fontSize: isMobile ? 15 : 21,
         lineHeight: 1.55,
-        color: "rgba(236,255,249,0.86)",
+        color: "rgba(238,255,249,0.88)",
         fontWeight: 650,
       },
       heroActions: {
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
         gap: 12,
-        marginTop: 26,
+        marginTop: 28,
         width: isMobile ? "100%" : "auto",
-        maxWidth: isMobile ? 420 : "none",
+        maxWidth: isMobile ? 430 : "none",
       },
       heroPrimaryBtn: {
         appearance: "none",
         border: "none",
         padding: isMobile ? "17px 18px" : "17px 25px",
         borderRadius: 999,
-        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
-        color: "#052018",
+        background: "linear-gradient(135deg, #16f5a2 0%, #40e7ff 100%)",
+        color: "#03150f",
         fontWeight: 950,
         fontSize: 15,
         cursor: "pointer",
-        boxShadow: "0 22px 46px rgba(55,242,195,0.25)",
+        boxShadow: "0 24px 54px rgba(22,245,162,0.28)",
       },
       heroGhostBtn: {
         appearance: "none",
         border: `1px solid ${COLORS.lineStrong}`,
         padding: isMobile ? "16px 18px" : "16px 23px",
         borderRadius: 999,
-        background: "rgba(3, 16, 12, 0.36)",
+        background: "rgba(3, 16, 12, 0.42)",
         color: COLORS.text,
         fontWeight: 850,
         fontSize: 14,
         cursor: "pointer",
+        backdropFilter: "blur(16px)",
+      },
+      heroStats: {
+        display: "grid",
+        gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(3, 150px)",
+        gap: 10,
+        marginTop: 24,
+        maxWidth: isMobile ? "100%" : 480,
+      },
+      heroStat: {
+        padding: "13px 12px",
+        borderRadius: 20,
+        background: "rgba(3, 16, 12, 0.38)",
+        border: `1px solid ${COLORS.line}`,
         backdropFilter: "blur(14px)",
       },
-      heroQuickStrip: {
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-        gap: 10,
-        marginTop: 22,
-        maxWidth: 760,
+      heroStatNum: {
+        display: "block",
+        fontSize: isMobile ? 18 : 22,
+        fontWeight: 950,
+        letterSpacing: "-0.04em",
       },
-      heroQuickItem: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "12px 14px",
-        borderRadius: 18,
-        background: "rgba(3, 16, 12, 0.34)",
-        border: `1px solid ${COLORS.line}`,
-        color: COLORS.textSoft,
-        fontSize: 12,
-        fontWeight: 800,
-        backdropFilter: "blur(12px)",
+      heroStatLabel: {
+        display: "block",
+        marginTop: 4,
+        color: COLORS.textDim,
+        fontSize: 10,
+        fontWeight: 900,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
       },
       section: {
-        maxWidth: 1280,
+        maxWidth: 1320,
         margin: "0 auto",
-        padding: isMobile ? "28px 16px 0" : "38px 24px 0",
+        padding: isMobile ? "30px 16px 0" : "44px 28px 0",
       },
       sectionTight: {
-        maxWidth: 1280,
+        maxWidth: 1320,
         margin: "0 auto",
-        padding: isMobile ? "18px 16px 0" : "24px 24px 0",
+        padding: isMobile ? "18px 16px 0" : "24px 28px 0",
       },
       sectionHeader: {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "flex-end",
         gap: 16,
-        marginBottom: 16,
+        marginBottom: 17,
       },
       sectionEyebrow: {
         display: "inline-flex",
         alignItems: "center",
         gap: 8,
         fontSize: isMobile ? 10 : 11,
-        letterSpacing: "0.16em",
+        letterSpacing: "0.17em",
         textTransform: "uppercase",
         color: COLORS.textDim,
         fontWeight: 950,
@@ -679,23 +789,23 @@ export default function Home() {
       sectionEyebrowLive: { color: COLORS.mintSoft },
       sectionTitle: {
         margin: 0,
-        fontSize: isMobile ? 25 : 36,
-        lineHeight: 1.02,
+        fontSize: isMobile ? 27 : 40,
+        lineHeight: 1,
         fontWeight: 950,
-        letterSpacing: "-0.05em",
+        letterSpacing: "-0.055em",
         color: COLORS.text,
       },
       sectionSubtitle: {
-        marginTop: 8,
+        marginTop: 9,
         marginBottom: 0,
-        maxWidth: 650,
+        maxWidth: 690,
         fontSize: isMobile ? 13 : 14,
         lineHeight: 1.6,
         color: COLORS.textSoft,
       },
       sectionAction: {
         border: `1px solid ${COLORS.lineStrong}`,
-        background: "rgba(7, 22, 17, 0.44)",
+        background: "rgba(7, 22, 17, 0.48)",
         color: COLORS.text,
         padding: isMobile ? "10px 12px" : "10px 14px",
         borderRadius: 999,
@@ -707,239 +817,265 @@ export default function Home() {
         cursor: "pointer",
         whiteSpace: "nowrap",
       },
-      createPanel: {
+      quickPanel: {
         position: "relative",
         overflow: "hidden",
         display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "0.85fr 1.15fr",
-        gap: isMobile ? 16 : 22,
-        alignItems: "center",
-        borderRadius: isMobile ? 30 : 36,
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+        gap: 12,
+        borderRadius: isMobile ? 30 : 38,
         border: `1px solid ${COLORS.lineStrong}`,
         background: `
-          radial-gradient(circle at 10% 0%, rgba(55,242,195,0.18), transparent 36%),
-          linear-gradient(145deg, rgba(8,24,18,0.76), rgba(5,14,10,0.92))
+          radial-gradient(circle at 12% 0%, rgba(22,245,162,0.18), transparent 34%),
+          radial-gradient(circle at 92% 14%, rgba(64,231,255,0.12), transparent 30%),
+          linear-gradient(145deg, rgba(8,24,18,0.78), rgba(3,9,7,0.92))
         `,
-        boxShadow: "0 24px 70px rgba(0,0,0,0.24)",
-        padding: isMobile ? 18 : 24,
-        marginTop: isMobile ? -64 : -86,
+        boxShadow: "0 28px 78px rgba(0,0,0,0.30)",
+        padding: isMobile ? 13 : 16,
+        marginTop: isMobile ? -70 : -94,
         zIndex: 5,
-        backdropFilter: "blur(18px)",
+        backdropFilter: "blur(20px)",
       },
-      createPanelCopy: {
-        padding: isMobile ? "2px 2px" : "8px 10px",
-      },
-      createPanelEyebrow: {
-        color: COLORS.mintSoft,
-        fontSize: 11,
-        fontWeight: 950,
-        letterSpacing: "0.15em",
-        textTransform: "uppercase",
-        marginBottom: 10,
-      },
-      createPanelTitle: {
-        margin: 0,
-        fontSize: isMobile ? 26 : 38,
-        lineHeight: 1.0,
-        letterSpacing: "-0.055em",
-        fontWeight: 950,
-      },
-      createPanelText: {
-        margin: "10px 0 0",
-        color: COLORS.textSoft,
-        fontSize: isMobile ? 13 : 14,
-        lineHeight: 1.6,
-        maxWidth: 430,
-        fontWeight: 650,
-      },
-      createActionGrid: {
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-        gap: 10,
-      },
-      createActionCard: {
+      quickCard: {
         appearance: "none",
         border: `1px solid ${COLORS.line}`,
         background: "rgba(255,255,255,0.045)",
         color: COLORS.text,
-        borderRadius: 24,
-        padding: 15,
+        borderRadius: 26,
+        padding: isMobile ? 15 : 18,
         display: "flex",
         alignItems: "center",
-        gap: 12,
+        gap: 13,
         textAlign: "left",
         cursor: "pointer",
-        minHeight: isMobile ? 76 : 140,
+        minHeight: isMobile ? 84 : 128,
       },
-      createActionCardPrimary: {
-        background: "linear-gradient(145deg, rgba(55,242,195,0.18), rgba(46,230,255,0.12))",
+      quickCardPrimary: {
+        background: "linear-gradient(145deg, rgba(22,245,162,0.19), rgba(64,231,255,0.12))",
         border: `1px solid ${COLORS.lineStrong}`,
+        boxShadow: "0 20px 48px rgba(22,245,162,.10)",
       },
-      createActionIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 16,
+      quickIcon: {
+        width: 50,
+        height: 50,
+        borderRadius: 19,
         display: "grid",
         placeItems: "center",
-        background: "rgba(255,255,255,0.08)",
+        background: "rgba(255,255,255,0.07)",
+        border: `1px solid ${COLORS.line}`,
         flex: "0 0 auto",
-        fontSize: 19,
+        fontSize: 10,
+        letterSpacing: ".12em",
+        fontWeight: 950,
+        color: COLORS.mintSoft,
       },
-      createActionBody: {
+      quickBody: {
         display: "flex",
         flexDirection: "column",
-        gap: 5,
+        gap: 6,
         flex: 1,
       },
-      createActionTitle: {
-        fontSize: 14,
+      quickTitle: {
+        fontSize: 16,
         lineHeight: 1.1,
         fontWeight: 950,
         color: COLORS.text,
       },
-      createActionText: {
+      quickText: {
         fontSize: 12,
-        lineHeight: 1.35,
+        lineHeight: 1.4,
         color: COLORS.textSoft,
         fontWeight: 650,
       },
-      createActionArrow: {
+      quickArrow: {
         color: COLORS.mintSoft,
         fontWeight: 950,
       },
-      votingBanner: {
-        position: "relative",
-        overflow: "hidden",
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1.15fr 0.85fr",
-        gap: 16,
-        alignItems: "center",
-        borderRadius: isMobile ? 26 : 32,
+      railShell: { position: "relative" },
+      rail: {
+        display: "flex",
+        gap: 14,
+        overflowX: "auto",
+        paddingBottom: 8,
+        scrollSnapType: "x mandatory",
+        scrollbarWidth: "none",
+        WebkitOverflowScrolling: "touch",
+      },
+      railArrow: {
+        position: "absolute",
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 3,
+        width: 46,
+        height: 46,
+        borderRadius: "50%",
         border: `1px solid ${COLORS.lineStrong}`,
-        background: `
-          radial-gradient(circle at 85% 0%, rgba(46,230,255,0.18), transparent 34%),
-          linear-gradient(145deg, rgba(8,24,18,0.72), rgba(5,14,10,0.92))
-        `,
-        boxShadow: "0 18px 50px rgba(0,0,0,0.20)",
-        padding: isMobile ? 16 : 20,
+        background: "rgba(7,22,17,0.78)",
+        color: COLORS.text,
+        fontWeight: 900,
+        cursor: "pointer",
+        backdropFilter: "blur(10px)",
       },
-      votingGlowA: {
-        position: "absolute",
-        width: 220,
-        height: 220,
-        right: -90,
-        top: -110,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(46,230,255,0.20), transparent 70%)",
-        pointerEvents: "none",
+      bookingCard: {
+        overflow: "hidden",
+        minWidth: isMobile ? "86vw" : 382,
+        width: isMobile ? "86vw" : 382,
+        flex: "0 0 auto",
+        scrollSnapAlign: "start",
+        borderRadius: 32,
+        border: `1px solid ${COLORS.lineStrong}`,
+        background: "linear-gradient(155deg, rgba(9,25,19,.84), rgba(3,9,7,.96))",
+        boxShadow: "0 24px 68px rgba(0,0,0,.30)",
+        textAlign: "left",
+        color: COLORS.text,
+        cursor: "pointer",
+        padding: 0,
       },
-      votingGlowB: {
-        position: "absolute",
-        width: 220,
-        height: 220,
-        left: -90,
-        bottom: -110,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(55,242,195,0.16), transparent 70%)",
-        pointerEvents: "none",
-      },
-      votingLeft: {
+      bookingMedia: {
         position: "relative",
-        zIndex: 1,
+        height: isMobile ? 250 : 278,
+        overflow: "hidden",
       },
-      votingRight: {
-        position: "relative",
-        zIndex: 1,
-        display: "grid",
-        gap: 10,
+      bookingImage: {
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        transform: "scale(1.035)",
+        filter: "saturate(1.08) contrast(1.04)",
       },
-      votingEyebrow: {
+      bookingOverlayTop: {
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(to bottom, rgba(0,0,0,.14), transparent 48%)",
+      },
+      bookingOverlayBottom: {
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(to top, rgba(1,3,2,.96), rgba(1,3,2,.06) 58%)",
+      },
+      bookingTopRow: {
+        position: "absolute",
+        top: 14,
+        left: 14,
+        right: 14,
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 8,
+      },
+      bookingBadge: {
         display: "inline-flex",
         alignItems: "center",
-        gap: 8,
         padding: "7px 11px",
         borderRadius: 999,
-        background: "rgba(8, 28, 21, 0.52)",
-        border: `1px solid ${COLORS.lineStrong}`,
-        color: COLORS.mintSoft,
-        fontSize: 10,
+        background: "linear-gradient(135deg, #16f5a2, #40e7ff)",
+        color: "#03150f",
+        fontSize: 11,
         fontWeight: 950,
-        letterSpacing: "0.12em",
         textTransform: "uppercase",
-        marginBottom: 10,
+        letterSpacing: ".08em",
       },
-      votingTitle: {
-        fontSize: isMobile ? 25 : 34,
-        lineHeight: 1,
-        fontWeight: 950,
-        letterSpacing: "-0.055em",
-        color: COLORS.text,
-      },
-      votingText: {
-        marginTop: 8,
-        color: COLORS.textSoft,
-        fontSize: isMobile ? 13 : 14,
-        lineHeight: 1.55,
-        fontWeight: 650,
-      },
-      votingMiniStats: {
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 10,
-      },
-      votingMiniCard: {
-        padding: 13,
-        borderRadius: 20,
-        background: "rgba(255,255,255,0.045)",
+      bookingPrice: {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "7px 11px",
+        borderRadius: 999,
+        background: "rgba(3, 15, 11, .58)",
         border: `1px solid ${COLORS.line}`,
+        color: COLORS.text,
+        fontSize: 11,
+        fontWeight: 850,
       },
-      votingMiniLabel: {
-        display: "block",
+      bookingTitleWrap: {
+        position: "absolute",
+        left: 17,
+        right: 17,
+        bottom: 17,
+      },
+      bookingType: {
+        color: COLORS.mintSoft,
+        fontSize: 11,
+        fontWeight: 950,
+        letterSpacing: ".14em",
+        textTransform: "uppercase",
+        marginBottom: 8,
+      },
+      bookingTitle: {
+        margin: 0,
+        fontSize: isMobile ? 29 : 34,
+        lineHeight: .96,
+        letterSpacing: "-.055em",
+        fontWeight: 950,
+      },
+      bookingLocation: {
+        marginTop: 9,
+        color: COLORS.textSoft,
+        fontSize: 13,
+        fontWeight: 750,
+      },
+      bookingBody: {
+        padding: 16,
+      },
+      bookingBodyTop: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+        marginBottom: 12,
+      },
+      bookingBodyLabel: {
         color: COLORS.textDim,
         fontSize: 10,
         fontWeight: 950,
-        letterSpacing: "0.12em",
         textTransform: "uppercase",
-        marginBottom: 6,
+        letterSpacing: ".14em",
       },
-      votingMiniValue: {
-        display: "block",
-        color: COLORS.text,
-        fontSize: isMobile ? 18 : 21,
-        lineHeight: 1.05,
-        letterSpacing: "-0.03em",
-      },
-      votingActionRow: {
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        gap: 10,
-        alignItems: "stretch",
-      },
-      votingPrimaryBtn: {
-        appearance: "none",
-        border: "none",
-        padding: "13px 16px",
-        borderRadius: 999,
-        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
-        color: "#052018",
-        fontWeight: 950,
+      bookingBodyValue: {
+        color: COLORS.mintSoft,
         fontSize: 13,
-        cursor: "pointer",
-        whiteSpace: "nowrap",
       },
-      votingCountdownChip: {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
+      dateList: {
+        display: "grid",
         gap: 8,
-        padding: "12px 13px",
-        borderRadius: 999,
-        background: "rgba(8, 28, 21, 0.52)",
+      },
+      dateRow: {
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 10,
+        alignItems: "center",
+        padding: "11px 12px",
+        borderRadius: 17,
+        background: "rgba(255,255,255,.045)",
         border: `1px solid ${COLORS.line}`,
-        color: COLORS.text,
-        fontSize: 12,
+      },
+      dateRowFull: {
+        opacity: .58,
+      },
+      dateLabel: {
+        fontSize: 13,
         fontWeight: 850,
-        whiteSpace: "nowrap",
+      },
+      dateSpots: {
+        fontSize: 12,
+        fontWeight: 950,
+        color: COLORS.mintSoft,
+      },
+      dateSpotsFull: {
+        color: "rgba(255,255,255,.58)",
+      },
+      bookingButton: {
+        width: "100%",
+        boxSizing: "border-box",
+        textAlign: "center",
+        marginTop: 13,
+        border: "none",
+        borderRadius: 999,
+        padding: "14px 16px",
+        background: "linear-gradient(135deg, #16f5a2 0%, #40e7ff 100%)",
+        color: "#03150f",
+        fontSize: 14,
+        fontWeight: 950,
       },
       liveFilters: {
         display: "flex",
@@ -951,7 +1087,9 @@ export default function Home() {
       },
       liveFilterChip: (active) => ({
         border: `1px solid ${active ? COLORS.lineStrong : COLORS.line}`,
-        background: active ? "linear-gradient(135deg, rgba(55,242,195,0.18), rgba(46,230,255,0.14))" : "rgba(255,255,255,0.04)",
+        background: active
+          ? "linear-gradient(135deg, rgba(22,245,162,0.18), rgba(64,231,255,0.13))"
+          : "rgba(255,255,255,0.04)",
         color: COLORS.text,
         padding: "11px 14px",
         borderRadius: 999,
@@ -964,13 +1102,13 @@ export default function Home() {
       liveFeaturedCard: {
         position: "relative",
         overflow: "hidden",
-        minHeight: isMobile ? 390 : 520,
-        borderRadius: isMobile ? 30 : 38,
+        minHeight: isMobile ? 400 : 540,
+        borderRadius: isMobile ? 32 : 42,
         border: `1px solid ${COLORS.lineStrong}`,
         background: "linear-gradient(145deg, rgba(8,24,18,0.72), rgba(7,17,13,0.92))",
-        boxShadow: "0 26px 76px rgba(0,0,0,0.30)",
+        boxShadow: "0 30px 84px rgba(0,0,0,0.34)",
         cursor: "pointer",
-        marginBottom: 18,
+        marginBottom: 20,
       },
       liveFeaturedImage: {
         position: "absolute",
@@ -978,18 +1116,18 @@ export default function Home() {
         width: "100%",
         height: "100%",
         objectFit: "cover",
-        transform: "scale(1.03)",
+        transform: "scale(1.035)",
       },
       liveFeaturedOverlay: {
         position: "absolute",
         inset: 0,
-        background: "linear-gradient(to top, rgba(2,8,6,0.98), rgba(2,8,6,0.38) 48%, rgba(2,8,6,0.08))",
+        background: "linear-gradient(to top, rgba(1,3,2,0.99), rgba(1,3,2,0.42) 48%, rgba(1,3,2,0.08))",
       },
       liveFeaturedContent: {
         position: "absolute",
-        left: isMobile ? 18 : 26,
-        right: isMobile ? 18 : 26,
-        bottom: isMobile ? 18 : 26,
+        left: isMobile ? 18 : 28,
+        right: isMobile ? 18 : 28,
+        bottom: isMobile ? 18 : 28,
       },
       liveFeaturedTopRow: {
         display: "flex",
@@ -1005,7 +1143,7 @@ export default function Home() {
         gap: 8,
         padding: "8px 12px",
         borderRadius: 999,
-        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+        background: "linear-gradient(135deg, #16f5a2 0%, #40e7ff 100%)",
         color: "#052018",
         fontSize: 11,
         fontWeight: 950,
@@ -1026,12 +1164,12 @@ export default function Home() {
       },
       liveFeaturedTitle: {
         margin: 0,
-        fontSize: isMobile ? 34 : 58,
-        lineHeight: 0.96,
+        fontSize: isMobile ? 35 : 62,
+        lineHeight: 0.94,
         fontWeight: 950,
-        letterSpacing: "-0.065em",
+        letterSpacing: "-0.07em",
         color: COLORS.text,
-        maxWidth: 760,
+        maxWidth: 780,
       },
       liveMetaRow: {
         display: "flex",
@@ -1061,46 +1199,11 @@ export default function Home() {
         border: "none",
         padding: isMobile ? "15px 18px" : "14px 22px",
         borderRadius: 999,
-        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+        background: "linear-gradient(135deg, #16f5a2 0%, #40e7ff 100%)",
         color: "#052018",
         fontWeight: 950,
         fontSize: 15,
         cursor: "pointer",
-      },
-      liveGhost: {
-        border: `1px solid ${COLORS.lineStrong}`,
-        padding: isMobile ? "14px 18px" : "14px 20px",
-        borderRadius: 999,
-        background: "rgba(8, 26, 20, 0.38)",
-        color: COLORS.text,
-        fontWeight: 850,
-        fontSize: 14,
-        cursor: "pointer",
-      },
-      railShell: { position: "relative" },
-      rail: {
-        display: "flex",
-        gap: 14,
-        overflowX: "auto",
-        paddingBottom: 8,
-        scrollSnapType: "x mandatory",
-        scrollbarWidth: "none",
-        WebkitOverflowScrolling: "touch",
-      },
-      railArrow: {
-        position: "absolute",
-        top: "50%",
-        transform: "translateY(-50%)",
-        zIndex: 3,
-        width: 46,
-        height: 46,
-        borderRadius: "50%",
-        border: `1px solid ${COLORS.lineStrong}`,
-        background: "rgba(7,22,17,0.78)",
-        color: COLORS.text,
-        fontWeight: 900,
-        cursor: "pointer",
-        backdropFilter: "blur(10px)",
       },
       goingCard: {
         position: "relative",
@@ -1116,12 +1219,25 @@ export default function Home() {
         scrollSnapAlign: "start",
         cursor: "pointer",
       },
-      goingCardCompact: {
-        height: isMobile ? 320 : 340,
+      goingCardCompact: { height: isMobile ? 320 : 340 },
+      goingCardImage: {
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        transform: "scale(1.03)",
       },
-      goingCardImage: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.03)" },
-      goingCardOverlayTop: { position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0.18))" },
-      goingCardOverlayBottom: { position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(4,14,10,0.98), rgba(4,14,10,0.16) 48%)" },
+      goingCardOverlayTop: {
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0.18))",
+      },
+      goingCardOverlayBottom: {
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(to top, rgba(4,14,10,0.98), rgba(4,14,10,0.16) 48%)",
+      },
       goingCardTop: {
         position: "absolute",
         top: 14,
@@ -1138,7 +1254,7 @@ export default function Home() {
         gap: 8,
         padding: "8px 12px",
         borderRadius: 999,
-        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+        background: "linear-gradient(135deg, #16f5a2 0%, #40e7ff 100%)",
         color: "#052018",
         fontSize: 11,
         fontWeight: 950,
@@ -1205,26 +1321,49 @@ export default function Home() {
       card: {
         position: "relative",
         overflow: "hidden",
-        borderRadius: 26,
-        background: "linear-gradient(155deg, rgba(8,24,18,0.74), rgba(7,17,13,0.90))",
+        borderRadius: 28,
+        background: "linear-gradient(155deg, rgba(8,24,18,0.78), rgba(4,10,8,0.94))",
         border: `1px solid ${COLORS.line}`,
         cursor: "pointer",
-        boxShadow: "0 14px 34px rgba(0,0,0,0.18)",
+        boxShadow: "0 18px 46px rgba(0,0,0,0.22)",
         minWidth: isMobile ? "82vw" : 312,
         flex: "0 0 auto",
         scrollSnapAlign: "start",
       },
       cardMedia: { position: "relative", width: "100%", height: isMobile ? 190 : 222, overflow: "hidden" },
-      cardImage: { width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.02)", transition: "transform 0.45s ease" },
-      cardMediaOverlayTop: { position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0.18))" },
-      cardMediaOverlayBottom: { position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(4,14,10,0.96), rgba(4,14,10,0.08) 48%)" },
-      cardMediaTopRow: { position: "absolute", top: 12, left: 12, right: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 },
+      cardImage: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        transform: "scale(1.02)",
+        transition: "transform 0.45s ease",
+      },
+      cardMediaOverlayTop: {
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0.18))",
+      },
+      cardMediaOverlayBottom: {
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(to top, rgba(4,14,10,0.96), rgba(4,14,10,0.08) 48%)",
+      },
+      cardMediaTopRow: {
+        position: "absolute",
+        top: 12,
+        left: 12,
+        right: 12,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 8,
+      },
       cardBadge: {
         display: "inline-flex",
         alignItems: "center",
         padding: "6px 10px",
         borderRadius: 999,
-        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+        background: "linear-gradient(135deg, #16f5a2 0%, #40e7ff 100%)",
         color: "#052018",
         fontWeight: 950,
         letterSpacing: "0.06em",
@@ -1248,9 +1387,30 @@ export default function Home() {
         whiteSpace: "nowrap",
       },
       cardBody: { padding: isMobile ? 14 : 16 },
-      cardTitle: { fontSize: isMobile ? 18 : 20, fontWeight: 950, lineHeight: 1.12, color: COLORS.text, marginBottom: 8, letterSpacing: "-0.025em" },
-      cardLocation: { display: "flex", alignItems: "center", gap: 7, fontSize: isMobile ? 12 : 13, color: COLORS.textSoft, marginBottom: 12 },
-      cardBottomRow: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, fontSize: isMobile ? 11 : 12, color: COLORS.textSoft },
+      cardTitle: {
+        fontSize: isMobile ? 18 : 20,
+        fontWeight: 950,
+        lineHeight: 1.12,
+        color: COLORS.text,
+        marginBottom: 8,
+        letterSpacing: "-0.025em",
+      },
+      cardLocation: {
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        fontSize: isMobile ? 12 : 13,
+        color: COLORS.textSoft,
+        marginBottom: 12,
+      },
+      cardBottomRow: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        fontSize: isMobile ? 11 : 12,
+        color: COLORS.textSoft,
+      },
       cardChips: { display: "flex", gap: 7, flexWrap: "wrap" },
       cardChip: {
         display: "inline-flex",
@@ -1266,22 +1426,34 @@ export default function Home() {
       emptyCard: {
         position: "relative",
         overflow: "hidden",
-        borderRadius: 28,
+        borderRadius: 30,
         padding: isMobile ? "20px" : "26px",
         background: `
-          radial-gradient(circle at 90% 0%, rgba(55,242,195,0.15), transparent 34%),
+          radial-gradient(circle at 90% 0%, rgba(22,245,162,0.15), transparent 34%),
           linear-gradient(145deg, rgba(8,24,18,0.72), rgba(7,17,13,0.88))
         `,
         border: `1px solid ${COLORS.line}`,
       },
-      emptyTitle: { fontSize: isMobile ? 22 : 28, fontWeight: 950, marginBottom: 8, color: COLORS.text, letterSpacing: "-0.04em" },
-      emptyText: { fontSize: isMobile ? 14 : 15, lineHeight: 1.6, color: COLORS.textSoft, maxWidth: 720, marginBottom: 16 },
+      emptyTitle: {
+        fontSize: isMobile ? 22 : 28,
+        fontWeight: 950,
+        marginBottom: 8,
+        color: COLORS.text,
+        letterSpacing: "-0.04em",
+      },
+      emptyText: {
+        fontSize: isMobile ? 14 : 15,
+        lineHeight: 1.6,
+        color: COLORS.textSoft,
+        maxWidth: 720,
+        marginBottom: 16,
+      },
       emptyButton: {
         appearance: "none",
         border: "none",
         borderRadius: 999,
         padding: "13px 17px",
-        background: "linear-gradient(135deg, #37f2c3 0%, #2ee6ff 100%)",
+        background: "linear-gradient(135deg, #16f5a2 0%, #40e7ff 100%)",
         color: "#052018",
         fontWeight: 950,
         cursor: "pointer",
@@ -1295,60 +1467,69 @@ export default function Home() {
       <section style={styles.hero}>
         <img src={HERO_IMAGE} alt="MeetOutdoors hero" style={styles.heroImage} />
         <div style={styles.heroOverlay} />
+        <div style={styles.heroGrid} />
 
         <div style={styles.heroInner}>
           <div style={styles.heroContent}>
             <div style={styles.heroEyebrow}>
               <span style={styles.liveDotSmall} />
-              <span>Outdoor social app</span>
+              <span>Real people • real outdoors • real experiences</span>
             </div>
 
             <h1 style={styles.heroTitle}>
-              Find people.
+              Don’t explore
               <br />
-              Go outside.
+              alone.
               <br />
-              <span style={styles.heroTitleAccent}>Do something real.</span>
+              <span style={styles.heroTitleAccent}>Book adventure.</span>
             </h1>
 
             <p style={styles.heroSubtitle}>
-              Join live plans, discover outdoor tours or create the next adventure people will actually show up for.
+              Join live outdoor plans, discover community tours and reserve real partner
+              experiences with available dates and real spots.
             </p>
 
             <div style={styles.heroActions}>
-              <button type="button" style={styles.heroPrimaryBtn} onClick={() => navigate("/going-now")}>Open Going Now</button>
-              <button type="button" style={styles.heroGhostBtn} onClick={() => navigate("/tours")}>Explore tours</button>
+              <button type="button" style={styles.heroPrimaryBtn} onClick={() => navigate("/going-now")}>
+                Open Going Now
+              </button>
+              <button
+                type="button"
+                style={styles.heroGhostBtn}
+                onClick={() => document.getElementById("experiences")?.scrollIntoView({ behavior: "smooth" })}
+              >
+                Book experiences
+              </button>
             </div>
 
-            <div style={styles.heroQuickStrip}>
-              <div style={styles.heroQuickItem}>⚡ Live plans near you</div>
-              <div style={styles.heroQuickItem}>🥾 Tours you can join</div>
-              <div style={styles.heroQuickItem}>🎟️ Events worth leaving home for</div>
+            <div style={styles.heroStats}>
+              <div style={styles.heroStat}>
+                <span style={styles.heroStatNum}>{goingNow.length || "Live"}</span>
+                <span style={styles.heroStatLabel}>plans</span>
+              </div>
+              <div style={styles.heroStat}>
+                <span style={styles.heroStatNum}>{tours.length || "Tours"}</span>
+                <span style={styles.heroStatLabel}>community</span>
+              </div>
+              <div style={styles.heroStat}>
+                <span style={styles.heroStatNum}>{experienceCards.length || "Host"}</span>
+                <span style={styles.heroStatLabel}>booking</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section style={styles.sectionTight}>
-        <CreateActionPanel styles={styles} navigate={navigate} />
-      </section>
-
-      <section style={styles.sectionTight}>
-        <VotingBanner
-          styles={styles}
-          leaderName={voteSummary?.leading_name || "Beograd"}
-          leaderVotes={formatNumber(voteSummary?.leading_votes || 0)}
-          countdown={voteCountdown}
-          onOpenVoting={() => navigate("/vote-city")}
-        />
+        <PremiumQuickActions styles={styles} navigate={navigate} />
       </section>
 
       <section style={styles.section}>
         <SectionHeader
           styles={styles}
           eyebrow="Going now"
-          title="The heartbeat of MeetOutdoors"
-          subtitle="Live plans first. Less confusion, more action. This is where people instantly understand what to do."
+          title="The live heartbeat"
+          subtitle="Instantly see what is happening now. Less scrolling, more real action."
           actionLabel="See all"
           onAction={() => navigate("/going-now")}
           live
@@ -1362,7 +1543,12 @@ export default function Home() {
             ["outdoor", "Outdoor"],
             ["trip", "Trip"],
           ].map(([value, label]) => (
-            <button key={value} type="button" style={styles.liveFilterChip(liveFilter === value)} onClick={() => setLiveFilter(value)}>
+            <button
+              key={value}
+              type="button"
+              style={styles.liveFilterChip(liveFilter === value)}
+              onClick={() => setLiveFilter(value)}
+            >
               {label}
             </button>
           ))}
@@ -1370,17 +1556,20 @@ export default function Home() {
 
         {featuredLive ? (
           <>
-            <GoingNowMainCard item={featuredLive} styles={styles} onClick={() => navigate(`/going-now/${featuredLive.id}`)} />
-
-            <SectionHeader
+            <GoingNowMainCard
+              item={featuredLive}
               styles={styles}
-              eyebrow="Swipe live"
-              title="Live now"
-              subtitle="Quick cards for what is happening around people right now."
+              onClick={() => navigate(`/going-now/${featuredLive.id}`)}
             />
+
             <HorizontalRail styles={styles} railRef={liveRailRef} isMobile={isMobile}>
               {(filteredLiveNow.length ? filteredLiveNow : liveNowItems).map((item) => (
-                <GoingNowSwipeCard key={item.id} item={item} styles={styles} onClick={() => navigate(`/going-now/${item.id}`)} />
+                <GoingNowSwipeCard
+                  key={item.id}
+                  item={item}
+                  styles={styles}
+                  onClick={() => navigate(`/going-now/${item.id}`)}
+                />
               ))}
             </HorizontalRail>
 
@@ -1394,7 +1583,13 @@ export default function Home() {
                 />
                 <HorizontalRail styles={styles} railRef={soonRailRef} isMobile={isMobile}>
                   {startingSoonItems.map((item) => (
-                    <GoingNowSwipeCard key={item.id} item={item} styles={styles} onClick={() => navigate(`/going-now/${item.id}`)} compact />
+                    <GoingNowSwipeCard
+                      key={item.id}
+                      item={item}
+                      styles={styles}
+                      onClick={() => navigate(`/going-now/${item.id}`)}
+                      compact
+                    />
                   ))}
                 </HorizontalRail>
               </>
@@ -1402,23 +1597,51 @@ export default function Home() {
           </>
         ) : (
           <div style={styles.emptyCard}>
-            <div style={styles.emptyTitle}>Be the first to start something.</div>
+            <div style={styles.emptyTitle}>Start the first live plan.</div>
             <div style={styles.emptyText}>
-              No live plans yet — but the screen should still feel alive. Create a plan and make Going Now the heartbeat of the app.
+              No live plans yet. Create one and make MeetOutdoors feel alive from the first screen.
             </div>
-            <button type="button" style={styles.emptyButton} onClick={() => navigate("/create-going-now")}>
+            <button type="button" style={styles.emptyButton} onClick={() => navigate("/going-now/create")}>
               Create live plan
             </button>
           </div>
         )}
       </section>
 
+      <section id="experiences" style={styles.section}>
+        <SectionHeader
+          styles={styles}
+          eyebrow="Book experiences"
+          title="Reserve real outdoor packages"
+          subtitle="Host profiles, packages, dates, spots and manual deposit workflow. This is the premium booking layer."
+          actionLabel="Become a host"
+          onAction={() => navigate("/create-host")}
+        />
+
+        <HorizontalRail styles={styles} railRef={bookingRailRef} isMobile={isMobile}>
+          {visibleExperiences.map((experience) => (
+            <ExperienceCard
+              key={experience.id}
+              experience={experience}
+              styles={styles}
+              onClick={() => {
+                if (experience.slug) {
+                  navigate(`/host/${experience.slug}`);
+                  return;
+                }
+                navigate("/create-host");
+              }}
+            />
+          ))}
+        </HorizontalRail>
+      </section>
+
       <section style={styles.section}>
         <SectionHeader
           styles={styles}
-          eyebrow="Tours"
+          eyebrow="Community tours"
           title="Fresh adventures"
-          subtitle="Discovery rail with premium image-first cards. Simple, scannable and clean."
+          subtitle="Tours created by people and creators. This keeps the community alive while bookings bring revenue."
           actionLabel="See all tours"
           onAction={() => navigate("/tours")}
         />
@@ -1436,14 +1659,14 @@ export default function Home() {
                 title={tour.title || "Untitled tour"}
                 location={getLocationLabel(tour)}
                 chips={[tour.difficulty || "All levels", tour.duration || "1–3 days"]}
-                rightMeta={`👥 ${tour.max_people || tour.capacity || "Small group"}`}
+                rightMeta={`👥 ${tour.max_people || tour.capacity || "Group"}`}
                 onClick={() => navigate(`/tour/${tour.id}`)}
               />
             ))}
           </HorizontalRail>
         ) : (
           <div style={styles.emptyCard}>
-            <div style={styles.emptyTitle}>Create the first tour.</div>
+            <div style={styles.emptyTitle}>Create the first community tour.</div>
             <div style={styles.emptyText}>Your tours will appear here as a premium discovery rail.</div>
             <button type="button" style={styles.emptyButton} onClick={() => navigate("/create-tour")}>
               Create tour
@@ -1456,8 +1679,8 @@ export default function Home() {
         <SectionHeader
           styles={styles}
           eyebrow="Events"
-          title="Upcoming outdoor events"
-          subtitle="Calmer, clean event cards that feel separate from tours but still part of the same premium system."
+          title="Outdoor moments worth leaving home for"
+          subtitle="Clean event cards for bigger community moments, challenges and MeetOutdoors campaigns."
           actionLabel="All events"
           onAction={() => navigate("/events")}
         />
@@ -1475,7 +1698,7 @@ export default function Home() {
                 title={eventItem.title || "Untitled event"}
                 location={getLocationLabel(eventItem)}
                 chips={[getEventDateLabel(eventItem), eventItem.category || eventItem.type || "Outdoor event"]}
-                rightMeta={`🎫 ${eventItem.max_people || eventItem.capacity || "Open spots"}`}
+                rightMeta={`🎫 ${eventItem.max_people || eventItem.capacity || "Open"}`}
                 onClick={() => navigate(`/event/${eventItem.id}`)}
               />
             ))}
@@ -1483,7 +1706,7 @@ export default function Home() {
         ) : (
           <div style={styles.emptyCard}>
             <div style={styles.emptyTitle}>Create the first event.</div>
-            <div style={styles.emptyText}>When events start landing, they’ll appear here in the same clean system.</div>
+            <div style={styles.emptyText}>When events start landing, they’ll appear here in the same premium system.</div>
             <button type="button" style={styles.emptyButton} onClick={() => navigate("/create-event")}>
               Create event
             </button>
@@ -1494,8 +1717,8 @@ export default function Home() {
       {loadingContent ? (
         <section style={styles.section}>
           <div style={styles.emptyCard}>
-            <div style={styles.emptyTitle}>Loading home content…</div>
-            <div style={styles.emptyText}>Pulling tours, events and live plans from Supabase.</div>
+            <div style={styles.emptyTitle}>Loading MeetOutdoors…</div>
+            <div style={styles.emptyText}>Pulling live plans, tours, events and experiences from Supabase.</div>
           </div>
         </section>
       ) : null}
