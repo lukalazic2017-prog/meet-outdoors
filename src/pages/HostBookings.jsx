@@ -1,4 +1,4 @@
-
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { useParams } from "react-router-dom";
 
@@ -8,15 +8,22 @@ export default function HostBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  async function loadBookings() {
+  const loadBookings = useCallback(async () => {
     setLoading(true);
 
     const { data, error } = await supabase
       .from("experience_bookings")
       .select(`
         *,
-        experience_packages(title),
-        experience_dates(start_date,end_date,total_spots,free_spots)
+        experience_packages(
+          title
+        ),
+        experience_dates(
+          start_date,
+          end_date,
+          total_spots,
+          free_spots
+        )
       `)
       .eq("host_id", hostId)
       .order("created_at", { ascending: false });
@@ -26,19 +33,22 @@ export default function HostBookings() {
     }
 
     setLoading(false);
-  }
+  }, [hostId]);
 
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
 
-  async function updateStatus(id, status) {
+  const updateStatus = async (id, status) => {
     const { error } = await supabase
       .from("experience_bookings")
       .update({ status })
       .eq("id", id);
 
     if (!error) {
-      loadBookings();
+      await loadBookings();
     }
-  }
+  };
 
   const styles = {
     page: {
@@ -48,10 +58,12 @@ export default function HostBookings() {
       padding: "90px 16px 120px",
       fontFamily: "Inter,sans-serif",
     },
+
     wrap: {
       maxWidth: 1100,
       margin: "0 auto",
     },
+
     badge: {
       display: "inline-flex",
       padding: "8px 12px",
@@ -64,6 +76,7 @@ export default function HostBookings() {
       textTransform: "uppercase",
       marginBottom: 18,
     },
+
     title: {
       fontSize: "clamp(42px,8vw,78px)",
       lineHeight: .9,
@@ -72,26 +85,31 @@ export default function HostBookings() {
       margin: 0,
       marginBottom: 28,
     },
+
     list: {
       display: "grid",
       gap: 14,
     },
+
     card: {
       padding: 18,
       borderRadius: 26,
       background: "rgba(255,255,255,.045)",
       border: "1px solid rgba(125,255,209,.13)",
     },
+
     top: {
       display: "flex",
       justifyContent: "space-between",
       gap: 12,
       flexWrap: "wrap",
     },
+
     name: {
       fontSize: 22,
       fontWeight: 950,
     },
+
     status: {
       padding: "7px 11px",
       borderRadius: 999,
@@ -101,6 +119,7 @@ export default function HostBookings() {
       fontWeight: 900,
       textTransform: "uppercase",
     },
+
     meta: {
       marginTop: 10,
       display: "grid",
@@ -108,12 +127,14 @@ export default function HostBookings() {
       color: "rgba(231,255,247,.72)",
       fontSize: 14,
     },
+
     actions: {
       marginTop: 16,
       display: "flex",
       gap: 10,
       flexWrap: "wrap",
     },
+
     btn: {
       border: "none",
       borderRadius: 999,
@@ -123,6 +144,7 @@ export default function HostBookings() {
       fontWeight: 900,
       cursor: "pointer",
     },
+
     ghost: {
       border: "1px solid rgba(125,255,209,.18)",
       borderRadius: 999,
@@ -132,6 +154,7 @@ export default function HostBookings() {
       fontWeight: 900,
       cursor: "pointer",
     },
+
     empty: {
       padding: 24,
       borderRadius: 26,
@@ -142,13 +165,20 @@ export default function HostBookings() {
   };
 
   if (loading) {
-    return <main style={styles.page}>Loading reservations...</main>;
+    return (
+      <main style={styles.page}>
+        Loading reservations...
+      </main>
+    );
   }
 
   return (
     <main style={styles.page}>
       <div style={styles.wrap}>
-        <div style={styles.badge}>Host Reservations</div>
+
+        <div style={styles.badge}>
+          Host Reservations
+        </div>
 
         <h1 style={styles.title}>
           Reservations.
@@ -158,6 +188,7 @@ export default function HostBookings() {
           {bookings.length ? (
             bookings.map((b) => (
               <div key={b.id} style={styles.card}>
+
                 <div style={styles.top}>
                   <div style={styles.name}>
                     {b.full_name || "MeetOutdoors user"}
@@ -169,39 +200,81 @@ export default function HostBookings() {
                 </div>
 
                 <div style={styles.meta}>
-                  <div>Package: {b.experience_packages?.title || "Package"}</div>
                   <div>
-                    Date: {b.experience_dates?.start_date}
-                    {b.experience_dates?.end_date ? ` - ${b.experience_dates.end_date}` : ""}
+                    Package: {b.experience_packages?.title || "Package"}
                   </div>
-                  <div>Persons: {b.persons}</div>
-                  {b.email ? <div>Email: {b.email}</div> : null}
-                  {b.phone ? <div>Phone: {b.phone}</div> : null}
-                  {b.note ? <div>Note: {b.note}</div> : null}
+
+                  <div>
+                    Date: {b.experience_dates?.start_date || "-"}
+
+                    {b.experience_dates?.end_date
+                      ? ` - ${b.experience_dates.end_date}`
+                      : ""}
+                  </div>
+
+                  <div>
+                    Persons: {b.persons || 1}
+                  </div>
+
+                  {b.email && (
+                    <div>
+                      Email: {b.email}
+                    </div>
+                  )}
+
+                  {b.phone && (
+                    <div>
+                      Phone: {b.phone}
+                    </div>
+                  )}
+
+                  {b.note && (
+                    <div>
+                      Note: {b.note}
+                    </div>
+                  )}
                 </div>
 
                 <div style={styles.actions}>
+
                   <button
                     style={styles.btn}
-                    onClick={() => updateStatus(b.id, "confirmed")}
+                    onClick={() =>
+                      updateStatus(
+                        b.id,
+                        "confirmed"
+                      )
+                    }
                   >
                     Confirm
                   </button>
 
                   <button
                     style={styles.ghost}
-                    onClick={() => updateStatus(b.id, "rejected")}
+                    onClick={() =>
+                      updateStatus(
+                        b.id,
+                        "rejected"
+                      )
+                    }
                   >
                     Reject
                   </button>
 
                   <button
                     style={styles.ghost}
-                    onClick={() => updateStatus(b.id, "cancelled")}
+                    onClick={() =>
+                      updateStatus(
+                        b.id,
+                        "cancelled"
+                      )
+                    }
                   >
                     Cancel
                   </button>
+
                 </div>
+
               </div>
             ))
           ) : (
@@ -210,6 +283,7 @@ export default function HostBookings() {
             </div>
           )}
         </div>
+
       </div>
     </main>
   );
