@@ -46,6 +46,7 @@ import CityVoting from "./pages/CityVoting";
 import VotingControlCenter from "./pages/VotingControlCenter";
 
 // BOOK EXPERIENCES
+import ExploreExperiences from "./pages/ExploreExperiences";
 import CreateHost from "./pages/CreateHost";
 import HostDashboard from "./pages/HostDashboard";
 import HostProfile from "./pages/HostProfile";
@@ -124,6 +125,7 @@ function App() {
           <Route path="/voting-control-center" element={<VotingControlCenter />} />
 
           {/* BOOK EXPERIENCES */}
+          <Route path="/experiences" element={<ExploreExperiences />} />
           <Route path="/host/:slug" element={<HostProfile />} />
 
           <Route

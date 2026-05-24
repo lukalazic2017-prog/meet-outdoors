@@ -106,9 +106,9 @@ function PremiumQuickActions({ styles, navigate }) {
     },
     {
       label: "Book Experiences",
-      text: "Reserve real host packages.",
+      text: "Search hosts, dates and packages.",
       icon: "BOOK",
-      path: "#experiences",
+      path: "/experiences",
     },
     {
       label: "Create",
@@ -125,13 +125,7 @@ function PremiumQuickActions({ styles, navigate }) {
           key={action.label}
           type="button"
           style={{ ...styles.quickCard, ...(action.primary ? styles.quickCardPrimary : {}) }}
-          onClick={() => {
-            if (action.path === "#experiences") {
-              document.getElementById("experiences")?.scrollIntoView({ behavior: "smooth" });
-              return;
-            }
-            navigate(action.path);
-          }}
+          onClick={() => navigate(action.path)}
         >
           <span style={styles.quickIcon}>{action.icon}</span>
           <span style={styles.quickBody}>
@@ -1496,9 +1490,9 @@ export default function Home() {
               <button
                 type="button"
                 style={styles.heroGhostBtn}
-                onClick={() => document.getElementById("experiences")?.scrollIntoView({ behavior: "smooth" })}
+                onClick={() => navigate("/experiences")}
               >
-                Book experiences
+                Search experiences
               </button>
             </div>
 
@@ -1522,6 +1516,34 @@ export default function Home() {
 
       <section style={styles.sectionTight}>
         <PremiumQuickActions styles={styles} navigate={navigate} />
+      </section>
+
+      <section id="experiences" style={styles.section}>
+        <SectionHeader
+          styles={styles}
+          eyebrow="Book experiences"
+          title="Find your next outdoor host"
+          subtitle="Search hosts, places, activities, dates and real package availability."
+          actionLabel="Explore all"
+          onAction={() => navigate("/experiences")}
+        />
+
+        <HorizontalRail styles={styles} railRef={bookingRailRef} isMobile={isMobile}>
+          {visibleExperiences.map((experience) => (
+            <ExperienceCard
+              key={experience.id}
+              experience={experience}
+              styles={styles}
+              onClick={() => {
+                if (experience.slug) {
+                  navigate(`/host/${experience.slug}`);
+                  return;
+                }
+                navigate("/experiences");
+              }}
+            />
+          ))}
+        </HorizontalRail>
       </section>
 
       <section style={styles.section}>
@@ -1606,34 +1628,6 @@ export default function Home() {
             </button>
           </div>
         )}
-      </section>
-
-      <section id="experiences" style={styles.section}>
-        <SectionHeader
-          styles={styles}
-          eyebrow="Book experiences"
-          title="Reserve real outdoor packages"
-          subtitle="Host profiles, packages, dates, spots and manual deposit workflow. This is the premium booking layer."
-          actionLabel="Become a host"
-          onAction={() => navigate("/create-host")}
-        />
-
-        <HorizontalRail styles={styles} railRef={bookingRailRef} isMobile={isMobile}>
-          {visibleExperiences.map((experience) => (
-            <ExperienceCard
-              key={experience.id}
-              experience={experience}
-              styles={styles}
-              onClick={() => {
-                if (experience.slug) {
-                  navigate(`/host/${experience.slug}`);
-                  return;
-                }
-                navigate("/create-host");
-              }}
-            />
-          ))}
-        </HorizontalRail>
       </section>
 
       <section style={styles.section}>
