@@ -1,60 +1,81 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  async function loadAuth() {
+    setLoading(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const currentUser = session?.user || null;
+    setUser(currentUser);
+
+    if (!currentUser) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", currentUser.id)
+      .single();
+
+    if (error) {
+      console.error("Profile load error:", error);
+      setProfile(null);
+    } else {
+      setProfile(data);
+    }
+
+    setLoading(false);
+  }
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadSession = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (!mounted) return;
-
-        if (error) {
-          console.error("AuthContext getSession error:", error);
-          setUser(null);
-          setAuthLoading(false);
-          return;
-        }
-
-        setUser(session?.user || null);
-        setAuthLoading(false);
-      } catch (err) {
-        console.error("AuthContext loadSession error:", err);
-        if (!mounted) return;
-        setUser(null);
-        setAuthLoading(false);
-      }
-    };
-
-    loadSession();
+    loadAuth();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      setUser(session?.user || null);
-      setAuthLoading(false);
+    } = supabase.auth.onAuthStateChange(() => {
+      loadAuth();
     });
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  const value = { user, authLoading, setUser };
+  async function logout() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+  }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        isLoggedIn: !!user,
+        isHost: profile?.role === "host",
+        isUser: profile?.role === "user",
+        logout,
+        reloadAuth: loadAuth,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

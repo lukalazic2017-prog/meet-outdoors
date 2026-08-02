@@ -273,7 +273,6 @@ export default function Footer({ user, avatarUrl, unreadCount, logout }) {
               <FooterLink to="/going-now">Going Now</FooterLink>
               <FooterLink to="/tours">Explore tours</FooterLink>
               <FooterLink to="/events">Events</FooterLink>
-              <FooterLink to="/timeline">Timeline</FooterLink>
             </FooterSection>
 
             <FooterSection title="Create">

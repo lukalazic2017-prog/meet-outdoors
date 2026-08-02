@@ -1,1617 +1,1998 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-const FALLBACK =
-  "https://images.pexels.com/photos/1732278/pexels-photo-1732278.jpeg";
+const FALLBACK_EVENT_IMAGE =
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85";
 
-const STORAGE_BUCKET = "experience";
+const FALLBACK_PACKAGE_IMAGE =
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=85";
 
-function formatDateRange(start, end) {
-  if (!start) return "Date soon";
+function Icon({
+  name,
+  size = 20,
+  strokeWidth = 2,
+  fill = "none",
+  className = "",
+}) {
+  const icons = {
+    arrowRight: (
+      <>
+        <path d="M5 12h14" />
+        <path d="m13 6 6 6-6 6" />
+      </>
+    ),
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </>
+    ),
+    package: (
+      <>
+        <path d="m12 3 8 4-8 4-8-4 8-4Z" />
+        <path d="m4 7 8 4 8-4" />
+        <path d="M4 7v10l8 4 8-4V7" />
+        <path d="M12 11v10" />
+      </>
+    ),
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2" />
+        <path d="M16 4.5a3 3 0 0 1 0 6" />
+        <path d="M17 13a5 5 0 0 1 4 5v2" />
+      </>
+    ),
+    heart: (
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
+    ),
+    plus: (
+      <>
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      </>
+    ),
+    booking: (
+      <>
+        <rect x="3" y="4" width="18" height="17" rx="2" />
+        <path d="M8 2v4M16 2v4M3 9h18" />
+        <path d="m8 14 2 2 5-5" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+    edit: (
+      <>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M3 6h18" />
+        <path d="M8 6V4h8v2" />
+        <path d="m19 6-1 15H6L5 6" />
+        <path d="M10 11v5M14 11v5" />
+      </>
+    ),
+    mapPin: (
+      <>
+        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </>
+    ),
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+    trend: (
+      <>
+        <path d="m3 17 6-6 4 4 7-8" />
+        <path d="M14 7h6v6" />
+      </>
+    ),
+    alert: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5" />
+        <path d="M12 16h.01" />
+      </>
+    ),
+    close: (
+      <>
+        <path d="m6 6 12 12" />
+        <path d="m18 6-12 12" />
+      </>
+    ),
+    gallery: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <circle cx="9" cy="11" r="2" />
+        <path d="m21 16-4-4-7 7" />
+      </>
+    ),
+    interested: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2" />
+        <path d="M18 8v6M15 11h6" />
+      </>
+    ),
+    shield: (
+      <>
+        <path d="M12 3 5 6v5c0 4.6 2.9 8.4 7 10 4.1-1.6 7-5.4 7-10V6l-7-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
+  };
 
-  const s = new Date(start);
-  const e = end ? new Date(end) : null;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={fill}
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {icons[name]}
+    </svg>
+  );
+}
 
-  if (Number.isNaN(s.getTime())) return start;
+function formatDate(value) {
+  if (!value) return "Datum nije dodat";
 
-  const startLabel = s.toLocaleDateString("en-GB", {
-    day: "numeric",
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return new Intl.DateTimeFormat("sr-Latn-RS", {
+    day: "2-digit",
     month: "short",
     year: "numeric",
-  });
-
-  if (!e || Number.isNaN(e.getTime())) return startLabel;
-
-  const endLabel = e.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-
-  return `${startLabel} - ${endLabel}`;
+  }).format(date);
 }
 
-function toArray(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value;
+function DashboardLoading() {
+  return (
+    <>
+      <DashboardStyles />
 
-  return String(value)
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean);
+      <main className="dashboardStatePage">
+        <div className="dashboardStateCard">
+          <span className="dashboardLoader" />
+          <h1>Učitavanje dashboarda</h1>
+          <p>Pripremamo tvoje događaje, pakete i statistiku.</p>
+        </div>
+      </main>
+    </>
+  );
 }
 
-function joinArray(value) {
-  if (!value) return "";
-  if (Array.isArray(value)) return value.join(", ");
-  return String(value);
+function UnauthorizedState() {
+  return (
+    <>
+      <DashboardStyles />
+
+      <main className="dashboardStatePage">
+        <div className="dashboardStateCard">
+          <span className="stateIcon">
+            <Icon name="shield" size={26} />
+          </span>
+
+          <h1>Samo domaćini imaju pristup.</h1>
+
+          <p>
+            Host Dashboard je namenjen organizatorima događaja i
+            outdoor paketa.
+          </p>
+
+          <Link to="/" className="stateLink">
+            Nazad na početnu
+            <Icon name="arrowRight" size={17} />
+          </Link>
+        </div>
+      </main>
+    </>
+  );
 }
 
-function normalizePhone(phone) {
-  if (!phone) return "";
-  return String(phone).replace(/[^\d+]/g, "");
+function StatCard({ icon, label, value, description }) {
+  return (
+    <article className="statCard">
+      <div className="statCardTop">
+        <span className="statIcon">
+          <Icon name={icon} size={20} />
+        </span>
+
+        <span className="statTrend">
+          <Icon name="trend" size={14} />
+        </span>
+      </div>
+
+      <strong>{value}</strong>
+      <span className="statLabel">{label}</span>
+      <small>{description}</small>
+    </article>
+  );
 }
 
-function statusLabel(status) {
-  if (!status) return "pending";
-  return String(status).replace(/_/g, " ");
+function DashboardItemCard({
+  type,
+  item,
+  interestedCount,
+  deleting,
+  onDelete,
+}) {
+  const isEvent = type === "event";
+
+  const detailsUrl = isEvent
+    ? `/event/${item.id}`
+    : `/package/${item.id}`;
+
+  const editUrl = isEvent
+    ? `/edit-event/${item.id}`
+    : `/edit-package/${item.id}`;
+
+  const imageUrl =
+    item.cover_url ||
+    (isEvent
+      ? FALLBACK_EVENT_IMAGE
+      : FALLBACK_PACKAGE_IMAGE);
+
+  const location =
+    [item.location, item.country].filter(Boolean).join(", ") ||
+    "Lokacija nije dodata";
+
+  const dateValue =
+    item.start_date ||
+    item.event_date ||
+    item.date ||
+    item.created_at;
+
+  return (
+    <article className="dashboardItemCard">
+      <div className="itemImageWrapper">
+        <img
+          src={imageUrl}
+          alt={item.title || "Outdoor ponuda"}
+          className="itemImage"
+        />
+
+        <div className="itemImageOverlay" />
+
+        <span className="itemTypeBadge">
+          <Icon
+            name={isEvent ? "calendar" : "package"}
+            size={14}
+          />
+          {isEvent ? "Događaj" : "Paket"}
+        </span>
+
+        <span className="interestBadge">
+          <Icon name="heart" size={13} />
+          {interestedCount}
+        </span>
+      </div>
+
+      <div className="itemBody">
+        <div className="itemHeading">
+          <span className="itemKicker">
+            {isEvent ? "Outdoor događaj" : "Outdoor paket"}
+          </span>
+
+          <h3>{item.title || "Bez naziva"}</h3>
+        </div>
+
+        <div className="itemMeta">
+          <span>
+            <Icon name="mapPin" size={14} />
+            {location}
+          </span>
+
+          <span>
+            <Icon name="clock" size={14} />
+            {formatDate(dateValue)}
+          </span>
+        </div>
+
+        <div className="interestSummary">
+          <span>
+            <Icon name="users" size={17} />
+          </span>
+
+          <div>
+            <strong>{interestedCount}</strong>
+            <small>
+              {interestedCount === 1
+                ? "zainteresovana osoba"
+                : "zainteresovanih osoba"}
+            </small>
+          </div>
+        </div>
+
+        <div className="itemActions">
+          <Link to={detailsUrl} className="itemAction">
+            <Icon name="eye" size={16} />
+            Pogledaj
+          </Link>
+
+          <Link to={editUrl} className="itemAction">
+            <Icon name="edit" size={16} />
+            Uredi
+          </Link>
+
+          {isEvent ? (
+            <Link
+              to={`/event/${item.id}/interested`}
+              className="itemAction"
+            >
+              <Icon name="interested" size={16} />
+              Interesovanje
+            </Link>
+          ) : (
+            <Link
+              to={`/edit-package/${item.id}/gallery`}
+              className="itemAction"
+            >
+              <Icon name="gallery" size={16} />
+              Galerija
+            </Link>
+          )}
+
+          <button
+            type="button"
+            className="deleteAction"
+            onClick={() => onDelete(item.id)}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <span className="smallLoader" />
+            ) : (
+              <Icon name="trash" size={16} />
+            )}
+
+            {deleting ? "Brisanje" : "Obriši"}
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EmptySection({
+  type,
+  title,
+  description,
+  buttonText,
+  buttonUrl,
+}) {
+  return (
+    <div className="emptySection">
+      <span className="emptyIcon">
+        <Icon
+          name={type === "event" ? "calendar" : "package"}
+          size={28}
+        />
+      </span>
+
+      <h3>{title}</h3>
+      <p>{description}</p>
+
+      <Link to={buttonUrl}>
+        <Icon name="plus" size={16} />
+        {buttonText}
+      </Link>
+    </div>
+  );
 }
 
 export default function HostDashboard() {
-  const navigate = useNavigate();
-  const { id } = useParams();
+  const { profile, isHost, loading } = useAuth();
 
-  const [loading, setLoading] = useState(true);
-  const [host, setHost] = useState(null);
+  const [events, setEvents] = useState([]);
   const [packages, setPackages] = useState([]);
-  const [dates, setDates] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [tab, setTab] = useState("overview");
-  const [currentUser, setCurrentUser] = useState(null);
-  const [accessDenied, setAccessDenied] = useState(false);
+  const [eventCounts, setEventCounts] = useState({});
+  const [packageCounts, setPackageCounts] = useState({});
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [deletingItem, setDeletingItem] = useState("");
 
-  const [editingPackage, setEditingPackage] = useState(null);
-  const [editForm, setEditForm] = useState(null);
-  const [savingPackage, setSavingPackage] = useState(false);
-  const [packageError, setPackageError] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const loadInterestCounts = useCallback(
+    async (items, tableName, foreignKey) => {
+      const entries = await Promise.all(
+        items.map(async (item) => {
+          const { count, error } = await supabase
+            .from(tableName)
+            .select("*", {
+              count: "exact",
+              head: true,
+            })
+            .eq(foreignKey, item.id);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setAccessDenied(false);
+          if (error) {
+            console.error(
+              `Greška pri brojanju interesovanja za ${item.id}:`,
+              error
+            );
+          }
 
-    const { data: authData } = await supabase.auth.getUser();
-    const me = authData?.user || null;
-    setCurrentUser(me);
+          return [item.id, count || 0];
+        })
+      );
 
-    if (!me) {
-      setHost(null);
+      return Object.fromEntries(entries);
+    },
+    []
+  );
+
+  const loadDashboard = useCallback(async () => {
+    if (!profile?.id || !isHost) {
+      setEvents([]);
       setPackages([]);
-      setBookings([]);
-      setDates([]);
-      setAccessDenied(true);
-      setLoading(false);
+      setEventCounts({});
+      setPackageCounts({});
+      setDashboardLoading(false);
       return;
     }
 
-    const { data: hostData, error: hostError } = await supabase
-      .from("experience_hosts")
-      .select("*")
-      .eq("id", id)
-      .single();
+    setDashboardLoading(true);
+    setMessage("");
 
-    if (hostError || !hostData) {
-      setHost(null);
-      setPackages([]);
-      setBookings([]);
-      setDates([]);
-      setLoading(false);
-      return;
-    }
-
-    if (hostData.owner_id !== me.id) {
-      setHost(hostData);
-      setPackages([]);
-      setBookings([]);
-      setDates([]);
-      setAccessDenied(true);
-      setLoading(false);
-      return;
-    }
-
-    const [{ data: packageData }, { data: bookingData }] = await Promise.all([
-      supabase
-        .from("experience_packages")
-        .select("*")
-        .eq("host_id", id)
-        .order("created_at", { ascending: false }),
-
-      supabase
-        .from("experience_bookings")
-        .select(
-          "*, experience_packages(*), experience_dates(start_date,end_date,total_spots,free_spots)"
-        )
-        .eq("host_id", id)
-        .order("created_at", { ascending: false }),
-    ]);
-
-    let dateData = [];
-
-    if (packageData?.length) {
-      const ids = packageData.map((x) => x.id);
-
-      const { data } = await supabase
-        .from("experience_dates")
-        .select("*")
-        .in("package_id", ids)
-        .order("start_date", { ascending: true });
-
-      dateData = data || [];
-    }
-
-    setHost(hostData);
-    setPackages(packageData || []);
-    setBookings(bookingData || []);
-    setDates(dateData);
-    setLoading(false);
-  }, [id]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  async function updateBookingStatus(bookingId, status) {
-    if (accessDenied || !currentUser || host?.owner_id !== currentUser.id) return;
-
-    const payload = { status };
-
-    if (status === "confirmed") {
-      payload.confirmed_at = new Date().toISOString();
-      payload.deposit_verified = true;
-      payload.deposit_verified_at = new Date().toISOString();
-    }
-
-    if (status === "cancelled") payload.cancelled_at = new Date().toISOString();
-    if (status === "completed") payload.completed_at = new Date().toISOString();
-
-    const { error } = await supabase
-      .from("experience_bookings")
-      .update(payload)
-      .eq("id", bookingId);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    await loadData();
-  }
-
-  async function uploadImage(file) {
-    if (accessDenied || !currentUser || host?.owner_id !== currentUser.id) return null;
-    if (!file || !host?.id) return null;
-
-    setUploading(true);
-
-    const ext = file.name.split(".").pop() || "jpg";
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const path = `hosts/${host.id}/${fileName}`;
-
-    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
-
-    if (error) {
-      setUploading(false);
-      throw error;
-    }
-
-    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-    setUploading(false);
-
-    return data.publicUrl;
-  }
-
-  async function handleCoverUpload(file) {
     try {
-      const url = await uploadImage(file);
-      if (!url) return;
+      const [eventsResult, packagesResult] =
+        await Promise.all([
+          supabase
+            .from("events")
+            .select("*")
+            .eq("host_id", profile.id)
+            .order("created_at", {
+              ascending: false,
+            }),
 
-      setEditForm((prev) => ({
-        ...prev,
-        cover_url: url,
-      }));
-    } catch (err) {
-      setUploading(false);
-      alert(err.message);
-    }
-  }
+          supabase
+            .from("packages")
+            .select("*")
+            .eq("host_id", profile.id)
+            .order("created_at", {
+              ascending: false,
+            }),
+        ]);
 
-  async function handleGalleryUpload(files) {
-    try {
-      const list = Array.from(files || []);
-      if (!list.length) return;
-
-      const uploaded = [];
-
-      for (const file of list) {
-        const url = await uploadImage(file);
-        if (url) uploaded.push(url);
+      if (eventsResult.error) {
+        throw eventsResult.error;
       }
 
-      setEditForm((prev) => ({
-        ...prev,
-        gallery_urls: [...(prev.gallery_urls || []), ...uploaded],
-      }));
-    } catch (err) {
-      setUploading(false);
-      alert(err.message);
+      if (packagesResult.error) {
+        throw packagesResult.error;
+      }
+
+      const loadedEvents = eventsResult.data || [];
+      const loadedPackages = packagesResult.data || [];
+
+      setEvents(loadedEvents);
+      setPackages(loadedPackages);
+
+      const [
+        loadedEventCounts,
+        loadedPackageCounts,
+      ] = await Promise.all([
+        loadInterestCounts(
+          loadedEvents,
+          "event_interested",
+          "event_id"
+        ),
+        loadInterestCounts(
+          loadedPackages,
+          "package_interested",
+          "package_id"
+        ),
+      ]);
+
+      setEventCounts(loadedEventCounts);
+      setPackageCounts(loadedPackageCounts);
+    } catch (error) {
+      console.error(
+        "Greška pri učitavanju dashboarda:",
+        error
+      );
+
+      setEvents([]);
+      setPackages([]);
+      setEventCounts({});
+      setPackageCounts({});
+
+      setMessage(
+        error?.message ||
+          "Dashboard nije moguće učitati."
+      );
+    } finally {
+      setDashboardLoading(false);
     }
-  }
+  }, [
+    isHost,
+    loadInterestCounts,
+    profile?.id,
+  ]);
 
-  function removeGalleryImage(index) {
-    setEditForm((prev) => ({
-      ...prev,
-      gallery_urls: (prev.gallery_urls || []).filter((_, i) => i !== index),
-    }));
-  }
+  useEffect(() => {
+    if (loading) return;
 
-  function openEditPackage(pkg) {
-    setPackageError("");
-    setEditingPackage(pkg);
-    setEditForm({
-      title: pkg.title || "",
-      description: pkg.description || "",
-      duration: pkg.duration || "",
-      price: pkg.price || "",
-      currency: pkg.currency || "EUR",
-      cover_url: pkg.cover_url || "",
-      included: joinArray(pkg.included),
-      not_included: joinArray(pkg.not_included),
-      gallery_urls: Array.isArray(pkg.gallery_urls) ? pkg.gallery_urls : [],
-      deposit_required: !!pkg.deposit_required,
-      deposit_amount: pkg.deposit_amount || "",
-      deposit_instructions: pkg.deposit_instructions || "",
-      active: pkg.active !== false,
-    });
-  }
+    loadDashboard();
+  }, [loading, loadDashboard]);
 
-  async function savePackageEdit() {
-    if (accessDenied || !currentUser || host?.owner_id !== currentUser.id) return;
-    if (!editingPackage || !editForm) return;
-
-    setPackageError("");
-
-    if (!editForm.title.trim()) {
-      setPackageError("Package title is required.");
-      return;
-    }
-
-    if (editForm.deposit_required && !editForm.deposit_amount) {
-      setPackageError("Deposit amount is required when deposit is enabled.");
-      return;
-    }
-
-    setSavingPackage(true);
-
-    const payload = {
-      title: editForm.title.trim(),
-      description: editForm.description || null,
-      duration: editForm.duration || null,
-      price: editForm.price ? Number(editForm.price) : null,
-      currency: editForm.currency || "EUR",
-      cover_url: editForm.cover_url || null,
-      included: toArray(editForm.included),
-      not_included: toArray(editForm.not_included),
-      gallery_urls: editForm.gallery_urls || [],
-      deposit_required: !!editForm.deposit_required,
-      deposit_amount: editForm.deposit_required ? Number(editForm.deposit_amount || 0) : 0,
-      deposit_instructions: editForm.deposit_required ? editForm.deposit_instructions || null : null,
-      active: !!editForm.active,
-    };
-
-    const { error } = await supabase
-      .from("experience_packages")
-      .update(payload)
-      .eq("id", editingPackage.id);
-
-    setSavingPackage(false);
-
-    if (error) {
-      setPackageError(error.message);
-      return;
-    }
-
-    setEditingPackage(null);
-    setEditForm(null);
-    await loadData();
-  }
-
-  async function deletePackage(pkg) {
-    if (accessDenied || !currentUser || host?.owner_id !== currentUser.id) return;
-
-    const ok = window.confirm(
-      `Delete package "${pkg.title}"? This can also remove connected dates/bookings depending on your database relations.`
+  const deleteEvent = useCallback(async (id) => {
+    const confirmed = window.confirm(
+      "Da li sigurno želiš da obrišeš ovaj događaj?"
     );
 
-    if (!ok) return;
+    if (!confirmed) return;
 
-    const { error } = await supabase.from("experience_packages").delete().eq("id", pkg.id);
+    setDeletingItem(`event-${id}`);
+    setMessage("");
 
-    if (error) {
-      alert(error.message);
-      return;
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setEvents((current) =>
+        current.filter((event) => event.id !== id)
+      );
+
+      setEventCounts((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    } catch (error) {
+      setMessage(
+        error?.message ||
+          "Događaj nije moguće obrisati."
+      );
+    } finally {
+      setDeletingItem("");
     }
+  }, []);
 
-    await loadData();
-  }
-
-  const stats = useMemo(() => {
-    const totalSpots = dates.reduce((a, b) => a + (b.total_spots || 0), 0);
-    const freeSpots = dates.reduce((a, b) => a + (b.free_spots || 0), 0);
-
-    const activePackages = packages.filter((p) => p.active !== false).length;
-    const pending = bookings.filter((b) => b.status === "pending").length;
-    const depositWaiting = bookings.filter((b) => b.status === "deposit_waiting").length;
-    const confirmed = bookings.filter((b) => b.status === "confirmed").length;
-    const completed = bookings.filter((b) => b.status === "completed").length;
-    const rejected = bookings.filter((b) => b.status === "rejected").length;
-    const cancelled = bookings.filter((b) => b.status === "cancelled").length;
-
-    const estimatedRevenue = bookings.reduce((sum, booking) => {
-      const pkg = booking.experience_packages;
-      if (!["confirmed", "completed"].includes(booking.status)) return sum;
-      return sum + Number(pkg?.price || 0) * Number(booking.persons || 1);
-    }, 0);
-
-    const confirmedDeposits = bookings.reduce((sum, booking) => {
-      const pkg = booking.experience_packages;
-      if (!["confirmed", "completed"].includes(booking.status)) return sum;
-      if (!pkg?.deposit_required) return sum;
-      return sum + Number(pkg.deposit_amount || booking.deposit_amount || 0);
-    }, 0);
-
-    const upcomingDates = dates.filter((date) => {
-      if (!date.start_date || date.closed) return false;
-      const ts = new Date(date.start_date).getTime();
-      return !Number.isNaN(ts) && ts >= Date.now() - 86400000;
-    }).length;
-
-    return {
-      activePackages,
-      totalPackages: packages.length,
-      dates: dates.length,
-      upcomingDates,
-      bookings: bookings.length,
-      totalSpots,
-      freeSpots,
-      pending,
-      depositWaiting,
-      confirmed,
-      completed,
-      rejected,
-      cancelled,
-      estimatedRevenue,
-      confirmedDeposits,
-    };
-  }, [packages, dates, bookings]);
-
-  const getPackageDates = (packageId) => dates.filter((date) => date.package_id === packageId);
-
-  const recentBookings = useMemo(() => bookings.slice(0, 4), [bookings]);
-
-  const nextDates = useMemo(() => {
-    return [...dates]
-      .filter((date) => !date.closed)
-      .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      .slice(0, 5);
-  }, [dates]);
-
-  const styles = {
-    page: {
-      minHeight: "100vh",
-      background:
-        "radial-gradient(circle at 50% -10%, rgba(22,245,162,.18), transparent 34%), radial-gradient(circle at 92% 9%, rgba(64,231,255,.12), transparent 30%), linear-gradient(180deg,#010302 0%,#04100c 50%,#06120d 100%)",
-      color: "#f4fff9",
-      padding: "90px 14px 120px",
-      fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    },
-    wrap: { maxWidth: 1380, margin: "0 auto" },
-    accessCard: {
-      maxWidth: 760,
-      margin: "80px auto 0",
-      padding: 24,
-      borderRadius: 34,
-      background: "linear-gradient(145deg, rgba(8,24,18,.86), rgba(3,9,7,.98))",
-      border: "1px solid rgba(255,80,80,.24)",
-      boxShadow: "0 28px 90px rgba(0,0,0,.46)",
-    },
-    hero: {
-      position: "relative",
-      overflow: "hidden",
-      borderRadius: 42,
-      border: "1px solid rgba(125,255,209,.20)",
-      background: "linear-gradient(145deg,rgba(8,24,18,.88),rgba(4,10,8,.98))",
-      padding: 22,
-      marginBottom: 18,
-      boxShadow: "0 34px 100px rgba(0,0,0,.34)",
-    },
-    heroBg: {
-      position: "absolute",
-      inset: 0,
-      opacity: 0.28,
-      backgroundImage: `url(${host?.cover_url || FALLBACK})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      filter: "saturate(1.12) contrast(1.07)",
-      transform: "scale(1.03)",
-    },
-    heroOverlay: {
-      position: "absolute",
-      inset: 0,
-      background:
-        "linear-gradient(90deg, rgba(1,3,2,.98), rgba(1,3,2,.72), rgba(1,3,2,.92)), radial-gradient(circle at 84% 0%, rgba(22,245,162,.20), transparent 34%)",
-    },
-    heroInner: { position: "relative", zIndex: 2 },
-    heroTop: {
-      display: "flex",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      gap: 16,
-      flexWrap: "wrap",
-    },
-    identityRow: {
-      display: "flex",
-      gap: 16,
-      alignItems: "flex-start",
-      minWidth: 0,
-    },
-    logo: {
-      width: 74,
-      height: 74,
-      borderRadius: 24,
-      objectFit: "cover",
-      background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-      border: "1px solid rgba(255,255,255,.18)",
-      boxShadow: "0 20px 46px rgba(0,0,0,.34)",
-      flex: "0 0 auto",
-    },
-    badgeRow: {
-      display: "flex",
-      gap: 8,
-      flexWrap: "wrap",
-      alignItems: "center",
-    },
-    badge: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 7,
-      padding: "8px 12px",
-      borderRadius: 999,
-      background: "rgba(22,245,162,.12)",
-      border: "1px solid rgba(125,255,209,.22)",
-      color: "#8fffe0",
-      fontSize: 11,
-      fontWeight: 950,
-      letterSpacing: ".12em",
-      textTransform: "uppercase",
-    },
-    verified: {
-      display: "inline-flex",
-      padding: "8px 12px",
-      borderRadius: 999,
-      background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-      color: "#03150f",
-      fontSize: 11,
-      fontWeight: 950,
-      letterSpacing: ".10em",
-      textTransform: "uppercase",
-    },
-    title: {
-      fontSize: "clamp(42px, 7vw, 82px)",
-      fontWeight: 950,
-      lineHeight: 0.86,
-      letterSpacing: "-.085em",
-      marginTop: 14,
-      maxWidth: 850,
-    },
-    subtitle: {
-      marginTop: 12,
-      color: "rgba(231,255,247,.78)",
-      lineHeight: 1.58,
-      maxWidth: 700,
-      fontWeight: 620,
-    },
-    contactStrip: {
-      display: "flex",
-      gap: 8,
-      flexWrap: "wrap",
-      marginTop: 16,
-    },
-    contactChip: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 7,
-      padding: "9px 12px",
-      borderRadius: 999,
-      background: "rgba(255,255,255,.055)",
-      border: "1px solid rgba(125,255,209,.14)",
-      color: "rgba(231,255,247,.82)",
-      fontSize: 12,
-      fontWeight: 850,
-      textDecoration: "none",
-    },
-    heroActions: { display: "flex", gap: 10, flexWrap: "wrap" },
-    button: {
-      border: "none",
-      padding: "14px 18px",
-      borderRadius: 999,
-      background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-      color: "#03150f",
-      fontWeight: 950,
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-      boxShadow: "0 20px 48px rgba(22,245,162,.20)",
-    },
-    ghostButton: {
-      border: "1px solid rgba(125,255,209,.22)",
-      padding: "13px 17px",
-      borderRadius: 999,
-      background: "rgba(255,255,255,.06)",
-      color: "#f4fff9",
-      fontWeight: 900,
-      cursor: "pointer",
-      whiteSpace: "nowrap",
-    },
-    commandPanel: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
-      gap: 10,
-      marginTop: 22,
-    },
-    commandCard: {
-      border: "1px solid rgba(125,255,209,.13)",
-      background: "rgba(255,255,255,.045)",
-      borderRadius: 24,
-      padding: 15,
-      textAlign: "left",
-      color: "#f4fff9",
-      cursor: "pointer",
-    },
-    commandTitle: {
-      display: "block",
-      fontSize: 14,
-      fontWeight: 950,
-      marginBottom: 5,
-    },
-    commandText: {
-      color: "rgba(231,255,247,.62)",
-      fontSize: 12,
-      lineHeight: 1.45,
-      fontWeight: 650,
-    },
-    stats: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit,minmax(138px,1fr))",
-      gap: 12,
-      marginTop: 18,
-    },
-    stat: {
-      padding: 16,
-      borderRadius: 24,
-      background: "rgba(255,255,255,.047)",
-      border: "1px solid rgba(125,255,209,.13)",
-      backdropFilter: "blur(14px)",
-    },
-    number: { fontSize: 32, fontWeight: 950, letterSpacing: "-.055em" },
-    label: {
-      marginTop: 6,
-      color: "rgba(231,255,247,.60)",
-      fontSize: 11,
-      fontWeight: 850,
-      letterSpacing: ".08em",
-      textTransform: "uppercase",
-    },
-    tabs: {
-      display: "flex",
-      gap: 9,
-      flexWrap: "wrap",
-      margin: "18px 0 22px",
-      padding: 6,
-      borderRadius: 999,
-      background: "rgba(255,255,255,.035)",
-      border: "1px solid rgba(125,255,209,.10)",
-      width: "fit-content",
-      maxWidth: "100%",
-    },
-    tab: (active) => ({
-      padding: "12px 16px",
-      borderRadius: 999,
-      border: active ? "1px solid rgba(125,255,209,.32)" : "1px solid transparent",
-      background: active ? "linear-gradient(135deg, rgba(22,245,162,.17), rgba(64,231,255,.12))" : "transparent",
-      color: "#fff",
-      cursor: "pointer",
-      fontWeight: 950,
-      textTransform: "capitalize",
-    }),
-    grid: { display: "grid", gap: 16 },
-    twoCol: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
-      gap: 16,
-    },
-    threeCol: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))",
-      gap: 16,
-    },
-    card: {
-      padding: 18,
-      borderRadius: 30,
-      background: "linear-gradient(145deg, rgba(8,24,18,.76), rgba(3,9,7,.95))",
-      border: "1px solid rgba(125,255,209,.13)",
-      boxShadow: "0 22px 64px rgba(0,0,0,.22)",
-    },
-    cardTitle: {
-      fontSize: 24,
-      fontWeight: 950,
-      letterSpacing: "-.045em",
-      marginBottom: 12,
-    },
-    muted: { color: "rgba(231,255,247,.66)", lineHeight: 1.55 },
-    packageCard: {
-      overflow: "hidden",
-      borderRadius: 32,
-      background: "linear-gradient(155deg, rgba(9,25,19,.86), rgba(3,9,7,.97))",
-      border: "1px solid rgba(125,255,209,.16)",
-      boxShadow: "0 26px 74px rgba(0,0,0,.25)",
-    },
-    packageImageWrap: { position: "relative", height: 230, overflow: "hidden" },
-    packageImage: {
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      filter: "saturate(1.07) contrast(1.04)",
-    },
-    imageOverlay: {
-      position: "absolute",
-      inset: 0,
-      background: "linear-gradient(to top, rgba(1,3,2,.92), transparent 58%)",
-    },
-    packageBadge: {
-      position: "absolute",
-      top: 14,
-      left: 14,
-      padding: "7px 11px",
-      borderRadius: 999,
-      background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-      color: "#03150f",
-      fontWeight: 950,
-      fontSize: 11,
-      textTransform: "uppercase",
-      letterSpacing: ".08em",
-    },
-    packageBody: { padding: 17 },
-    packageTitle: {
-      fontSize: 28,
-      lineHeight: 0.98,
-      fontWeight: 950,
-      letterSpacing: "-.055em",
-    },
-    packageMeta: { marginTop: 8, color: "#8fffe0", fontWeight: 900, fontSize: 14 },
-    description: {
-      marginTop: 10,
-      color: "rgba(231,255,247,.68)",
-      lineHeight: 1.55,
-      fontSize: 14,
-    },
-    depositBox: {
-      marginTop: 12,
-      padding: 12,
-      borderRadius: 18,
-      background: "rgba(244,208,111,.09)",
-      border: "1px solid rgba(244,208,111,.22)",
-      color: "#f7e2a2",
-      fontSize: 13,
-      lineHeight: 1.5,
-      fontWeight: 750,
-    },
-    chipRow: { display: "flex", gap: 7, flexWrap: "wrap", marginTop: 12 },
-    chip: {
-      padding: "6px 9px",
-      borderRadius: 999,
-      background: "rgba(255,255,255,.045)",
-      border: "1px solid rgba(125,255,209,.12)",
-      color: "rgba(231,255,247,.78)",
-      fontSize: 12,
-      fontWeight: 800,
-    },
-    row: {
-      display: "flex",
-      justifyContent: "space-between",
-      gap: 12,
-      alignItems: "center",
-      padding: "13px 14px",
-      borderRadius: 18,
-      background: "rgba(255,255,255,.045)",
-      border: "1px solid rgba(125,255,209,.12)",
-    },
-    rowStack: { display: "grid", gap: 10 },
-    rowTitle: { fontWeight: 900 },
-    rowSub: { marginTop: 4, color: "rgba(231,255,247,.60)", fontSize: 13 },
-    status: (status) => ({
-      display: "inline-flex",
-      padding: "7px 10px",
-      borderRadius: 999,
-      background:
-        status === "confirmed" || status === "completed"
-          ? "rgba(22,245,162,.14)"
-          : status === "rejected" || status === "cancelled"
-          ? "rgba(255,80,80,.12)"
-          : "rgba(244,208,111,.10)",
-      color:
-        status === "confirmed" || status === "completed"
-          ? "#8fffe0"
-          : status === "rejected" || status === "cancelled"
-          ? "#ffd1d1"
-          : "#f7e2a2",
-      fontSize: 11,
-      fontWeight: 950,
-      textTransform: "uppercase",
-      whiteSpace: "nowrap",
-    }),
-    miniActions: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 },
-    smallButton: {
-      border: "none",
-      padding: "10px 12px",
-      borderRadius: 999,
-      background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-      color: "#03150f",
-      fontWeight: 900,
-      cursor: "pointer",
-      fontSize: 12,
-    },
-    smallGhost: {
-      border: "1px solid rgba(125,255,209,.18)",
-      padding: "9px 12px",
-      borderRadius: 999,
-      background: "rgba(255,255,255,.04)",
-      color: "#f4fff9",
-      fontWeight: 850,
-      cursor: "pointer",
-      fontSize: 12,
-    },
-    dangerGhost: {
-      border: "1px solid rgba(255,80,80,.22)",
-      padding: "9px 12px",
-      borderRadius: 999,
-      background: "rgba(255,80,80,.08)",
-      color: "#ffd1d1",
-      fontWeight: 850,
-      cursor: "pointer",
-      fontSize: 12,
-    },
-    empty: {
-      padding: 22,
-      borderRadius: 26,
-      background: "rgba(255,255,255,.035)",
-      border: "1px solid rgba(125,255,209,.12)",
-      color: "rgba(231,255,247,.66)",
-      lineHeight: 1.6,
-    },
-    bookingCard: {
-      padding: 18,
-      borderRadius: 30,
-      background:
-        "radial-gradient(circle at 100% 0%, rgba(22,245,162,.10), transparent 30%), linear-gradient(145deg, rgba(8,24,18,.78), rgba(3,9,7,.96))",
-      border: "1px solid rgba(125,255,209,.14)",
-      boxShadow: "0 24px 70px rgba(0,0,0,.22)",
-    },
-    bookingTop: {
-      display: "flex",
-      justifyContent: "space-between",
-      gap: 14,
-      flexWrap: "wrap",
-      alignItems: "flex-start",
-    },
-    bookingTitle: {
-      fontSize: 26,
-      lineHeight: 0.98,
-      fontWeight: 950,
-      letterSpacing: "-.05em",
-    },
-    warning: {
-      marginTop: 12,
-      padding: 13,
-      borderRadius: 18,
-      background: "rgba(244,208,111,.09)",
-      border: "1px solid rgba(244,208,111,.22)",
-      color: "#f7e2a2",
-      fontSize: 13,
-      lineHeight: 1.5,
-      fontWeight: 750,
-    },
-    modalOverlay: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,.72)",
-      backdropFilter: "blur(16px)",
-      zIndex: 9999,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 16,
-    },
-    modal: {
-      width: "100%",
-      maxWidth: 780,
-      maxHeight: "90vh",
-      overflowY: "auto",
-      borderRadius: 34,
-      padding: 20,
-      background: "linear-gradient(145deg, rgba(8,24,18,.98), rgba(3,9,7,.99))",
-      border: "1px solid rgba(125,255,209,.24)",
-      boxShadow: "0 34px 100px rgba(0,0,0,.62)",
-    },
-    input: {
-      width: "100%",
-      boxSizing: "border-box",
-      border: "1px solid rgba(125,255,209,.14)",
-      background: "rgba(255,255,255,.045)",
-      color: "#f4fff9",
-      borderRadius: 18,
-      padding: "14px",
-      outline: "none",
-      fontSize: 14,
-    },
-    textarea: {
-      width: "100%",
-      boxSizing: "border-box",
-      minHeight: 110,
-      border: "1px solid rgba(125,255,209,.14)",
-      background: "rgba(255,255,255,.045)",
-      color: "#f4fff9",
-      borderRadius: 18,
-      padding: "14px",
-      outline: "none",
-      resize: "vertical",
-      fontFamily: "inherit",
-      fontSize: 14,
-    },
-    formGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-      gap: 12,
-    },
-    switchCard: {
-      padding: 14,
-      borderRadius: 22,
-      background: "rgba(255,255,255,.04)",
-      border: "1px solid rgba(125,255,209,.13)",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: 12,
-      cursor: "pointer",
-    },
-    galleryGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))",
-      gap: 10,
-    },
-    galleryItem: {
-      position: "relative",
-      overflow: "hidden",
-      borderRadius: 18,
-      border: "1px solid rgba(125,255,209,.14)",
-      background: "rgba(255,255,255,.04)",
-      height: 120,
-    },
-    galleryImage: {
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      display: "block",
-    },
-    removePhoto: {
-      position: "absolute",
-      right: 8,
-      top: 8,
-      border: "none",
-      width: 28,
-      height: 28,
-      borderRadius: 999,
-      background: "rgba(0,0,0,.62)",
-      color: "#fff",
-      cursor: "pointer",
-      fontWeight: 900,
-    },
-    fileBox: {
-      padding: 14,
-      borderRadius: 20,
-      background: "rgba(255,255,255,.04)",
-      border: "1px dashed rgba(125,255,209,.24)",
-      color: "rgba(231,255,247,.72)",
-    },
-  };
-
-  if (loading) return <div style={styles.page}>Loading dashboard...</div>;
-
-  if (accessDenied) {
-    return (
-      <main style={styles.page}>
-        <div style={styles.accessCard}>
-          <div style={styles.badge}>Protected dashboard</div>
-          <div style={{ ...styles.title, fontSize: "clamp(38px,6vw,68px)" }}>
-            Access denied.
-          </div>
-          <div style={styles.subtitle}>
-            This dashboard belongs to another host account. Log in with the owner account
-            for this Experience Host profile.
-          </div>
-
-          <div style={styles.heroActions}>
-            <button style={styles.button} onClick={() => navigate("/login")}>
-              Go to login
-            </button>
-
-            {host?.slug ? (
-              <button style={styles.ghostButton} onClick={() => navigate(`/host/${host.slug}`)}>
-                Open public profile
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </main>
+  const deletePackage = useCallback(async (id) => {
+    const confirmed = window.confirm(
+      "Da li sigurno želiš da obrišeš ovaj paket?"
     );
+
+    if (!confirmed) return;
+
+    setDeletingItem(`package-${id}`);
+    setMessage("");
+
+    try {
+      const { error } = await supabase
+        .from("packages")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setPackages((current) =>
+        current.filter((item) => item.id !== id)
+      );
+
+      setPackageCounts((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    } catch (error) {
+      setMessage(
+        error?.message ||
+          "Paket nije moguće obrisati."
+      );
+    } finally {
+      setDeletingItem("");
+    }
+  }, []);
+
+  const totalEventInterested = useMemo(
+    () =>
+      Object.values(eventCounts).reduce(
+        (sum, number) =>
+          sum + Number(number || 0),
+        0
+      ),
+    [eventCounts]
+  );
+
+  const totalPackageInterested = useMemo(
+    () =>
+      Object.values(packageCounts).reduce(
+        (sum, number) =>
+          sum + Number(number || 0),
+        0
+      ),
+    [packageCounts]
+  );
+
+  const totalInterest =
+    totalEventInterested +
+    totalPackageInterested;
+
+  if (loading || dashboardLoading) {
+    return <DashboardLoading />;
   }
 
-  if (!host) return <div style={styles.page}>Host not found.</div>;
+  if (!isHost) {
+    return <UnauthorizedState />;
+  }
+
+  const hostName =
+    profile?.full_name ||
+    profile?.username ||
+    "domaćine";
 
   return (
-    <main style={styles.page}>
-      <div style={styles.wrap}>
-        <div style={styles.hero}>
-          <div style={styles.heroBg} />
-          <div style={styles.heroOverlay} />
-
-          <div style={styles.heroInner}>
-            <div style={styles.heroTop}>
-              <div style={styles.identityRow}>
-                <img src={host.logo_url || host.cover_url || FALLBACK} alt="" style={styles.logo} />
-
-                <div>
-                  <div style={styles.badgeRow}>
-                    <div style={styles.badge}>Host Command Center</div>
-                    <div style={host.verified ? styles.verified : styles.badge}>
-                      {host.verified ? "Verified" : "Pending verification"}
-                    </div>
-                  </div>
-
-                  <div style={styles.title}>{host?.name}</div>
-
-                  <div style={styles.subtitle}>
-                    {host?.location || "No location added yet"}
-                    {host?.category ? ` • ${host.category}` : ""}
-                    <br />
-                    {host?.short_description ||
-                      "Manage packages, dates, deposits and reservations from one place."}
-                  </div>
-
-                  <div style={styles.contactStrip}>
-                    {host.email ? (
-                      <a style={styles.contactChip} href={`mailto:${host.email}`}>
-                        ✉ {host.email}
-                      </a>
-                    ) : null}
-
-                    {host.phone ? (
-                      <a style={styles.contactChip} href={`tel:${normalizePhone(host.phone)}`}>
-                        ☎ {host.phone}
-                      </a>
-                    ) : null}
-
-                    {host.instagram ? (
-                      <span style={styles.contactChip}>◎ {host.instagram}</span>
-                    ) : null}
-
-                    {host.address ? (
-                      <span style={styles.contactChip}>📍 {host.address}</span>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-
-              <div style={styles.heroActions}>
-                <button
-                  style={styles.button}
-                  onClick={() => navigate(`/host-dashboard/${id}/create-package`)}
-                >
-                  + Create package
-                </button>
-
-                <button style={styles.ghostButton} onClick={() => setTab("bookings")}>
-                  Reservations
-                </button>
-
-                <button style={styles.ghostButton} onClick={() => navigate(`/host/${host.slug}`)}>
-                  Public profile
-                </button>
-
-                {host?.map_url ? (
-                  <button style={styles.ghostButton} onClick={() => window.open(host.map_url, "_blank")}>
-                    Map
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            <div style={styles.stats}>
-              <div style={styles.stat}>
-                <div style={styles.number}>{stats.activePackages}</div>
-                <div style={styles.label}>Active packages</div>
-              </div>
-
-              <div style={styles.stat}>
-                <div style={styles.number}>{stats.bookings}</div>
-                <div style={styles.label}>Reservations</div>
-              </div>
-
-              <div style={styles.stat}>
-                <div style={styles.number}>{stats.estimatedRevenue}</div>
-                <div style={styles.label}>Est. revenue</div>
-              </div>
-
-              <div style={styles.stat}>
-                <div style={styles.number}>{stats.upcomingDates}</div>
-                <div style={styles.label}>Upcoming dates</div>
-              </div>
-
-              <div style={styles.stat}>
-                <div style={styles.number}>{stats.freeSpots}</div>
-                <div style={styles.label}>Free spots</div>
-              </div>
-
-              <div style={styles.stat}>
-                <div style={styles.number}>{stats.depositWaiting}</div>
-                <div style={styles.label}>Deposit waiting</div>
-              </div>
-
-              <div style={styles.stat}>
-                <div style={styles.number}>{stats.confirmed}</div>
-                <div style={styles.label}>Confirmed</div>
-              </div>
-
-              <div style={styles.stat}>
-                <div style={styles.number}>{stats.completed}</div>
-                <div style={styles.label}>Completed</div>
-              </div>
-            </div>
-
-            <div style={styles.commandPanel}>
-              <button style={styles.commandCard} onClick={() => navigate(`/host-dashboard/${id}/create-package`)}>
-                <span style={styles.commandTitle}>Create package</span>
-                <span style={styles.commandText}>Add photos, price, deposit, dates and spots.</span>
-              </button>
-
-              <button style={styles.commandCard} onClick={() => setTab("packages")}>
-                <span style={styles.commandTitle}>Manage packages</span>
-                <span style={styles.commandText}>Edit package details, gallery and deposit rules.</span>
-              </button>
-
-              <button style={styles.commandCard} onClick={() => setTab("dates")}>
-                <span style={styles.commandTitle}>Calendar</span>
-                <span style={styles.commandText}>See upcoming dates and available spots.</span>
-              </button>
-
-              <button style={styles.commandCard} onClick={() => setTab("bookings")}>
-                <span style={styles.commandTitle}>Reservations</span>
-                <span style={styles.commandText}>Confirm deposits, reject, complete or contact guests.</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.tabs}>
-          {["overview", "packages", "dates", "bookings", "profile"].map((x) => (
-            <button key={x} style={styles.tab(tab === x)} onClick={() => setTab(x)}>
-              {x}
-            </button>
-          ))}
-        </div>
-
-        <div style={styles.grid}>
-          {tab === "overview" && (
-            <>
-              <div style={styles.threeCol}>
-                <div style={styles.card}>
-                  <div style={styles.cardTitle}>Next dates</div>
-
-                  <div style={styles.rowStack}>
-                    {nextDates.length ? (
-                      nextDates.map((date) => {
-                        const pkg = packages.find((p) => p.id === date.package_id);
-                        return (
-                          <div key={date.id} style={styles.row}>
-                            <div>
-                              <div style={styles.rowTitle}>{pkg?.title || "Package"}</div>
-                              <div style={styles.rowSub}>{formatDateRange(date.start_date, date.end_date)}</div>
-                            </div>
-                            <div style={styles.status(date.free_spots <= 0 ? "deposit_waiting" : "confirmed")}>
-                              {date.free_spots}/{date.total_spots}
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div style={styles.empty}>No upcoming dates yet.</div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={styles.card}>
-                  <div style={styles.cardTitle}>Latest reservations</div>
-
-                  <div style={styles.rowStack}>
-                    {recentBookings.length ? (
-                      recentBookings.map((booking) => (
-                        <div key={booking.id} style={styles.row}>
-                          <div>
-                            <div style={styles.rowTitle}>{booking.full_name || "MeetOutdoors user"}</div>
-                            <div style={styles.rowSub}>
-                              {booking.experience_packages?.title || "Package"} • {booking.persons || 1} persons
-                            </div>
-                          </div>
-                          <div style={styles.status(booking.status)}>{statusLabel(booking.status)}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={styles.empty}>No reservations yet.</div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={styles.card}>
-                  <div style={styles.cardTitle}>Deposit workflow</div>
-                  <div style={styles.muted}>
-                    When a package requires a deposit, the user sees instructions before booking.
-                    Confirm the reservation only after you verify payment manually.
-                  </div>
-
-                  <div style={styles.warning}>
-                    Current system is manual deposit confirmation. No online payment is processed here.
-                  </div>
-
-                  <div style={styles.miniActions}>
-                    <button style={styles.smallButton} onClick={() => setTab("bookings")}>
-                      Open reservations
-                    </button>
-                    <button style={styles.smallGhost} onClick={() => setTab("profile")}>
-                      Payment instructions
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {tab === "packages" && (
-            <>
-              <div style={styles.heroActions}>
-                <button style={styles.button} onClick={() => navigate(`/host-dashboard/${id}/create-package`)}>
-                  + Add new package
-                </button>
-              </div>
-
-              {packages.length ? (
-                <div style={styles.twoCol}>
-                  {packages.map((pkg) => {
-                    const pkgDates = getPackageDates(pkg.id);
-                    const galleryCount = Array.isArray(pkg.gallery_urls) ? pkg.gallery_urls.length : 0;
-
-                    return (
-                      <div key={pkg.id} style={styles.packageCard}>
-                        <div style={styles.packageImageWrap}>
-                          <img src={pkg.cover_url || host.cover_url || FALLBACK} alt={pkg.title} style={styles.packageImage} />
-                          <div style={styles.imageOverlay} />
-                          <div style={styles.packageBadge}>{pkg.active ? "Active" : "Inactive"}</div>
-                        </div>
-
-                        <div style={styles.packageBody}>
-                          <div style={styles.packageTitle}>{pkg.title}</div>
-
-                          <div style={styles.packageMeta}>
-                            {pkg.price ? `${pkg.price} ${pkg.currency || "EUR"}` : "Price on request"}
-                            {pkg.duration ? ` • ${pkg.duration}` : ""}
-                          </div>
-
-                          {pkg.deposit_required ? (
-                            <div style={styles.depositBox}>
-                              Deposit required: {pkg.deposit_amount || 0} {pkg.currency || "EUR"}
-                              <br />
-                              {pkg.deposit_instructions || host.payment_instructions || "No deposit instructions added."}
-                            </div>
-                          ) : (
-                            <div style={styles.depositBox}>No deposit required.</div>
-                          )}
-
-                          {pkg.description ? <div style={styles.description}>{pkg.description}</div> : null}
-
-                          {pkg.included?.length ? (
-                            <div style={styles.chipRow}>
-                              {pkg.included.slice(0, 8).map((item) => (
-                                <span key={item} style={styles.chip}>✓ {item}</span>
-                              ))}
-                            </div>
-                          ) : null}
-
-                          <div style={styles.chipRow}>
-                            <span style={styles.chip}>{pkgDates.length} dates</span>
-                            <span style={styles.chip}>{galleryCount} gallery photos</span>
-                          </div>
-
-                          <div style={styles.miniActions}>
-                            <button
-                              style={styles.smallButton}
-                              onClick={() => navigate(`/host-dashboard/${id}/package/${pkg.id}/create-date`)}
-                            >
-                              Add date
-                            </button>
-
-                            <button style={styles.smallGhost} onClick={() => openEditPackage(pkg)}>
-                              Edit
-                            </button>
-
-                            <button style={styles.dangerGhost} onClick={() => deletePackage(pkg)}>
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={styles.empty}>
-                  No packages yet. Create your first package with image, price, deposit settings and gallery.
-                </div>
-              )}
-            </>
-          )}
-
-          {tab === "dates" && (
-            <>
-              {packages.length ? (
-                <div style={styles.grid}>
-                  {packages.map((pkg) => {
-                    const pkgDates = getPackageDates(pkg.id);
-
-                    return (
-                      <div key={pkg.id} style={styles.card}>
-                        <div style={styles.heroTop}>
-                          <div>
-                            <div style={styles.cardTitle}>{pkg.title}</div>
-                            <div style={styles.muted}>
-                              {pkgDates.length} available date{pkgDates.length === 1 ? "" : "s"}
-                            </div>
-                          </div>
-
-                          <button
-                            style={styles.smallButton}
-                            onClick={() => navigate(`/host-dashboard/${id}/package/${pkg.id}/create-date`)}
-                          >
-                            Add date
-                          </button>
-                        </div>
-
-                        <div style={{ ...styles.rowStack, marginTop: 14 }}>
-                          {pkgDates.length ? (
-                            pkgDates.map((date) => {
-                              const full = date.free_spots <= 0;
-                              const closed = date.closed;
-
-                              return (
-                                <div key={date.id} style={styles.row}>
-                                  <div>
-                                    <div style={styles.rowTitle}>
-                                      {formatDateRange(date.start_date, date.end_date)}
-                                    </div>
-                                    <div style={styles.rowSub}>
-                                      {date.free_spots}/{date.total_spots} free spots
-                                      {date.price_override ? ` • ${date.price_override} EUR` : ""}
-                                    </div>
-                                  </div>
-
-                                  <div style={styles.status(closed ? "cancelled" : full ? "deposit_waiting" : "confirmed")}>
-                                    {closed ? "Closed" : full ? "Full" : "Open"}
-                                  </div>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <div style={styles.empty}>No dates for this package yet.</div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={styles.empty}>Create a package first, then add dates.</div>
-              )}
-            </>
-          )}
-
-          {tab === "bookings" && (
-            <>
-              {bookings.length ? (
-                <div style={styles.grid}>
-                  {bookings.map((booking) => {
-                    const pkg = booking.experience_packages;
-                    const requiresDeposit = pkg?.deposit_required;
-                    const phone = booking.phone || booking.customer_phone;
-                    const cleanPhone = normalizePhone(phone);
-
-                    return (
-                      <div key={booking.id} style={styles.bookingCard}>
-                        <div style={styles.bookingTop}>
-                          <div>
-                            <div style={styles.bookingTitle}>{booking.full_name || "MeetOutdoors user"}</div>
-                            <div style={styles.muted}>
-                              {pkg?.title || "Package"} •{" "}
-                              {formatDateRange(booking.experience_dates?.start_date, booking.experience_dates?.end_date)}
-                            </div>
-                          </div>
-
-                          <div style={styles.status(booking.status)}>{statusLabel(booking.status)}</div>
-                        </div>
-
-                        {requiresDeposit ? (
-                          <div style={styles.warning}>
-                            Deposit required: {pkg.deposit_amount || booking.deposit_amount || 0} {pkg.currency || "EUR"}
-                            <br />
-                            Confirm only after deposit verification.
-                            <br />
-                            Instructions: {pkg.deposit_instructions || host.payment_instructions || "No instructions added."}
-                          </div>
-                        ) : (
-                          <div style={styles.warning}>
-                            No deposit required. You can manually confirm this reservation.
-                          </div>
-                        )}
-
-                        <div style={{ ...styles.rowStack, marginTop: 12 }}>
-                          <div style={styles.row}><span>Persons</span><strong>{booking.persons}</strong></div>
-
-                          {booking.email ? <div style={styles.row}><span>Email</span><strong>{booking.email}</strong></div> : null}
-                          {phone ? <div style={styles.row}><span>Phone</span><strong>{phone}</strong></div> : null}
-                          {booking.note ? <div style={styles.row}><span>Note</span><strong>{booking.note}</strong></div> : null}
-                        </div>
-
-                        <div style={styles.miniActions}>
-                          <button style={styles.smallButton} onClick={() => updateBookingStatus(booking.id, "confirmed")}>
-                            {requiresDeposit ? "Confirm deposit" : "Confirm"}
-                          </button>
-
-                          <button style={styles.smallButton} onClick={() => updateBookingStatus(booking.id, "completed")}>
-                            Complete
-                          </button>
-
-                          <button style={styles.dangerGhost} onClick={() => updateBookingStatus(booking.id, "rejected")}>
-                            Reject
-                          </button>
-
-                          <button style={styles.smallGhost} onClick={() => updateBookingStatus(booking.id, "cancelled")}>
-                            Cancel
-                          </button>
-
-                          {booking.email ? (
-                            <button
-                              style={styles.smallGhost}
-                              onClick={() =>
-                                (window.location.href = `mailto:${booking.email}?subject=MeetOutdoors reservation - ${pkg?.title || "Experience"}`)
-                              }
-                            >
-                              Email
-                            </button>
-                          ) : null}
-
-                          {cleanPhone ? (
-                            <button style={styles.smallGhost} onClick={() => window.open(`https://wa.me/${cleanPhone}`, "_blank")}>
-                              WhatsApp
-                            </button>
-                          ) : null}
-
-                          {cleanPhone ? (
-                            <button style={styles.smallGhost} onClick={() => (window.location.href = `tel:${cleanPhone}`)}>
-                              Call
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={styles.empty}>No reservations yet.</div>
-              )}
-            </>
-          )}
-
-          {tab === "profile" && (
-            <div style={styles.twoCol}>
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>Host details</div>
-
-                <div style={styles.rowStack}>
-                  <div style={styles.row}><span>Name</span><strong>{host.name}</strong></div>
-                  <div style={styles.row}><span>Slug</span><strong>/host/{host.slug}</strong></div>
-                  <div style={styles.row}><span>Category</span><strong>{host.category || "Not set"}</strong></div>
-                  <div style={styles.row}><span>Location</span><strong>{host.location || "Not set"}</strong></div>
-                  <div style={styles.row}><span>Address</span><strong>{host.address || "Not set"}</strong></div>
-                  <div style={styles.row}><span>Phone</span><strong>{host.phone || "Not set"}</strong></div>
-                  <div style={styles.row}><span>Email</span><strong>{host.email || "Not set"}</strong></div>
-                  <div style={styles.row}><span>Instagram</span><strong>{host.instagram || "Not set"}</strong></div>
-                  <div style={styles.row}><span>WhatsApp</span><strong>{host.whatsapp || "Not set"}</strong></div>
-                  <div style={styles.row}><span>Website</span><strong>{host.website || "Not set"}</strong></div>
-                  <div style={styles.row}><span>Verified</span><strong>{host.verified ? "Yes" : "No"}</strong></div>
-                </div>
-              </div>
-
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>Description & payment</div>
-
-                <div style={styles.muted}>{host.description || host.short_description || "No description yet."}</div>
-
-                <div style={styles.warning}>
-                  Payment instructions:
+    <>
+      <DashboardStyles />
+
+      <main className="hostDashboardPage">
+        <div className="dashboardContainer">
+          <section className="dashboardHero">
+            <div className="heroDecoration heroDecorationOne" />
+            <div className="heroDecoration heroDecorationTwo" />
+
+            <div className="heroMain">
+              <div className="heroCopy">
+                <span className="heroKicker">
+                  Kontrolni centar domaćina
+                </span>
+
+                <h1>
+                  Dobrodošao,
                   <br />
-                  {host.payment_instructions || "No payment instructions added."}
-                </div>
+                  {hostName}.
+                </h1>
 
-                <div style={styles.miniActions}>
-                  <button style={styles.smallButton} onClick={() => navigate(`/host/${host.slug}`)}>
-                    Open public page
-                  </button>
+                <p>
+                  Upravljaj događajima, paketima,
+                  interesovanjima i rezervacijama sa jednog
+                  mesta.
+                </p>
+              </div>
 
-                  {host.map_url ? (
-                    <button style={styles.smallGhost} onClick={() => window.open(host.map_url, "_blank")}>
-                      Open map
-                    </button>
-                  ) : null}
-                </div>
+              <div className="heroActions">
+                <Link
+                  to="/create-event"
+                  className="heroPrimaryAction"
+                >
+                  <span>
+                    <Icon name="calendar" size={20} />
+                  </span>
+
+                  <div>
+                    <strong>Kreiraj događaj</strong>
+                    <small>
+                      Objavi novu jednodnevnu avanturu.
+                    </small>
+                  </div>
+
+                  <Icon name="arrowRight" size={18} />
+                </Link>
+
+                <Link
+                  to="/create-package"
+                  className="heroSecondaryAction"
+                >
+                  <span>
+                    <Icon name="package" size={20} />
+                  </span>
+
+                  <div>
+                    <strong>Kreiraj paket</strong>
+                    <small>
+                      Dodaj turu ili višednevno iskustvo.
+                    </small>
+                  </div>
+
+                  <Icon name="arrowRight" size={18} />
+                </Link>
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {editingPackage && editForm ? (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <div style={styles.heroTop}>
-              <div>
-                <div style={styles.badge}>Edit package</div>
-                <div style={{ ...styles.cardTitle, marginTop: 12 }}>{editingPackage.title}</div>
-              </div>
+            <div className="heroBottom">
+              <Link to="/host-bookings">
+                <Icon name="booking" size={17} />
+                Upravljaj rezervacijama
+                <Icon name="arrowRight" size={16} />
+              </Link>
+
+              {profile?.username && (
+                <Link to={`/h/${profile.username}`}>
+                  <Icon name="eye" size={17} />
+                  Pogledaj javni profil
+                </Link>
+              )}
+            </div>
+          </section>
+
+          {message && (
+            <div
+              className="dashboardMessage"
+              role="alert"
+            >
+              <span>
+                <Icon name="alert" size={18} />
+              </span>
+
+              <p>{message}</p>
 
               <button
-                style={styles.smallGhost}
-                onClick={() => {
-                  setEditingPackage(null);
-                  setEditForm(null);
-                  setPackageError("");
-                }}
+                type="button"
+                onClick={() => setMessage("")}
+                aria-label="Zatvori poruku"
               >
-                Close
+                <Icon name="close" size={17} />
               </button>
             </div>
+          )}
 
-            <div style={{ ...styles.grid, marginTop: 16 }}>
-              <div style={styles.formGrid}>
-                <input style={styles.input} placeholder="Package title" value={editForm.title} onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))} />
-                <input style={styles.input} placeholder="Duration" value={editForm.duration} onChange={(e) => setEditForm((p) => ({ ...p, duration: e.target.value }))} />
-                <input style={styles.input} placeholder="Price" type="number" value={editForm.price} onChange={(e) => setEditForm((p) => ({ ...p, price: e.target.value }))} />
-                <input style={styles.input} placeholder="Currency" value={editForm.currency} onChange={(e) => setEditForm((p) => ({ ...p, currency: e.target.value }))} />
-              </div>
+          <section className="statsGrid">
+            <StatCard
+              icon="calendar"
+              label="Događaji"
+              value={events.length}
+              description="Ukupan broj objavljenih događaja."
+            />
 
-              <textarea style={styles.textarea} placeholder="Description" value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} />
+            <StatCard
+              icon="package"
+              label="Paketi"
+              value={packages.length}
+              description="Ture i višednevna iskustva."
+            />
 
-              <div style={styles.formGrid}>
-                <input style={styles.input} placeholder="Included: Rafting, Guide, Lunch" value={editForm.included} onChange={(e) => setEditForm((p) => ({ ...p, included: e.target.value }))} />
-                <input style={styles.input} placeholder="Not included" value={editForm.not_included} onChange={(e) => setEditForm((p) => ({ ...p, not_included: e.target.value }))} />
-              </div>
+            <StatCard
+              icon="heart"
+              label="Ukupno interesovanje"
+              value={totalInterest}
+              description="Interesovanje za sve tvoje ponude."
+            />
 
-              <div style={styles.switchCard} onClick={() => setEditForm((p) => ({ ...p, active: !p.active }))}>
-                <div>
-                  <strong>Package active</strong>
-                  <div style={styles.muted}>Inactive packages are hidden from users.</div>
-                </div>
-                <strong>{editForm.active ? "ON" : "OFF"}</strong>
-              </div>
+            <StatCard
+              icon="users"
+              label="Sadržaj"
+              value={
+                events.length + packages.length
+              }
+              description="Sve aktivne avanture na profilu."
+            />
+          </section>
 
-              <div style={styles.switchCard} onClick={() => setEditForm((p) => ({ ...p, deposit_required: !p.deposit_required }))}>
-                <div>
-                  <strong>Require deposit</strong>
-                  <div style={styles.muted}>Users will see deposit amount and instructions before booking.</div>
-                </div>
-                <strong>{editForm.deposit_required ? "ON" : "OFF"}</strong>
-              </div>
-
-              {editForm.deposit_required ? (
-                <>
-                  <div style={styles.formGrid}>
-                    <input style={styles.input} placeholder="Deposit amount" type="number" value={editForm.deposit_amount} onChange={(e) => setEditForm((p) => ({ ...p, deposit_amount: e.target.value }))} />
-                    <input style={styles.input} placeholder="Currency" value={editForm.currency} onChange={(e) => setEditForm((p) => ({ ...p, currency: e.target.value }))} />
-                  </div>
-
-                  <textarea style={styles.textarea} placeholder="Deposit instructions" value={editForm.deposit_instructions} onChange={(e) => setEditForm((p) => ({ ...p, deposit_instructions: e.target.value }))} />
-                </>
-              ) : null}
-
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>Cover image</div>
-
-                {editForm.cover_url ? (
-                  <div style={{ ...styles.galleryItem, height: 190, marginBottom: 12 }}>
-                    <img src={editForm.cover_url} alt="Cover" style={styles.galleryImage} />
-                  </div>
-                ) : null}
-
-                <div style={styles.fileBox}>
-                  <input type="file" accept="image/*" onChange={(e) => handleCoverUpload(e.target.files?.[0])} />
-                  <div style={{ marginTop: 8 }}>{uploading ? "Uploading..." : "Upload cover from gallery"}</div>
-                </div>
-              </div>
-
-              <div style={styles.card}>
-                <div style={styles.cardTitle}>Gallery photos</div>
-
-                <div style={styles.fileBox}>
-                  <input type="file" multiple accept="image/*" onChange={(e) => handleGalleryUpload(e.target.files)} />
-                  <div style={{ marginTop: 8 }}>{uploading ? "Uploading..." : "Upload multiple photos from gallery"}</div>
-                </div>
-
-                {editForm.gallery_urls?.length ? (
-                  <div style={{ ...styles.galleryGrid, marginTop: 14 }}>
-                    {editForm.gallery_urls.map((img, index) => (
-                      <div key={`${img}-${index}`} style={styles.galleryItem}>
-                        <img src={img} alt="" style={styles.galleryImage} />
-                        <button type="button" style={styles.removePhoto} onClick={() => removeGalleryImage(index)}>
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ ...styles.muted, marginTop: 12 }}>No gallery photos yet.</div>
-                )}
-              </div>
-
-              {packageError ? <div style={styles.warning}>{packageError}</div> : null}
-
-              <div style={styles.miniActions}>
-                <button style={styles.smallButton} onClick={savePackageEdit} disabled={savingPackage || uploading}>
-                  {savingPackage ? "Saving..." : "Save package"}
-                </button>
-
-                <button
-                  style={styles.smallGhost}
-                  onClick={() => {
-                    setEditingPackage(null);
-                    setEditForm(null);
-                    setPackageError("");
-                  }}
-                >
-                  Cancel
-                </button>
+          <section className="dashboardQuickActions">
+            <div className="quickActionsHeading">
+              <div>
+                <span className="sectionKicker">
+                  Brze akcije
+                </span>
+                <h2>Šta želiš da uradiš?</h2>
               </div>
             </div>
-          </div>
+
+            <div className="quickActionGrid">
+              <Link
+                to="/create-event"
+                className="quickActionCard"
+              >
+                <span>
+                  <Icon name="plus" size={21} />
+                </span>
+
+                <div>
+                  <strong>Novi događaj</strong>
+                  <small>
+                    Kreiraj jednodnevnu avanturu.
+                  </small>
+                </div>
+
+                <Icon name="arrowRight" size={17} />
+              </Link>
+
+              <Link
+                to="/create-package"
+                className="quickActionCard"
+              >
+                <span>
+                  <Icon name="package" size={21} />
+                </span>
+
+                <div>
+                  <strong>Novi paket</strong>
+                  <small>
+                    Objavi turu ili višednevno iskustvo.
+                  </small>
+                </div>
+
+                <Icon name="arrowRight" size={17} />
+              </Link>
+
+              <Link
+                to="/host-bookings"
+                className="quickActionCard"
+              >
+                <span>
+                  <Icon name="booking" size={21} />
+                </span>
+
+                <div>
+                  <strong>Rezervacije</strong>
+                  <small>
+                    Pregledaj i upravljaj zahtevima.
+                  </small>
+                </div>
+
+                <Icon name="arrowRight" size={17} />
+              </Link>
+
+              {profile?.username && (
+                <Link
+                  to={`/h/${profile.username}`}
+                  className="quickActionCard"
+                >
+                  <span>
+                    <Icon name="eye" size={21} />
+                  </span>
+
+                  <div>
+                    <strong>Javni profil</strong>
+                    <small>
+                      Proveri kako te vide korisnici.
+                    </small>
+                  </div>
+
+                  <Icon name="arrowRight" size={17} />
+                </Link>
+              )}
+            </div>
+          </section>
+
+          <section className="dashboardSection">
+            <div className="dashboardSectionHeader">
+              <div>
+                <span className="sectionKicker">
+                  Događaji
+                </span>
+                <h2>Moji događaji</h2>
+
+                <p>
+                  Upravljaj objavljenim događajima i pregledaj
+                  interesovanje korisnika.
+                </p>
+              </div>
+
+              <Link
+                to="/create-event"
+                className="sectionButton"
+              >
+                <Icon name="plus" size={16} />
+                Novi događaj
+              </Link>
+            </div>
+
+            {events.length === 0 ? (
+              <EmptySection
+                type="event"
+                title="Još nemaš objavljene događaje."
+                description="Kreiraj svoju prvu outdoor avanturu i počni da okupljaš zajednicu."
+                buttonText="Kreiraj prvi događaj"
+                buttonUrl="/create-event"
+              />
+            ) : (
+              <div className="dashboardItemsGrid">
+                {events.map((event) => (
+                  <DashboardItemCard
+                    key={event.id}
+                    type="event"
+                    item={event}
+                    interestedCount={
+                      eventCounts[event.id] || 0
+                    }
+                    deleting={
+                      deletingItem ===
+                      `event-${event.id}`
+                    }
+                    onDelete={deleteEvent}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="dashboardSection packagesDashboardSection">
+            <div className="dashboardSectionHeader">
+              <div>
+                <span className="sectionKicker">
+                  Paketi i ture
+                </span>
+                <h2>Moji paketi</h2>
+
+                <p>
+                  Organizuj višednevna iskustva, upravljaj
+                  galerijom i prati interesovanje.
+                </p>
+              </div>
+
+              <Link
+                to="/create-package"
+                className="sectionButton"
+              >
+                <Icon name="plus" size={16} />
+                Novi paket
+              </Link>
+            </div>
+
+            {packages.length === 0 ? (
+              <EmptySection
+                type="package"
+                title="Još nemaš objavljene pakete."
+                description="Kreiraj turu ili kompletno outdoor iskustvo sa smeštajem, aktivnostima i rasporedom."
+                buttonText="Kreiraj prvi paket"
+                buttonUrl="/create-package"
+              />
+            ) : (
+              <div className="dashboardItemsGrid">
+                {packages.map((item) => (
+                  <DashboardItemCard
+                    key={item.id}
+                    type="package"
+                    item={item}
+                    interestedCount={
+                      packageCounts[item.id] || 0
+                    }
+                    deleting={
+                      deletingItem ===
+                      `package-${item.id}`
+                    }
+                    onDelete={deletePackage}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-      ) : null}
-    </main>
+      </main>
+    </>
+  );
+}
+
+function DashboardStyles() {
+  return (
+    <style>{`
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #f1f3ec;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .hostDashboardPage,
+      .dashboardStatePage {
+        min-height: 100vh;
+        color: #17271f;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .hostDashboardPage {
+        padding: 118px 24px 90px;
+        background:
+          radial-gradient(
+            circle at 10% 0%,
+            rgba(166, 203, 126, 0.17),
+            transparent 24%
+          ),
+          radial-gradient(
+            circle at 95% 20%,
+            rgba(92, 132, 91, 0.1),
+            transparent 26%
+          ),
+          #f1f3ec;
+      }
+
+      .hostDashboardPage a,
+      .dashboardStatePage a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .dashboardContainer {
+        width: min(1240px, 100%);
+        margin: 0 auto;
+      }
+
+      .dashboardHero {
+        position: relative;
+        isolation: isolate;
+        min-height: 530px;
+        padding: 33px;
+        overflow: hidden;
+        border-radius: 33px;
+        color: white;
+        box-shadow:
+          0 28px 75px rgba(24, 58, 39, 0.18);
+      }
+
+      .dashboardHero::before {
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        content: "";
+        background:
+          linear-gradient(
+            100deg,
+            rgba(5, 20, 11, 0.97),
+            rgba(14, 45, 27, 0.86) 55%,
+            rgba(11, 33, 21, 0.7)
+          ),
+          url("https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1800&q=85")
+          center / cover;
+      }
+
+      .heroDecoration {
+        position: absolute;
+        z-index: -1;
+        border:
+          1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 50%;
+      }
+
+      .heroDecorationOne {
+        right: -180px;
+        bottom: -230px;
+        width: 530px;
+        height: 530px;
+        box-shadow:
+          0 0 0 80px rgba(255, 255, 255, 0.02),
+          0 0 0 160px rgba(255, 255, 255, 0.012);
+      }
+
+      .heroDecorationTwo {
+        top: -120px;
+        right: 24%;
+        width: 230px;
+        height: 230px;
+      }
+
+      .heroMain {
+        display: grid;
+        grid-template-columns:
+          minmax(0, 1.15fr)
+          minmax(330px, 0.65fr);
+        align-items: end;
+        gap: 45px;
+        margin-top: 88px;
+      }
+
+      .heroKicker,
+      .sectionKicker {
+        display: block;
+        color: #83a760;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .heroKicker {
+        color: #c9f28c;
+      }
+
+      .heroCopy h1 {
+        max-width: 780px;
+        margin: 15px 0 0;
+        font-size:
+          clamp(50px, 7vw, 91px);
+        line-height: 0.92;
+        letter-spacing: -0.075em;
+      }
+
+      .heroCopy p {
+        max-width: 590px;
+        margin: 23px 0 0;
+        color:
+          rgba(255, 255, 255, 0.61);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .heroActions {
+        display: grid;
+        gap: 12px;
+      }
+
+      .heroPrimaryAction,
+      .heroSecondaryAction {
+        display: grid;
+        grid-template-columns:
+          auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 13px;
+        min-height: 84px;
+        padding: 14px;
+        border-radius: 19px;
+        transition: 0.2s ease;
+      }
+
+      .heroPrimaryAction {
+        background: #c9f28c;
+        color: #183a27 !important;
+        box-shadow:
+          0 15px 35px rgba(3, 17, 8, 0.22);
+      }
+
+      .heroSecondaryAction {
+        border:
+          1px solid rgba(255, 255, 255, 0.16);
+        background:
+          rgba(255, 255, 255, 0.09);
+        color: white !important;
+        backdrop-filter: blur(12px);
+      }
+
+      .heroPrimaryAction:hover,
+      .heroSecondaryAction:hover {
+        transform: translateY(-3px);
+      }
+
+      .heroPrimaryAction > span,
+      .heroSecondaryAction > span {
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 15px;
+      }
+
+      .heroPrimaryAction > span {
+        background:
+          rgba(24, 58, 39, 0.1);
+      }
+
+      .heroSecondaryAction > span {
+        background:
+          rgba(255, 255, 255, 0.09);
+        color: #c9f28c;
+      }
+
+      .heroActions strong,
+      .heroActions small {
+        display: block;
+      }
+
+      .heroActions strong {
+        font-size: 12px;
+      }
+
+      .heroActions small {
+        margin-top: 4px;
+        opacity: 0.62;
+        font-size: 9px;
+        line-height: 1.4;
+      }
+
+      .heroBottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        margin-top: 48px;
+        padding-top: 21px;
+        border-top:
+          1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .heroBottom > a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color:
+          rgba(255, 255, 255, 0.69);
+        font-size: 10px;
+        font-weight: 800;
+        transition: 0.18s ease;
+      }
+
+      .heroBottom > a:hover {
+        gap: 12px;
+        color: white;
+      }
+
+      .dashboardMessage {
+        display: grid;
+        grid-template-columns:
+          auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 11px;
+        margin-top: 20px;
+        padding: 14px;
+        border: 1px solid #efc6c1;
+        border-radius: 16px;
+        background: #fff0ee;
+        color: #963e34;
+      }
+
+      .dashboardMessage > span {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: #f7d7d3;
+      }
+
+      .dashboardMessage p {
+        margin: 0;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .dashboardMessage button {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .statsGrid {
+        display: grid;
+        grid-template-columns:
+          repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .statCard {
+        min-width: 0;
+        padding: 20px;
+        border: 1px solid #dce3d9;
+        border-radius: 22px;
+        background:
+          rgba(255, 255, 255, 0.76);
+        box-shadow:
+          0 12px 34px rgba(34, 53, 41, 0.045);
+      }
+
+      .statCardTop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        margin-bottom: 22px;
+      }
+
+      .statIcon,
+      .statTrend {
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+      }
+
+      .statIcon {
+        width: 43px;
+        height: 43px;
+        background: #e8f1dd;
+        color: #58763e;
+      }
+
+      .statTrend {
+        width: 29px;
+        height: 29px;
+        background: #f0f4eb;
+        color: #87987b;
+      }
+
+      .statCard > strong {
+        display: block;
+        color: #20342a;
+        font-size: 35px;
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .statLabel {
+        display: block;
+        margin-top: 9px;
+        color: #47584e;
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .statCard > small {
+        display: block;
+        margin-top: 6px;
+        color: #929b94;
+        font-size: 9px;
+        line-height: 1.5;
+      }
+
+      .dashboardQuickActions,
+      .dashboardSection {
+        margin-top: 34px;
+      }
+
+      .quickActionsHeading,
+      .dashboardSectionHeader {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 17px;
+      }
+
+      .quickActionsHeading h2,
+      .dashboardSectionHeader h2 {
+        margin: 7px 0 0;
+        color: #20342a;
+        font-size:
+          clamp(29px, 4vw, 40px);
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .dashboardSectionHeader p {
+        max-width: 600px;
+        margin: 11px 0 0;
+        color: #7e8981;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      .quickActionGrid {
+        display: grid;
+        grid-template-columns:
+          repeat(4, minmax(0, 1fr));
+        gap: 13px;
+      }
+
+      .quickActionCard {
+        display: grid;
+        grid-template-columns:
+          auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        min-height: 85px;
+        padding: 14px;
+        border: 1px solid #dce3d9;
+        border-radius: 19px;
+        background:
+          rgba(255, 255, 255, 0.72);
+        transition: 0.2s ease;
+      }
+
+      .quickActionCard:hover {
+        border-color: #9caf91;
+        background: white;
+        transform: translateY(-3px);
+        box-shadow:
+          0 14px 32px rgba(35, 53, 42, 0.07);
+      }
+
+      .quickActionCard > span {
+        display: grid;
+        place-items: center;
+        width: 45px;
+        height: 45px;
+        border-radius: 14px;
+        background: #e8f1dd;
+        color: #59763f;
+      }
+
+      .quickActionCard strong,
+      .quickActionCard small {
+        display: block;
+      }
+
+      .quickActionCard strong {
+        color: #34483b;
+        font-size: 11px;
+      }
+
+      .quickActionCard small {
+        margin-top: 4px;
+        color: #909992;
+        font-size: 8px;
+        line-height: 1.45;
+      }
+
+      .quickActionCard > svg {
+        color: #8c978f;
+      }
+
+      .dashboardSection {
+        padding: 27px;
+        border: 1px solid #dce3d9;
+        border-radius: 27px;
+        background:
+          rgba(255, 255, 255, 0.57);
+        box-shadow:
+          0 15px 43px rgba(32, 51, 39, 0.045);
+      }
+
+      .packagesDashboardSection {
+        background:
+          linear-gradient(
+            145deg,
+            rgba(238, 245, 231, 0.88),
+            rgba(255, 255, 255, 0.66)
+          );
+      }
+
+      .sectionButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        flex: 0 0 auto;
+        min-height: 43px;
+        padding: 0 15px;
+        border-radius: 13px;
+        background: #183a27;
+        color: white !important;
+        font-size: 10px;
+        font-weight: 850;
+        box-shadow:
+          0 11px 25px rgba(24, 58, 39, 0.15);
+        transition: 0.18s ease;
+      }
+
+      .sectionButton:hover {
+        gap: 11px;
+        background: #224c34;
+        transform: translateY(-2px);
+      }
+
+      .dashboardItemsGrid {
+        display: grid;
+        grid-template-columns:
+          repeat(3, minmax(0, 1fr));
+        gap: 17px;
+      }
+
+      .dashboardItemCard {
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid #dce2d9;
+        border-radius: 22px;
+        background: white;
+        transition: 0.2s ease;
+      }
+
+      .dashboardItemCard:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 18px 42px rgba(32, 51, 39, 0.09);
+      }
+
+      .itemImageWrapper {
+        position: relative;
+        height: 200px;
+        overflow: hidden;
+      }
+
+      .itemImage {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+      }
+
+      .dashboardItemCard:hover
+        .itemImage {
+        transform: scale(1.04);
+      }
+
+      .itemImageOverlay {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(4, 14, 8, 0.08),
+            rgba(4, 14, 8, 0.57)
+          );
+      }
+
+      .itemTypeBadge,
+      .interestBadge {
+        position: absolute;
+        top: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 30px;
+        padding: 0 10px;
+        border:
+          1px solid rgba(255, 255, 255, 0.17);
+        border-radius: 999px;
+        background:
+          rgba(5, 20, 11, 0.54);
+        color: white;
+        font-size: 9px;
+        font-weight: 850;
+        backdrop-filter: blur(11px);
+      }
+
+      .itemTypeBadge {
+        left: 13px;
+      }
+
+      .interestBadge {
+        right: 13px;
+        color: #d8f6aa;
+      }
+
+      .itemBody {
+        padding: 18px;
+      }
+
+      .itemKicker {
+        color: #7a9958;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .itemHeading h3 {
+        margin: 7px 0 0;
+        color: #23362b;
+        font-size: 21px;
+        line-height: 1.12;
+        letter-spacing: -0.035em;
+      }
+
+      .itemMeta {
+        display: grid;
+        gap: 7px;
+        margin-top: 14px;
+      }
+
+      .itemMeta > span {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: #7b877f;
+        font-size: 9px;
+        line-height: 1.4;
+      }
+
+      .itemMeta svg {
+        flex: 0 0 auto;
+        color: #789258;
+      }
+
+      .interestSummary {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 14px;
+        background: #f3f7ee;
+      }
+
+      .interestSummary > span {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        background: #e5efd9;
+        color: #5d7b42;
+      }
+
+      .interestSummary strong,
+      .interestSummary small {
+        display: block;
+      }
+
+      .interestSummary strong {
+        color: #354a3c;
+        font-size: 14px;
+      }
+
+      .interestSummary small {
+        margin-top: 2px;
+        color: #879188;
+        font-size: 8px;
+      }
+
+      .itemActions {
+        display: grid;
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 15px;
+      }
+
+      .itemAction,
+      .deleteAction {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 39px;
+        padding: 0 9px;
+        border-radius: 11px;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 800;
+        transition: 0.17s ease;
+      }
+
+      .itemAction {
+        border: 1px solid #dbe2d8;
+        background: #f8faf6;
+        color: #475b4e !important;
+      }
+
+      .itemAction:hover {
+        border-color: #94aa88;
+        background: white;
+      }
+
+      .deleteAction {
+        border: 1px solid #efcfca;
+        background: #fff2f0;
+        color: #9a4439;
+      }
+
+      .deleteAction:hover:not(:disabled) {
+        border-color: #df9d94;
+        background: #ffe9e6;
+      }
+
+      .deleteAction:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
+
+      .smallLoader {
+        width: 14px;
+        height: 14px;
+        border:
+          2px solid rgba(154, 68, 57, 0.2);
+        border-top-color: currentColor;
+        border-radius: 50%;
+        animation:
+          dashboardSpin 0.75s linear infinite;
+      }
+
+      .emptySection {
+        display: grid;
+        place-items: center;
+        padding: 55px 20px;
+        border: 1px dashed #cfd8cc;
+        border-radius: 21px;
+        background:
+          linear-gradient(
+            145deg,
+            rgba(241, 246, 235, 0.8),
+            rgba(250, 251, 248, 0.8)
+          );
+        text-align: center;
+      }
+
+      .emptyIcon {
+        display: grid;
+        place-items: center;
+        width: 61px;
+        height: 61px;
+        border-radius: 19px;
+        background: #e6efd9;
+        color: #607f45;
+      }
+
+      .emptySection h3 {
+        margin: 17px 0 0;
+        color: #34483b;
+        font-size: 18px;
+        letter-spacing: -0.025em;
+      }
+
+      .emptySection p {
+        max-width: 510px;
+        margin: 9px auto 0;
+        color: #879189;
+        font-size: 10px;
+        line-height: 1.6;
+      }
+
+      .emptySection a {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 18px;
+        padding: 12px 15px;
+        border-radius: 12px;
+        background: #183a27;
+        color: white !important;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .dashboardStatePage {
+        display: grid;
+        place-items: center;
+        padding: 118px 24px 24px;
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(166, 203, 126, 0.18),
+            transparent 30%
+          ),
+          #f1f3ec;
+      }
+
+      .dashboardStateCard {
+        display: grid;
+        place-items: center;
+        width: min(520px, 100%);
+        padding: 50px 30px;
+        border: 1px solid #dce3d9;
+        border-radius: 28px;
+        background:
+          rgba(255, 255, 255, 0.8);
+        text-align: center;
+        box-shadow:
+          0 20px 60px rgba(28, 48, 35, 0.08);
+      }
+
+      .dashboardLoader {
+        width: 37px;
+        height: 37px;
+        border: 3px solid #dce5d7;
+        border-top-color: #52783c;
+        border-radius: 50%;
+        animation:
+          dashboardSpin 0.8s linear infinite;
+      }
+
+      @keyframes dashboardSpin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .stateIcon {
+        display: grid;
+        place-items: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 19px;
+        background: #e7f0dc;
+        color: #5b7841;
+      }
+
+      .dashboardStateCard h1 {
+        margin: 19px 0 0;
+        color: #24372c;
+        font-size: 29px;
+        letter-spacing: -0.045em;
+      }
+
+      .dashboardStateCard p {
+        max-width: 390px;
+        margin: 10px auto 0;
+        color: #7e8981;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      .stateLink {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 21px;
+        padding: 12px 15px;
+        border-radius: 13px;
+        background: #183a27;
+        color: white !important;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      @media (max-width: 1050px) {
+        .heroMain {
+          grid-template-columns:
+            minmax(0, 1fr) 330px;
+        }
+
+        .statsGrid,
+        .quickActionGrid {
+          grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+        }
+
+        .dashboardItemsGrid {
+          grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 760px) {
+        .hostDashboardPage {
+          padding: 84px 0 70px;
+        }
+
+        .dashboardStatePage {
+          padding-top: 84px;
+        }
+
+        .dashboardHero {
+          min-height: auto;
+          padding: 24px;
+          border-radius: 0 0 30px 30px;
+        }
+
+        .heroMain {
+          grid-template-columns: 1fr;
+          margin-top: 85px;
+        }
+
+        .heroCopy h1 {
+          font-size:
+            clamp(48px, 11vw, 72px);
+        }
+
+        .heroActions {
+          grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+        }
+
+        .heroPrimaryAction,
+        .heroSecondaryAction {
+          grid-template-columns:
+            auto minmax(0, 1fr);
+        }
+
+        .heroPrimaryAction > svg,
+        .heroSecondaryAction > svg {
+          display: none;
+        }
+
+        .heroBottom {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .statsGrid,
+        .dashboardQuickActions,
+        .dashboardSection,
+        .dashboardMessage {
+          margin-right: 18px;
+          margin-left: 18px;
+        }
+
+        .dashboardSectionHeader {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 590px) {
+        .heroMain {
+          margin-top: 70px;
+        }
+
+        .heroCopy h1 {
+          font-size: 47px;
+        }
+
+        .heroActions,
+        .statsGrid,
+        .quickActionGrid,
+        .dashboardItemsGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .heroPrimaryAction,
+        .heroSecondaryAction {
+          min-height: 76px;
+        }
+
+        .dashboardSection {
+          padding: 19px;
+          border-radius: 22px;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .dashboardHero {
+          padding: 20px 17px 24px;
+        }
+
+        .heroCopy h1 {
+          font-size: 42px;
+        }
+
+        .heroCopy p {
+          font-size: 12px;
+        }
+
+        .statsGrid,
+        .dashboardQuickActions,
+        .dashboardSection,
+        .dashboardMessage {
+          margin-right: 13px;
+          margin-left: 13px;
+        }
+
+        .quickActionsHeading h2,
+        .dashboardSectionHeader h2 {
+          font-size: 31px;
+        }
+
+        .itemActions {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    `}</style>
   );
 }

@@ -1,1645 +1,1601 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useParams } from "react-router-dom";
 
-const FALLBACK =
-  "https://images.pexels.com/photos/1732278/pexels-photo-1732278.jpeg";
+const FALLBACK_AVATAR =
+  "https://api.dicebear.com/8.x/initials/svg?seed=Host";
 
-function formatDateRange(start, end) {
-  if (!start) return "Date soon";
-  const startDate = new Date(start);
-  const endDate = end ? new Date(end) : null;
-  if (Number.isNaN(startDate.getTime())) return start;
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1800&q=90";
 
-  const startLabel = startDate.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
+function Icon({
+  name,
+  size = 20,
+  strokeWidth = 2,
+  fill = "none",
+  className = "",
+}) {
+  const icons = {
+    arrowRight: (
+      <>
+        <path d="M5 12h14" />
+        <path d="m13 6 6 6-6 6" />
+      </>
+    ),
 
-  if (!endDate || Number.isNaN(endDate.getTime())) return startLabel;
+    arrowLeft: (
+      <>
+        <path d="M19 12H5" />
+        <path d="m11 18-6-6 6-6" />
+      </>
+    ),
 
-  const endLabel = endDate.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
+    check: <path d="m5 12 4 4L19 6" />,
 
-  return `${startLabel} - ${endLabel}`;
+    verified: (
+      <>
+        <path d="m12 3 2 1.4 2.4-.2.8 2.2 2 1.4-.8 2.3.8 2.3-2 1.4-.8 2.2-2.4-.2-2 1.4-2-1.4-2.4.2-.8-2.2-2-1.4.8-2.3-.8-2.3 2-1.4.8-2.2 2.4.2L12 3Z" />
+        <path d="m9.5 12 1.7 1.7 3.5-3.7" />
+      </>
+    ),
+
+    mapPin: (
+      <>
+        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </>
+    ),
+
+    edit: (
+      <>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </>
+    ),
+
+    phone: (
+      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z" />
+    ),
+
+    instagram: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle
+          cx="17.5"
+          cy="6.5"
+          r="0.8"
+          fill="currentColor"
+          stroke="none"
+        />
+      </>
+    ),
+
+    globe: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18" />
+        <path d="M12 3a15 15 0 0 1 0 18" />
+        <path d="M12 3a15 15 0 0 0 0 18" />
+      </>
+    ),
+
+    video: (
+      <>
+        <rect x="3" y="5" width="13" height="14" rx="2" />
+        <path d="m16 10 5-3v10l-5-3" />
+      </>
+    ),
+
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </>
+    ),
+
+    package: (
+      <>
+        <path d="m12 3 8 4-8 4-8-4 8-4Z" />
+        <path d="m4 7 8 4 8-4" />
+        <path d="M4 7v10l8 4 8-4V7" />
+        <path d="M12 11v10" />
+      </>
+    ),
+
+    star: (
+      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+    ),
+
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2" />
+        <path d="M16 4.5a3 3 0 0 1 0 6" />
+        <path d="M17 13a5 5 0 0 1 4 5v2" />
+      </>
+    ),
+
+    shield: (
+      <>
+        <path d="M12 3 5 6v5c0 4.6 2.9 8.4 7 10 4.1-1.6 7-5.4 7-10V6l-7-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
+
+    compass: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+      </>
+    ),
+
+    external: (
+      <>
+        <path d="M14 4h6v6" />
+        <path d="m20 4-9 9" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      </>
+    ),
+
+    alert: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5" />
+        <path d="M12 16h.01" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={fill}
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {icons[name]}
+    </svg>
+  );
 }
 
-function getMonthLabel(start) {
-  if (!start) return "Available";
-  const date = new Date(start);
-  if (Number.isNaN(date.getTime())) return "Available";
+function ContactItem({ icon, title, value, href, mutedText }) {
+  const content = (
+    <>
+      <span className="contactIcon">
+        <Icon name={icon} size={18} />
+      </span>
 
-  return date.toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric",
-  });
+      <span className="contactText">
+        <small>{title}</small>
+        <strong>{value || mutedText}</strong>
+      </span>
+
+      {href && (
+        <span className="contactArrow">
+          <Icon name="external" size={15} />
+        </span>
+      )}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target={href.startsWith("tel:") ? undefined : "_blank"}
+        rel={href.startsWith("tel:") ? undefined : "noreferrer"}
+        className="contactItem active"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return <div className="contactItem disabled">{content}</div>;
+}
+
+function LoadingState() {
+  return (
+    <>
+      <HostProfileStyles />
+
+      <main className="hostProfilePage">
+        <div className="stateCard">
+          <span className="stateLoader" />
+          <h1>Učitavanje profila</h1>
+          <p>Pripremamo informacije o domaćinu.</p>
+        </div>
+      </main>
+    </>
+  );
+}
+
+function NotFoundState() {
+  return (
+    <>
+      <HostProfileStyles />
+
+      <main className="hostProfilePage">
+        <div className="stateCard">
+          <span className="stateIcon">
+            <Icon name="alert" size={25} />
+          </span>
+
+          <h1>Host profil nije pronađen.</h1>
+
+          <p>
+            Profil možda više nije dostupan ili je korisničko ime
+            promenjeno.
+          </p>
+
+          <Link to="/" className="stateButton">
+            <Icon name="arrowLeft" size={17} />
+            Nazad na početnu
+          </Link>
+        </div>
+      </main>
+    </>
+  );
 }
 
 export default function HostProfile() {
-  const { slug } = useParams();
+  const { username } = useParams();
 
+  const [profile, setProfile] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [host, setHost] = useState(null);
-  const [hostInactive, setHostInactive] = useState(false);
-  const [packages, setPackages] = useState([]);
-  const [dates, setDates] = useState([]);
-  const [galleryOpen, setGalleryOpen] = useState(null);
 
-  const [selectedPackage, setSelectedPackage] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
-
-  const [fullName, setFullName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-
-  const [persons, setPersons] = useState(1);
-  const [note, setNote] = useState("");
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [bookingMessage, setBookingMessage] = useState("");
-  const [bookingSuccess, setBookingSuccess] = useState(false);
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
-
-  async function load() {
+  const loadProfile = useCallback(async () => {
     setLoading(true);
 
-    const { data: hostData } = await supabase
-      .from("experience_hosts")
-      .select("*")
-      .eq("slug", slug)
-      .single();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!hostData) {
-      setHost(null);
-      setHostInactive(false);
-      setLoading(false);
-      return;
-    }
+      setCurrentUserId(user?.id || null);
 
-    if (hostData.active === false) {
-      setHost(hostData);
-      setHostInactive(true);
-      setPackages([]);
-      setDates([]);
-      setLoading(false);
-      return;
-    }
-
-    setHostInactive(false);
-
-    const { data: packageData } = await supabase
-      .from("experience_packages")
-      .select("*")
-      .eq("host_id", hostData.id)
-      .eq("active", true)
-      .order("created_at", { ascending: false });
-
-    let dateData = [];
-
-    if (packageData?.length) {
-      const ids = packageData.map((x) => x.id);
-      const { data } = await supabase
-        .from("experience_dates")
+      const { data, error } = await supabase
+        .from("profiles")
         .select("*")
-        .in("package_id", ids)
-        .order("start_date", { ascending: true });
+        .eq("username", username)
+        .eq("role", "host")
+        .single();
 
-      dateData = data || [];
+      if (error) {
+        throw error;
+      }
+
+      setProfile(data);
+    } catch (error) {
+      console.error("Greška pri učitavanju host profila:", error);
+      setProfile(null);
+    } finally {
+      setLoading(false);
     }
+  }, [username]);
 
-    setHost(hostData);
-    setPackages(packageData || []);
-    setDates(dateData);
-    setLoading(false);
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  if (loading) {
+    return <LoadingState />;
   }
 
-  function openReservation(pkg, date) {
-    const unavailable = date.free_spots <= 0 || date.closed;
-    if (unavailable) return;
-
-    setSelectedPackage(pkg);
-    setSelectedDate(date);
-    setPersons(1);
-    setNote("");
-    setFullName("");
-    setCustomerEmail("");
-    setCustomerPhone("");
-    setBookingMessage("");
-    setBookingSuccess(false);
+  if (!profile) {
+    return <NotFoundState />;
   }
 
-  async function reserveDate() {
-    if (!selectedDate || !selectedPackage) return;
+  const isOwnProfile = currentUserId === profile.id;
 
-    setBookingMessage("");
-    setBookingSuccess(false);
+  const location =
+    [profile.city, profile.country].filter(Boolean).join(", ") ||
+    "Lokacija još nije dodata";
 
-    if (!fullName.trim()) {
-      setBookingMessage("Full name is required.");
-      return;
-    }
+  const activities = Array.isArray(profile.activities)
+    ? profile.activities
+    : [];
 
-    if (!customerEmail.trim()) {
-      setBookingMessage("Email is required.");
-      return;
-    }
-
-    if (!customerPhone.trim()) {
-      setBookingMessage("Phone is required.");
-      return;
-    }
-
-    setBookingLoading(true);
-
-    const { data: userData } = await supabase.auth.getUser();
-
-    if (!userData?.user) {
-      setBookingLoading(false);
-      setBookingMessage("You must be logged in to reserve.");
-      return;
-    }
-
-    const targetStatus = selectedPackage.deposit_required ? "deposit_waiting" : "pending";
-
-    const depositLine = selectedPackage.deposit_required
-      ? `Deposit required: ${selectedPackage.deposit_amount || 0} ${
-          selectedPackage.currency || "EUR"
-        }`
-      : "No deposit required";
-
-    const finalNote = [depositLine, note ? `Guest note: ${note}` : ""]
-      .filter(Boolean)
-      .join("\n");
-
-    const { error: rpcError } = await supabase.rpc("create_experience_booking", {
-      p_date_id: selectedDate.id,
-      p_persons: persons,
-      p_note: finalNote || null,
-    });
-
-    if (rpcError) {
-      setBookingLoading(false);
-      setBookingMessage(rpcError.message);
-      return;
-    }
-
-    const { data: latestBooking } = await supabase
-      .from("experience_bookings")
-      .select("id")
-      .eq("date_id", selectedDate.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (latestBooking?.id) {
-      await supabase
-        .from("experience_bookings")
-        .update({
-          full_name: fullName.trim(),
-          email: customerEmail.trim(),
-          phone: customerPhone.trim(),
-          customer_phone: customerPhone.trim(),
-          status: targetStatus,
-          deposit_amount: selectedPackage.deposit_required
-            ? Number(selectedPackage.deposit_amount || 0)
-            : 0,
-        })
-        .eq("id", latestBooking.id);
-    }
-
-    setBookingLoading(false);
-    setBookingSuccess(true);
-    setBookingMessage(
-      selectedPackage.deposit_required
-        ? "Reservation request sent. Status: deposit waiting. Your spot is not confirmed until the host verifies the deposit."
-        : "Reservation request sent. The host can confirm it from their dashboard."
-    );
-
-    await load();
-
-    setTimeout(() => {
-      setSelectedDate(null);
-      setSelectedPackage(null);
-      setPersons(1);
-      setNote("");
-      setFullName("");
-      setCustomerEmail("");
-      setCustomerPhone("");
-      setBookingMessage("");
-      setBookingSuccess(false);
-    }, 1900);
-  }
-
-  const packageStats = useMemo(() => {
-    const totalDates = dates.length;
-    const freeSpots = dates.reduce((sum, item) => sum + (item.free_spots || 0), 0);
-    return { totalDates, freeSpots };
-  }, [dates]);
-
-  const firstAvailableDate = useMemo(() => {
-    return dates.find((item) => !item.closed && item.free_spots > 0) || null;
-  }, [dates]);
-
-  const firstAvailablePackage = useMemo(() => {
-    if (!firstAvailableDate) return null;
-    return packages.find((item) => item.id === firstAvailableDate.package_id) || null;
-  }, [firstAvailableDate, packages]);
-
-  const styles = useMemo(
-    () => ({
-      page: {
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at 50% -10%, rgba(22,245,162,.16), transparent 34%), radial-gradient(circle at 90% 8%, rgba(64,231,255,.10), transparent 28%), linear-gradient(180deg,#010302 0%,#04100c 46%,#071611 100%)",
-        color: "#f4fff9",
-        fontFamily:
-          "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        overflowX: "hidden",
-      },
-      loadingPage: {
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "linear-gradient(180deg,#010302,#06120d)",
-        color: "#f4fff9",
-        fontWeight: 900,
-      },
-
-      unavailableCard: {
-        maxWidth: 720,
-        margin: "0 auto",
-        padding: 26,
-        borderRadius: 34,
-        background:
-          "linear-gradient(145deg, rgba(8,24,18,.82), rgba(3,9,7,.96))",
-        border: "1px solid rgba(255,80,80,.24)",
-        boxShadow: "0 30px 90px rgba(0,0,0,.38)",
-        textAlign: "center",
-      },
-      hero: {
-        position: "relative",
-        minHeight: "92vh",
-        overflow: "hidden",
-        display: "flex",
-        alignItems: "flex-end",
-      },
-      heroImage: {
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-        filter: "saturate(1.08) contrast(1.08) brightness(.86)",
-        transform: "scale(1.02)",
-      },
-      heroOverlay: {
-        position: "absolute",
-        inset: 0,
-        background:
-          "radial-gradient(circle at 42% 26%, rgba(22,245,162,.16), transparent 26%), linear-gradient(to top, rgba(1,3,2,1) 0%, rgba(1,3,2,.86) 22%, rgba(1,3,2,.36) 60%, rgba(1,3,2,.12) 100%), linear-gradient(90deg, rgba(1,3,2,.82), rgba(1,3,2,.12))",
-      },
-      heroGrid: {
-        position: "absolute",
-        inset: 0,
-        opacity: 0.34,
-        background:
-          "linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px)",
-        backgroundSize: "46px 46px",
-        maskImage: "linear-gradient(to bottom, transparent 0%, black 34%, transparent 86%)",
-      },
-      heroInner: {
-        position: "relative",
-        zIndex: 2,
-        width: "100%",
-        maxWidth: 1320,
-        margin: "0 auto",
-        padding: "150px 16px 42px",
-      },
-      heroLayout: {
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) minmax(320px, 410px)",
-        gap: 22,
-        alignItems: "end",
-      },
-      badgeRow: {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 9,
-        alignItems: "center",
-        marginBottom: 18,
-      },
-      badge: {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "9px 14px",
-        borderRadius: 999,
-        background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-        color: "#03150f",
-        fontWeight: 950,
-        fontSize: 11,
-        textTransform: "uppercase",
-        letterSpacing: ".12em",
-      },
-      glassBadge: {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "8px 12px",
-        borderRadius: 999,
-        background: "rgba(255,255,255,.07)",
-        border: "1px solid rgba(125,255,209,.18)",
-        color: "#8fffe0",
-        fontWeight: 900,
-        fontSize: 11,
-        textTransform: "uppercase",
-        letterSpacing: ".12em",
-        backdropFilter: "blur(14px)",
-      },
-      title: {
-        margin: 0,
-        fontSize: "clamp(52px,8.4vw,112px)",
-        lineHeight: 0.84,
-        fontWeight: 950,
-        letterSpacing: "-.09em",
-        maxWidth: 900,
-        textShadow: "0 28px 80px rgba(0,0,0,.46)",
-      },
-      subtitle: {
-        marginTop: 18,
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 10,
-        alignItems: "center",
-        color: "rgba(231,255,247,.86)",
-        fontSize: 15,
-        fontWeight: 800,
-      },
-      dot: {
-        width: 5,
-        height: 5,
-        borderRadius: 999,
-        background: "rgba(231,255,247,.50)",
-      },
-      heroDescription: {
-        marginTop: 18,
-        maxWidth: 660,
-        color: "rgba(231,255,247,.76)",
-        lineHeight: 1.68,
-        fontSize: 16,
-        fontWeight: 620,
-      },
-      heroActions: {
-        display: "flex",
-        gap: 10,
-        flexWrap: "wrap",
-        marginTop: 24,
-      },
-      primaryButton: {
-        border: "none",
-        borderRadius: 999,
-        padding: "15px 19px",
-        background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-        color: "#03150f",
-        fontWeight: 950,
-        cursor: "pointer",
-        boxShadow: "0 22px 52px rgba(22,245,162,.22)",
-      },
-      ghostButton: {
-        border: "1px solid rgba(125,255,209,.22)",
-        borderRadius: 999,
-        padding: "14px 18px",
-        background: "rgba(255,255,255,.06)",
-        color: "#f4fff9",
-        fontWeight: 900,
-        cursor: "pointer",
-        backdropFilter: "blur(14px)",
-      },
-      bookingPanel: {
-        borderRadius: 34,
-        padding: 18,
-        background:
-          "linear-gradient(145deg, rgba(8,24,18,.82), rgba(3,9,7,.96))",
-        border: "1px solid rgba(125,255,209,.20)",
-        boxShadow: "0 30px 90px rgba(0,0,0,.44)",
-        backdropFilter: "blur(20px)",
-      },
-      panelTop: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: 12,
-        marginBottom: 14,
-      },
-      panelEyebrow: {
-        color: "#8fffe0",
-        fontSize: 11,
-        fontWeight: 950,
-        letterSpacing: ".15em",
-        textTransform: "uppercase",
-        marginBottom: 7,
-      },
-      panelTitle: {
-        fontSize: 28,
-        lineHeight: 0.96,
-        fontWeight: 950,
-        letterSpacing: "-.055em",
-      },
-      panelPrice: {
-        color: "#8fffe0",
-        fontSize: 15,
-        fontWeight: 950,
-        whiteSpace: "nowrap",
-      },
-      panelStats: {
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap: 8,
-        marginTop: 16,
-      },
-      panelStat: {
-        padding: "12px 10px",
-        borderRadius: 18,
-        background: "rgba(255,255,255,.045)",
-        border: "1px solid rgba(125,255,209,.12)",
-      },
-      panelStatNumber: {
-        display: "block",
-        fontSize: 20,
-        fontWeight: 950,
-        letterSpacing: "-.04em",
-      },
-      panelStatLabel: {
-        display: "block",
-        marginTop: 3,
-        color: "rgba(231,255,247,.56)",
-        fontSize: 10,
-        fontWeight: 850,
-        textTransform: "uppercase",
-        letterSpacing: ".10em",
-      },
-      section: {
-        maxWidth: 1320,
-        margin: "0 auto",
-        padding: "44px 16px 0",
-      },
-      sectionHeader: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-end",
-        gap: 16,
-        marginBottom: 18,
-      },
-      sectionEyebrow: {
-        color: "#8fffe0",
-        fontSize: 11,
-        fontWeight: 950,
-        letterSpacing: ".16em",
-        textTransform: "uppercase",
-        marginBottom: 8,
-      },
-      sectionTitle: {
-        margin: 0,
-        fontSize: "clamp(34px,6vw,54px)",
-        lineHeight: 0.95,
-        fontWeight: 950,
-        letterSpacing: "-.07em",
-      },
-      sectionSubtitle: {
-        marginTop: 9,
-        maxWidth: 680,
-        color: "rgba(231,255,247,.68)",
-        lineHeight: 1.6,
-        fontSize: 14,
-      },
-      aboutGrid: {
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1.2fr) minmax(300px, .8fr)",
-        gap: 18,
-      },
-      about: {
-        padding: 24,
-        borderRadius: 32,
-        background:
-          "linear-gradient(145deg, rgba(8,24,18,.74), rgba(3,9,7,.94))",
-        border: "1px solid rgba(125,255,209,.14)",
-        color: "rgba(231,255,247,.76)",
-        lineHeight: 1.75,
-        boxShadow: "0 22px 60px rgba(0,0,0,.20)",
-      },
-      trustCard: {
-        padding: 24,
-        borderRadius: 32,
-        background:
-          "radial-gradient(circle at 100% 0%, rgba(22,245,162,.16), transparent 32%), linear-gradient(145deg, rgba(8,24,18,.74), rgba(3,9,7,.94))",
-        border: "1px solid rgba(125,255,209,.14)",
-        boxShadow: "0 22px 60px rgba(0,0,0,.20)",
-      },
-      trustRow: {
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 12,
-        padding: "13px 0",
-        borderBottom: "1px solid rgba(125,255,209,.10)",
-        color: "rgba(231,255,247,.72)",
-      },
-      trustValue: {
-        color: "#f4fff9",
-        fontWeight: 950,
-      },
-      contactGrid: {
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
-        gap: 12,
-        marginTop: 18,
-      },
-      contactCard: {
-        padding: 16,
-        borderRadius: 24,
-        background: "rgba(255,255,255,.04)",
-        border: "1px solid rgba(125,255,209,.12)",
-      },
-      contactLabel: {
-        color: "rgba(231,255,247,.55)",
-        fontSize: 11,
-        fontWeight: 900,
-        letterSpacing: ".12em",
-        textTransform: "uppercase",
-        marginBottom: 6,
-      },
-      contactValue: {
-        color: "#f4fff9",
-        fontWeight: 850,
-        overflowWrap: "anywhere",
-      },
-      packageGrid: {
-        display: "grid",
-        gap: 22,
-      },
-      packageCard: {
-        overflow: "hidden",
-        borderRadius: 36,
-        background:
-          "linear-gradient(155deg, rgba(9,25,19,.86), rgba(3,9,7,.97))",
-        border: "1px solid rgba(125,255,209,.17)",
-        boxShadow: "0 30px 90px rgba(0,0,0,.28)",
-      },
-      packageTop: {
-        display: "grid",
-        gridTemplateColumns: "minmax(280px, .9fr) minmax(0, 1.1fr)",
-        minHeight: 330,
-      },
-      coverWrap: {
-        position: "relative",
-        minHeight: 320,
-        overflow: "hidden",
-      },
-      cover: {
-        position: "absolute",
-        inset: 0,
-        height: "100%",
-        width: "100%",
-        objectFit: "cover",
-        filter: "saturate(1.08) contrast(1.04)",
-      },
-      coverOverlay: {
-        position: "absolute",
-        inset: 0,
-        background:
-          "linear-gradient(to top, rgba(1,3,2,.88), rgba(1,3,2,.08) 60%)",
-      },
-      coverBadge: {
-        position: "absolute",
-        left: 16,
-        top: 16,
-        padding: "8px 12px",
-        borderRadius: 999,
-        background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-        color: "#03150f",
-        fontSize: 11,
-        fontWeight: 950,
-        textTransform: "uppercase",
-        letterSpacing: ".09em",
-      },
-      coverBottom: {
-        position: "absolute",
-        left: 18,
-        right: 18,
-        bottom: 18,
-      },
-      packageBody: {
-        padding: 22,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-      },
-      packageTitle: {
-        fontSize: "clamp(32px,4.8vw,50px)",
-        fontWeight: 950,
-        lineHeight: 0.92,
-        letterSpacing: "-.075em",
-        margin: 0,
-      },
-      packageDescription: {
-        marginTop: 13,
-        color: "rgba(231,255,247,.70)",
-        fontSize: 14,
-        lineHeight: 1.65,
-      },
-      price: {
-        marginTop: 14,
-        color: "#8fffe0",
-        fontWeight: 950,
-        fontSize: 16,
-      },
-      depositBox: {
-        marginTop: 14,
-        padding: 14,
-        borderRadius: 22,
-        background: "rgba(244,208,111,.09)",
-        border: "1px solid rgba(244,208,111,.22)",
-        color: "#f7e2a2",
-        fontSize: 13,
-        lineHeight: 1.5,
-        fontWeight: 750,
-      },
-      included: {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 8,
-        marginTop: 15,
-      },
-      chip: {
-        padding: "7px 10px",
-        borderRadius: 999,
-        background: "rgba(255,255,255,.045)",
-        border: "1px solid rgba(125,255,209,.12)",
-        color: "rgba(231,255,247,.78)",
-        fontSize: 12,
-        fontWeight: 800,
-      },
-      dateBlock: {
-        marginTop: 20,
-        padding: 16,
-        borderRadius: 26,
-        background: "rgba(255,255,255,.035)",
-        border: "1px solid rgba(125,255,209,.11)",
-      },
-      dateBlockHeader: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-        marginBottom: 12,
-      },
-      dateBlockTitle: {
-        color: "#f4fff9",
-        fontSize: 14,
-        fontWeight: 950,
-        letterSpacing: ".10em",
-        textTransform: "uppercase",
-      },
-      dateBlockHint: {
-        color: "rgba(231,255,247,.58)",
-        fontSize: 12,
-        fontWeight: 750,
-      },
-      datesWrap: {
-        display: "grid",
-        gap: 10,
-      },
-      date: {
-        width: "100%",
-        display: "grid",
-        gridTemplateColumns: "1fr auto auto",
-        alignItems: "center",
-        gap: 14,
-        padding: "15px 16px",
-        borderRadius: 21,
-        border: "1px solid rgba(125,255,209,.13)",
-        background: "rgba(255,255,255,.045)",
-        color: "#f4fff9",
-        cursor: "pointer",
-        textAlign: "left",
-      },
-      dateMain: {
-        minWidth: 0,
-      },
-      dateLabel: {
-        display: "block",
-        fontWeight: 950,
-        fontSize: 15,
-      },
-      dateMonth: {
-        display: "block",
-        marginTop: 4,
-        color: "rgba(231,255,247,.55)",
-        fontSize: 12,
-        fontWeight: 750,
-      },
-      dateSpotsWrap: {
-        display: "grid",
-        justifyItems: "end",
-        gap: 5,
-      },
-      dateSpots: {
-        color: "#8fffe0",
-        fontWeight: 950,
-        fontSize: 13,
-        whiteSpace: "nowrap",
-      },
-      progressTrack: {
-        width: 92,
-        height: 5,
-        borderRadius: 999,
-        background: "rgba(255,255,255,.10)",
-        overflow: "hidden",
-      },
-      progressFill: (percentage) => ({
-        height: "100%",
-        width: `${percentage}%`,
-        borderRadius: 999,
-        background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-      }),
-      bookPill: {
-        border: "none",
-        borderRadius: 999,
-        padding: "10px 13px",
-        background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-        color: "#03150f",
-        fontWeight: 950,
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-      },
-      fullPill: {
-        border: "1px solid rgba(255,255,255,.12)",
-        borderRadius: 999,
-        padding: "10px 13px",
-        background: "rgba(255,255,255,.05)",
-        color: "rgba(231,255,247,.48)",
-        fontWeight: 950,
-        whiteSpace: "nowrap",
-      },
-      noDates: {
-        padding: 16,
-        borderRadius: 21,
-        background: "rgba(255,255,255,.035)",
-        border: "1px solid rgba(125,255,209,.10)",
-        color: "rgba(231,255,247,.60)",
-        fontSize: 13,
-      },
-      emptyCard: {
-        padding: 24,
-        borderRadius: 32,
-        background:
-          "linear-gradient(145deg, rgba(8,24,18,.74), rgba(3,9,7,.94))",
-        border: "1px solid rgba(125,255,209,.14)",
-        color: "rgba(231,255,247,.66)",
-        lineHeight: 1.6,
-      },
-      modalOverlay: {
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,.72)",
-        backdropFilter: "blur(16px)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      },
-      modal: {
-        position: "relative",
-        width: "100%",
-        maxWidth: 540,
-        maxHeight: "90vh",
-        overflowY: "auto",
-        padding: 22,
-        borderRadius: 34,
-        background:
-          "linear-gradient(145deg, rgba(8,24,18,.98), rgba(3,9,7,.99))",
-        border: "1px solid rgba(125,255,209,.24)",
-        boxShadow: "0 34px 100px rgba(0,0,0,.62)",
-      },
-      modalClose: {
-        position: "absolute",
-        right: 16,
-        top: 16,
-        width: 38,
-        height: 38,
-        borderRadius: 999,
-        border: "1px solid rgba(125,255,209,.18)",
-        background: "rgba(255,255,255,.05)",
-        color: "#fff",
-        fontSize: 23,
-        cursor: "pointer",
-      },
-      modalTitle: {
-        margin: "17px 0 8px",
-        fontSize: 38,
-        lineHeight: 0.92,
-        fontWeight: 950,
-        letterSpacing: "-.065em",
-      },
-      modalText: {
-        color: "rgba(231,255,247,.72)",
-        marginBottom: 16,
-        lineHeight: 1.5,
-      },
-      selectedDateCard: {
-        padding: 14,
-        borderRadius: 22,
-        background: "rgba(255,255,255,.045)",
-        border: "1px solid rgba(125,255,209,.13)",
-        marginBottom: 14,
-      },
-      depositModalBox: {
-        padding: 14,
-        borderRadius: 22,
-        background: "rgba(244,208,111,.10)",
-        border: "1px solid rgba(244,208,111,.24)",
-        color: "#f7e2a2",
-        fontSize: 13,
-        lineHeight: 1.55,
-        marginBottom: 14,
-        fontWeight: 750,
-      },
-      input: {
-        width: "100%",
-        boxSizing: "border-box",
-        border: "1px solid rgba(125,255,209,.14)",
-        background: "rgba(255,255,255,.045)",
-        color: "#f4fff9",
-        borderRadius: 18,
-        padding: "14px",
-        outline: "none",
-        fontSize: 14,
-        marginBottom: 10,
-      },
-      personRow: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 22,
-        padding: 14,
-        borderRadius: 22,
-        background: "rgba(255,255,255,.045)",
-        border: "1px solid rgba(125,255,209,.13)",
-        marginBottom: 14,
-      },
-      personBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 999,
-        border: "none",
-        background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-        color: "#03150f",
-        fontSize: 23,
-        fontWeight: 950,
-        cursor: "pointer",
-      },
-      personNumber: {
-        fontSize: 24,
-        fontWeight: 950,
-      },
-      modalTextarea: {
-        width: "100%",
-        boxSizing: "border-box",
-        minHeight: 104,
-        borderRadius: 22,
-        border: "1px solid rgba(125,255,209,.14)",
-        background: "rgba(255,255,255,.045)",
-        color: "#fff",
-        padding: 14,
-        resize: "vertical",
-        marginBottom: 14,
-        outline: "none",
-        fontFamily: "inherit",
-      },
-      modalMessage: (success) => ({
-        padding: 12,
-        borderRadius: 18,
-        background: success ? "rgba(22,245,162,.10)" : "rgba(255,80,80,.11)",
-        border: success
-          ? "1px solid rgba(125,255,209,.18)"
-          : "1px solid rgba(255,80,80,.22)",
-        color: success ? "#8fffe0" : "#ffd1d1",
-        marginBottom: 14,
-        fontSize: 13,
-        fontWeight: 850,
-        lineHeight: 1.45,
-      }),
-      reserve: {
-        width: "100%",
-        border: "none",
-        padding: "16px",
-        borderRadius: 999,
-        background: "linear-gradient(135deg,#16f5a2,#40e7ff)",
-        color: "#03150f",
-        fontWeight: 950,
-        cursor: "pointer",
-        boxShadow: "0 22px 52px rgba(22,245,162,.20)",
-      },
-
-      packageGallery: {
-        marginTop: 16,
-        display: "flex",
-        gap: 10,
-        overflowX: "auto",
-        paddingBottom: 6,
-        scrollbarWidth: "none",
-      },
-
-      packageGalleryThumb: {
-        position: "relative",
-        minWidth: 118,
-        width: 118,
-        height: 88,
-        borderRadius: 18,
-        overflow: "hidden",
-        border: "1px solid rgba(125,255,209,.14)",
-        background: "rgba(255,255,255,.04)",
-        cursor: "pointer",
-      },
-
-      packageGalleryImage: {
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-        display: "block",
-      },
-
-      galleryCountBadge: {
-        position: "absolute",
-        right: 8,
-        bottom: 8,
-        padding: "5px 8px",
-        borderRadius: 999,
-        background: "rgba(0,0,0,.58)",
-        color: "#fff",
-        fontSize: 11,
-        fontWeight: 900,
-      },
-
-      galleryModalOverlay: {
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,.88)",
-        backdropFilter: "blur(18px)",
-        zIndex: 10000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      },
-
-      galleryModal: {
-        width: "100%",
-        maxWidth: 1100,
-        maxHeight: "92vh",
-        overflowY: "auto",
-        borderRadius: 34,
-        padding: 16,
-        background: "linear-gradient(145deg, rgba(8,24,18,.96), rgba(3,9,7,.99))",
-        border: "1px solid rgba(125,255,209,.22)",
-        boxShadow: "0 34px 100px rgba(0,0,0,.70)",
-      },
-
-      galleryModalTop: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-        marginBottom: 14,
-      },
-
-      galleryModalTitle: {
-        fontSize: 24,
-        fontWeight: 950,
-        letterSpacing: "-.04em",
-      },
-
-      galleryClose: {
-        width: 40,
-        height: 40,
-        borderRadius: 999,
-        border: "1px solid rgba(125,255,209,.18)",
-        background: "rgba(255,255,255,.06)",
-        color: "#fff",
-        fontSize: 24,
-        cursor: "pointer",
-      },
-
-      galleryModalGrid: {
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: 12,
-      },
-
-      galleryModalImage: {
-        width: "100%",
-        height: 260,
-        objectFit: "cover",
-        borderRadius: 24,
-        border: "1px solid rgba(125,255,209,.12)",
-      },
-
-      mobileCSS: `
-        @media (max-width: 900px) {
-          .mo-host-hero-layout {
-            grid-template-columns: 1fr !important;
-          }
-
-          .mo-host-about-grid {
-            grid-template-columns: 1fr !important;
-          }
-
-          .mo-host-package-top {
-            grid-template-columns: 1fr !important;
-          }
-
-          .mo-host-booking-panel {
-            display: none !important;
-          }
-
-          .mo-host-date-row {
-            grid-template-columns: 1fr !important;
-          }
-
-          .mo-host-date-spots {
-            justify-items: start !important;
-          }
-        }
-      `,
-    }),
-    []
-  );
-
-
-  function getPackageImages(pkg) {
-    const list = [];
-
-    if (pkg?.cover_url) list.push(pkg.cover_url);
-
-    if (Array.isArray(pkg?.gallery_urls)) {
-      pkg.gallery_urls.forEach((url) => {
-        if (url && !list.includes(url)) list.push(url);
-      });
-    }
-
-    if (!list.length && host?.cover_url) list.push(host.cover_url);
-    if (!list.length) list.push(FALLBACK);
-
-    return list;
-  }
-
-  if (loading) return <div style={styles.loadingPage}>Loading experience...</div>;
-  if (!host) return <div style={styles.loadingPage}>Host not found</div>;
-
-  if (hostInactive) {
-    return (
-      <main style={styles.page}>
-        <div style={styles.loadingPage}>
-          <div style={styles.unavailableCard}>
-            <div style={styles.badge}>Host unavailable</div>
-            <h1 style={{ ...styles.title, fontSize: "clamp(42px,7vw,82px)", marginTop: 18 }}>
-              This experience is not available.
-            </h1>
-            <div style={styles.heroDescription}>
-              This host profile is currently inactive or awaiting approval.
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  const displayName =
+    profile.full_name || profile.username || "Outdoor Host";
 
   return (
-    <main style={styles.page}>
-      <section style={styles.hero}>
-        <img src={host.cover_url || FALLBACK} style={styles.heroImage} alt={host.name} />
-        <div style={styles.heroOverlay} />
-        <div style={styles.heroGrid} />
+    <>
+      <HostProfileStyles />
 
-        <div style={styles.heroInner}>
-          <div className="mo-host-hero-layout" style={styles.heroLayout}>
-            <div>
-              <div style={styles.badgeRow}>
-                <span style={styles.badge}>Experience Host</span>
-                {host.verified ? <span style={styles.glassBadge}>Verified</span> : null}
-                {packageStats.freeSpots > 0 ? (
-                  <span style={styles.glassBadge}>{packageStats.freeSpots} spots available</span>
-                ) : null}
-              </div>
+      <main className="hostProfilePage">
+        <section className="profileShell">
+          <div className="profileHero">
+            <img
+              src={profile.cover_url || FALLBACK_COVER}
+              alt=""
+              className="coverImage"
+            />
 
-              <h1 style={styles.title}>{host.name}</h1>
+            <div className="coverOverlay" />
 
-              <div style={styles.subtitle}>
-                <span>📍 {host.location || "Outdoor experience"}</span>
-                <span style={styles.dot} />
-                <span>⭐ {host.rating || "New"}</span>
-                <span style={styles.dot} />
-                <span>{host.reviews_count || 0} reviews</span>
-              </div>
+            <div className="heroProfileInfo">
+              <img
+                src={profile.avatar_url || FALLBACK_AVATAR}
+                alt={displayName}
+                className="profileAvatar"
+              />
 
-              <div style={styles.heroDescription}>
-                {host.short_description ||
-                  host.description ||
-                  "Book real outdoor experiences with available dates, real spots and verified hosts."}
-              </div>
-
-              <div style={styles.heroActions}>
-                <button
-                  type="button"
-                  style={styles.primaryButton}
-                  onClick={() => {
-                    if (firstAvailablePackage && firstAvailableDate) {
-                      openReservation(firstAvailablePackage, firstAvailableDate);
+              <div className="heroText">
+                <div className="hostBadgeRow">
+                  <span
+                    className={
+                      profile.is_verified
+                        ? "hostBadge verified"
+                        : "hostBadge"
                     }
-                  }}
-                >
-                  Reserve experience
-                </button>
-
-                <button
-                  type="button"
-                  style={styles.ghostButton}
-                  onClick={() => {
-                    const element = document.getElementById("packages");
-                    element?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                >
-                  View packages
-                </button>
-
-                {host.map_url ? (
-                  <button
-                    type="button"
-                    style={styles.ghostButton}
-                    onClick={() => window.open(host.map_url, "_blank")}
                   >
-                    Open map
-                  </button>
-                ) : null}
-              </div>
-            </div>
+                    <Icon
+                      name={profile.is_verified ? "verified" : "shield"}
+                      size={15}
+                    />
 
-            <aside className="mo-host-booking-panel" style={styles.bookingPanel}>
-              <div style={styles.panelTop}>
-                <div>
-                  <div style={styles.panelEyebrow}>Quick booking</div>
-                  <div style={styles.panelTitle}>
-                    {firstAvailablePackage?.title || "Choose an experience"}
-                  </div>
+                    {profile.is_verified
+                      ? "MeetOutdoors verifikovani domaćin"
+                      : "MeetOutdoors domaćin"}
+                  </span>
                 </div>
 
-                <div style={styles.panelPrice}>
-                  {firstAvailablePackage?.price
-                    ? `${firstAvailablePackage.price} ${firstAvailablePackage.currency || "EUR"}`
-                    : "From host"}
-                </div>
-              </div>
+                <h1>{displayName}</h1>
 
-              <div style={styles.panelStats}>
-                <div style={styles.panelStat}>
-                  <span style={styles.panelStatNumber}>{packages.length}</span>
-                  <span style={styles.panelStatLabel}>Packages</span>
-                </div>
+                <div className="profileMeta">
+                  <span>@{profile.username}</span>
 
-                <div style={styles.panelStat}>
-                  <span style={styles.panelStatNumber}>{packageStats.totalDates}</span>
-                  <span style={styles.panelStatLabel}>Dates</span>
-                </div>
+                  <span className="metaDivider" />
 
-                <div style={styles.panelStat}>
-                  <span style={styles.panelStatNumber}>{packageStats.freeSpots}</span>
-                  <span style={styles.panelStatLabel}>Spots</span>
+                  <span>
+                    <Icon name="mapPin" size={15} />
+                    {location}
+                  </span>
                 </div>
               </div>
-
-              <button
-                type="button"
-                style={{ ...styles.primaryButton, width: "100%", marginTop: 16 }}
-                onClick={() => {
-                  if (firstAvailablePackage && firstAvailableDate) {
-                    openReservation(firstAvailablePackage, firstAvailableDate);
-                  }
-                }}
-              >
-                Book next available
-              </button>
-            </aside>
-          </div>
-        </div>
-      </section>
-
-      <section style={styles.section}>
-        <div className="mo-host-about-grid" style={styles.aboutGrid}>
-          <div>
-            <div style={styles.sectionEyebrow}>About the host</div>
-            <h2 style={styles.sectionTitle}>Real outdoor experiences, ready to book.</h2>
-            <div style={{ ...styles.about, marginTop: 18 }}>
-              {host.description ||
-                host.short_description ||
-                "This host has not added a description yet."}
             </div>
           </div>
 
-          <div style={styles.trustCard}>
-            <div style={styles.sectionEyebrow}>Host snapshot</div>
-
-            <div style={styles.trustRow}>
-              <span>Category</span>
-              <span style={styles.trustValue}>{host.category || "Outdoor"}</span>
-            </div>
-
-            <div style={styles.trustRow}>
-              <span>Location</span>
-              <span style={styles.trustValue}>{host.location || "Not set"}</span>
-            </div>
-
-            <div style={styles.trustRow}>
-              <span>Address</span>
-              <span style={styles.trustValue}>{host.address || "Not set"}</span>
-            </div>
-
-            <div style={styles.trustRow}>
-              <span>Verified</span>
-              <span style={styles.trustValue}>{host.verified ? "Yes" : "Pending"}</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.contactGrid}>
-          {host.phone ? (
-            <div style={styles.contactCard}>
-              <div style={styles.contactLabel}>Phone</div>
-              <div style={styles.contactValue}>{host.phone}</div>
-            </div>
-          ) : null}
-
-          {host.email ? (
-            <div style={styles.contactCard}>
-              <div style={styles.contactLabel}>Email</div>
-              <div style={styles.contactValue}>{host.email}</div>
-            </div>
-          ) : null}
-
-          {host.instagram ? (
-            <div style={styles.contactCard}>
-              <div style={styles.contactLabel}>Instagram</div>
-              <div style={styles.contactValue}>{host.instagram}</div>
-            </div>
-          ) : null}
-
-          {host.whatsapp ? (
-            <div style={styles.contactCard}>
-              <div style={styles.contactLabel}>WhatsApp</div>
-              <div style={styles.contactValue}>{host.whatsapp}</div>
-            </div>
-          ) : null}
-
-          {host.website ? (
-            <div style={styles.contactCard}>
-              <div style={styles.contactLabel}>Website</div>
-              <div style={styles.contactValue}>{host.website}</div>
-            </div>
-          ) : null}
-
-          {host.map_url ? (
-            <div style={styles.contactCard}>
-              <div style={styles.contactLabel}>Map</div>
-              <button
-                type="button"
-                style={{ ...styles.primaryButton, padding: "11px 14px" }}
-                onClick={() => window.open(host.map_url, "_blank")}
-              >
-                Open location
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section id="packages" style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <div>
-            <div style={styles.sectionEyebrow}>Book experiences</div>
-            <h2 style={styles.sectionTitle}>Packages & available dates</h2>
-            <div style={styles.sectionSubtitle}>
-              Choose a package, pick an available date and send a reservation request.
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.packageGrid}>
-          {packages.length ? (
-            packages.map((pkg) => {
-              const packageDates = dates.filter((x) => x.package_id === pkg.id);
-
-              return (
-                <article key={pkg.id} style={styles.packageCard}>
-                  <div className="mo-host-package-top" style={styles.packageTop}>
-                    <div style={styles.coverWrap}>
-                      <img
-                        src={pkg.cover_url || host.cover_url || FALLBACK}
-                        alt={pkg.title}
-                        style={styles.cover}
-                      />
-                      <div style={styles.coverOverlay} />
-                      <div style={styles.coverBadge}>{pkg.duration || "Experience"}</div>
-
-                      <div style={styles.coverBottom}>
-                        <div style={styles.glassBadge}>
-                          {packageDates.length} date{packageDates.length === 1 ? "" : "s"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={styles.packageBody}>
-                      <div>
-                        <h3 style={styles.packageTitle}>{pkg.title}</h3>
-
-                        <div style={styles.price}>
-                          {pkg.price
-                            ? `${pkg.price} ${pkg.currency || "EUR"}`
-                            : "Price on request"}
-                          {pkg.duration ? ` • ${pkg.duration}` : ""}
-                        </div>
-
-                        {pkg.deposit_required ? (
-                          <div style={styles.depositBox}>
-                            Deposit required: {pkg.deposit_amount || 0} {pkg.currency || "EUR"}
-                            <br />
-                            Your spot is confirmed only after the host verifies the deposit.
-                          </div>
-                        ) : null}
-
-                        {pkg.description ? (
-                          <div style={styles.packageDescription}>{pkg.description}</div>
-                        ) : null}
-
-                        {pkg.included?.length ? (
-                          <div style={styles.included}>
-                            {pkg.included.map((item) => (
-                              <span key={item} style={styles.chip}>
-                                ✓ {item}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-
-                        {getPackageImages(pkg).length ? (
-                          <div style={styles.packageGallery}>
-                            {getPackageImages(pkg).slice(0, 8).map((img, index) => (
-                              <button
-                                key={`${pkg.id}-gallery-${index}`}
-                                type="button"
-                                style={styles.packageGalleryThumb}
-                                onClick={() =>
-                                  setGalleryOpen({
-                                    title: pkg.title,
-                                    images: getPackageImages(pkg),
-                                  })
-                                }
-                              >
-                                <img src={img} alt="" style={styles.packageGalleryImage} />
-                                {index === 0 ? (
-                                  <span style={styles.galleryCountBadge}>
-                                    {getPackageImages(pkg).length} photos
-                                  </span>
-                                ) : null}
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div style={styles.dateBlock}>
-                        <div style={styles.dateBlockHeader}>
-                          <div style={styles.dateBlockTitle}>Available dates</div>
-                          <div style={styles.dateBlockHint}>Tap a date to book</div>
-                        </div>
-
-                        <div style={styles.datesWrap}>
-                          {packageDates.length ? (
-                            packageDates.map((d) => {
-                              const unavailable = d.free_spots <= 0 || d.closed;
-                              const taken = Math.max(0, (d.total_spots || 0) - (d.free_spots || 0));
-                              const percentage = d.total_spots
-                                ? Math.min(100, Math.round((taken / d.total_spots) * 100))
-                                : 0;
-
-                              return (
-                                <button
-                                  key={d.id}
-                                  type="button"
-                                  className="mo-host-date-row"
-                                  style={{
-                                    ...styles.date,
-                                    opacity: unavailable ? 0.55 : 1,
-                                    cursor: unavailable ? "not-allowed" : "pointer",
-                                  }}
-                                  disabled={unavailable}
-                                  onClick={() => openReservation(pkg, d)}
-                                >
-                                  <span style={styles.dateMain}>
-                                    <span style={styles.dateLabel}>
-                                      {formatDateRange(d.start_date, d.end_date)}
-                                    </span>
-                                    <span style={styles.dateMonth}>{getMonthLabel(d.start_date)}</span>
-                                  </span>
-
-                                  <span className="mo-host-date-spots" style={styles.dateSpotsWrap}>
-                                    <span style={styles.dateSpots}>
-                                      {unavailable ? "FULL" : `${d.free_spots}/${d.total_spots} free`}
-                                    </span>
-
-                                    <span style={styles.progressTrack}>
-                                      <span style={styles.progressFill(percentage)} />
-                                    </span>
-                                  </span>
-
-                                  <span style={unavailable ? styles.fullPill : styles.bookPill}>
-                                    {unavailable ? "Full" : "Book"}
-                                  </span>
-                                </button>
-                              );
-                            })
-                          ) : (
-                            <div style={styles.noDates}>No available dates yet.</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              );
-            })
-          ) : (
-            <div style={styles.emptyCard}>No packages yet.</div>
-          )}
-        </div>
-      </section>
-
-
-      {galleryOpen ? (
-        <div style={styles.galleryModalOverlay}>
-          <div style={styles.galleryModal}>
-            <div style={styles.galleryModalTop}>
-              <div>
-                <div style={styles.badge}>Gallery</div>
-                <div style={styles.galleryModalTitle}>{galleryOpen.title}</div>
-              </div>
-
-              <button
-                type="button"
-                style={styles.galleryClose}
-                onClick={() => setGalleryOpen(null)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={styles.galleryModalGrid}>
-              {galleryOpen.images.map((img, index) => (
-                <img
-                  key={`${img}-${index}`}
-                  src={img}
-                  alt=""
-                  style={styles.galleryModalImage}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {selectedDate ? (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <button
-              type="button"
-              style={styles.modalClose}
-              onClick={() => {
-                setSelectedDate(null);
-                setSelectedPackage(null);
-                setBookingMessage("");
-                setBookingSuccess(false);
-              }}
-            >
-              ×
-            </button>
-
-            <div style={styles.badge}>Reserve experience</div>
-
-            <h2 style={styles.modalTitle}>{selectedPackage?.title}</h2>
-
-            <div style={styles.selectedDateCard}>
-              <div style={styles.dateLabel}>
-                {formatDateRange(selectedDate.start_date, selectedDate.end_date)}
-              </div>
-              <div style={styles.dateMonth}>
-                {selectedDate.free_spots}/{selectedDate.total_spots} spots available
-              </div>
-            </div>
-
-            {selectedPackage?.deposit_required ? (
-              <div style={styles.depositModalBox}>
-                <strong>
-                  Deposit required: {selectedPackage.deposit_amount || 0}{" "}
-                  {selectedPackage.currency || "EUR"}
-                </strong>
-                <br />
-                Your reservation is not confirmed until the host verifies the deposit.
-                <br />
-                <br />
-                <strong>Deposit instructions:</strong>
-                <br />
-                {selectedPackage.deposit_instructions ||
-                  host.payment_instructions ||
-                  "The host will contact you with payment details."}
-              </div>
-            ) : (
-              <div style={styles.selectedDateCard}>
-                No deposit required for this package. The host can still confirm or reject your request.
-              </div>
+          <div className="profileContent">
+            {isOwnProfile && (
+              <Link to="/edit-profile" className="editButton mobileEdit">
+                <Icon name="edit" size={17} />
+                Uredi host profil
+              </Link>
             )}
 
-            <p style={styles.modalText}>
-              Add your contact details. The host will see your request inside their dashboard.
-            </p>
+            <section className="hostStats">
+              <article>
+                <span>
+                  <Icon name="calendar" size={19} />
+                </span>
 
-            <input
-              style={styles.input}
-              placeholder="Full name *"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
+                <div>
+                  <strong>0</strong>
+                  <small>Aktivnih događaja</small>
+                </div>
+              </article>
 
-            <input
-              style={styles.input}
-              placeholder="Email *"
-              value={customerEmail}
-              onChange={(e) => setCustomerEmail(e.target.value)}
-            />
+              <article>
+                <span>
+                  <Icon name="package" size={19} />
+                </span>
 
-            <input
-              style={styles.input}
-              placeholder="Phone *"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-            />
+                <div>
+                  <strong>0</strong>
+                  <small>Paketa i tura</small>
+                </div>
+              </article>
 
-            <div style={styles.personRow}>
-              <button
-                type="button"
-                style={styles.personBtn}
-                onClick={() => setPersons((x) => Math.max(1, x - 1))}
-              >
-                -
-              </button>
+              <article>
+                <span>
+                  <Icon name="users" size={19} />
+                </span>
 
-              <strong style={styles.personNumber}>{persons}</strong>
+                <div>
+                  <strong>0</strong>
+                  <small>Učesnika</small>
+                </div>
+              </article>
 
-              <button
-                type="button"
-                style={styles.personBtn}
-                onClick={() => setPersons((x) => Math.min(selectedDate.free_spots, x + 1))}
-              >
-                +
-              </button>
+              <article>
+                <span>
+                  <Icon name="star" size={19} />
+                </span>
+
+                <div>
+                  <strong>—</strong>
+                  <small>Prosečna ocena</small>
+                </div>
+              </article>
+            </section>
+
+            <div className="mainGrid">
+              <div className="mainColumn">
+                <section className="contentCard aboutCard">
+                  <div className="sectionHeading">
+                    <div>
+                      <span className="sectionKicker">O domaćinu</span>
+                      <h2>Iskustvo iza avanture.</h2>
+                    </div>
+
+                    <span className="sectionIcon">
+                      <Icon name="compass" size={21} />
+                    </span>
+                  </div>
+
+                  <p className="hostBio">
+                    {profile.bio ||
+                      "Ovaj domaćin još nije dodao opis. Uskoro će ovde biti više informacija o iskustvu, pristupu organizaciji i avanturama koje nudi."}
+                  </p>
+
+                  <div className="trustMessage">
+                    <span>
+                      <Icon name="shield" size={18} />
+                    </span>
+
+                    <div>
+                      <strong>Profil domaćina</strong>
+
+                      <p>
+                        Informacije na profilu pomažu učesnicima da
+                        upoznaju organizatora pre rezervacije.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="contentCard">
+                  <div className="sectionHeading">
+                    <div>
+                      <span className="sectionKicker">
+                        Outdoor aktivnosti
+                      </span>
+
+                      <h2>Avanture koje organizuje.</h2>
+                    </div>
+                  </div>
+
+                  <div className="activityList">
+                    {activities.length > 0 ? (
+                      activities.map((activity) => (
+                        <span key={activity} className="activityChip">
+                          <Icon name="check" size={14} />
+                          {activity}
+                        </span>
+                      ))
+                    ) : (
+                      <div className="emptyInline">
+                        Aktivnosti još nisu dodate.
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+
+              <aside className="sideColumn">
+                <section className="contentCard contactCard">
+                  <div className="sectionHeading compact">
+                    <div>
+                      <span className="sectionKicker">Kontakt</span>
+                      <h2>Poveži se sa domaćinom.</h2>
+                    </div>
+                  </div>
+
+                  <div className="contactList">
+                    <ContactItem
+                      icon="phone"
+                      title="Telefon"
+                      value={profile.phone}
+                      href={
+                        profile.phone
+                          ? `tel:${profile.phone.replace(/\s/g, "")}`
+                          : ""
+                      }
+                      mutedText="Telefon nije dodat"
+                    />
+
+                    <ContactItem
+                      icon="instagram"
+                      title="Instagram"
+                      value={
+                        profile.instagram_url
+                          ? "Otvori Instagram profil"
+                          : ""
+                      }
+                      href={profile.instagram_url}
+                      mutedText="Instagram nije dodat"
+                    />
+
+                    <ContactItem
+                      icon="globe"
+                      title="Web-sajt"
+                      value={
+                        profile.website_url ? "Poseti web-sajt" : ""
+                      }
+                      href={profile.website_url}
+                      mutedText="Web-sajt nije dodat"
+                    />
+
+                    <ContactItem
+                      icon="video"
+                      title="Promo video"
+                      value={
+                        profile.promo_video_url
+                          ? "Pogledaj promo video"
+                          : ""
+                      }
+                      href={profile.promo_video_url}
+                      mutedText="Promo video nije dodat"
+                    />
+                  </div>
+                </section>
+
+                <section className="verifiedCard">
+                  <span className="verifiedIcon">
+                    <Icon name="shield" size={23} />
+                  </span>
+
+                  <div>
+                    <span className="verifiedLabel">
+                      MeetOutdoors sigurnost
+                    </span>
+
+                    <h3>
+                      Upoznaj domaćina pre nego što rezervišeš.
+                    </h3>
+
+                    <p>
+                      Pregledaj opis, aktivnosti, događaje i iskustva
+                      drugih učesnika.
+                    </p>
+                  </div>
+                </section>
+              </aside>
             </div>
 
-            <textarea
-              style={styles.modalTextarea}
-              placeholder="Note for host"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
+            <section className="listingSection">
+              <div className="listingHeader">
+                <div>
+                  <span className="sectionKicker">Događaji</span>
+                  <h2>Predstojeće avanture</h2>
 
-            {bookingMessage ? (
-              <div style={styles.modalMessage(bookingSuccess)}>{bookingMessage}</div>
-            ) : null}
+                  <p>
+                    Događaji koje ovaj domaćin organizuje pojaviće se
+                    ovde.
+                  </p>
+                </div>
 
-            <button
-              type="button"
-              style={styles.reserve}
-              onClick={reserveDate}
-              disabled={bookingLoading}
-            >
-              {bookingLoading ? "Sending..." : "Send reservation request"}
-            </button>
+                {isOwnProfile && (
+                  <Link to="/create-event" className="sectionAction">
+                    Kreiraj događaj
+                    <Icon name="arrowRight" size={17} />
+                  </Link>
+                )}
+              </div>
+
+              <div className="emptyListing">
+                <span>
+                  <Icon name="calendar" size={27} />
+                </span>
+
+                <h3>Trenutno nema objavljenih događaja.</h3>
+
+                <p>
+                  Kada domaćin objavi novu avanturu, moći ćeš da je
+                  pronađeš ovde.
+                </p>
+
+                {isOwnProfile && (
+                  <Link to="/create-event">
+                    Objavi prvi događaj
+                    <Icon name="arrowRight" size={16} />
+                  </Link>
+                )}
+              </div>
+            </section>
+
+            <section className="listingSection packagesSection">
+              <div className="listingHeader">
+                <div>
+                  <span className="sectionKicker">Ture i paketi</span>
+                  <h2>Višednevna iskustva</h2>
+
+                  <p>
+                    Paketi, ture i kompletna outdoor iskustva ovog
+                    domaćina.
+                  </p>
+                </div>
+
+                {isOwnProfile && (
+                  <Link to="/create-package" className="sectionAction">
+                    Kreiraj paket
+                    <Icon name="arrowRight" size={17} />
+                  </Link>
+                )}
+              </div>
+
+              <div className="emptyListing">
+                <span>
+                  <Icon name="package" size={27} />
+                </span>
+
+                <h3>Trenutno nema aktivnih paketa.</h3>
+
+                <p>
+                  Novi paketi i ture će se automatski prikazati na ovom
+                  profilu.
+                </p>
+
+                {isOwnProfile && (
+                  <Link to="/create-package">
+                    Objavi prvi paket
+                    <Icon name="arrowRight" size={16} />
+                  </Link>
+                )}
+              </div>
+            </section>
+
+            <section className="reviewsSection">
+              <div className="reviewsIntro">
+                <span className="sectionKicker">Utisci učesnika</span>
+                <h2>Recenzije domaćina</h2>
+
+                <p>
+                  Recenzije će pomoći budućim učesnicima da izaberu
+                  avanturu sa više sigurnosti.
+                </p>
+              </div>
+
+              <div className="reviewsPlaceholder">
+                <div className="ratingBlock">
+                  <span>
+                    <Icon name="star" size={27} />
+                  </span>
+
+                  <strong>Još nema ocena</strong>
+                  <small>Prva recenzija će se pojaviti ovde.</small>
+                </div>
+
+                <div className="reviewBars">
+                  {[5, 4, 3, 2, 1].map((rating) => (
+                    <div key={rating}>
+                      <span>{rating}</span>
+                      <Icon name="star" size={12} />
+                      <div>
+                        <span style={{ width: "0%" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
           </div>
-        </div>
-      ) : null}
+        </section>
+      </main>
+    </>
+  );
+}
 
-      <style>{styles.mobileCSS}</style>
-    </main>
+function HostProfileStyles() {
+  return (
+    <style>{`
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #f2f4ed;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .hostProfilePage {
+        min-height: 100vh;
+        padding: 118px 30px 30px;
+        background:
+          radial-gradient(
+            circle at 10% 0%,
+            rgba(170, 203, 135, 0.16),
+            transparent 26%
+          ),
+          radial-gradient(
+            circle at 90% 20%,
+            rgba(93, 134, 94, 0.09),
+            transparent 27%
+          ),
+          #f2f4ed;
+        color: #17271f;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .hostProfilePage a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .profileShell {
+        width: min(1240px, 100%);
+        margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid rgba(34, 55, 43, 0.1);
+        border-radius: 34px;
+        background: rgba(250, 251, 247, 0.88);
+        box-shadow: 0 30px 90px rgba(30, 50, 37, 0.11);
+      }
+
+      .profileHero {
+        position: relative;
+        isolation: isolate;
+        min-height: 590px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 34px;
+        overflow: hidden;
+        color: white;
+      }
+
+      .coverImage,
+      .coverOverlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .coverImage {
+        z-index: -3;
+        object-fit: cover;
+        transition: transform 0.8s ease;
+      }
+
+      .profileHero:hover .coverImage {
+        transform: scale(1.018);
+      }
+
+      .coverOverlay {
+        z-index: -2;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(5, 16, 10, 0.32),
+            rgba(5, 16, 10, 0.22) 30%,
+            rgba(4, 14, 8, 0.83) 76%,
+            rgba(4, 14, 8, 0.98)
+          ),
+          linear-gradient(
+            90deg,
+            rgba(4, 14, 8, 0.43),
+            transparent 66%
+          );
+      }
+
+      .editButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 43px;
+        padding: 0 15px;
+        border: 1px solid #c9f28c;
+        border-radius: 13px;
+        background: #c9f28c;
+        color: #183a27 !important;
+        box-shadow: 0 10px 25px rgba(5, 20, 10, 0.18);
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 850;
+        transition: 0.18s ease;
+      }
+
+      .editButton:hover {
+        background: #d8f7a9;
+        transform: translateY(-2px);
+      }
+
+      .heroProfileInfo {
+        display: flex;
+        align-items: flex-end;
+        gap: 25px;
+      }
+
+      .profileAvatar {
+        flex: 0 0 auto;
+        width: 150px;
+        height: 150px;
+        border: 5px solid rgba(255, 255, 255, 0.93);
+        border-radius: 36px;
+        object-fit: cover;
+        background: #1a2e23;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.27);
+      }
+
+      .heroText {
+        min-width: 0;
+        padding-bottom: 5px;
+      }
+
+      .hostBadgeRow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-bottom: 14px;
+      }
+
+      .hostBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 11px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 10px;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+        backdrop-filter: blur(12px);
+      }
+
+      .hostBadge.verified {
+        border-color: rgba(201, 242, 140, 0.32);
+        background: rgba(201, 242, 140, 0.13);
+        color: #d9f7ae;
+      }
+
+      .heroText h1 {
+        max-width: 850px;
+        margin: 0;
+        font-size: clamp(47px, 7vw, 89px);
+        line-height: 0.94;
+        letter-spacing: -0.075em;
+      }
+
+      .profileMeta {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 16px;
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .profileMeta > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .metaDivider {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.34);
+      }
+
+      .profileContent {
+        position: relative;
+        padding: 30px;
+      }
+
+      .mobileEdit {
+        display: none;
+      }
+
+      .hostStats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 13px;
+        margin-bottom: 24px;
+      }
+
+      .hostStats article {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-width: 0;
+        padding: 18px;
+        border: 1px solid #dfe5dc;
+        border-radius: 19px;
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .hostStats article > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 43px;
+        height: 43px;
+        border-radius: 13px;
+        background: #e9f2de;
+        color: #58743f;
+      }
+
+      .hostStats strong,
+      .hostStats small {
+        display: block;
+      }
+
+      .hostStats strong {
+        color: #23362a;
+        font-size: 19px;
+      }
+
+      .hostStats small {
+        margin-top: 3px;
+        color: #869087;
+        font-size: 10px;
+        line-height: 1.35;
+      }
+
+      .mainGrid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.75fr);
+        gap: 20px;
+      }
+
+      .mainColumn,
+      .sideColumn {
+        display: grid;
+        align-content: start;
+        gap: 20px;
+      }
+
+      .contentCard,
+      .listingSection,
+      .reviewsSection {
+        border: 1px solid #dde4da;
+        border-radius: 25px;
+        background: rgba(255, 255, 255, 0.76);
+        box-shadow: 0 12px 35px rgba(33, 52, 40, 0.045);
+      }
+
+      .contentCard {
+        padding: 25px;
+      }
+
+      .sectionHeading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .sectionHeading.compact {
+        margin-bottom: 17px;
+      }
+
+      .sectionKicker {
+        display: block;
+        margin-bottom: 8px;
+        color: #759253;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .sectionHeading h2,
+      .listingHeader h2,
+      .reviewsIntro h2 {
+        margin: 0;
+        color: #21342a;
+        font-size: clamp(24px, 3vw, 34px);
+        line-height: 1.05;
+        letter-spacing: -0.045em;
+      }
+
+      .sectionIcon {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 43px;
+        height: 43px;
+        border-radius: 14px;
+        background: #e9f2de;
+        color: #5d7843;
+      }
+
+      .hostBio {
+        margin: 0;
+        color: #647169;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .trustMessage {
+        display: flex;
+        gap: 12px;
+        margin-top: 22px;
+        padding: 16px;
+        border: 1px solid #dbe7d2;
+        border-radius: 17px;
+        background: #f3f8ed;
+      }
+
+      .trustMessage > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: #e2efd7;
+        color: #587640;
+      }
+
+      .trustMessage strong {
+        display: block;
+        color: #304438;
+        font-size: 12px;
+      }
+
+      .trustMessage p {
+        margin: 4px 0 0;
+        color: #7d8981;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
+      .activityList {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
+      .activityChip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 38px;
+        padding: 0 13px;
+        border: 1px solid #d4ded0;
+        border-radius: 999px;
+        background: #f7f9f4;
+        color: #526359;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .activityChip svg {
+        color: #6d9050;
+      }
+
+      .emptyInline {
+        width: 100%;
+        padding: 15px;
+        border-radius: 14px;
+        background: #f5f7f2;
+        color: #8a958d;
+        font-size: 11px;
+      }
+
+      .contactList {
+        display: grid;
+        gap: 10px;
+      }
+
+      .contactItem {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 11px;
+        min-height: 68px;
+        padding: 11px;
+        border: 1px solid #dee4dc;
+        border-radius: 16px;
+        background: #f9faf7;
+        transition: 0.18s ease;
+      }
+
+      .contactItem.active:hover {
+        border-color: #9bae91;
+        background: white;
+        transform: translateY(-2px);
+      }
+
+      .contactItem.disabled {
+        opacity: 0.62;
+      }
+
+      .contactIcon {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: #e9f2de;
+        color: #5b7741;
+      }
+
+      .contactText {
+        min-width: 0;
+      }
+
+      .contactText small,
+      .contactText strong {
+        display: block;
+      }
+
+      .contactText small {
+        color: #929b94;
+        font-size: 9px;
+      }
+
+      .contactText strong {
+        overflow: hidden;
+        margin-top: 4px;
+        color: #3c4d42;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .contactArrow {
+        color: #89938c;
+      }
+
+      .verifiedCard {
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 23px;
+        border-radius: 24px;
+        background: linear-gradient(145deg, #173b27, #234f36);
+        color: white;
+        box-shadow: 0 18px 40px rgba(24, 58, 39, 0.16);
+      }
+
+      .verifiedIcon {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(201, 242, 140, 0.22);
+        border-radius: 15px;
+        background: rgba(201, 242, 140, 0.12);
+        color: #c9f28c;
+      }
+
+      .verifiedLabel {
+        color: #c9f28c;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .verifiedCard h3 {
+        margin: 8px 0 0;
+        font-size: 18px;
+        line-height: 1.2;
+        letter-spacing: -0.03em;
+      }
+
+      .verifiedCard p {
+        margin: 10px 0 0;
+        color: rgba(255, 255, 255, 0.58);
+        font-size: 10px;
+        line-height: 1.6;
+      }
+
+      .listingSection {
+        margin-top: 20px;
+        padding: 28px;
+      }
+
+      .listingHeader {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .listingHeader p,
+      .reviewsIntro p {
+        margin: 12px 0 0;
+        color: #7c8880;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      .sectionAction {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex: 0 0 auto;
+        min-height: 42px;
+        padding: 0 14px;
+        border: 1px solid #d6dfd2;
+        border-radius: 13px;
+        background: white;
+        color: #37513f !important;
+        font-size: 10px;
+        font-weight: 850;
+        transition: 0.18s ease;
+      }
+
+      .sectionAction:hover {
+        gap: 12px;
+        border-color: #8fa584;
+        transform: translateY(-2px);
+      }
+
+      .emptyListing {
+        display: grid;
+        place-items: center;
+        margin-top: 24px;
+        padding: 55px 20px;
+        border: 1px dashed #cfd8cc;
+        border-radius: 20px;
+        background:
+          linear-gradient(
+            145deg,
+            rgba(241, 246, 235, 0.8),
+            rgba(250, 251, 248, 0.8)
+          );
+        text-align: center;
+      }
+
+      .emptyListing > span {
+        display: grid;
+        place-items: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 19px;
+        background: #e5efdb;
+        color: #607d46;
+      }
+
+      .emptyListing h3 {
+        margin: 18px 0 0;
+        color: #34483b;
+        font-size: 17px;
+      }
+
+      .emptyListing p {
+        max-width: 500px;
+        margin: 9px auto 0;
+        color: #89938c;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      .emptyListing a {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 18px;
+        padding: 11px 14px;
+        border-radius: 12px;
+        background: #183a27;
+        color: white !important;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .packagesSection {
+        background:
+          linear-gradient(
+            145deg,
+            rgba(238, 245, 231, 0.9),
+            rgba(255, 255, 255, 0.8)
+          );
+      }
+
+      .reviewsSection {
+        display: grid;
+        grid-template-columns: minmax(0, 0.8fr) minmax(350px, 1.2fr);
+        gap: 30px;
+        margin-top: 20px;
+        padding: 28px;
+      }
+
+      .reviewsPlaceholder {
+        display: grid;
+        grid-template-columns: minmax(150px, 0.55fr) minmax(230px, 1fr);
+        gap: 25px;
+        align-items: center;
+        padding: 21px;
+        border: 1px solid #e0e5de;
+        border-radius: 20px;
+        background: #f8faf6;
+      }
+
+      .ratingBlock {
+        display: grid;
+        place-items: center;
+        text-align: center;
+      }
+
+      .ratingBlock > span {
+        display: grid;
+        place-items: center;
+        width: 53px;
+        height: 53px;
+        border-radius: 17px;
+        background: #e9f2de;
+        color: #6b894f;
+      }
+
+      .ratingBlock strong {
+        margin-top: 12px;
+        color: #35483d;
+        font-size: 13px;
+      }
+
+      .ratingBlock small {
+        margin-top: 5px;
+        color: #909992;
+        font-size: 9px;
+      }
+
+      .reviewBars {
+        display: grid;
+        gap: 8px;
+      }
+
+      .reviewBars > div {
+        display: grid;
+        grid-template-columns: 12px 13px 1fr;
+        align-items: center;
+        gap: 6px;
+        color: #859087;
+        font-size: 9px;
+      }
+
+      .reviewBars > div > div {
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e1e7df;
+      }
+
+      .reviewBars > div > div > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: #88a66b;
+      }
+
+      .stateCard {
+        display: grid;
+        place-items: center;
+        width: min(520px, 100%);
+        margin: 20px auto 110px;
+        padding: 50px 30px;
+        border: 1px solid #dce3d9;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.8);
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(28, 48, 35, 0.08);
+      }
+
+      .stateLoader {
+        width: 36px;
+        height: 36px;
+        border: 3px solid #dce5d7;
+        border-top-color: #52783c;
+        border-radius: 50%;
+        animation: profileSpin 0.8s linear infinite;
+      }
+
+      @keyframes profileSpin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .stateIcon {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        background: #f3dfdc;
+        color: #98463c;
+      }
+
+      .stateCard h1 {
+        margin: 18px 0 0;
+        font-size: 28px;
+        letter-spacing: -0.04em;
+      }
+
+      .stateCard p {
+        max-width: 380px;
+        margin: 10px auto 0;
+        color: #7e8981;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .stateButton {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 22px;
+        padding: 12px 15px;
+        border-radius: 13px;
+        background: #183a27;
+        color: white !important;
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      @media (max-width: 1000px) {
+        .hostStats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .mainGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .sideColumn {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .reviewsSection {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .hostProfilePage {
+          padding: 84px 0 0;
+        }
+
+        .profileShell {
+          border: 0;
+          border-radius: 0;
+        }
+
+        .profileHero {
+          min-height: 590px;
+          padding: 22px;
+        }
+
+        .mobileEdit {
+          display: flex;
+          width: 100%;
+          margin-bottom: 17px;
+        }
+
+        .heroProfileInfo {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 17px;
+        }
+
+        .profileAvatar {
+          width: 120px;
+          height: 120px;
+          border-radius: 28px;
+        }
+
+        .heroText h1 {
+          font-size: clamp(46px, 12vw, 68px);
+        }
+
+        .profileContent {
+          padding: 22px;
+        }
+
+        .sideColumn {
+          grid-template-columns: 1fr;
+        }
+
+        .listingHeader {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .reviewsPlaceholder {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .profileHero {
+          min-height: 560px;
+          padding: 18px;
+        }
+
+        .profileAvatar {
+          width: 105px;
+          height: 105px;
+          border-radius: 25px;
+        }
+
+        .heroText h1 {
+          font-size: 43px;
+        }
+
+        .profileMeta {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 7px;
+        }
+
+        .metaDivider {
+          display: none !important;
+        }
+
+        .profileContent {
+          padding: 16px;
+        }
+
+        .hostStats {
+          grid-template-columns: 1fr;
+        }
+
+        .contentCard,
+        .listingSection,
+        .reviewsSection {
+          padding: 20px;
+          border-radius: 21px;
+        }
+
+        .sectionHeading h2,
+        .listingHeader h2,
+        .reviewsIntro h2 {
+          font-size: 27px;
+        }
+
+        .sectionIcon {
+          display: none;
+        }
+
+        .contactItem {
+          grid-template-columns: auto minmax(0, 1fr);
+        }
+
+        .contactArrow {
+          display: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    `}</style>
   );
 }

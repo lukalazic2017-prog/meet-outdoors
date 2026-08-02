@@ -1,1536 +1,1872 @@
-// src/pages/CreateEvent.jsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { useAuth } from "../context/AuthContext";
 
-import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1800&q=85";
 
-function LocationPicker({ lat, lng, onChange }) {
-  useMapEvents({
-    click(e) {
-      const { lat, lng } = e.latlng;
-      onChange({ latitude: lat, longitude: lng });
-    },
-  });
+function Icon({
+  name,
+  size = 20,
+  strokeWidth = 2,
+  fill = "none",
+}) {
+  const icons = {
+    arrowLeft: (
+      <>
+        <path d="M19 12H5" />
+        <path d="m11 18-6-6 6-6" />
+      </>
+    ),
 
-  return <Marker position={[lat, lng]} />;
+    arrowRight: (
+      <>
+        <path d="M5 12h14" />
+        <path d="m13 6 6 6-6 6" />
+      </>
+    ),
+
+    compass: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+      </>
+    ),
+
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </>
+    ),
+
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+
+    mapPin: (
+      <>
+        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </>
+    ),
+
+    globe: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18" />
+        <path d="M12 3a15 15 0 0 1 0 18" />
+        <path d="M12 3a15 15 0 0 0 0 18" />
+      </>
+    ),
+
+    edit: (
+      <>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </>
+    ),
+
+    image: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <path d="m21 15-5-5L5 21" />
+      </>
+    ),
+
+    upload: (
+      <>
+        <path d="M12 16V4" />
+        <path d="m7 9 5-5 5 5" />
+        <path d="M5 20h14" />
+      </>
+    ),
+
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2" />
+        <path d="M16 4.5a3 3 0 0 1 0 6" />
+        <path d="M17 13a5 5 0 0 1 4 5v2" />
+      </>
+    ),
+
+    euro: (
+      <>
+        <path d="M18 7.5a6 6 0 1 0 0 9" />
+        <path d="M5 10h9M5 14h8" />
+      </>
+    ),
+
+    check: <path d="m5 12 4 4L19 6" />,
+
+    close: (
+      <>
+        <path d="m6 6 12 12" />
+        <path d="m18 6-12 12" />
+      </>
+    ),
+
+    alert: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5" />
+        <path d="M12 16h.01" />
+      </>
+    ),
+
+    shield: (
+      <>
+        <path d="M12 3 5 6v5c0 4.6 2.9 8.4 7 10 4.1-1.6 7-5.4 7-10V6l-7-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
+
+    info: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5" />
+        <path d="M12 8h.01" />
+      </>
+    ),
+
+    trash: (
+      <>
+        <path d="M3 6h18" />
+        <path d="M8 6V4h8v2" />
+        <path d="m19 6-1 15H6L5 6" />
+      </>
+    ),
+
+    mountain: (
+      <>
+        <path d="m3 20 7-12 4 7 2-3 5 8" />
+        <path d="m8.8 10 2.2 2 1.4-1.4" />
+      </>
+    ),
+
+    sparkle: (
+      <>
+        <path d="m12 3 1.1 3.3L16 8l-2.9 1.7L12 13l-1.1-3.3L8 8l2.9-1.7L12 3Z" />
+        <path d="m18 14 .7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14Z" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={fill}
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {icons[name]}
+    </svg>
+  );
+}
+
+function formatDate(value) {
+  if (!value) return "Datum nije izabran";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Datum nije izabran";
+  }
+
+  return new Intl.DateTimeFormat("sr-Latn-RS", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatPrice(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number) || number <= 0) {
+    return "Besplatno";
+  }
+
+  return new Intl.NumberFormat("sr-Latn-RS", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(number);
+}
+
+function FormField({
+  label,
+  icon,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  required = false,
+  min,
+  step,
+  hint,
+}) {
+  return (
+    <label className="createEventField">
+      <span className="createEventLabel">
+        {label}
+        {required && <strong>*</strong>}
+      </span>
+
+      <span className="createEventInputWrapper">
+        <span className="createEventInputIcon">
+          <Icon name={icon} size={17} />
+        </span>
+
+        <input
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          required={required}
+          min={min}
+          step={step}
+        />
+      </span>
+
+      {hint && <small className="createEventHint">{hint}</small>}
+    </label>
+  );
+}
+
+function LoadingState() {
+  return (
+    <>
+      <CreateEventStyles />
+
+      <main className="createEventStatePage">
+        <div className="createEventStateCard">
+          <span className="createEventLoader" />
+          <h1>Pripremamo formu</h1>
+          <p>Učitavamo tvoj host profil i podešavanja.</p>
+        </div>
+      </main>
+    </>
+  );
 }
 
 export default function CreateEvent() {
   const navigate = useNavigate();
-
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" ? window.innerWidth < 860 : false
-  );
-
-  useEffect(() => {
-    const loadUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setUser(user);
-
-        const { data: profileData, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-
-        if (!error) setProfile(profileData);
-      }
-    };
-
-    loadUser();
-  }, []);
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 860);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  const isVerifiedCreator =
-    profile?.is_verified === true ||
-    profile?.is_verified_creator === true ||
-    profile?.creator_status === "approved";
-
-  const isSchoolOrInstructor =
-    profile?.account_type === "school" || profile?.account_type === "instructor";
-
-  const [form, setForm] = useState({
-    title: "",
-    subtitle: "",
-    category: "",
-    description: "",
-    startDate: "",
-    startTime: "",
-    endDate: "",
-    endTime: "",
-    locationName: "",
-    city: "",
-    country: "",
-    latitude: 43.9,
-    longitude: 21.0,
-    isFree: true,
-    priceFrom: "",
-    organizerName: "",
-    websiteUrl: "",
-    coverUrl: "",
-
-    isTraining: false,
-    trainingType: "",
-    skillLevel: "all_levels",
-    equipmentIncluded: false,
-    certificateIncluded: false,
-    trainingLanguage: "",
-  });
+  const { user, profile, loading, isHost } = useAuth();
 
   const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
-  const [fileUploading, setFileUploading] = useState(false);
+  const [error, setError] = useState("");
 
-  const categoryOptions = [
-    "Meetup",
-    "Festival",
-    "Hiking Day",
-    "Running Event",
-    "Outdoor Conference",
-    "Workshop",
-    "Retreat",
-    "Charity Event",
-    "Climbing Event",
-    "Bike Gathering",
-    "Ski School Event",
-    "Paragliding School Event",
-    "Diving School Event",
-    "Climbing School Event",
-    "Survival Training Event",
-  ];
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [country, setCountry] = useState("");
+  const [price, setPrice] = useState("");
+  const [capacity, setCapacity] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [coverFile, setCoverFile] = useState(null);
 
-  const countryOptions = [
-    "",
-    "Serbia",
-    "Bosnia & Herzegovina",
-    "Croatia",
-    "Montenegro",
-    "North Macedonia",
-    "Albania",
-    "Greece",
-    "Bulgaria",
-    "Romania",
-    "Slovenia",
-    "Hungary",
-    "Austria",
-    "Germany",
-    "Switzerland",
-    "Italy",
-    "Spain",
-    "France",
-    "Portugal",
-    "Turkey",
-    "Georgia",
-    "Cyprus",
-    "USA",
-    "Canada",
-    "Australia",
-    "Other",
-  ];
-
-  const trainingTypesList = [
-    { value: "ski_training", label: "Ski Training" },
-    { value: "paragliding_training", label: "Paragliding Training" },
-    { value: "diving_training", label: "Diving Training" },
-    { value: "climbing_training", label: "Climbing Training" },
-    { value: "survival_training", label: "Survival Training" },
-    { value: "kayak_training", label: "Kayak Training" },
-    { value: "horse_riding_training", label: "Horse Riding Training" },
-    { value: "cycling_training", label: "Cycling Training" },
-    { value: "hiking_training", label: "Hiking Training" },
-    { value: "camping_training", label: "Camping Training" },
-    { value: "other", label: "Other Training" },
-  ];
-
-  const skillLevelsList = [
-    { value: "beginner", label: "Beginner" },
-    { value: "intermediate", label: "Intermediate" },
-    { value: "advanced", label: "Advanced" },
-    { value: "all_levels", label: "All Levels" },
-  ];
-
-  const handleChange = (field) => (e) => {
-    const value =
-      e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCategoryClick = (cat) => {
-    setForm((prev) => ({ ...prev, category: cat }));
-  };
-
-  const handleLocationChange = ({ latitude, longitude }) => {
-    setForm((prev) => ({ ...prev, latitude, longitude }));
-  };
-
-  const buildDateTime = (date, time) => {
-    if (!date) return null;
-    const safeTime = time || "00:00";
-    const d = new Date(`${date}T${safeTime}:00`);
-    return isNaN(d.getTime()) ? null : d.toISOString();
-  };
-
-  const validate = () => {
-    if (!form.title.trim()) return "Title is required.";
-    if (!form.category) return "Category is required.";
-    if (!form.startDate) return "Start date is required.";
-    if (!form.country) return "Country is required.";
-    if (!user) return "You must be logged in.";
-    if (!isVerifiedCreator)
-      return "You must be a verified creator to publish events.";
-
-    if (form.isTraining) {
-      if (!form.trainingType) return "Training type is required.";
-      if (!form.skillLevel) return "Skill level is required.";
+  const coverPreview = useMemo(() => {
+    if (coverFile) {
+      return URL.createObjectURL(coverFile);
     }
 
-    return "";
-  };
+    return FALLBACK_COVER;
+  }, [coverFile]);
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setFileUploading(true);
-    setErrorMsg("");
-
-    const fileName = `event_${Date.now()}_${file.name}`;
-
-    const { error } = await supabase.storage
-      .from("event-covers")
-      .upload(fileName, file);
-
-    if (error) {
-      setErrorMsg("Image upload failed.");
-      setFileUploading(false);
-      return;
-    }
-
-    const { data } = supabase.storage
-      .from("event-covers")
-      .getPublicUrl(fileName);
-
-    setForm((prev) => ({ ...prev, coverUrl: data.publicUrl }));
-    setFileUploading(false);
-  };
-
-  const handleSubmit = async (e) => {
-    if (e?.preventDefault) e.preventDefault();
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    const validationError = validate();
-    if (validationError) {
-      setErrorMsg(validationError);
-      return;
-    }
-
-    setSaving(true);
-
-    const payload = {
-      title: form.title.trim(),
-      subtitle: form.subtitle || null,
-      category: form.category,
-      description: form.description || null,
-      start_time: buildDateTime(form.startDate, form.startTime),
-      end_time: buildDateTime(form.endDate, form.endTime),
-      location_name: form.locationName || null,
-      city: form.city || null,
-      country: form.country,
-      latitude: form.latitude,
-      longitude: form.longitude,
-      is_free: form.isFree,
-      price_from: form.isFree ? 0 : Number(form.priceFrom) || null,
-      organizer_name:
-        form.organizerName || profile?.school_name || profile?.full_name || null,
-      website_url: form.websiteUrl || profile?.website_url || null,
-      cover_url: form.coverUrl || null,
-      creator_id: user.id,
-
-      is_training: form.isTraining,
-      training_type: form.isTraining ? form.trainingType : null,
-      instructor_id:
-        form.isTraining && profile?.account_type === "instructor" ? user.id : null,
-      school_profile_id:
-        form.isTraining &&
-        (profile?.account_type === "school" ||
-          profile?.account_type === "instructor")
-          ? user.id
-          : null,
-      skill_level: form.isTraining ? form.skillLevel : null,
-      equipment_included: form.isTraining ? form.equipmentIncluded : false,
-      certificate_included: form.isTraining ? form.certificateIncluded : false,
-      training_language: form.isTraining ? form.trainingLanguage || null : null,
+  useEffect(() => {
+    return () => {
+      if (coverFile && coverPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(coverPreview);
+      }
     };
+  }, [coverFile, coverPreview]);
 
-    const { data, error } = await supabase
-      .from("events")
-      .insert([payload])
-      .select()
-      .single();
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
 
-    if (error) {
-      setErrorMsg(error.message);
-    } else {
-      setSuccessMsg(
-        form.isTraining
-          ? "Training event created successfully."
-          : "Event created successfully."
-      );
-      navigate(`/event/${data.id}`);
+    if (loading || saving) return;
+
+    if (!user || !profile) {
+      setError("Moraš biti ulogovan kao domaćin.");
+      return;
     }
 
-    setSaving(false);
-  };
+    if (!isHost) {
+      setError("Samo domaćin može da kreira događaj.");
+      return;
+    }
 
-  const defaultCover =
-    "https://images.pexels.com/photos/3324422/pexels-photo-3324422.jpeg";
-  const cover = form.coverUrl || defaultCover;
-  const pricePreview = form.isFree
-    ? "Free event"
-    : form.priceFrom
-    ? `From ${form.priceFrom} €`
-    : "Price on request";
+    const cleanTitle = title.trim();
+    const cleanDescription = description.trim();
+    const cleanLocation = location.trim();
+    const cleanCountry = country.trim();
 
-  const fakeStatus = form.isTraining ? "Training" : "Draft";
-  
+    if (!cleanTitle) {
+      setError("Naziv događaja je obavezan.");
+      return;
+    }
 
-  const styles = {
-    page: {
-      minHeight: "100vh",
-      padding: isMobile ? "98px 0 36px" : "118px 0 48px",
-      marginTop: -120,
-      background:
-        "radial-gradient(1000px 420px at 8% -5%, rgba(0,255,184,0.16), transparent 60%)," +
-        "radial-gradient(900px 400px at 100% 10%, rgba(0,170,255,0.12), transparent 58%)," +
-        "radial-gradient(850px 340px at 50% 100%, rgba(124,77,255,0.10), transparent 55%)," +
-        "linear-gradient(180deg, #041512 0%, #02070b 42%, #000000 100%)",
-      display: "flex",
-      justifyContent: "center",
-      fontFamily:
-        "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      color: "#f6fbf8",
-      overflowX: "hidden",
-      boxSizing: "border-box",
-    },
+    if (Number(capacity || 1) < 1) {
+      setError("Kapacitet mora biti najmanje 1.");
+      return;
+    }
 
-    container: {
-      width: "100%",
-      maxWidth: 1280,
-      padding: isMobile ? "0 12px" : "0 16px",
-      boxSizing: "border-box",
-    },
+    if (
+      startDate &&
+      endDate &&
+      new Date(endDate).getTime() <=
+        new Date(startDate).getTime()
+    ) {
+      setError(
+        "Datum završetka mora biti posle datuma početka."
+      );
+      return;
+    }
 
-    hero: {
-      position: "relative",
-      minHeight: isMobile ? 320 : 280,
-      borderRadius: isMobile ? 28 : 32,
-      overflow: "hidden",
-      marginBottom: 18,
-      boxShadow: "0 30px 90px rgba(0,0,0,0.55)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      background:
-        "radial-gradient(650px 250px at 10% 0%, rgba(0,255,184,0.14), transparent 60%)," +
-        "radial-gradient(650px 280px at 90% 0%, rgba(0,170,255,0.10), transparent 60%)," +
-        "linear-gradient(180deg, rgba(8,22,18,0.98), rgba(3,10,8,1))",
-    },
+    try {
+      setSaving(true);
 
-    heroOverlay: {
-      position: "absolute",
-      inset: 0,
-      background:
-        "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.68) 72%, rgba(0,0,0,0.84))",
-    },
+      let cover_url = null;
 
-    heroGlow: {
-      position: "absolute",
-      inset: 0,
-      background:
-        "radial-gradient(700px 240px at 8% 0%, rgba(0,255,184,0.12), transparent 48%)," +
-        "radial-gradient(460px 220px at 92% 8%, rgba(124,77,255,0.10), transparent 50%)",
-      pointerEvents: "none",
-    },
+      if (coverFile) {
+        const safeName = coverFile.name
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9.-]/g, "");
 
-    heroInner: {
-      position: "relative",
-      zIndex: 2,
-      padding: isMobile ? "18px 16px 20px" : "24px 26px 24px",
-    },
+        const fileName = `${profile.id}/${Date.now()}-${safeName}`;
 
-    heroTop: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: isMobile ? "flex-start" : "center",
-      gap: 10,
-      flexWrap: "wrap",
-    },
+        const { error: uploadError } =
+          await supabase.storage
+            .from("event-covers")
+            .upload(fileName, coverFile);
 
-    badge: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 8,
-      padding: "7px 12px",
-      borderRadius: 999,
-      border: "1px solid rgba(255,255,255,0.14)",
-      background: "rgba(255,255,255,0.08)",
-      backdropFilter: "blur(14px)",
-      fontSize: 11,
-      letterSpacing: "0.14em",
-      textTransform: "uppercase",
-      color: "rgba(214,244,227,0.94)",
-      fontWeight: 900,
-      boxShadow: "0 10px 24px rgba(0,0,0,0.20)",
-    },
+        if (uploadError) {
+          throw uploadError;
+        }
 
-    heroTitle: {
-      fontSize: isMobile ? 34 : 52,
-      lineHeight: isMobile ? 1 : 0.96,
-      fontWeight: 1000,
-      letterSpacing: "-0.05em",
-      color: "#f9fffb",
-      margin: isMobile ? "22px 0 8px" : "28px 0 8px",
-      maxWidth: 780,
-      textShadow: "0 14px 34px rgba(0,0,0,0.45)",
-    },
+        const { data: publicUrlData } =
+          supabase.storage
+            .from("event-covers")
+            .getPublicUrl(fileName);
 
-    heroSubtitle: {
-      fontSize: isMobile ? 13 : 15,
-      lineHeight: 1.65,
-      maxWidth: 760,
-      color: "rgba(225,240,232,0.82)",
-    },
+        cover_url = publicUrlData.publicUrl;
+      }
 
-    heroStats: {
-      marginTop: 16,
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0, 1fr))",
-      gap: 10,
-    },
+      const { data, error: insertError } =
+        await supabase
+          .from("events")
+          .insert({
+            host_id: profile.id,
+            title: cleanTitle,
+            description: cleanDescription,
+            location: cleanLocation,
+            country: cleanCountry,
+            cover_url,
+            price: Number(price || 0),
+            capacity: Number(capacity || 1),
+            start_date: startDate || null,
+            end_date: endDate || null,
+            is_active: true,
+          })
+          .select("id")
+          .single();
 
-    heroStat: {
-      padding: isMobile ? "12px 12px" : "14px 14px",
-      borderRadius: 18,
-      background: "rgba(255,255,255,0.06)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      backdropFilter: "blur(16px)",
-      boxShadow: "0 14px 34px rgba(0,0,0,0.18)",
-    },
+      if (insertError) {
+        throw insertError;
+      }
 
-    mainGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile
-        ? "1fr"
-        : "minmax(0, 1.55fr) minmax(380px, 0.95fr)",
-      gap: 18,
-      alignItems: "start",
-    },
+      navigate(`/event/${data.id}`);
+    } catch (err) {
+      console.error("Greška pri kreiranju događaja:", err);
 
-    card: {
-      borderRadius: isMobile ? 22 : 24,
-      padding: isMobile ? 14 : 18,
-      background:
-        "linear-gradient(145deg, rgba(8,18,16,0.72), rgba(3,10,8,0.68))",
-      border: "1px solid rgba(255,255,255,0.08)",
-      boxShadow: "0 22px 60px rgba(0,0,0,0.55)",
-      backdropFilter: "blur(18px)",
-      fontSize: 13,
-      overflow: "hidden",
-    },
+      setError(
+        err.message || "Greška pri kreiranju događaja."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
-    rightStack: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 18,
-      position: "static",
-    },
+  function handleCancel() {
+    navigate("/host-dashboard");
+  }
 
-    sectionTitleRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "baseline",
-      gap: 8,
-      marginBottom: 12,
-      flexWrap: "wrap",
-    },
+  if (loading) {
+    return <LoadingState />;
+  }
 
-    sectionTitle: {
-      fontSize: 12,
-      fontWeight: 900,
-      marginBottom: 0,
-      textTransform: "uppercase",
-      letterSpacing: "0.12em",
-      color: "rgba(210,255,230,0.88)",
-    },
-
-    sectionHint: {
-      fontSize: 11,
-      color: "rgba(220,240,230,0.66)",
-      lineHeight: 1.45,
-    },
-
-    block: {
-      marginBottom: 18,
-      paddingBottom: 18,
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
-    },
-
-    fieldGrid2: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "minmax(0,1fr) minmax(0,1fr)",
-      gap: 10,
-      marginBottom: 10,
-    },
-
-    fieldGrid3: {
-      display: "grid",
-      gridTemplateColumns: isMobile
-        ? "1fr"
-        : "minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)",
-      gap: 10,
-      marginBottom: 10,
-    },
-
-    field: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 6,
-      marginBottom: 10,
-    },
-
-    labelRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: 8,
-      flexWrap: "wrap",
-      fontSize: 12,
-    },
-
-    label: {
-      fontWeight: 700,
-      color: "rgba(235,250,242,0.96)",
-    },
-
-    labelHint: {
-      fontSize: 11,
-      color: "rgba(200,220,210,0.74)",
-    },
-
-    input: {
-      borderRadius: 14,
-      border: "1px solid rgba(255,255,255,0.12)",
-      padding: isMobile ? "12px 12px" : "11px 12px",
-      background: "rgba(0,0,0,0.42)",
-      color: "#f6fbf8",
-      fontSize: 14,
-      fontWeight: 600,
-      outline: "none",
-      boxSizing: "border-box",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
-    },
-
-    textarea: {
-      borderRadius: 16,
-      border: "1px solid rgba(255,255,255,0.12)",
-      padding: "12px 12px",
-      background: "rgba(0,0,0,0.42)",
-      color: "#f6fbf8",
-      fontSize: 14,
-      minHeight: isMobile ? 120 : 100,
-      resize: "vertical",
-      outline: "none",
-      lineHeight: 1.6,
-      boxSizing: "border-box",
-    },
-
-    select: {
-      borderRadius: 14,
-      border: "1px solid rgba(255,255,255,0.12)",
-      padding: isMobile ? "12px 12px" : "11px 12px",
-      background: "rgba(0,0,0,0.42)",
-      color: "#f6fbf8",
-      fontSize: 14,
-      fontWeight: 600,
-      outline: "none",
-    },
-
-    categoryGrid: {
-      display: "grid",
-      gridTemplateColumns: isMobile
-        ? "1fr 1fr"
-        : "repeat(auto-fit, minmax(140px,1fr))",
-      gap: 8,
-      marginTop: 4,
-      marginBottom: 8,
-    },
-
-    categoryButton: (active) => ({
-      borderRadius: 16,
-      padding: isMobile ? "12px 10px" : "10px 10px",
-      border: active
-        ? "1px solid rgba(0,255,184,0.70)"
-        : "1px solid rgba(255,255,255,0.10)",
-      background: active
-        ? "linear-gradient(135deg, rgba(0,255,184,0.18), rgba(0,130,92,0.32))"
-        : "rgba(255,255,255,0.05)",
-      color: active ? "#eafff8" : "rgba(225,240,235,0.92)",
-      cursor: "pointer",
-      fontSize: 12,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start",
-      gap: 4,
-      transition: "all 0.18s ease",
-      boxShadow: active ? "0 14px 36px rgba(0,255,184,0.10)" : "none",
-      textAlign: "left",
-    }),
-
-    categoryLabel: {
-      fontWeight: 800,
-      fontSize: 12,
-      lineHeight: 1.25,
-    },
-
-    categorySub: {
-      fontSize: 11,
-      opacity: 0.72,
-      lineHeight: 1.35,
-    },
-
-    toggleRow: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      marginTop: 4,
-      fontSize: 13,
-      padding: "12px 12px",
-      borderRadius: 16,
-      background: "rgba(255,255,255,0.05)",
-      border: "1px solid rgba(255,255,255,0.08)",
-    },
-
-    uploader: {
-      marginTop: 8,
-      marginBottom: 12,
-      padding: "14px 14px",
-      borderRadius: 18,
-      border: "1px dashed rgba(255,255,255,0.18)",
-      background:
-        "radial-gradient(circle at top left, rgba(0,255,184,0.10), rgba(0,0,0,0.28))",
-    },
-
-    errorBox: {
-      marginTop: 10,
-      marginBottom: 4,
-      borderRadius: 14,
-      padding: "11px 12px",
-      background: "rgba(255,60,60,0.10)",
-      border: "1px solid rgba(255,100,100,0.44)",
-      color: "#ffb8b8",
-      fontSize: 12,
-      lineHeight: 1.5,
-    },
-
-    successBox: {
-      marginTop: 10,
-      marginBottom: 4,
-      borderRadius: 14,
-      padding: "11px 12px",
-      background: "rgba(0,255,160,0.08)",
-      border: "1px solid rgba(0,255,160,0.38)",
-      color: "#d0ffe8",
-      fontSize: 12,
-      lineHeight: 1.5,
-    },
-
-    submitRow: {
-      marginTop: 16,
-      display: "flex",
-      justifyContent: isMobile ? "stretch" : "flex-end",
-      position: "relative",
-      zIndex: 1,
-    },
-
-    submitButton: {
-      width: isMobile ? "100%" : "auto",
-      padding: isMobile ? "15px 20px" : "12px 24px",
-      borderRadius: 999,
-      border: "none",
-      cursor: "pointer",
-      fontWeight: 900,
-      fontSize: 13,
-      letterSpacing: "0.08em",
-      textTransform: "uppercase",
-      background: "linear-gradient(125deg, #00ffb8, #00c287, #00905c)",
-      color: "#022015",
-      boxShadow: "0 0 24px rgba(0,255,184,0.28)",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      opacity: saving || !isVerifiedCreator ? 0.7 : 1,
-    },
-
-    previewTitle: {
-      fontSize: 12,
-      fontWeight: 900,
-      marginBottom: 12,
-      textTransform: "uppercase",
-      letterSpacing: "0.12em",
-      color: "rgba(210,255,230,0.88)",
-    },
-
-    previewCard: {
-      borderRadius: 24,
-      overflow: "hidden",
-      border: "1px solid rgba(255,255,255,0.08)",
-      background:
-        "linear-gradient(135deg, rgba(4,18,13,0.98), rgba(6,24,17,0.98))",
-      marginBottom: 14,
-      boxShadow: "0 24px 60px rgba(0,0,0,0.40)",
-    },
-
-    previewImgWrapper: {
-      height: isMobile ? 220 : 240,
-      position: "relative",
-      overflow: "hidden",
-    },
-
-    previewImg: {
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      transform: "scale(1.03)",
-      filter: "saturate(1.08) contrast(1.03)",
-    },
-
-    previewOverlay: {
-      position: "absolute",
-      inset: 0,
-      background:
-        "linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.18))",
-    },
-
-    previewTitleBox: {
-      position: "absolute",
-      left: 14,
-      bottom: 12,
-      right: 14,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "flex-end",
-      gap: 10,
-    },
-
-    previewStatus: {
-      fontSize: 11,
-      borderRadius: 999,
-      padding: "5px 10px",
-      background: "rgba(0,255,184,0.16)",
-      border: "1px solid rgba(0,255,184,0.52)",
-      color: "#e2fff7",
-      textTransform: "uppercase",
-      letterSpacing: "0.10em",
-      fontWeight: 900,
-      backdropFilter: "blur(10px)",
-    },
-
-    previewPrice: {
-      marginTop: 8,
-      fontSize: 13,
-      fontWeight: 900,
-      color: "#e6fff5",
-      textAlign: "right",
-      textShadow: "0 8px 24px rgba(0,0,0,0.55)",
-    },
-
-    previewBody: {
-      padding: 14,
-      fontSize: 12,
-      color: "rgba(230,244,238,0.9)",
-      lineHeight: 1.55,
-    },
-
-    previewLine: { marginBottom: 6 },
-
-    statMiniGrid: {
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 10,
-      marginTop: 12,
-      marginBottom: 14,
-    },
-
-    statMini: {
-      padding: "12px 12px",
-      borderRadius: 18,
-      background: "rgba(255,255,255,0.05)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      boxShadow: "0 14px 34px rgba(0,0,0,0.18)",
-    },
-
-    mapBox: {
-      borderRadius: 20,
-      overflow: "hidden",
-      border: "1px solid rgba(255,255,255,0.08)",
-      marginTop: 10,
-      boxShadow: "0 22px 60px rgba(0,0,0,0.34)",
-    },
-
-    mapContainer: {
-      height: isMobile ? 300 : 320,
-      width: "100%",
-    },
-  };
+  const displayLocation =
+    [location.trim(), country.trim()]
+      .filter(Boolean)
+      .join(", ") || "Lokacija nije dodata";
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.hero}>
-          <div style={styles.heroOverlay} />
-          <div style={styles.heroGlow} />
-          <div style={styles.heroInner}>
-            <div style={styles.heroTop}>
-              <div style={styles.badge}>
-                {form.isTraining
-                  ? "🎓 Create · Training Event"
-                  : "⚡ Create · Event"}
-              </div>
-              <div style={styles.badge}>
-                {isVerifiedCreator
-                  ? "✅ Verified creator"
-                  : "🔒 Verification required"}
+    <>
+      <CreateEventStyles />
+
+      <main className="createEventPage">
+        <div className="createEventShell">
+          <aside className="eventPreviewPanel">
+            <div className="eventPreviewImage">
+              <img src={coverPreview} alt="" />
+
+              <div className="eventPreviewOverlay" />
+
+              <button
+                type="button"
+                className="previewBackButton"
+                onClick={handleCancel}
+              >
+                <Icon name="arrowLeft" size={17} />
+                Dashboard
+              </button>
+
+              <span className="previewBadge">
+                <Icon name="calendar" size={15} />
+                Novi događaj
+              </span>
+
+              <div className="previewImageBottom">
+                <span>
+                  <Icon name="clock" size={14} />
+                  {formatDate(startDate)}
+                </span>
+
+                <span>
+                  <Icon name="users" size={14} />
+                  {capacity
+                    ? `Do ${capacity} učesnika`
+                    : "Kapacitet nije dodat"}
+                </span>
               </div>
             </div>
 
-            <h1 style={styles.heroTitle}>
-              {form.isTraining
-                ? "Create a training event people instantly trust."
-                : "Host an outdoor event that feels premium instantly."}
-            </h1>
+            <div className="eventPreviewBody">
+              <span className="previewKicker">
+                Pregled događaja
+              </span>
 
-            <p style={styles.heroSubtitle}>
-              Add the vibe, location, timing, pricing and visuals in one place.
-              {form.isTraining
-                ? " Perfect for schools, instructors and structured outdoor learning."
-                : " This screen is built to feel polished on desktop and even stronger on mobile."}
-            </p>
+              <h2>{title.trim() || "Naziv tvog događaja"}</h2>
 
-            <div style={styles.heroStats}>
-              <div style={styles.heroStat}>
-                <div style={{ fontSize: 22, fontWeight: 1000 }}>
-                  {form.category || "Type"}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
-                  event category
+              <div className="previewLocation">
+                <Icon name="mapPin" size={15} />
+                {displayLocation}
+              </div>
+
+              <p className="previewDescription">
+                {description.trim() ||
+                  "Opis događaja će se prikazati ovde. Dodaj informacije o planu, mestu okupljanja i opremi koju učesnici treba da ponesu."}
+              </p>
+
+              <div className="previewDetails">
+                <article>
+                  <span>
+                    <Icon name="calendar" size={17} />
+                  </span>
+
+                  <div>
+                    <small>Početak</small>
+                    <strong>{formatDate(startDate)}</strong>
+                  </div>
+                </article>
+
+                <article>
+                  <span>
+                    <Icon name="clock" size={17} />
+                  </span>
+
+                  <div>
+                    <small>Završetak</small>
+                    <strong>{formatDate(endDate)}</strong>
+                  </div>
+                </article>
+
+                <article>
+                  <span>
+                    <Icon name="euro" size={17} />
+                  </span>
+
+                  <div>
+                    <small>Cena</small>
+                    <strong>{formatPrice(price)}</strong>
+                  </div>
+                </article>
+
+                <article>
+                  <span>
+                    <Icon name="users" size={17} />
+                  </span>
+
+                  <div>
+                    <small>Kapacitet</small>
+                    <strong>
+                      {capacity
+                        ? `${capacity} učesnika`
+                        : "Nije navedeno"}
+                    </strong>
+                  </div>
+                </article>
+              </div>
+
+              <div className="previewHost">
+                <span>
+                  <Icon name="shield" size={18} />
+                </span>
+
+                <div>
+                  <small>Organizator</small>
+                  <strong>
+                    {profile?.full_name ||
+                      profile?.username ||
+                      "MeetOutdoors domaćin"}
+                  </strong>
                 </div>
               </div>
-              <div style={styles.heroStat}>
-                <div style={{ fontSize: 22, fontWeight: 1000 }}>
-                  {form.isFree ? "Free" : pricePreview}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
-                  pricing mode
-                </div>
-              </div>
-              <div style={styles.heroStat}>
-                <div style={{ fontSize: 22, fontWeight: 1000 }}>
-                  {form.country || "Country"}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
-                  location target
-                </div>
-              </div>
-              <div style={styles.heroStat}>
-                <div style={{ fontSize: 22, fontWeight: 1000 }}>
-                  {form.isTraining ? "PRO" : "LIVE"}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.72, marginTop: 4 }}>
-                  {form.isTraining ? "training mode" : "preview updates"}
-                </div>
+
+              <div className="previewNotice">
+                <Icon name="info" size={17} />
+
+                <p>
+                  Ovo je približan pregled kartice događaja.
+                  Objavljena stranica može sadržati dodatne
+                  informacije.
+                </p>
               </div>
             </div>
-          </div>
-        </div>
+          </aside>
 
-        <div style={styles.mainGrid}>
-          <form style={styles.card} onSubmit={handleSubmit}>
-            <div style={styles.block}>
-              <div style={styles.sectionTitleRow}>
-                <div style={styles.sectionTitle}>Basic information</div>
-                <div style={styles.sectionHint}>
-                  Give the event a clear identity and strong first impression.
-                </div>
+          <section className="createEventContent">
+            <header className="createEventHeader">
+              <div>
+                <button
+                  type="button"
+                  className="mobileBackButton"
+                  onClick={handleCancel}
+                >
+                  <Icon name="arrowLeft" size={17} />
+                </button>
+
+                <span className="createEventBrand">
+                  <span>
+                    <Icon name="compass" size={21} />
+                  </span>
+
+                  MeetOutdoors
+                </span>
+
+                <span className="createEventKicker">
+                  Host alat
+                </span>
+
+                <h1>Kreiraj događaj.</h1>
+
+                <p>
+                  Objavi lokalnu outdoor avanturu koju ljudi
+                  mogu da pronađu, prate i kojoj mogu da se
+                  pridruže.
+                </p>
               </div>
 
-              <div style={styles.field}>
-                <div style={styles.labelRow}>
-                  <span style={styles.label}>Event title *</span>
-                  <span style={styles.labelHint}>
-                    e.g. Balkan Outdoor Meetup 2025
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  style={styles.input}
-                  value={form.title}
-                  onChange={handleChange("title")}
-                  placeholder="Name your event"
-                />
-              </div>
+              <span className="draftBadge">
+                <Icon name="edit" size={16} />
+                Novi nacrt
+              </span>
+            </header>
 
-              <div style={styles.field}>
-                <div style={styles.labelRow}>
-                  <span style={styles.label}>Subtitle</span>
-                  <span style={styles.labelHint}>
-                    One strong sentence that sets the vibe.
+            <form
+              onSubmit={handleSubmit}
+              className="createEventForm"
+            >
+              <section className="eventFormSection">
+                <div className="eventFormHeading">
+                  <span>
+                    <Icon name="sparkle" size={20} />
                   </span>
-                </div>
-                <input
-                  type="text"
-                  style={styles.input}
-                  value={form.subtitle}
-                  onChange={handleChange("subtitle")}
-                  placeholder="Optional tagline for your event"
-                />
-              </div>
 
-              <div style={styles.field}>
-                <div style={styles.labelRow}>
-                  <span style={styles.label}>Category *</span>
-                  <span style={styles.labelHint}>
-                    Choose the main type people will instantly recognize.
-                  </span>
+                  <div>
+                    <small>Osnovne informacije</small>
+                    <h2>Predstavi događaj</h2>
+                    <p>
+                      Naziv i opis treba jasno da objasne šta
+                      učesnici mogu da očekuju.
+                    </p>
+                  </div>
                 </div>
 
-                <div style={styles.categoryGrid}>
-                  {categoryOptions.map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      style={styles.categoryButton(form.category === cat)}
-                      onClick={() => handleCategoryClick(cat)}
-                    >
-                      <span style={styles.categoryLabel}>{cat}</span>
-                      <span style={styles.categorySub}>
-                        {form.category === cat ? "Selected" : "Tap to choose"}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={styles.field}>
-                <div style={styles.labelRow}>
-                  <span style={styles.label}>Description</span>
-                  <span style={styles.labelHint}>
-                    Tell people what they can expect.
-                  </span>
-                </div>
-                <textarea
-                  style={styles.textarea}
-                  value={form.description}
-                  onChange={handleChange("description")}
-                  placeholder={
-                    form.isTraining
-                      ? "Describe structure, safety, skill level, instructor guidance, equipment and what people will learn."
-                      : "Share the flow of the day, audience, energy, highlights, logistics and what makes this event worth joining."
+                <FormField
+                  label="Naziv događaja"
+                  icon="mountain"
+                  value={title}
+                  onChange={(event) =>
+                    setTitle(event.target.value)
                   }
+                  placeholder="Na primer: Planinarenje uz zalazak sunca"
+                  required
+                  hint="Koristi jasan naziv koji opisuje aktivnost."
                 />
-              </div>
-            </div>
 
-            <div style={styles.block}>
-              <div style={styles.sectionTitleRow}>
-                <div style={styles.sectionTitle}>Event mode</div>
-                <div style={styles.sectionHint}>
-                  Turn this on for schools, academies and instructor-led sessions.
-                </div>
-              </div>
-
-              <div style={styles.toggleRow}>
-                <input
-                  type="checkbox"
-                  id="isTraining"
-                  checked={form.isTraining}
-                  onChange={handleChange("isTraining")}
-                />
-                <label htmlFor="isTraining">
-                  This is a <strong>training / school event</strong>
-                  {isSchoolOrInstructor ? " (recommended for your profile)" : ""}
-                </label>
-              </div>
-            </div>
-
-            {form.isTraining && (
-              <div style={styles.block}>
-                <div style={styles.sectionTitleRow}>
-                  <div style={styles.sectionTitle}>Training details</div>
-                  <div style={styles.sectionHint}>
-                    Add structured learning info people look for instantly.
-                  </div>
-                </div>
-
-                <div style={styles.fieldGrid2}>
-                  <div style={styles.field}>
-                    <div style={styles.labelRow}>
-                      <span style={styles.label}>Training type *</span>
-                    </div>
-                    <select
-                      style={styles.select}
-                      value={form.trainingType}
-                      onChange={handleChange("trainingType")}
-                    >
-                      <option value="">Select training type</option>
-                      {trainingTypesList.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div style={styles.field}>
-                    <div style={styles.labelRow}>
-                      <span style={styles.label}>Skill level *</span>
-                    </div>
-                    <select
-                      style={styles.select}
-                      value={form.skillLevel}
-                      onChange={handleChange("skillLevel")}
-                    >
-                      {skillLevelsList.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div style={styles.fieldGrid2}>
-                  <div style={styles.field}>
-                    <div style={styles.labelRow}>
-                      <span style={styles.label}>Training language</span>
-                    </div>
-                    <input
-                      type="text"
-                      style={styles.input}
-                      value={form.trainingLanguage}
-                      onChange={handleChange("trainingLanguage")}
-                      placeholder="English / Serbian / German"
-                    />
-                  </div>
-
-                  <div style={styles.field}>
-                    <div style={styles.labelRow}>
-                      <span style={styles.label}>Organizer profile type</span>
-                    </div>
-                    <input
-                      type="text"
-                      style={styles.input}
-                      value={profile?.account_type || "creator"}
-                      disabled
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gap: 10 }}>
-                  <div style={styles.toggleRow}>
-                    <input
-                      type="checkbox"
-                      id="equipmentIncluded"
-                      checked={form.equipmentIncluded}
-                      onChange={handleChange("equipmentIncluded")}
-                    />
-                    <label htmlFor="equipmentIncluded">
-                      Equipment included
-                    </label>
-                  </div>
-
-                  <div style={styles.toggleRow}>
-                    <input
-                      type="checkbox"
-                      id="certificateIncluded"
-                      checked={form.certificateIncluded}
-                      onChange={handleChange("certificateIncluded")}
-                    />
-                    <label htmlFor="certificateIncluded">
-                      Certificate included
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div style={styles.block}>
-              <div style={styles.sectionTitleRow}>
-                <div style={styles.sectionTitle}>Date & time</div>
-                <div style={styles.sectionHint}>
-                  Set the rhythm of the event precisely.
-                </div>
-              </div>
-
-              <div style={styles.fieldGrid2}>
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>Start date *</span>
-                  </div>
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={form.startDate}
-                    onChange={handleChange("startDate")}
-                  />
-                </div>
-
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>Start time</span>
-                  </div>
-                  <input
-                    type="time"
-                    style={styles.input}
-                    value={form.startTime}
-                    onChange={handleChange("startTime")}
-                  />
-                </div>
-              </div>
-
-              <div style={styles.fieldGrid2}>
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>End date</span>
-                  </div>
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={form.endDate}
-                    onChange={handleChange("endDate")}
-                  />
-                </div>
-
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>End time</span>
-                  </div>
-                  <input
-                    type="time"
-                    style={styles.input}
-                    value={form.endTime}
-                    onChange={handleChange("endTime")}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.block}>
-              <div style={styles.sectionTitleRow}>
-                <div style={styles.sectionTitle}>Location</div>
-                <div style={styles.sectionHint}>
-                  Exact place, city, country and pin on map.
-                </div>
-              </div>
-
-              <div style={styles.field}>
-                <div style={styles.labelRow}>
-                  <span style={styles.label}>Location name</span>
-                  <span style={styles.labelHint}>
-                    e.g. Kopaonik, Lake Ohrid, Durmitor Basecamp
+                <label className="createEventField eventDescriptionField">
+                  <span className="createEventLabel">
+                    Opis događaja
                   </span>
-                </div>
-                <input
-                  type="text"
-                  style={styles.input}
-                  value={form.locationName}
-                  onChange={handleChange("locationName")}
-                  placeholder="Trailhead, camp, venue or exact place"
-                />
-              </div>
 
-              <div style={styles.fieldGrid3}>
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>City</span>
+                  <span className="createEventTextareaWrapper">
+                    <span>
+                      <Icon name="edit" size={17} />
+                    </span>
+
+                    <textarea
+                      rows="7"
+                      maxLength="2000"
+                      value={description}
+                      onChange={(event) =>
+                        setDescription(event.target.value)
+                      }
+                      placeholder="Opiši događaj, mesto okupljanja, plan, pravila i opremu koju učesnici treba da ponesu..."
+                    />
+                  </span>
+
+                  <span className="descriptionCount">
+                    {description.length}/2000
+                  </span>
+                </label>
+              </section>
+
+              <section className="eventFormSection">
+                <div className="eventFormHeading">
+                  <span>
+                    <Icon name="mapPin" size={20} />
+                  </span>
+
+                  <div>
+                    <small>Lokacija</small>
+                    <h2>Gde se avantura održava?</h2>
+                    <p>
+                      Dodaj mesto okupljanja ili naziv područja
+                      u kome se događaj održava.
+                    </p>
                   </div>
-                  <input
-                    type="text"
-                    style={styles.input}
-                    value={form.city}
-                    onChange={handleChange("city")}
-                    placeholder="City or region"
+                </div>
+
+                <div className="eventFieldsGrid">
+                  <FormField
+                    label="Lokacija"
+                    icon="mapPin"
+                    value={location}
+                    onChange={(event) =>
+                      setLocation(event.target.value)
+                    }
+                    placeholder="Na primer: Niš, Čair"
+                  />
+
+                  <FormField
+                    label="Država"
+                    icon="globe"
+                    value={country}
+                    onChange={(event) =>
+                      setCountry(event.target.value)
+                    }
+                    placeholder="Na primer: Srbija"
                   />
                 </div>
+              </section>
 
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>Country *</span>
-                  </div>
-                  <select
-                    style={styles.select}
-                    value={form.country}
-                    onChange={handleChange("country")}
-                  >
-                    {countryOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c || "Select country"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <section className="eventFormSection">
+                <div className="eventFormHeading">
+                  <span>
+                    <Icon name="calendar" size={20} />
+                  </span>
 
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>Coordinates</span>
-                    <span style={styles.labelHint}>Tap map below</span>
-                  </div>
-                  <div
-                    style={{
-                      ...styles.input,
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    {form.latitude.toFixed(4)}, {form.longitude.toFixed(4)}
+                  <div>
+                    <small>Vreme održavanja</small>
+                    <h2>Datum i trajanje</h2>
+                    <p>
+                      Unesi početak i završetak događaja kako bi
+                      učesnici mogli da planiraju dolazak.
+                    </p>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div style={styles.block}>
-              <div style={styles.sectionTitleRow}>
-                <div style={styles.sectionTitle}>Pricing</div>
-                <div style={styles.sectionHint}>
-                  Make it free or set a visible starting price.
+                <div className="eventFieldsGrid">
+                  <FormField
+                    label="Početak događaja"
+                    icon="calendar"
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(event) =>
+                      setStartDate(event.target.value)
+                    }
+                  />
+
+                  <FormField
+                    label="Završetak događaja"
+                    icon="clock"
+                    type="datetime-local"
+                    value={endDate}
+                    onChange={(event) =>
+                      setEndDate(event.target.value)
+                    }
+                    min={startDate || undefined}
+                  />
                 </div>
-              </div>
+              </section>
 
-              <div style={styles.toggleRow}>
-                <input
-                  type="checkbox"
-                  id="isFree"
-                  checked={form.isFree}
-                  onChange={handleChange("isFree")}
-                />
-                <label htmlFor="isFree">
-                  This is a <strong>free event</strong>
-                </label>
-              </div>
+              <section className="eventFormSection">
+                <div className="eventFormHeading">
+                  <span>
+                    <Icon name="users" size={20} />
+                  </span>
 
-              {!form.isFree && (
-                <div style={{ ...styles.field, marginTop: 10 }}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>Price from</span>
-                    <span style={styles.labelHint}>
-                      Minimum ticket or participation fee
-                    </span>
+                  <div>
+                    <small>Učešće</small>
+                    <h2>Cena i kapacitet</h2>
+                    <p>
+                      Besplatan događaj može imati cenu 0.
+                      Kapacitet određuje maksimalan broj učesnika.
+                    </p>
                   </div>
-                  <input
+                </div>
+
+                <div className="eventFieldsGrid">
+                  <FormField
+                    label="Cena po osobi"
+                    icon="euro"
                     type="number"
                     min="0"
-                    step="0.5"
-                    style={styles.input}
-                    value={form.priceFrom}
-                    onChange={handleChange("priceFrom")}
-                    placeholder="e.g. 20 (EUR)"
+                    step="0.01"
+                    value={price}
+                    onChange={(event) =>
+                      setPrice(event.target.value)
+                    }
+                    placeholder="0"
+                    hint="Cena se čuva u evrima."
                   />
+
+                  <FormField
+                    label="Maksimalan broj učesnika"
+                    icon="users"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={capacity}
+                    onChange={(event) =>
+                      setCapacity(event.target.value)
+                    }
+                    placeholder="30"
+                  />
+                </div>
+              </section>
+
+              <section className="eventFormSection">
+                <div className="eventFormHeading">
+                  <span>
+                    <Icon name="image" size={20} />
+                  </span>
+
+                  <div>
+                    <small>Naslovna fotografija</small>
+                    <h2>Dodaj fotografiju događaja</h2>
+                    <p>
+                      Kvalitetna horizontalna fotografija pomaže
+                      događaju da se izdvoji.
+                    </p>
+                  </div>
+                </div>
+
+                <label
+                  className={
+                    coverFile
+                      ? "eventUpload selected"
+                      : "eventUpload"
+                  }
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                      setCoverFile(
+                        event.target.files?.[0] || null
+                      )
+                    }
+                  />
+
+                  <span className="eventUploadIcon">
+                    <Icon
+                      name={coverFile ? "check" : "upload"}
+                      size={22}
+                    />
+                  </span>
+
+                  <span className="eventUploadCopy">
+                    <strong>
+                      {coverFile
+                        ? coverFile.name
+                        : "Izaberi naslovnu fotografiju"}
+                    </strong>
+
+                    <small>
+                      {coverFile
+                        ? `${(
+                            coverFile.size /
+                            1024 /
+                            1024
+                          ).toFixed(2)} MB`
+                        : "JPG, PNG ili WEBP. Preporučena širina najmanje 1200 px."}
+                    </small>
+                  </span>
+
+                  <span className="eventUploadAction">
+                    {coverFile ? "Promeni" : "Izaberi"}
+                  </span>
+                </label>
+
+                {coverFile && (
+                  <button
+                    type="button"
+                    className="removeEventCover"
+                    onClick={() => setCoverFile(null)}
+                  >
+                    <Icon name="trash" size={15} />
+                    Ukloni fotografiju
+                  </button>
+                )}
+              </section>
+
+              {error && (
+                <div
+                  className="createEventError"
+                  role="alert"
+                >
+                  <span>
+                    <Icon name="alert" size={18} />
+                  </span>
+
+                  <p>{error}</p>
+
+                  <button
+                    type="button"
+                    onClick={() => setError("")}
+                    aria-label="Zatvori poruku"
+                  >
+                    <Icon name="close" size={16} />
+                  </button>
                 </div>
               )}
-            </div>
 
-            <div style={styles.block}>
-              <div style={styles.sectionTitleRow}>
-                <div style={styles.sectionTitle}>Organizer</div>
-                <div style={styles.sectionHint}>
-                  Add trust with your name and event site.
-                </div>
-              </div>
+              <div className="createEventActions">
+                <button
+                  type="button"
+                  className="cancelEventButton"
+                  onClick={handleCancel}
+                  disabled={saving}
+                >
+                  Otkaži
+                </button>
 
-              <div style={styles.fieldGrid2}>
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>Organizer name</span>
-                  </div>
-                  <input
-                    type="text"
-                    style={styles.input}
-                    value={form.organizerName}
-                    onChange={handleChange("organizerName")}
-                    placeholder="Your name or organization"
-                  />
-                </div>
-
-                <div style={styles.field}>
-                  <div style={styles.labelRow}>
-                    <span style={styles.label}>Event website</span>
-                  </div>
-                  <input
-                    type="url"
-                    style={styles.input}
-                    value={form.websiteUrl}
-                    onChange={handleChange("websiteUrl")}
-                    placeholder="Optional external link"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.block}>
-              <div style={styles.sectionTitleRow}>
-                <div style={styles.sectionTitle}>Visuals</div>
-                <div style={styles.sectionHint}>
-                  Paste a cover URL or upload an image directly.
-                </div>
-              </div>
-
-              <div style={styles.field}>
-                <div style={styles.labelRow}>
-                  <span style={styles.label}>Cover image URL</span>
-                  <span style={styles.labelHint}>
-                    Direct image link for the event hero
-                  </span>
-                </div>
-                <input
-                  type="url"
-                  style={styles.input}
-                  value={form.coverUrl}
-                  onChange={handleChange("coverUrl")}
-                  placeholder="https://…"
-                />
-              </div>
-
-              <div style={styles.uploader}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  style={{ color: "white", width: "100%" }}
-                />
-                {fileUploading && (
-                  <div style={{ fontSize: 12, marginTop: 8, color: "#8affc1" }}>
-                    Uploading image…
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {errorMsg && <div style={styles.errorBox}>{errorMsg}</div>}
-            {successMsg && <div style={styles.successBox}>{successMsg}</div>}
-
-            <div style={styles.submitRow}>
-              <button
-                type="submit"
-                style={styles.submitButton}
-                disabled={saving || !isVerifiedCreator}
-              >
-                {saving
-                  ? "Saving…"
-                  : form.isTraining
-                  ? "Save training event"
-                  : "Save event"}
-                {!saving && <span>➜</span>}
-              </button>
-            </div>
-          </form>
-
-          <div style={styles.rightStack}>
-            <div style={styles.card}>
-              <div style={styles.previewTitle}>Live preview</div>
-
-              <div style={styles.previewCard}>
-                <div style={styles.previewImgWrapper}>
-                  <img src={cover} alt="preview" style={styles.previewImg} />
-                  <div style={styles.previewOverlay} />
-
-                  <div style={styles.previewTitleBox}>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "rgba(255,255,255,0.86)",
-                          marginBottom: 4,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                          fontWeight: 900,
-                        }}
-                      >
-                        {form.isTraining
-                          ? "Training event"
-                          : form.category || "Event category"}
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: isMobile ? 18 : 22,
-                          fontWeight: 1000,
-                          lineHeight: 1.05,
-                          color: "#f7fff9",
-                          letterSpacing: "-0.03em",
-                          maxWidth: 260,
-                        }}
-                      >
-                        {form.title || "Your event title will appear here"}
-                      </div>
-
-                      {form.subtitle && (
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: "rgba(230,245,240,0.80)",
-                            marginTop: 4,
-                            lineHeight: 1.45,
-                            maxWidth: 260,
-                          }}
-                        >
-                          {form.subtitle}
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ textAlign: "right" }}>
-                      <div style={styles.previewStatus}>{fakeStatus}</div>
-                      <div style={styles.previewPrice}>{pricePreview}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={styles.previewBody}>
-                  <div style={styles.previewLine}>
-                    📅 {form.startDate ? form.startDate : "Pick a start date"}{" "}
-                    {form.startTime && `· ${form.startTime}`}
-                  </div>
-                  <div style={styles.previewLine}>
-                    📍{" "}
-                    {form.locationName ||
-                      form.city ||
-                      form.country ||
-                      "Location will be shown here"}
-                  </div>
-                  <div style={styles.previewLine}>
-                    🌍 {form.country || "Choose a country"}
-                  </div>
-                  {form.isTraining && (
+                <button
+                  type="submit"
+                  className="publishEventButton"
+                  disabled={saving}
+                >
+                  {saving ? (
                     <>
-                      <div style={styles.previewLine}>
-                        🎯{" "}
-                        {skillLevelsList.find((s) => s.value === form.skillLevel)
-                          ?.label || "All Levels"}
-                      </div>
-                      {form.trainingLanguage && (
-                        <div style={styles.previewLine}>
-                          🗣 {form.trainingLanguage}
-                        </div>
-                      )}
-                      {form.equipmentIncluded && (
-                        <div style={styles.previewLine}>🧰 Equipment included</div>
-                      )}
-                      {form.certificateIncluded && (
-                        <div style={styles.previewLine}>📜 Certificate included</div>
-                      )}
+                      <span className="publishLoader" />
+                      Kreiranje događaja...
+                    </>
+                  ) : (
+                    <>
+                      Objavi događaj
+                      <Icon name="arrowRight" size={17} />
                     </>
                   )}
-                  {form.description && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontSize: 11,
-                        opacity: 0.82,
-                      }}
-                    >
-                      {form.description.slice(0, 150)}
-                      {form.description.length > 150 ? "…" : ""}
-                    </div>
-                  )}
-                </div>
+                </button>
               </div>
 
-              <div style={styles.statMiniGrid}>
-                <div style={styles.statMini}>
-                  <div style={{ fontSize: 11, opacity: 0.66 }}>Price</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, marginTop: 4 }}>
-                    {pricePreview}
-                  </div>
-                </div>
-                <div style={styles.statMini}>
-                  <div style={{ fontSize: 11, opacity: 0.66 }}>Status</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, marginTop: 4 }}>
-                    {fakeStatus}
-                  </div>
-                </div>
-              </div>
-            </div>
+              <div className="eventSecurityNotice">
+                <Icon name="shield" size={17} />
 
-            <div style={styles.card}>
-              <div style={styles.previewTitle}>Location map</div>
-              <div style={styles.sectionHint}>
-                Tap on the map to move the marker and set the exact event position.
+                <p>
+                  Događaj će odmah biti vidljiv korisnicima
+                  nakon uspešnog objavljivanja.
+                </p>
               </div>
-
-              <div style={styles.mapBox}>
-                <MapContainer
-                  center={[form.latitude, form.longitude]}
-                  zoom={7}
-                  scrollWheelZoom={true}
-                  style={styles.mapContainer}
-                >
-                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <LocationPicker
-                    lat={form.latitude}
-                    lng={form.longitude}
-                    onChange={handleLocationChange}
-                  />
-                </MapContainer>
-              </div>
-
-              <div style={{ ...styles.statMiniGrid, marginBottom: 0 }}>
-                <div style={styles.statMini}>
-                  <div style={{ fontSize: 11, opacity: 0.66 }}>Latitude</div>
-                  <div style={{ fontSize: 14, fontWeight: 900, marginTop: 4 }}>
-                    {form.latitude.toFixed(4)}
-                  </div>
-                </div>
-                <div style={styles.statMini}>
-                  <div style={{ fontSize: 11, opacity: 0.66 }}>Longitude</div>
-                  <div style={{ fontSize: 14, fontWeight: 900, marginTop: 4 }}>
-                    {form.longitude.toFixed(4)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+            </form>
+          </section>
         </div>
+      </main>
+    </>
+  );
+}
 
-        {!isVerifiedCreator && (
-          <div
-            style={{
-              marginTop: 16,
-              borderRadius: 18,
-              padding: "14px 16px",
-              background: "rgba(255,60,60,0.10)",
-              border: "1px solid rgba(255,100,100,0.30)",
-              color: "#ffd0d0",
-              fontSize: 13,
-              lineHeight: 1.55,
-            }}
-          >
-            You must be a verified creator to publish events.
-          </div>
-        )}
-      </div>
-    </div>
+function CreateEventStyles() {
+  return (
+    <style>{`
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #f1f3ec;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button,
+      label,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .createEventPage,
+      .createEventStatePage {
+        min-height: 100vh;
+        color: #17271f;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .createEventPage {
+        padding: 28px;
+        background:
+          radial-gradient(
+            circle at 5% 0%,
+            rgba(169, 203, 131, 0.18),
+            transparent 25%
+          ),
+          radial-gradient(
+            circle at 97% 30%,
+            rgba(85, 129, 91, 0.1),
+            transparent 24%
+          ),
+          #f1f3ec;
+      }
+
+      .createEventShell {
+        width: min(1280px, 100%);
+        min-height: calc(100vh - 56px);
+        display: grid;
+        grid-template-columns:
+          minmax(340px, 0.75fr)
+          minmax(0, 1.25fr);
+        margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid rgba(34, 55, 43, 0.1);
+        border-radius: 34px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 28px 85px rgba(27, 49, 35, 0.11);
+      }
+
+      .eventPreviewPanel {
+        min-width: 0;
+        background: #102b1c;
+        color: white;
+      }
+
+      .eventPreviewImage {
+        position: relative;
+        height: 390px;
+        overflow: hidden;
+      }
+
+      .eventPreviewImage > img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .eventPreviewOverlay {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(5, 17, 10, 0.2),
+            rgba(5, 17, 10, 0.12) 35%,
+            rgba(7, 24, 14, 0.94)
+          );
+      }
+
+      .previewBackButton,
+      .previewBadge {
+        position: absolute;
+        top: 22px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 40px;
+        padding: 0 12px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        font-size: 9px;
+        font-weight: 850;
+        backdrop-filter: blur(13px);
+      }
+
+      .previewBackButton {
+        left: 22px;
+        cursor: pointer;
+      }
+
+      .previewBackButton:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .previewBadge {
+        right: 22px;
+        color: #d8f7aa;
+      }
+
+      .previewImageBottom {
+        position: absolute;
+        right: 22px;
+        bottom: 22px;
+        left: 22px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .previewImageBottom > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 31px;
+        padding: 0 10px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        background: rgba(5, 20, 11, 0.5);
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 8px;
+        font-weight: 800;
+        backdrop-filter: blur(11px);
+      }
+
+      .eventPreviewBody {
+        padding: 28px 28px 36px;
+      }
+
+      .previewKicker {
+        display: block;
+        color: #c9f28c;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .eventPreviewBody h2 {
+        margin: 10px 0 0;
+        color: white;
+        font-size: clamp(32px, 4vw, 48px);
+        line-height: 1;
+        letter-spacing: -0.055em;
+      }
+
+      .previewLocation {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 15px;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .previewLocation svg {
+        color: #c9f28c;
+      }
+
+      .previewDescription {
+        margin: 18px 0 0;
+        color: rgba(255, 255, 255, 0.59);
+        font-size: 10px;
+        line-height: 1.72;
+        white-space: pre-line;
+      }
+
+      .previewDetails {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        margin-top: 22px;
+      }
+
+      .previewDetails article {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .previewDetails article > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        background: rgba(201, 242, 140, 0.09);
+        color: #c9f28c;
+      }
+
+      .previewDetails small,
+      .previewDetails strong {
+        display: block;
+      }
+
+      .previewDetails small {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 7px;
+      }
+
+      .previewDetails strong {
+        overflow: hidden;
+        margin-top: 3px;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 8px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .previewHost {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .previewHost > span {
+        display: grid;
+        place-items: center;
+        width: 39px;
+        height: 39px;
+        border-radius: 12px;
+        background: rgba(201, 242, 140, 0.1);
+        color: #c9f28c;
+      }
+
+      .previewHost small,
+      .previewHost strong {
+        display: block;
+      }
+
+      .previewHost small {
+        color: rgba(255, 255, 255, 0.39);
+        font-size: 7px;
+      }
+
+      .previewHost strong {
+        margin-top: 3px;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 9px;
+      }
+
+      .previewNotice {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        margin-top: 20px;
+        padding: 13px;
+        border: 1px solid rgba(201, 242, 140, 0.14);
+        border-radius: 14px;
+        background: rgba(201, 242, 140, 0.06);
+        color: #c9f28c;
+      }
+
+      .previewNotice svg {
+        flex: 0 0 auto;
+      }
+
+      .previewNotice p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.48);
+        font-size: 8px;
+        line-height: 1.55;
+      }
+
+      .createEventContent {
+        min-width: 0;
+        padding: 39px;
+        background:
+          radial-gradient(
+            circle at 100% 0%,
+            rgba(186, 211, 155, 0.11),
+            transparent 26%
+          ),
+          #fafbf7;
+      }
+
+      .createEventHeader {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 25px;
+        margin-bottom: 30px;
+      }
+
+      .createEventBrand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 36px;
+        color: #263c2f;
+        font-size: 14px;
+        font-weight: 900;
+        letter-spacing: -0.025em;
+      }
+
+      .createEventBrand > span {
+        display: grid;
+        place-items: center;
+        width: 39px;
+        height: 39px;
+        border-radius: 13px;
+        background: #183a27;
+        color: #c9f28c;
+      }
+
+      .createEventKicker {
+        display: block;
+        color: #779556;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .createEventHeader h1 {
+        margin: 10px 0 0;
+        color: #20342a;
+        font-size: clamp(43px, 5vw, 66px);
+        line-height: 0.94;
+        letter-spacing: -0.07em;
+      }
+
+      .createEventHeader p {
+        max-width: 620px;
+        margin: 17px 0 0;
+        color: #7b877f;
+        font-size: 12px;
+        line-height: 1.65;
+      }
+
+      .draftBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        flex: 0 0 auto;
+        min-height: 39px;
+        padding: 0 12px;
+        border: 1px solid #d7e1d2;
+        border-radius: 12px;
+        background: #f1f6eb;
+        color: #597244;
+        font-size: 9px;
+        font-weight: 850;
+      }
+
+      .mobileBackButton {
+        display: none;
+      }
+
+      .createEventForm {
+        display: grid;
+        gap: 20px;
+      }
+
+      .eventFormSection {
+        padding: 25px;
+        border: 1px solid #dce4d9;
+        border-radius: 25px;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 12px 34px rgba(31, 51, 38, 0.045);
+      }
+
+      .eventFormHeading {
+        display: flex;
+        align-items: flex-start;
+        gap: 13px;
+        margin-bottom: 23px;
+      }
+
+      .eventFormHeading > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 43px;
+        height: 43px;
+        border-radius: 14px;
+        background: #e7f0dc;
+        color: #5d7a43;
+      }
+
+      .eventFormHeading small {
+        display: block;
+        color: #7f9d5c;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .eventFormHeading h2 {
+        margin: 6px 0 0;
+        color: #2b4033;
+        font-size: 22px;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      .eventFormHeading p {
+        margin: 7px 0 0;
+        color: #89938c;
+        font-size: 9px;
+        line-height: 1.55;
+      }
+
+      .eventFieldsGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 15px;
+      }
+
+      .createEventField {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .createEventLabel {
+        color: #495c50;
+        font-size: 9px;
+        font-weight: 850;
+      }
+
+      .createEventLabel strong {
+        margin-left: 3px;
+        color: #9e453c;
+      }
+
+      .createEventInputWrapper,
+      .createEventTextareaWrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .createEventInputIcon,
+      .createEventTextareaWrapper > span {
+        position: absolute;
+        left: 14px;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        color: #829078;
+        pointer-events: none;
+      }
+
+      .createEventTextareaWrapper > span {
+        top: 15px;
+      }
+
+      .createEventInputWrapper input,
+      .createEventTextareaWrapper textarea {
+        width: 100%;
+        border: 1px solid #d9e1d6;
+        outline: none;
+        background: #f8faf6;
+        color: #25382d;
+        transition: 0.18s ease;
+      }
+
+      .createEventInputWrapper input {
+        min-height: 51px;
+        padding: 0 14px 0 43px;
+        border-radius: 14px;
+        font-size: 11px;
+      }
+
+      .createEventTextareaWrapper textarea {
+        min-height: 165px;
+        resize: vertical;
+        padding: 14px 14px 14px 43px;
+        border-radius: 15px;
+        font-size: 11px;
+        line-height: 1.65;
+      }
+
+      .createEventInputWrapper input:focus,
+      .createEventTextareaWrapper textarea:focus {
+        border-color: #86a36b;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(134, 163, 107, 0.1);
+      }
+
+      .createEventInputWrapper input::placeholder,
+      .createEventTextareaWrapper textarea::placeholder {
+        color: #a2aaa4;
+      }
+
+      .createEventHint {
+        color: #959e97;
+        font-size: 8px;
+        line-height: 1.5;
+      }
+
+      .eventDescriptionField {
+        position: relative;
+      }
+
+      .descriptionCount {
+        position: absolute;
+        right: 12px;
+        bottom: 10px;
+        padding: 4px 7px;
+        border-radius: 8px;
+        background: rgba(248, 250, 246, 0.9);
+        color: #939d95;
+        font-size: 7px;
+      }
+
+      .eventUpload {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-height: 105px;
+        padding: 15px;
+        border: 1px dashed #bdc9b8;
+        border-radius: 17px;
+        background: #f9faf7;
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+
+      .eventUpload:hover {
+        border-color: #789a59;
+        background: white;
+      }
+
+      .eventUpload.selected {
+        border-style: solid;
+        border-color: #97af83;
+        background: #f0f6e9;
+      }
+
+      .eventUpload input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .eventUploadIcon {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: #e7f0dc;
+        color: #5c7842;
+      }
+
+      .eventUpload.selected .eventUploadIcon {
+        background: #dceacd;
+        color: #4c6c34;
+      }
+
+      .eventUploadCopy {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .eventUploadCopy strong,
+      .eventUploadCopy small {
+        display: block;
+      }
+
+      .eventUploadCopy strong {
+        overflow: hidden;
+        color: #415448;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .eventUploadCopy small {
+        margin-top: 5px;
+        color: #929b94;
+        font-size: 8px;
+        line-height: 1.5;
+      }
+
+      .eventUploadAction {
+        flex: 0 0 auto;
+        padding: 9px 11px;
+        border: 1px solid #d6dfd2;
+        border-radius: 10px;
+        background: white;
+        color: #53665a;
+        font-size: 8px;
+        font-weight: 850;
+      }
+
+      .removeEventCover {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 9px;
+        background: #fff0ee;
+        color: #9a463c;
+        cursor: pointer;
+        font-size: 8px;
+        font-weight: 800;
+      }
+
+      .createEventError {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 11px;
+        padding: 14px;
+        border: 1px solid #efc7c2;
+        border-radius: 16px;
+        background: #fff0ee;
+        color: #963f35;
+      }
+
+      .createEventError > span {
+        display: grid;
+        place-items: center;
+        width: 33px;
+        height: 33px;
+        border-radius: 10px;
+        background: #f8d7d3;
+      }
+
+      .createEventError p {
+        margin: 0;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
+      .createEventError button {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .createEventActions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .cancelEventButton,
+      .publishEventButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 18px;
+        border-radius: 14px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 900;
+        transition: 0.18s ease;
+      }
+
+      .cancelEventButton {
+        border: 1px solid #d6dfd3;
+        background: white;
+        color: #59685f;
+      }
+
+      .cancelEventButton:hover:not(:disabled) {
+        border-color: #a3b09d;
+      }
+
+      .publishEventButton {
+        min-width: 190px;
+        border: 1px solid #183a27;
+        background: #183a27;
+        color: white;
+        box-shadow: 0 12px 27px rgba(24, 58, 39, 0.17);
+      }
+
+      .publishEventButton:hover:not(:disabled) {
+        gap: 12px;
+        background: #234d35;
+        transform: translateY(-2px);
+      }
+
+      .cancelEventButton:disabled,
+      .publishEventButton:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
+
+      .publishLoader {
+        width: 15px;
+        height: 15px;
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: createEventSpin 0.75s linear infinite;
+      }
+
+      .eventSecurityNotice {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: #89938c;
+        font-size: 8px;
+        text-align: center;
+      }
+
+      .eventSecurityNotice svg {
+        color: #779357;
+      }
+
+      .eventSecurityNotice p {
+        margin: 0;
+      }
+
+      .createEventStatePage {
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(166, 203, 126, 0.18),
+            transparent 30%
+          ),
+          #f1f3ec;
+      }
+
+      .createEventStateCard {
+        display: grid;
+        place-items: center;
+        width: min(500px, 100%);
+        padding: 50px 30px;
+        border: 1px solid #dce3d9;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.82);
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(28, 48, 35, 0.08);
+      }
+
+      .createEventLoader {
+        width: 37px;
+        height: 37px;
+        border: 3px solid #dce5d7;
+        border-top-color: #52783c;
+        border-radius: 50%;
+        animation: createEventSpin 0.8s linear infinite;
+      }
+
+      @keyframes createEventSpin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .createEventStateCard h1 {
+        margin: 18px 0 0;
+        color: #24372c;
+        font-size: 28px;
+        letter-spacing: -0.04em;
+      }
+
+      .createEventStateCard p {
+        margin: 9px 0 0;
+        color: #7e8981;
+        font-size: 11px;
+      }
+
+      @media (max-width: 1000px) {
+        .createEventShell {
+          grid-template-columns:
+            minmax(310px, 0.68fr)
+            minmax(0, 1.32fr);
+        }
+
+        .previewDetails {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 850px) {
+        .createEventPage {
+          padding: 18px;
+        }
+
+        .createEventShell {
+          display: block;
+          min-height: auto;
+        }
+
+        .eventPreviewImage {
+          height: 360px;
+        }
+
+        .previewDetails {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 680px) {
+        .createEventPage {
+          padding: 0;
+        }
+
+        .createEventShell {
+          border: 0;
+          border-radius: 0;
+        }
+
+        .eventPreviewPanel {
+          display: none;
+        }
+
+        .createEventContent {
+          padding: 27px 20px 45px;
+        }
+
+        .createEventHeader {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .mobileBackButton {
+          display: grid;
+          place-items: center;
+          width: 39px;
+          height: 39px;
+          margin-bottom: 20px;
+          padding: 0;
+          border: 1px solid #d7dfd4;
+          border-radius: 12px;
+          background: white;
+          color: #405449;
+          cursor: pointer;
+        }
+
+        .createEventBrand {
+          margin-bottom: 28px;
+        }
+
+        .eventFieldsGrid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 460px) {
+        .createEventContent {
+          padding: 24px 14px 40px;
+        }
+
+        .createEventHeader h1 {
+          font-size: 43px;
+        }
+
+        .eventFormSection {
+          padding: 19px;
+          border-radius: 21px;
+        }
+
+        .eventUpload {
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .eventUploadCopy {
+          width: calc(100% - 68px);
+          flex: none;
+        }
+
+        .eventUploadAction {
+          margin-left: 65px;
+        }
+
+        .createEventActions {
+          align-items: stretch;
+          flex-direction: column-reverse;
+        }
+
+        .cancelEventButton,
+        .publishEventButton {
+          width: 100%;
+        }
+
+        .eventSecurityNotice {
+          align-items: flex-start;
+          text-align: left;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    `}</style>
   );
 }

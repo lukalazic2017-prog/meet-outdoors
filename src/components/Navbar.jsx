@@ -1,1700 +1,1251 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient";
+import { useAuth } from "../context/AuthContext";
 
-const COLORS = {
-  bgSolid: "rgba(6, 17, 13, 0.96)",
-  line: "rgba(55, 242, 195, 0.16)",
-  lineStrong: "rgba(55, 242, 195, 0.28)",
-  lineBlue: "rgba(46, 230, 255, 0.22)",
-  text: "#f4fff9",
-  textSoft: "rgba(231, 255, 247, 0.78)",
-  textDim: "rgba(211, 241, 231, 0.58)",
-  mint: "#37f2c3",
-  mintBlue: "#2ee6ff",
-  mintSoft: "#8fffe0",
-  danger: "#ff8c8c",
-};
+function Icon({ name, size = 20, strokeWidth = 2 }) {
+  const icons = {
+    mountain: (
+      <>
+        <path d="m3 19 7-12 4 7 3-5 4 10" />
+        <path d="m8.2 10.1 1.8 1.4 1.7-1.2" />
+      </>
+    ),
+    menu: (
+      <>
+        <path d="M5 8h14" />
+        <path d="M5 16h14" />
+      </>
+    ),
+    close: (
+      <>
+        <path d="M6 6l12 12" />
+        <path d="M18 6 6 18" />
+      </>
+    ),
+    arrow: (
+      <>
+        <path d="M5 12h14" />
+        <path d="m13 6 6 6-6 6" />
+      </>
+    ),
+    compass: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+      </>
+    ),
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </>
+    ),
+    package: (
+      <>
+        <path d="m12 3 8 4-8 4-8-4 8-4Z" />
+        <path d="M4 7v10l8 4 8-4V7" />
+        <path d="M12 11v10" />
+      </>
+    ),
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2" />
+        <path d="M16 4.5a3 3 0 0 1 0 6M17 13a5 5 0 0 1 4 5v2" />
+      </>
+    ),
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
+    edit: (
+      <>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </>
+    ),
+    bell: (
+      <>
+        <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+        <path d="M10 21h4" />
+      </>
+    ),
+    dashboard: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="2" />
+        <rect x="14" y="3" width="7" height="7" rx="2" />
+        <rect x="3" y="14" width="7" height="7" rx="2" />
+        <rect x="14" y="14" width="7" height="7" rx="2" />
+      </>
+    ),
+    plus: (
+      <>
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M10 5H5v14h5" />
+        <path d="M14 8l4 4-4 4" />
+        <path d="M18 12H9" />
+      </>
+    ),
+    login: (
+      <>
+        <path d="M14 5h5v14h-5" />
+        <path d="m10 8-4 4 4 4" />
+        <path d="M6 12h9" />
+      </>
+    ),
+    sparkle: (
+      <>
+        <path d="m12 3 1.1 3.3L16 8l-2.9 1.7L12 13l-1.1-3.3L8 8l2.9-1.7L12 3Z" />
+        <path d="m18 14 .7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14Z" />
+      </>
+    ),
+  };
 
-const FALLBACK_AVATAR = "https://i.pravatar.cc/160?img=12";
-const HEADER_DESKTOP = 84;
-const HEADER_MOBILE = 96;
-
-function useIsMobile(breakpoint = 960) {
-  const getValue = useCallback(() => {
-    if (typeof window === "undefined") return false;
-    return window.innerWidth <= breakpoint;
-  }, [breakpoint]);
-
-  const [isMobile, setIsMobile] = useState(getValue);
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(getValue());
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [getValue]);
-
-  return isMobile;
-}
-
-function BrandMark({ mobile = false }) {
   return (
-    <div
-      style={{
-        width: mobile ? 38 : 50,
-        height: mobile ? 38 : 50,
-        borderRadius: mobile ? 16 : 18,
-        background:
-          "radial-gradient(circle at 28% 20%, rgba(255,255,255,0.95), rgba(143,255,224,0.95) 18%, rgba(55,242,195,1) 42%, rgba(46,230,255,0.92) 72%, rgba(4,27,23,1) 100%)",
-        display: "grid",
-        placeItems: "center",
-        boxShadow:
-          "0 0 0 1px rgba(255,255,255,0.12), 0 0 28px rgba(55,242,195,0.26), 0 18px 44px rgba(0,0,0,0.34)",
-        flexShrink: 0,
-      }}
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      <span
-        style={{
-          fontSize: mobile ? 19 : 24,
-          filter: "drop-shadow(0 8px 12px rgba(0,0,0,0.26))",
-        }}
-      >
-        🏔️
-      </span>
-    </div>
-  );
-}
-
-function LiveDot() {
-  return (
-    <span
-      style={{
-        width: 8,
-        height: 8,
-        borderRadius: 999,
-        background: COLORS.mint,
-        boxShadow:
-          "0 0 0 5px rgba(55,242,195,0.10), 0 0 16px rgba(55,242,195,0.86)",
-        flexShrink: 0,
-      }}
-    />
+      {icons[name]}
+    </svg>
   );
 }
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useIsMobile(1180);
+  const { profile, loading, logout } = useAuth();
 
+  const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [myHost, setMyHost] = useState(null);
-  const [avatarUrl, setAvatarUrl] = useState(FALLBACK_AVATAR);
-
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchCursor, setSearchCursor] = useState(-1);
-  const [friendsSet, setFriendsSet] = useState(new Set());
-
-  const searchRef = useRef(null);
-  const notifRef = useRef(null);
-  const menuRef = useRef(null);
-  const searchInputRef = useRef(null);
-  const headerRef = useRef(null);
-  const mobilePanelRef = useRef(null);
-
-  const [headerOffset, setHeaderOffset] = useState(
-    isMobile ? HEADER_MOBILE : HEADER_DESKTOP
-  );
-
-  const navItems = useMemo(
-    () => [
-      { key: "home", label: "Home", path: "/", icon: "⌂" },
-      {
-        key: "going-now",
-        label: "Going Now",
-        path: "/going-now",
-        live: true,
-        icon: "ϟ",
-      },
-      { key: "tours", label: "Tours", path: "/tours", icon: "♜" },
-      { key: "events", label: "Events", path: "/events", icon: "▣" },
-      { key: "timeline", label: "Timeline", path: "/timeline", icon: "⌁" },
-    ],
-    []
-  );
-
-  const quickMenuItems = useMemo(
-    () => [
-      {
-        label: "Create live plan",
-        action: () => navigate(user ? "/going-now/create" : "/login"),
-        icon: "⚡",
-        sub: "Start something now",
-      },
-      {
-        label: "Create tour",
-        action: () => navigate(user ? "/create-tour" : "/login"),
-        icon: "🥾",
-        sub: "Build an adventure",
-      },
-      {
-        label: "Create event",
-        action: () => navigate(user ? "/create-event" : "/login"),
-        icon: "🎟️",
-        sub: "Organize a bigger moment",
-      },
-      {
-        label: "Saved tours",
-        action: () => navigate(user ? "/saved-tours" : "/login"),
-        icon: "🔖",
-        sub: "Your saved adventures",
-      },
-      {
-        label: "My bookings",
-        action: () => navigate(user ? "/my-bookings" : "/login"),
-        icon: "🎫",
-        sub: "Your reservations",
-      },
-      {
-        label: "Create host",
-        action: () => navigate(user ? "/create-host" : "/login"),
-        icon: "🏕️",
-        sub: "Start hosting experiences",
-      },
-      {
-        label: "Host dashboard",
-        action: () =>
-          navigate(user ? (myHost ? `/host-dashboard/${myHost.id}` : "/create-host") : "/login"),
-        icon: "📊",
-        sub: myHost ? "Manage your host profile" : "Create host first",
-      },
-      {
-        label: "Profile",
-        action: () => navigate(user ? `/profile/${user.id}` : "/login"),
-        icon: "👤",
-        sub: "View your profile",
-      },
-      {
-        label: "Settings",
-        action: () => navigate(user ? "/settings" : "/login"),
-        icon: "⚙️",
-        sub: "Account preferences",
-      },
-    ],
-    [navigate, user, myHost]
-  );
-
-  const bestDisplayName = useMemo(() => {
-    const fullName = profile?.full_name?.trim?.() || "";
-    if (fullName) return fullName;
-    return user?.email?.split("@")[0] || "Explorer";
-  }, [profile, user]);
-
-  const isActive = useCallback(
-    (path) => {
-      if (path === "/") return location.pathname === "/";
-      return location.pathname.startsWith(path);
-    },
-    [location.pathname]
-  );
-
-  const closePanels = useCallback(() => {
-    setMenuOpen(false);
-    setNotificationsOpen(false);
-    setSearchOpen(false);
-  }, []);
-
-  const loadNavbarData = useCallback(async () => {
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    setUser(authUser || null);
-
-    if (!authUser) {
-      setProfile(null);
-      setMyHost(null);
-      setAvatarUrl(FALLBACK_AVATAR);
-      setNotifications([]);
-      setUnreadCount(0);
-      return;
-    }
-
-    const [{ data: profileData }, { data: notes }, { data: hostData }] =
-      await Promise.all([
-        supabase.from("profiles").select("*").eq("id", authUser.id).single(),
-
-        supabase
-          .from("notifications")
-          .select("*")
-          .eq("user_id", authUser.id)
-          .order("created_at", { ascending: false })
-          .limit(30),
-
-        supabase
-          .from("experience_hosts")
-          .select("*")
-          .eq("owner_id", authUser.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-    setProfile(profileData || null);
-    setMyHost(hostData || null);
-    setAvatarUrl(profileData?.avatar_url || FALLBACK_AVATAR);
-
-    const safeNotes = notes || [];
-    setNotifications(safeNotes);
-    setUnreadCount(safeNotes.filter((n) => !(n.read || n.is_read)).length);
-  }, []);
-
-  const buildFriendsSet = useCallback(async () => {
-    if (!user) {
-      setFriendsSet(new Set());
-      return;
-    }
-
-    const { data: iFollow } = await supabase
-      .from("profile_follows")
-      .select("following_id")
-      .eq("follower_id", user.id)
-      .limit(500);
-
-    const followingIds = (iFollow || []).map((r) => r.following_id).filter(Boolean);
-
-    if (!followingIds.length) {
-      setFriendsSet(new Set());
-      return;
-    }
-
-    const { data: theyFollowMe } = await supabase
-      .from("profile_follows")
-      .select("follower_id")
-      .eq("following_id", user.id)
-      .in("follower_id", followingIds)
-      .limit(500);
-
-    setFriendsSet(new Set((theyFollowMe || []).map((r) => r.follower_id).filter(Boolean)));
-  }, [user]);
 
   useEffect(() => {
-    loadNavbarData();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      loadNavbarData();
-    });
-
-    return () => listener?.subscription?.unsubscribe?.();
-  }, [loadNavbarData]);
-
-  useEffect(() => {
-    let cleanup = null;
-
-    async function subscribeRealtime() {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
-
-      if (!authUser) return;
-
-      const channel = supabase
-        .channel(`navbar-notifications-${authUser.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${authUser.id}`,
-          },
-          (payload) => {
-            setNotifications((prev) => [payload.new, ...prev]);
-            if (!(payload.new.read || payload.new.is_read)) {
-              setUnreadCount((prev) => prev + 1);
-            }
-          }
-        )
-        .subscribe();
-
-      cleanup = () => {
-        supabase.removeChannel(channel);
-      };
+    function onScroll() {
+      setScrolled(window.scrollY > 18);
     }
 
-    subscribeRealtime();
-    return () => cleanup?.();
-  }, []);
-
-  useEffect(() => {
-    const updateHeaderOffset = () => {
-      if (!headerRef.current) {
-        setHeaderOffset(isMobile ? HEADER_MOBILE : HEADER_DESKTOP);
-        return;
-      }
-      const next =
-        Math.ceil(headerRef.current.getBoundingClientRect().height) +
-        (isMobile ? 4 : 2);
-      setHeaderOffset(next);
-    };
-
-    updateHeaderOffset();
-    window.addEventListener("resize", updateHeaderOffset);
-    return () => window.removeEventListener("resize", updateHeaderOffset);
-  }, [isMobile, scrolled, menuOpen, notificationsOpen, searchOpen, user]);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 14);
     onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scroll", onScroll);
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
-    const onDown = (e) => {
-      const target = e.target;
-      const insideMobilePanel = mobilePanelRef.current?.contains(target);
+    setOpen(false);
+  }, [location.pathname]);
 
-      if (!insideMobilePanel && !searchRef.current?.contains(target)) {
-        setSearchOpen(false);
-      }
-      if (!insideMobilePanel && !notifRef.current?.contains(target)) {
-        setNotificationsOpen(false);
-      }
-      if (!insideMobilePanel && !menuRef.current?.contains(target)) {
-        setMenuOpen(false);
-      }
-    };
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
 
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("touchstart", onDown);
     return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("touchstart", onDown);
+      document.body.style.overflow = "";
     };
-  }, []);
+  }, [open]);
 
-  useEffect(() => {
-    if (!searchOpen) {
-      setSearchQuery("");
-      setSearchResults([]);
-      setSearchCursor(-1);
-      return;
+  async function handleLogout() {
+    await logout();
+    setOpen(false);
+    navigate("/");
+  }
+
+  const profileUrl =
+    profile?.role === "host"
+      ? `/h/${profile.username}`
+      : `/u/${profile?.username}`;
+
+  const initials = useMemo(() => {
+    const value =
+      profile?.full_name ||
+      profile?.username ||
+      "MeetOutdoors";
+
+    return value
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase();
+  }, [profile?.full_name, profile?.username]);
+
+  function isActive(path) {
+    if (path === "/") {
+      return location.pathname === "/";
     }
 
-    buildFriendsSet();
-    const t = setTimeout(() => searchInputRef.current?.focus?.(), 40);
-    return () => clearTimeout(t);
-  }, [searchOpen, buildFriendsSet]);
+    return location.pathname.startsWith(path);
+  }
 
-  useEffect(() => {
-    if (!searchOpen) return;
-
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      setSearchCursor(-1);
-      return;
-    }
-
-    const q = searchQuery.trim();
-    const t = setTimeout(async () => {
-      setSearchLoading(true);
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, home_base")
-        .or(`full_name.ilike.%${q}%,home_base.ilike.%${q}%`)
-        .limit(12);
-
-      const rows = data || [];
-      setSearchResults(rows);
-      setSearchCursor(rows.length ? 0 : -1);
-      setSearchLoading(false);
-    }, 220);
-
-    return () => clearTimeout(t);
-  }, [searchOpen, searchQuery]);
-
-  const onSearchKeyDown = (e) => {
-    if (e.key === "Escape") {
-      setSearchOpen(false);
-      return;
-    }
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSearchCursor((c) => Math.min(searchResults.length - 1, c + 1));
-    }
-
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSearchCursor((c) => Math.max(0, c - 1));
-    }
-
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const idx = searchCursor >= 0 ? searchCursor : 0;
-      const row = searchResults[idx];
-      if (row?.id) {
-        setSearchOpen(false);
-        navigate(`/profile/${row.id}`);
-      }
-    }
-  };
-
-  const markAllAsRead = async () => {
-    if (!user || unreadCount === 0) return;
-
-    await supabase
-      .from("notifications")
-      .update({ read: true, is_read: true })
-      .eq("user_id", user.id)
-      .or("read.eq.false,is_read.eq.false");
-
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, read: true, is_read: true }))
-    );
-    setUnreadCount(0);
-  };
-
-  const clearNotifications = async () => {
-    if (!user || notifications.length === 0) return;
-    await supabase.from("notifications").delete().eq("user_id", user.id);
-    setNotifications([]);
-    setUnreadCount(0);
-  };
-
-  const openNotification = async (n) => {
-    if (!(n.read || n.is_read)) {
-      await supabase
-        .from("notifications")
-        .update({ read: true, is_read: true })
-        .eq("id", n.id);
-
-      setNotifications((prev) =>
-        prev.map((x) => (x.id === n.id ? { ...x, read: true, is_read: true } : x))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    }
-
-    setNotificationsOpen(false);
-    if (n.link) navigate(n.link);
-  };
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setMyHost(null);
-    setAvatarUrl(FALLBACK_AVATAR);
-    closePanels();
-    navigate("/login");
-  };
-
-  const notificationIcon = (type) => {
-    if (type === "creator_approved") return "✅";
-    if (type === "creator_rejected") return "❌";
-    if (type === "tour_joined") return "🎉";
-    if (type === "new_message") return "💬";
-    if (type === "new_follower") return "👤";
-    if (type === "new_rating") return "⭐";
-    return "🔔";
-  };
-
-  const topHeaderStyle = {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1400,
-    borderRadius: 0,
-    background: scrolled
-      ? COLORS.bgSolid
-      : isMobile
-      ? "linear-gradient(180deg, rgba(6,17,13,0.54), rgba(6,17,13,0.38))"
-      : "linear-gradient(180deg, rgba(6,17,13,0.68), rgba(6,17,13,0.42))",
-    backdropFilter: "blur(22px) saturate(1.18)",
-    WebkitBackdropFilter: "blur(22px) saturate(1.18)",
-    border: scrolled
-      ? `1px solid ${COLORS.lineStrong}`
-      : "1px solid rgba(143,255,224,0.14)",
-    boxShadow: scrolled
-      ? "0 22px 60px rgba(0,0,0,0.38), 0 0 0 1px rgba(55,242,195,0.04), inset 0 1px 0 rgba(255,255,255,0.055)"
-      : "0 18px 46px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.04)",
-    transition:
-      "background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease",
-  };
-
-  const shellStyle = {
-    maxWidth: 1460,
-    margin: "0 auto",
-    padding: isMobile ? "8px 10px 8px" : "12px 18px 12px",
-    display: "grid",
-    gap: isMobile ? 7 : 0,
-  };
-
-  const topRowStyle = {
-    minHeight: isMobile ? 48 : 58,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  };
-
-  const brandWrapStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: isMobile ? 10 : 12,
-    cursor: "pointer",
-    minWidth: 0,
-    flexShrink: 0,
-  };
-
-  const brandTitleStyle = {
-    fontWeight: 1000,
-    letterSpacing: isMobile ? "0.035em" : "0.09em",
-    textTransform: "uppercase",
-    fontSize: isMobile ? 15 : 20,
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    color: COLORS.text,
-  };
-
-  const brandAccentStyle = {
-    background: `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`,
-    WebkitBackgroundClip: "text",
-    color: "transparent",
-    textShadow: "0 0 16px rgba(55,242,195,0.16)",
-  };
-
-  const brandSubStyle = {
-    fontSize: 10,
-    letterSpacing: "0.16em",
-    textTransform: "uppercase",
-    color: COLORS.textDim,
-    marginTop: 5,
-    fontWeight: 850,
-  };
-
-  const desktopNavWrap = {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "6px",
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.035)",
-    border: `1px solid ${COLORS.line}`,
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.045)",
-    minWidth: 0,
-  };
-
-  const desktopNavItem = (active, live = false, special = false) => ({
-    height: special ? 44 : 42,
-    padding: special ? "0 16px" : live ? "0 14px" : "0 13px",
-    borderRadius: 999,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    textDecoration: "none",
-    color: active ? "#052018" : COLORS.text,
-    background: active
-      ? `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`
-      : special
-      ? "linear-gradient(135deg, rgba(55,242,195,0.16), rgba(46,230,255,0.12))"
-      : live
-      ? "linear-gradient(135deg, rgba(55,242,195,0.10), rgba(46,230,255,0.08))"
-      : "transparent",
-    border: special
-      ? `1px solid ${COLORS.lineStrong}`
-      : active
-      ? "1px solid rgba(255,255,255,0.10)"
-      : "1px solid transparent",
-    boxShadow: special
-      ? "0 0 24px rgba(55,242,195,0.16)"
-      : active
-      ? "0 12px 28px rgba(55,242,195,0.22)"
-      : "none",
-    fontWeight: special ? 950 : active ? 950 : 820,
-    fontSize: special ? 13 : 13,
-    whiteSpace: "nowrap",
-    transition: "all 160ms ease",
-  });
-
-  const navIconStyle = {
-    opacity: 0.88,
-    fontSize: 15,
-    lineHeight: 1,
-  };
-
-  const topIconButton = (active = false, special = false) => ({
-    width: isMobile ? 38 : 46,
-    height: isMobile ? 38 : 46,
-    borderRadius: isMobile ? 14 : 17,
-    border: active
-      ? `1px solid ${COLORS.lineStrong}`
-      : special
-      ? `1px solid ${COLORS.lineBlue}`
-      : "1px solid rgba(255,255,255,0.10)",
-    background: active
-      ? "linear-gradient(135deg, rgba(55,242,195,0.16), rgba(46,230,255,0.12))"
-      : special
-      ? "linear-gradient(135deg, rgba(46,230,255,0.12), rgba(55,242,195,0.08))"
-      : "rgba(255,255,255,0.045)",
-    color: COLORS.text,
-    display: "grid",
-    placeItems: "center",
-    cursor: "pointer",
-    boxShadow: active
-      ? "0 0 18px rgba(55,242,195,0.16), 0 12px 28px rgba(0,0,0,0.24)"
-      : "0 12px 28px rgba(0,0,0,0.18)",
-    position: "relative",
-    transition: "all 160ms ease",
-    WebkitTapHighlightColor: "transparent",
-    flexShrink: 0,
-    fontSize: 18,
-  });
-
-  const createButtonStyle = {
-    height: 46,
-    padding: "0 18px",
-    borderRadius: 999,
-    border: "none",
-    background: `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`,
-    color: "#052018",
-    fontWeight: 950,
-    fontSize: 14,
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    cursor: "pointer",
-    boxShadow: "0 16px 34px rgba(55,242,195,0.24)",
-    whiteSpace: "nowrap",
-    flexShrink: 0,
-  };
-
-  const panelBase = {
-    position: "absolute",
-    top: isMobile ? 52 : 58,
-    right: 0,
-    borderRadius: 26,
-    padding: 14,
-    background:
-      "radial-gradient(circle at top left, rgba(55,242,195,0.13), transparent 32%), radial-gradient(circle at top right, rgba(46,230,255,0.12), transparent 36%), linear-gradient(180deg, rgba(8,22,17,0.985), rgba(5,13,10,0.985))",
-    border: `1px solid ${COLORS.lineStrong}`,
-    boxShadow:
-      "0 30px 76px rgba(0,0,0,0.54), 0 0 0 1px rgba(55,242,195,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
-    backdropFilter: "blur(24px) saturate(1.15)",
-    WebkitBackdropFilter: "blur(24px) saturate(1.15)",
-    zIndex: 1600,
-    maxWidth: "calc(100vw - 24px)",
-  };
-
-  const mobileTabsWrap = {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: 7,
-    overflow: "hidden",
-    padding: "2px 1px 3px",
-  };
-
-  const mobileTab = (active, live = false, special = false) => ({
-    height: 38,
-    minWidth: 0,
-    padding: "0 6px",
-    borderRadius: 999,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    textDecoration: "none",
-    color: active ? "#052018" : COLORS.text,
-    background: active
-      ? `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`
-      : special
-      ? "linear-gradient(135deg, rgba(55,242,195,0.16), rgba(46,230,255,0.12))"
-      : live
-      ? "linear-gradient(135deg, rgba(55,242,195,0.10), rgba(46,230,255,0.08))"
-      : "rgba(255,255,255,0.04)",
-    border: active
-      ? "1px solid rgba(255,255,255,0.08)"
-      : special || live
-      ? `1px solid ${COLORS.lineStrong}`
-      : `1px solid ${COLORS.line}`,
-    boxShadow: active ? "0 12px 26px rgba(55,242,195,0.22)" : "none",
-    fontWeight: active ? 950 : 820,
-    fontSize: 12,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-  });
-
-  const avatarButtonStyle =
-    user && !isMobile
-      ? {
-          height: 48,
-          padding: "0 12px 0 7px",
-          borderRadius: 999,
-          border: menuOpen
-            ? `1px solid ${COLORS.lineStrong}`
-            : "1px solid rgba(255,255,255,0.12)",
-          background: menuOpen
-            ? "linear-gradient(135deg, rgba(55,242,195,0.14), rgba(46,230,255,0.10))"
-            : "rgba(255,255,255,0.045)",
-          color: COLORS.text,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 10,
-          cursor: "pointer",
-          boxShadow: menuOpen
-            ? "0 0 18px rgba(55,242,195,0.14), 0 10px 24px rgba(0,0,0,0.22)"
-            : "0 12px 28px rgba(0,0,0,0.18)",
-          flexShrink: 0,
-        }
-      : topIconButton(menuOpen);
+  const mainLinks = [
+    {
+      to: "/",
+      label: "Explore",
+      icon: "compass",
+      index: "01",
+    },
+    {
+      to: "/events",
+      label: "Events",
+      icon: "calendar",
+      index: "02",
+    },
+    {
+      to: "/packages",
+      label: "Packages",
+      icon: "package",
+      index: "03",
+    },
+    {
+      to: "/hosts",
+      label: "Hosts",
+      icon: "users",
+      index: "04",
+    },
+  ];
 
   return (
     <>
-      <header ref={headerRef} style={topHeaderStyle}>
-        <div style={shellStyle}>
-          <div style={topRowStyle}>
-            <div
-              style={brandWrapStyle}
-              onClick={() => {
-                closePanels();
-                navigate("/");
-              }}
+      <NavbarStyles />
+
+      <header
+        className={`brutalNav ${
+          scrolled ? "scrolled" : ""
+        } ${open ? "menuOpen" : ""}`}
+      >
+        <Link to="/" className="brutalNavLogo">
+          <span className="brutalNavLogoMark">
+            <Icon name="mountain" size={27} strokeWidth={2.2} />
+          </span>
+
+          <span className="brutalNavLogoCopy">
+            <strong>MeetOutdoors</strong>
+            <small>Go beyond ordinary.</small>
+          </span>
+        </Link>
+
+        <nav className="brutalNavDesktop">
+          {mainLinks.slice(0, 3).map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={
+                isActive(link.to) ? "active" : ""
+              }
             >
-              {!isMobile ? <BrandMark mobile={isMobile} /> : null}
+              {link.label}
+            </Link>
+          ))}
+        </nav>
 
-              {isMobile ? (
-                <div
-                  style={{
-                    width: 46,
-                    height: 46,
-                    borderRadius: 16,
-                    position: "relative",
-                    overflow: "hidden",
-                    background:
-                      "linear-gradient(145deg, rgba(55,242,195,1) 0%, rgba(46,230,255,1) 100%)",
-                    boxShadow:
-                      "0 0 0 1px rgba(255,255,255,0.12), 0 12px 30px rgba(46,230,255,0.34), 0 8px 18px rgba(55,242,195,0.24)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 1,
-                      borderRadius: 15,
-                      background:
-                        "linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02))",
-                    }}
-                  />
-
-                  <span
-                    style={{
-                      position: "relative",
-                      zIndex: 2,
-                      fontSize: 22,
-                      filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.35))",
-                    }}
-                  >
-                    ⛰️
-                  </span>
-                </div>
-              ) : null}
-
-              <div style={{ minWidth: 0 }}>
-                <div style={brandTitleStyle}>
-                  MEET<span style={brandAccentStyle}>OUTDOORS</span>
-                </div>
-                {!isMobile ? (
-                  <div style={brandSubStyle}>Explore • connect • adventure</div>
-                ) : null}
-              </div>
-            </div>
-
-            {!isMobile ? (
-              <div style={desktopNavWrap}>
-                {navItems.map((item) => {
-                  const active = isActive(item.path);
-
-                  return (
-                    <Link
-                      key={item.key}
-                      to={item.path}
-                      style={desktopNavItem(active, item.live, item.special)}
-                    >
-                      <span style={navIconStyle}>{item.icon}</span>
-                      {item.live && !item.special ? <LiveDot /> : null}
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: isMobile ? 7 : 9,
-                flexShrink: 0,
-              }}
+        <div className="brutalNavRight">
+          {!loading && profile && (
+            <Link
+              to={profileUrl}
+              className="brutalNavProfile"
+              aria-label="Open profile"
             >
-              <div ref={searchRef} style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  style={topIconButton(searchOpen, true)}
-                  onClick={() => {
-                    setSearchOpen((p) => !p);
-                    setNotificationsOpen(false);
-                    setMenuOpen(false);
-                  }}
-                  title="Search"
-                >
-                  🔎
-                </button>
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={
+                    profile.full_name ||
+                    profile.username ||
+                    "Profile"
+                  }
+                />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </Link>
+          )}
 
-                {searchOpen && !isMobile ? (
-                  <div style={{ ...panelBase, width: 430 }}>
-                    <SearchPanel
-                      searchInputRef={searchInputRef}
-                      searchQuery={searchQuery}
-                      setSearchQuery={setSearchQuery}
-                      searchLoading={searchLoading}
-                      searchResults={searchResults}
-                      searchCursor={searchCursor}
-                      setSearchCursor={setSearchCursor}
-                      onSearchKeyDown={onSearchKeyDown}
-                      navigate={navigate}
-                      close={() => setSearchOpen(false)}
-                      friendsSet={friendsSet}
-                    />
-                  </div>
-                ) : null}
-              </div>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="brutalMenuButton"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+          >
+            <span className="brutalMenuButtonGlow" />
 
-              {user ? (
-                <div ref={notifRef} style={{ position: "relative" }}>
-                  <button
-                    type="button"
-                    style={topIconButton(notificationsOpen)}
-                    onClick={() => {
-                      const next = !notificationsOpen;
-                      setNotificationsOpen(next);
-                      setSearchOpen(false);
-                      setMenuOpen(false);
-                      if (next) markAllAsRead();
-                    }}
-                    title="Notifications"
-                  >
-                    🔔
-                    {unreadCount > 0 ? (
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: -5,
-                          right: -4,
-                          minWidth: 18,
-                          height: 18,
-                          padding: "0 5px",
-                          borderRadius: 999,
-                          background: "linear-gradient(135deg, #37f2c3, #2ee6ff)",
-                          color: "#052018",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 10,
-                          fontWeight: 950,
-                          boxShadow: "0 0 16px rgba(55,242,195,0.48)",
-                        }}
-                      >
-                        {unreadCount}
-                      </span>
-                    ) : null}
-                  </button>
+            <span className="brutalMenuButtonIcon">
+              <Icon
+                name={open ? "close" : "menu"}
+                size={23}
+                strokeWidth={2.2}
+              />
+            </span>
 
-                  {notificationsOpen && !isMobile ? (
-                    <div style={{ ...panelBase, width: 390 }}>
-                      <NotificationsPanel
-                        notifications={notifications}
-                        clearNotifications={clearNotifications}
-                        openNotification={openNotification}
-                        notificationIcon={notificationIcon}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {!isMobile ? (
-                <button
-                  type="button"
-                  style={createButtonStyle}
-                  onClick={() => navigate(user ? "/going-now/create" : "/login")}
-                >
-                  <span>＋</span>
-                  <span>Create</span>
-                </button>
-              ) : null}
-
-              {!user && !isMobile ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/login")}
-                    style={{
-                      height: 44,
-                      padding: "0 16px",
-                      borderRadius: 999,
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      background: "rgba(255,255,255,0.04)",
-                      color: COLORS.text,
-                      fontWeight: 900,
-                      fontSize: 14,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Log in
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate("/register")}
-                    style={{
-                      height: 44,
-                      padding: "0 16px",
-                      borderRadius: 999,
-                      border: "none",
-                      background: `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`,
-                      color: "#052018",
-                      fontWeight: 950,
-                      fontSize: 14,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      boxShadow: "0 14px 30px rgba(55,242,195,0.18)",
-                    }}
-                  >
-                    Sign up
-                  </button>
-                </>
-              ) : null}
-
-              {user || isMobile ? (
-                <div ref={menuRef} style={{ position: "relative" }}>
-                  {!isMobile ? (
-                    <button
-                      type="button"
-                      style={avatarButtonStyle}
-                      onClick={() => {
-                        setMenuOpen((p) => !p);
-                        setSearchOpen(false);
-                        setNotificationsOpen(false);
-                      }}
-                      title={user ? "Account" : "Menu"}
-                    >
-                      <AvatarImage avatarUrl={avatarUrl} size={34} online />
-                      <span
-                        style={{
-                          maxWidth: 150,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          fontWeight: 900,
-                          fontSize: 13,
-                          color: COLORS.text,
-                        }}
-                      >
-                        {bestDisplayName}
-                      </span>
-                      <span style={{ opacity: 0.72, fontSize: 12 }}>▾</span>
-                    </button>
-                  ) : user ? (
-                    <button
-                      type="button"
-                      style={{
-                        ...topIconButton(menuOpen),
-                        padding: 0,
-                        overflow: "visible",
-                        background: menuOpen
-                          ? "linear-gradient(135deg, rgba(55,242,195,0.14), rgba(46,230,255,0.10))"
-                          : "rgba(255,255,255,0.045)",
-                      }}
-                      onClick={() => {
-                        setMenuOpen((p) => !p);
-                        setSearchOpen(false);
-                        setNotificationsOpen(false);
-                      }}
-                      title="Account"
-                    >
-                      <AvatarImage avatarUrl={avatarUrl} size={38} online />
-                    </button>
-                  ) : null}
-
-                  {menuOpen && !isMobile ? (
-                    <div style={{ ...panelBase, width: 380, right: 0 }}>
-                      <MenuPanel
-                        user={user}
-                        avatarUrl={avatarUrl}
-                        bestDisplayName={bestDisplayName}
-                        email={user?.email || "Guest"}
-                        quickMenuItems={quickMenuItems}
-                        logout={logout}
-                        navigate={navigate}
-                        close={() => setMenuOpen(false)}
-                        isMobile={isMobile}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          {isMobile ? (
-            <div style={mobileTabsWrap}>
-              {navItems
-                .filter((item) =>
-                  ["home", "going-now", "tours", "events"].includes(item.key)
-                )
-                .map((item) => {
-                  const active = isActive(item.path);
-                  const shortLabel = item.key === "going-now" ? "Going" : item.label;
-
-                  return (
-                    <Link
-                      key={item.key}
-                      to={item.path}
-                      style={mobileTab(active, item.live, item.special)}
-                    >
-                      <span style={{ fontSize: 14 }}>{item.icon}</span>
-                      {item.live && !item.special ? <LiveDot /> : null}
-                      <span>{shortLabel}</span>
-                    </Link>
-                  );
-                })}
-            </div>
-          ) : null}
+            <span className="brutalMenuButtonLabel">
+              {open ? "Close" : "Menu"}
+            </span>
+          </button>
         </div>
       </header>
 
-      <div style={{ height: headerOffset }} />
+      <div
+        className={`brutalDrawer ${open ? "open" : ""}`}
+        aria-hidden={!open}
+      >
+        <div className="brutalDrawerBackground" />
+        <div className="brutalDrawerNoise" />
+        <div className="brutalDrawerGradient" />
 
-      {isMobile && (searchOpen || notificationsOpen || menuOpen) ? (
-        <div
-          ref={mobilePanelRef}
-          style={{
-            position: "fixed",
-            top: Math.max(8, headerOffset + 6),
-            left: 10,
-            right: 10,
-            zIndex: 1600,
-            ...panelBase,
-            width: "auto",
-            maxHeight: `calc(100vh - ${Math.max(8, headerOffset + 24)}px)`,
-            overflowY: "auto",
-          }}
-        >
-          {searchOpen ? (
-            <SearchPanel
-              searchInputRef={searchInputRef}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              searchLoading={searchLoading}
-              searchResults={searchResults}
-              searchCursor={searchCursor}
-              setSearchCursor={setSearchCursor}
-              onSearchKeyDown={onSearchKeyDown}
-              navigate={navigate}
-              close={() => setSearchOpen(false)}
-              friendsSet={friendsSet}
-            />
-          ) : null}
+        <div className="brutalDrawerOrb orbOne" />
+        <div className="brutalDrawerOrb orbTwo" />
 
-          {notificationsOpen ? (
-            <NotificationsPanel
-              notifications={notifications}
-              clearNotifications={clearNotifications}
-              openNotification={openNotification}
-              notificationIcon={notificationIcon}
-            />
-          ) : null}
+        <div className="brutalDrawerInner">
+          <section className="brutalDrawerIntro">
+            <span className="brutalDrawerKicker">
+              <Icon name="sparkle" size={15} />
+              Navigation
+            </span>
 
-          {menuOpen ? (
-            <MenuPanel
-              user={user}
-              avatarUrl={avatarUrl}
-              bestDisplayName={bestDisplayName}
-              email={user?.email || "Guest"}
-              quickMenuItems={quickMenuItems}
-              logout={logout}
-              navigate={navigate}
-              close={() => setMenuOpen(false)}
-              isMobile={isMobile}
-            />
-          ) : null}
+            <h2>
+              Choose your
+              <br />
+              next move.
+            </h2>
+
+            <p>
+              Events, hosts and outdoor experiences — one bold
+              direction at a time.
+            </p>
+
+            {!loading && profile && (
+              <Link
+                to={profileUrl}
+                className="brutalDrawerUser"
+              >
+                <div className="brutalDrawerAvatar">
+                  {profile.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={
+                        profile.full_name ||
+                        profile.username ||
+                        "Profile"
+                      }
+                    />
+                  ) : (
+                    <span>{initials}</span>
+                  )}
+                </div>
+
+                <div>
+                  <small>Signed in as</small>
+                  <strong>
+                    {profile.full_name || profile.username}
+                  </strong>
+                  <span>@{profile.username}</span>
+                </div>
+
+                <Icon name="arrow" size={18} />
+              </Link>
+            )}
+          </section>
+
+          <section className="brutalDrawerNavigation">
+            <div className="brutalDrawerMainLinks">
+              {mainLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={
+                    isActive(link.to) ? "active" : ""
+                  }
+                >
+                  <span className="brutalDrawerLinkIndex">
+                    {link.index}
+                  </span>
+
+                  <span className="brutalDrawerLinkIcon">
+                    <Icon name={link.icon} size={21} />
+                  </span>
+
+                  <strong>{link.label}</strong>
+
+                  <span className="brutalDrawerLinkArrow">
+                    <Icon name="arrow" size={21} />
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+            <div className="brutalDrawerAccount">
+              {!loading && !profile && (
+                <>
+                  <span className="brutalDrawerAccountLabel">
+                    Your account
+                  </span>
+
+                  <div className="brutalDrawerAuthGrid">
+                    <Link
+                      to="/login"
+                      className="brutalDrawerSecondary"
+                    >
+                      <Icon name="login" size={17} />
+                      Log in
+                    </Link>
+
+                    <Link
+                      to="/signup"
+                      className="brutalDrawerPrimary"
+                    >
+                      Create account
+                      <Icon name="arrow" size={17} />
+                    </Link>
+                  </div>
+                </>
+              )}
+
+              {!loading && profile && (
+                <>
+                  <span className="brutalDrawerAccountLabel">
+                    Account shortcuts
+                  </span>
+
+                  <div className="brutalDrawerShortcutGrid">
+                    <Link to={profileUrl}>
+                      <Icon name="user" size={17} />
+                      My Profile
+                    </Link>
+
+                    <Link to="/edit-profile">
+                      <Icon name="edit" size={17} />
+                      Edit Profile
+                    </Link>
+
+                    <Link to="/my-events">
+                      <Icon name="calendar" size={17} />
+                      My Events
+                    </Link>
+
+                    <Link to="/notifications">
+                      <Icon name="bell" size={17} />
+                      Notifications
+                    </Link>
+                  </div>
+
+                  {profile.role === "host" && (
+                    <div className="brutalDrawerHostPanel">
+                      <div>
+                        <span>Host mode</span>
+                        <strong>
+                          Build experiences people remember.
+                        </strong>
+                      </div>
+
+                      <div className="brutalDrawerHostActions">
+                        <Link to="/dashboard">
+                          <Icon
+                            name="dashboard"
+                            size={17}
+                          />
+                          Host Studio
+                        </Link>
+
+                        <Link to="/create-event">
+                          <Icon name="plus" size={17} />
+                          Create Event
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="brutalDrawerLogout"
+                  >
+                    <Icon name="logout" size={17} />
+                    Logout
+                  </button>
+                </>
+              )}
+            </div>
+          </section>
         </div>
-      ) : null}
+
+        <footer className="brutalDrawerFooter">
+          <span>MeetOutdoors</span>
+          <span>Adventure starts before the trail.</span>
+        </footer>
+      </div>
     </>
   );
 }
 
-function AvatarImage({ avatarUrl, size = 38, online = false }) {
+function NavbarStyles() {
   return (
-    <span
-      style={{
-        position: "relative",
-        width: size,
-        height: size,
-        borderRadius: 999,
-        display: "inline-flex",
-        flexShrink: 0,
-        padding: 2,
+    <style>{`
+      * {
+        box-sizing: border-box;
+      }
+
+      .brutalNav,
+      .brutalDrawer {
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .brutalNav a,
+      .brutalDrawer a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .brutalNav button,
+      .brutalDrawer button {
+        font: inherit;
+      }
+
+      .brutalNav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 3000;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 18px;
+        height: 106px;
+        padding: 24px 30px;
+        pointer-events: none;
+        transition:
+          top 0.25s ease,
+          left 0.25s ease,
+          right 0.25s ease,
+          height 0.25s ease,
+          padding 0.25s ease,
+          border-radius 0.25s ease,
+          background 0.25s ease,
+          box-shadow 0.25s ease,
+          backdrop-filter 0.25s ease;
+      }
+
+      .brutalNav.scrolled,
+      .brutalNav.menuOpen {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        height: 72px;
+        padding: 9px 10px 9px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 24px;
+        background: rgba(7, 18, 12, 0.66);
+        box-shadow:
+          0 20px 70px rgba(0, 0, 0, 0.34),
+          inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(28px) saturate(145%);
+      }
+
+      .brutalNavLogo,
+      .brutalNavDesktop,
+      .brutalNavRight {
+        pointer-events: auto;
+      }
+
+      .brutalNavLogo {
+        display: inline-flex;
+        align-items: center;
+        justify-self: start;
+        gap: 11px;
+        color: white !important;
+      }
+
+      .brutalNavLogoMark {
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 16px;
         background:
-          "linear-gradient(135deg, rgba(55,242,195,0.95), rgba(46,230,255,0.65), rgba(255,255,255,0.18))",
-        boxShadow:
-          "0 0 0 1px rgba(255,255,255,0.10), 0 0 22px rgba(55,242,195,0.18)",
-      }}
-    >
-      <img
-        src={avatarUrl || FALLBACK_AVATAR}
-        alt="avatar"
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius: 999,
-          objectFit: "cover",
-          display: "block",
-          background: "rgba(255,255,255,0.06)",
-        }}
-      />
-      {online ? (
-        <span
-          style={{
-            position: "absolute",
-            right: 0,
-            bottom: 0,
-            width: Math.max(10, Math.round(size * 0.26)),
-            height: Math.max(10, Math.round(size * 0.26)),
-            borderRadius: 999,
-            background: COLORS.mint,
-            border: "2px solid rgba(5,13,10,0.98)",
-            boxShadow: "0 0 12px rgba(55,242,195,0.78)",
-          }}
-        />
-      ) : null}
-    </span>
-  );
-}
+          linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+          );
+        color: #baff9e;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.12),
+          0 13px 30px rgba(0, 0, 0, 0.22);
+        backdrop-filter: blur(18px);
+      }
 
-function SearchPanel({
-  searchInputRef,
-  searchQuery,
-  setSearchQuery,
-  searchLoading,
-  searchResults,
-  searchCursor,
-  setSearchCursor,
-  onSearchKeyDown,
-  navigate,
-  close,
-  friendsSet,
-}) {
-  return (
-    <div>
-      <PanelHeader eyebrow="Search" title="Find explorers" close={close} />
+      .brutalNavLogoCopy strong,
+      .brutalNavLogoCopy small {
+        display: block;
+      }
 
-      <div style={{ position: "relative" }}>
-        <input
-          ref={searchInputRef}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={onSearchKeyDown}
-          placeholder="Search by name or home base..."
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            borderRadius: 999,
-            padding: "15px 16px 15px 48px",
-            border: `1px solid ${COLORS.lineStrong}`,
-            background: "rgba(255,255,255,0.045)",
-            color: COLORS.text,
-            outline: "none",
-            fontSize: 14,
-            fontWeight: 750,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            left: 17,
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: COLORS.textSoft,
-          }}
-        >
-          🔎
-        </div>
-      </div>
+      .brutalNavLogoCopy strong {
+        font-size: 14px;
+        font-weight: 950;
+        letter-spacing: -0.035em;
+        text-transform: uppercase;
+        text-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      }
 
-      <div style={{ marginTop: 13, maxHeight: 370, overflowY: "auto", paddingRight: 2 }}>
-        {searchLoading ? (
-          <EmptyInfo title="Searching..." text="Looking for explorers." />
-        ) : null}
+      .brutalNavLogoCopy small {
+        margin-top: 3px;
+        color: rgba(255, 255, 255, 0.52);
+        font-size: 7px;
+        font-weight: 800;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
 
-        {!searchLoading && searchQuery.trim().length > 0 && searchResults.length === 0 ? (
-          <EmptyInfo title="No profiles found" text="Try another name or home base." />
-        ) : null}
+      .brutalNavDesktop {
+        display: flex;
+        align-items: center;
+        justify-self: center;
+        gap: 4px;
+        padding: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        background: rgba(4, 12, 8, 0.26);
+        backdrop-filter: blur(18px);
+      }
 
-        {!searchLoading
-          ? searchResults.map((p, idx) => {
-              const name = p.full_name || "Explorer";
-              const meta = p.home_base || "Explorer";
-              const isFriend = friendsSet?.has?.(p.id);
+      .brutalNavDesktop a {
+        position: relative;
+        padding: 10px 15px;
+        border-radius: 999px;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 9px;
+        font-weight: 850;
+        transition:
+          color 0.2s ease,
+          background 0.2s ease;
+      }
 
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onMouseEnter={() => setSearchCursor(idx)}
-                  onClick={() => {
-                    close();
-                    navigate(`/profile/${p.id}`);
-                  }}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    textAlign: "left",
-                    padding: 10,
-                    borderRadius: 20,
-                    border:
-                      idx === searchCursor
-                        ? `1px solid ${COLORS.lineStrong}`
-                        : "1px solid rgba(255,255,255,0.08)",
-                    background:
-                      idx === searchCursor
-                        ? "linear-gradient(135deg, rgba(55,242,195,0.14), rgba(46,230,255,0.10))"
-                        : "rgba(255,255,255,0.04)",
-                    color: COLORS.text,
-                    cursor: "pointer",
-                    marginBottom: 8,
-                  }}
-                >
-                  <AvatarImage avatarUrl={p.avatar_url || FALLBACK_AVATAR} size={48} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 950, fontSize: 14, color: COLORS.text }}>
-                      {name}
-                    </div>
-                    <div
-                      style={{
-                        color: COLORS.textSoft,
-                        fontSize: 12,
-                        marginTop: 4,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {meta}
-                    </div>
-                  </div>
-                  {isFriend ? (
-                    <span
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 999,
-                        background: `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`,
-                        color: "#052018",
-                        fontWeight: 950,
-                        fontSize: 10,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Friend
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })
-          : null}
-      </div>
-    </div>
-  );
-}
+      .brutalNavDesktop a:hover,
+      .brutalNavDesktop a.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
 
-function NotificationsPanel({
-  notifications,
-  clearNotifications,
-  openNotification,
-  notificationIcon,
-}) {
-  return (
-    <div>
-      <PanelHeader
-        eyebrow="Notifications"
-        title="Alerts and activity"
-        right={
-          notifications.length ? (
-            <button
-              type="button"
-              onClick={clearNotifications}
-              style={{
-                border: "none",
-                background: "transparent",
-                color: COLORS.danger,
-                cursor: "pointer",
-                fontWeight: 900,
-                fontSize: 12,
-              }}
-            >
-              Clear all
-            </button>
-          ) : null
+      .brutalNavDesktop a.active::after {
+        position: absolute;
+        right: 12px;
+        bottom: 5px;
+        left: 12px;
+        height: 2px;
+        border-radius: 999px;
+        background: #baff9e;
+        content: "";
+      }
+
+      .brutalNavRight {
+        display: flex;
+        align-items: center;
+        justify-self: end;
+        gap: 8px;
+      }
+
+      .brutalNavProfile {
+        display: grid;
+        place-items: center;
+        width: 45px;
+        height: 45px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.09);
+        color: #0c2517;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+      }
+
+      .brutalNavProfile img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .brutalNavProfile span {
+        display: grid;
+        place-items: center;
+        width: 100%;
+        height: 100%;
+        background: #baff9e;
+        font-size: 10px;
+        font-weight: 950;
+      }
+
+      .brutalMenuButton {
+        position: relative;
+        display: inline-grid;
+        grid-template-columns: auto auto;
+        align-items: center;
+        gap: 9px;
+        min-width: 108px;
+        height: 48px;
+        padding: 0 16px 0 12px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 16px;
+        background:
+          linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.14),
+            rgba(255, 255, 255, 0.05)
+          );
+        color: white;
+        cursor: pointer;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.11),
+          0 14px 35px rgba(0, 0, 0, 0.22);
+        backdrop-filter: blur(18px);
+        transition:
+          transform 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .brutalMenuButton:hover {
+        transform: translateY(-2px);
+        background:
+          linear-gradient(
+            145deg,
+            rgba(186, 255, 158, 0.18),
+            rgba(255, 255, 255, 0.07)
+          );
+      }
+
+      .brutalMenuButtonGlow {
+        position: absolute;
+        top: -40px;
+        left: -30px;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(186, 255, 158, 0.2);
+        filter: blur(22px);
+      }
+
+      .brutalMenuButtonIcon {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+      }
+
+      .brutalMenuButtonLabel {
+        position: relative;
+        z-index: 1;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .brutalDrawer {
+        position: fixed;
+        inset: 0;
+        z-index: 2500;
+        overflow: auto;
+        background: #06100b;
+        color: white;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-12px);
+        transition:
+          opacity 0.32s ease,
+          transform 0.32s ease;
+      }
+
+      .brutalDrawer.open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+
+      .brutalDrawerBackground,
+      .brutalDrawerGradient,
+      .brutalDrawerNoise {
+        position: fixed;
+        inset: 0;
+      }
+
+      .brutalDrawerBackground {
+        background-image:
+          url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2200&q=92");
+        background-position: center;
+        background-size: cover;
+        transform: scale(1.04);
+      }
+
+      .brutalDrawerGradient {
+        background:
+          linear-gradient(
+            90deg,
+            rgba(5, 15, 9, 0.97) 0%,
+            rgba(5, 15, 9, 0.86) 42%,
+            rgba(5, 15, 9, 0.45) 100%
+          ),
+          linear-gradient(
+            180deg,
+            rgba(5, 15, 9, 0.2),
+            rgba(5, 15, 9, 0.96)
+          );
+      }
+
+      .brutalDrawerNoise {
+        opacity: 0.08;
+        background-image:
+          url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+      }
+
+      .brutalDrawerOrb {
+        position: fixed;
+        border-radius: 50%;
+        pointer-events: none;
+        filter: blur(80px);
+      }
+
+      .brutalDrawerOrb.orbOne {
+        top: 10%;
+        right: 8%;
+        width: 260px;
+        height: 260px;
+        background: rgba(137, 255, 114, 0.11);
+      }
+
+      .brutalDrawerOrb.orbTwo {
+        bottom: -80px;
+        left: 26%;
+        width: 330px;
+        height: 330px;
+        background: rgba(103, 184, 255, 0.08);
+      }
+
+      .brutalDrawerInner {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns:
+          minmax(300px, 0.9fr)
+          minmax(450px, 1.1fr);
+        gap: 80px;
+        min-height: 100svh;
+        padding: 150px 5vw 90px;
+      }
+
+      .brutalDrawerIntro {
+        align-self: start;
+      }
+
+      .brutalDrawerKicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #baff9e;
+        font-size: 9px;
+        font-weight: 950;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .brutalDrawerIntro h2 {
+        margin: 24px 0 0;
+        font-size: clamp(62px, 8vw, 122px);
+        line-height: 0.82;
+        letter-spacing: -0.08em;
+      }
+
+      .brutalDrawerIntro > p {
+        max-width: 520px;
+        margin: 28px 0 0;
+        color: rgba(255, 255, 255, 0.52);
+        font-size: 13px;
+        line-height: 1.75;
+      }
+
+      .brutalDrawerUser {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 13px;
+        max-width: 430px;
+        margin-top: 36px;
+        padding: 13px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(20px);
+        transition:
+          background 0.2s ease,
+          transform 0.2s ease;
+      }
+
+      .brutalDrawerUser:hover {
+        transform: translateY(-2px);
+        background: rgba(255, 255, 255, 0.11);
+      }
+
+      .brutalDrawerAvatar {
+        display: grid;
+        place-items: center;
+        width: 51px;
+        height: 51px;
+        overflow: hidden;
+        border-radius: 15px;
+        background: #baff9e;
+        color: #0d2617;
+        font-size: 11px;
+        font-weight: 950;
+      }
+
+      .brutalDrawerAvatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .brutalDrawerUser small,
+      .brutalDrawerUser strong,
+      .brutalDrawerUser span {
+        display: block;
+      }
+
+      .brutalDrawerUser small {
+        color: rgba(255, 255, 255, 0.43);
+        font-size: 7px;
+        text-transform: uppercase;
+      }
+
+      .brutalDrawerUser strong {
+        margin-top: 4px;
+        font-size: 11px;
+      }
+
+      .brutalDrawerUser span {
+        margin-top: 2px;
+        color: rgba(255, 255, 255, 0.48);
+        font-size: 8px;
+      }
+
+      .brutalDrawerNavigation {
+        display: grid;
+        align-content: start;
+        gap: 28px;
+      }
+
+      .brutalDrawerMainLinks {
+        display: grid;
+      }
+
+      .brutalDrawerMainLinks > a {
+        display: grid;
+        grid-template-columns: 34px 44px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        min-height: 94px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.82);
+        transition:
+          color 0.2s ease,
+          padding-left 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .brutalDrawerMainLinks > a:first-child {
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .brutalDrawerMainLinks > a:hover,
+      .brutalDrawerMainLinks > a.active {
+        padding-left: 12px;
+        background:
+          linear-gradient(
+            90deg,
+            rgba(186, 255, 158, 0.08),
+            transparent
+          );
+        color: white;
+      }
+
+      .brutalDrawerLinkIndex {
+        color: rgba(255, 255, 255, 0.32);
+        font-size: 8px;
+        font-weight: 900;
+      }
+
+      .brutalDrawerLinkIcon {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #baff9e;
+      }
+
+      .brutalDrawerMainLinks strong {
+        font-size: clamp(34px, 4vw, 58px);
+        line-height: 1;
+        letter-spacing: -0.055em;
+      }
+
+      .brutalDrawerLinkArrow {
+        color: rgba(255, 255, 255, 0.4);
+        transition: transform 0.2s ease;
+      }
+
+      .brutalDrawerMainLinks > a:hover
+        .brutalDrawerLinkArrow {
+        transform: translateX(6px);
+      }
+
+      .brutalDrawerAccount {
+        display: grid;
+        gap: 13px;
+        padding: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 22px;
+        background: rgba(2, 8, 4, 0.34);
+        backdrop-filter: blur(20px);
+      }
+
+      .brutalDrawerAccountLabel {
+        color: rgba(255, 255, 255, 0.42);
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .brutalDrawerAuthGrid,
+      .brutalDrawerShortcutGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+      }
+
+      .brutalDrawerSecondary,
+      .brutalDrawerPrimary,
+      .brutalDrawerShortcutGrid a,
+      .brutalDrawerHostActions a,
+      .brutalDrawerLogout {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 14px;
+        border-radius: 14px;
+        font-size: 9px;
+        font-weight: 850;
+      }
+
+      .brutalDrawerSecondary,
+      .brutalDrawerShortcutGrid a {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: white;
+      }
+
+      .brutalDrawerPrimary {
+        justify-content: space-between;
+        background: #baff9e;
+        color: #0b2415 !important;
+      }
+
+      .brutalDrawerHostPanel {
+        display: grid;
+        gap: 13px;
+        padding: 15px;
+        border: 1px solid rgba(186, 255, 158, 0.18);
+        border-radius: 17px;
+        background:
+          linear-gradient(
+            145deg,
+            rgba(186, 255, 158, 0.12),
+            rgba(186, 255, 158, 0.04)
+          );
+      }
+
+      .brutalDrawerHostPanel span,
+      .brutalDrawerHostPanel strong {
+        display: block;
+      }
+
+      .brutalDrawerHostPanel span {
+        color: #baff9e;
+        font-size: 8px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .brutalDrawerHostPanel strong {
+        margin-top: 5px;
+        font-size: 11px;
+      }
+
+      .brutalDrawerHostActions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .brutalDrawerHostActions a {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(3, 10, 5, 0.25);
+        color: white;
+      }
+
+      .brutalDrawerLogout {
+        width: 100%;
+        border: 1px solid rgba(255, 104, 104, 0.21);
+        background: rgba(255, 71, 71, 0.09);
+        color: #ffc6c6;
+        cursor: pointer;
+      }
+
+      .brutalDrawerFooter {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 0 5vw 28px;
+        color: rgba(255, 255, 255, 0.34);
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      @media (max-width: 980px) {
+        .brutalNav {
+          grid-template-columns: 1fr auto;
         }
-      />
 
-      {notifications.length === 0 ? (
-        <EmptyInfo title="All clear" text="You're caught up for now." />
-      ) : (
-        <div style={{ maxHeight: 380, overflowY: "auto", paddingRight: 2 }}>
-          {notifications.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              onClick={() => openNotification(n)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: 12,
-                borderRadius: 20,
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.045)",
-                color: COLORS.text,
-                cursor: n.link ? "pointer" : "default",
-                marginBottom: 10,
-              }}
-            >
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 15,
-                    display: "grid",
-                    placeItems: "center",
-                    background: "rgba(55,242,195,0.10)",
-                    border: `1px solid ${COLORS.line}`,
-                    flexShrink: 0,
-                  }}
-                >
-                  {notificationIcon(n.type)}
-                </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 950, fontSize: 13 }}>
-                    {n.title || "Notification"}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      lineHeight: 1.5,
-                      color: COLORS.textSoft,
-                      marginTop: 5,
-                    }}
-                  >
-                    {n.body || n.message || "No details available."}
-                  </div>
-                  <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 8 }}>
-                    {new Date(n.created_at).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+        .brutalNavDesktop {
+          display: none;
+        }
 
-function MenuPanel({
-  user,
-  avatarUrl,
-  bestDisplayName,
-  email,
-  quickMenuItems,
-  logout,
-  navigate,
-  close,
-  isMobile,
-}) {
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 13,
-          paddingBottom: 14,
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          marginBottom: 13,
-        }}
-      >
-        <AvatarImage avatarUrl={avatarUrl || FALLBACK_AVATAR} size={58} online={Boolean(user)} />
+        .brutalDrawerInner {
+          grid-template-columns: 1fr;
+          gap: 48px;
+          padding-top: 138px;
+        }
 
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div
-            style={{
-              fontWeight: 950,
-              color: COLORS.text,
-              fontSize: 16,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {user ? bestDisplayName : "Guest explorer"}
-          </div>
-          <div style={{ fontSize: 12, color: COLORS.mintSoft, marginTop: 3, fontWeight: 850 }}>
-            {user ? "Explorer" : "Not logged in"}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: COLORS.textSoft,
-              marginTop: 4,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {email}
-          </div>
-        </div>
-      </div>
+        .brutalDrawerIntro h2 {
+          font-size: clamp(64px, 12vw, 100px);
+        }
+      }
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-          gap: 9,
-        }}
-      >
-        {quickMenuItems.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            onClick={() => {
-              close();
-              item.action();
-            }}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              padding: "12px 13px",
-              borderRadius: 18,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background:
-                item.label === "Create live plan"
-                  ? "linear-gradient(135deg, rgba(55,242,195,0.15), rgba(46,230,255,0.10))"
-                  : "rgba(255,255,255,0.045)",
-              color: COLORS.text,
-              cursor: "pointer",
-              fontWeight: 850,
-              fontSize: 13,
-              display: "grid",
-              gridTemplateColumns: "34px 1fr auto",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <span
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 13,
-                display: "grid",
-                placeItems: "center",
-                background: "rgba(255,255,255,0.06)",
-                border: `1px solid ${COLORS.line}`,
-              }}
-            >
-              {item.icon}
-            </span>
-            <span style={{ minWidth: 0 }}>
-              <span style={{ display: "block", fontWeight: 950 }}>{item.label}</span>
-              <span
-                style={{
-                  display: "block",
-                  color: COLORS.textDim,
-                  fontSize: 11,
-                  marginTop: 3,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {item.sub}
-              </span>
-            </span>
-            <span style={{ color: COLORS.textDim }}>›</span>
-          </button>
-        ))}
-      </div>
+      @media (max-width: 640px) {
+        .brutalNav {
+          height: 92px;
+          padding: 20px 18px;
+        }
 
-      {user ? (
-        <button
-          type="button"
-          onClick={logout}
-          style={{
-            width: "100%",
-            textAlign: "left",
-            padding: "13px 14px",
-            borderRadius: 18,
-            border: "1px solid rgba(255,140,140,0.22)",
-            background:
-              "linear-gradient(135deg, rgba(255,140,140,0.10), rgba(255,90,110,0.05))",
-            color: COLORS.danger,
-            cursor: "pointer",
-            fontWeight: 950,
-            fontSize: 13,
-            marginTop: 10,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span>↪</span>
-          <span>Logout</span>
-        </button>
-      ) : (
-        <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-          <button
-            type="button"
-            onClick={() => {
-              close();
-              navigate("/login");
-            }}
-            style={{
-              width: "100%",
-              padding: "12px 14px",
-              borderRadius: 16,
-              border: "1px solid rgba(255,255,255,0.10)",
-              background: "rgba(255,255,255,0.04)",
-              color: COLORS.text,
-              cursor: "pointer",
-              fontWeight: 900,
-            }}
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              close();
-              navigate("/register");
-            }}
-            style={{
-              width: "100%",
-              padding: "12px 14px",
-              borderRadius: 16,
-              border: "none",
-              background: `linear-gradient(135deg, ${COLORS.mint} 0%, ${COLORS.mintBlue} 100%)`,
-              color: "#052018",
-              cursor: "pointer",
-              fontWeight: 950,
-            }}
-          >
-            Join now
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+        .brutalNav.scrolled,
+        .brutalNav.menuOpen {
+          top: 8px;
+          left: 8px;
+          right: 8px;
+          height: 66px;
+          padding: 8px 8px 8px 11px;
+          border-radius: 20px;
+        }
 
-function PanelHeader({ eyebrow, title, close, right }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        gap: 12,
-        marginBottom: 13,
-      }}
-    >
-      <div>
-        <div
-          style={{
-            color: COLORS.textDim,
-            fontSize: 11,
-            textTransform: "uppercase",
-            letterSpacing: "0.16em",
-            fontWeight: 950,
-          }}
-        >
-          {eyebrow}
-        </div>
-        <div style={{ color: COLORS.text, fontWeight: 950, fontSize: 17, marginTop: 4 }}>
-          {title}
-        </div>
-      </div>
+        .brutalNavLogoMark {
+          width: 43px;
+          height: 43px;
+          border-radius: 14px;
+        }
 
-      {right ||
-        (close ? (
-          <button
-            type="button"
-            onClick={close}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 13,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "rgba(255,255,255,0.05)",
-              color: COLORS.text,
-              cursor: "pointer",
-            }}
-          >
-            ✕
-          </button>
-        ) : null)}
-    </div>
-  );
-}
+        .brutalNavLogoCopy small {
+          display: none;
+        }
 
-function EmptyInfo({ title, text }) {
-  return (
-    <div
-      style={{
-        padding: "16px 14px",
-        borderRadius: 18,
-        border: "1px solid rgba(255,255,255,0.08)",
-        background: "rgba(255,255,255,0.04)",
-      }}
-    >
-      <div style={{ color: COLORS.text, fontWeight: 950, fontSize: 14 }}>{title}</div>
-      <div style={{ color: COLORS.textSoft, fontSize: 12, lineHeight: 1.55, marginTop: 6 }}>
-        {text}
-      </div>
-    </div>
+        .brutalMenuButton {
+          min-width: 48px;
+          width: 48px;
+          padding: 0;
+          grid-template-columns: 1fr;
+          border-radius: 15px;
+        }
+
+        .brutalMenuButtonLabel {
+          display: none;
+        }
+
+        .brutalNavProfile {
+          width: 43px;
+          height: 43px;
+          border-radius: 14px;
+        }
+
+        .brutalDrawerInner {
+          padding: 118px 18px 70px;
+        }
+
+        .brutalDrawerIntro h2 {
+          font-size: clamp(56px, 16vw, 82px);
+        }
+
+        .brutalDrawerMainLinks > a {
+          grid-template-columns: 25px 38px minmax(0, 1fr) auto;
+          min-height: 78px;
+        }
+
+        .brutalDrawerLinkIcon {
+          width: 35px;
+          height: 35px;
+        }
+
+        .brutalDrawerMainLinks strong {
+          font-size: clamp(32px, 10vw, 46px);
+        }
+
+        .brutalDrawerAuthGrid,
+        .brutalDrawerShortcutGrid,
+        .brutalDrawerHostActions {
+          grid-template-columns: 1fr;
+        }
+
+        .brutalDrawerFooter {
+          flex-direction: column;
+          padding: 0 18px 22px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    `}</style>
   );
 }

@@ -2,8 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
-const FALLBACK_IMAGE =
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85";
+const FALLBACK_AVATAR =
+  "https://api.dicebear.com/8.x/initials/svg?seed=Host";
+
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=85";
 
 function Icon({
   name,
@@ -27,19 +30,10 @@ function Icon({
       </>
     ),
 
-    calendar: (
+    compass: (
       <>
-        <rect x="3" y="5" width="18" height="16" rx="2" />
-        <path d="M16 3v4M8 3v4M3 10h18" />
-      </>
-    ),
-
-    users: (
-      <>
-        <circle cx="9" cy="8" r="3" />
-        <path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2" />
-        <path d="M16 4.5a3 3 0 0 1 0 6" />
-        <path d="M17 13a5 5 0 0 1 4 5v2" />
+        <circle cx="12" cy="12" r="9" />
+        <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
       </>
     ),
 
@@ -50,10 +44,26 @@ function Icon({
       </>
     ),
 
-    compass: (
+    verified: (
       <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+        <path d="m12 3 2 1.4 2.4-.2.8 2.2 2 1.4-.8 2.3.8 2.3-2 1.4-.8 2.2-2.4-.2-2 1.4-2-1.4-2.4.2-.8-2.2-2-1.4.8-2.3-.8-2.3 2-1.4.8-2.2 2.4.2L12 3Z" />
+        <path d="m9.5 12 1.7 1.7 3.5-3.7" />
+      </>
+    ),
+
+    shield: (
+      <>
+        <path d="M12 3 5 6v5c0 4.6 2.9 8.4 7 10 4.1-1.6 7-5.4 7-10V6l-7-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
+
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2" />
+        <path d="M16 4.5a3 3 0 0 1 0 6" />
+        <path d="M17 13a5 5 0 0 1 4 5v2" />
       </>
     ),
 
@@ -72,15 +82,16 @@ function Icon({
       </>
     ),
 
-    clock: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-      </>
+    star: (
+      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
     ),
 
-    heart: (
-      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
+    alert: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5" />
+        <path d="M12 16h.01" />
+      </>
     ),
 
     plus: (
@@ -90,11 +101,10 @@ function Icon({
       </>
     ),
 
-    alert: (
+    activity: (
       <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 8v5" />
-        <path d="M12 16h.01" />
+        <path d="M4 18 10 8l3 5 2-3 5 8" />
+        <path d="M3 20h18" />
       </>
     ),
   };
@@ -117,168 +127,174 @@ function Icon({
   );
 }
 
-function formatPrice(value) {
-  const number = Number(value);
-
-  if (!Number.isFinite(number) || number <= 0) {
-    return "Besplatno";
-  }
-
-  return new Intl.NumberFormat("sr-Latn-RS", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(number);
-}
-
-function formatDate(value) {
-  if (!value) return "Datum uskoro";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("sr-Latn-RS", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
-
 function LoadingState() {
   return (
     <>
-      <EventsStyles />
+      <HostsStyles />
 
-      <main className="eventsStatePage">
-        <div className="eventsStateCard">
-          <span className="eventsLoader" />
-          <h1>Učitavanje događaja</h1>
-          <p>Pronalazimo najnovije outdoor avanture.</p>
+      <main className="hostsStatePage">
+        <div className="hostsStateCard">
+          <span className="hostsLoader" />
+
+          <h1>Učitavanje domaćina</h1>
+
+          <p>Pronalazimo organizatore outdoor avantura.</p>
         </div>
       </main>
     </>
   );
 }
 
-function EventCard({ event }) {
+function HostCard({ host }) {
+  const activities = Array.isArray(host.activities)
+    ? host.activities
+    : [];
+
   const location =
-    [event.location, event.country].filter(Boolean).join(", ") ||
+    [host.city, host.country].filter(Boolean).join(", ") ||
     "Lokacija nije dodata";
 
-  const dateValue =
-    event.start_date ||
-    event.event_date ||
-    event.date ||
-    event.created_at;
+  const displayName =
+    host.full_name || host.username || "Outdoor Host";
 
-  const capacity =
-    event.capacity ||
-    event.max_people ||
-    event.max_participants ||
-    null;
+  const description = host.bio
+    ? host.bio.length > 145
+      ? `${host.bio.slice(0, 145)}...`
+      : host.bio
+    : "Ovaj domaćin još nije dodao opis svog iskustva i avantura.";
 
   return (
-    <Link to={`/event/${event.id}`} className="eventCard">
-      <div className="eventImageWrapper">
+    <article className="hostCard">
+      <div className="hostCover">
         <img
-          src={event.cover_url || FALLBACK_IMAGE}
-          alt={event.title || "Outdoor događaj"}
-          className="eventImage"
+          src={host.cover_url || FALLBACK_COVER}
+          alt=""
+          className="hostCoverImage"
         />
 
-        <div className="eventImageOverlay" />
+        <div className="hostCoverOverlay" />
 
-        <span className="eventTypeBadge">
-          <Icon name="compass" size={14} />
-          Outdoor događaj
-        </span>
+        <span
+          className={
+            host.is_verified
+              ? "hostStatus verified"
+              : "hostStatus"
+          }
+        >
+          <Icon
+            name={host.is_verified ? "verified" : "shield"}
+            size={14}
+          />
 
-        <span className="eventPriceBadge">
-          {formatPrice(event.price)}
+          {host.is_verified
+            ? "Verifikovani domaćin"
+            : "MeetOutdoors domaćin"}
         </span>
       </div>
 
-      <div className="eventCardBody">
-        <span className="eventKicker">MeetOutdoors iskustvo</span>
+      <div className="hostCardBody">
+        <div className="hostIdentity">
+          <img
+            src={host.avatar_url || FALLBACK_AVATAR}
+            alt={displayName}
+            className="hostAvatar"
+          />
 
-        <h2>{event.title || "Događaj bez naziva"}</h2>
+          <div className="hostIdentityText">
+            <h2>{displayName}</h2>
+            <span>@{host.username}</span>
+          </div>
+        </div>
 
-        <div className="eventMeta">
-          <span>
-            <Icon name="mapPin" size={15} />
-            {location}
-          </span>
+        <div className="hostLocation">
+          <Icon name="mapPin" size={15} />
+          {location}
+        </div>
 
-          <span>
-            <Icon name="calendar" size={15} />
-            {formatDate(dateValue)}
-          </span>
+        <p className="hostBio">{description}</p>
 
-          {capacity && (
-            <span>
-              <Icon name="users" size={15} />
-              Do {capacity} učesnika
-            </span>
+        <div className="hostActivities">
+          {activities.length > 0 ? (
+            <>
+              {activities.slice(0, 4).map((activity) => (
+                <span key={activity}>
+                  {activity}
+                </span>
+              ))}
+
+              {activities.length > 4 && (
+                <span className="moreActivities">
+                  +{activities.length - 4}
+                </span>
+              )}
+            </>
+          ) : (
+            <span>Aktivnosti nisu dodate</span>
           )}
         </div>
 
-        {event.description && (
-          <p className="eventDescription">
-            {event.description}
-          </p>
-        )}
+        <div className="hostCardFooter">
+          <div className="hostTrust">
+            <span>
+              <Icon name="users" size={16} />
+            </span>
 
-        <div className="eventCardFooter">
-          <div>
-            <small>Cena po osobi</small>
-            <strong>{formatPrice(event.price)}</strong>
+            <div>
+              <strong>Outdoor organizator</strong>
+              <small>Profil na MeetOutdoors platformi</small>
+            </div>
           </div>
 
-          <span className="eventArrow">
-            Pogledaj događaj
-            <Icon name="arrowRight" size={17} />
-          </span>
+          <Link
+            to={`/h/${host.username}`}
+            className="viewHostButton"
+          >
+            Pogledaj profil
+            <Icon name="arrowRight" size={16} />
+          </Link>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
 
-export default function Events() {
-  const [events, setEvents] = useState([]);
+export default function Hosts() {
+  const [hosts, setHosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
-  const [priceFilter, setPriceFilter] = useState("all");
+  const [activityFilter, setActivityFilter] = useState("");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   useEffect(() => {
-    loadEvents();
+    loadHosts();
   }, []);
 
-  async function loadEvents() {
+  async function loadHosts() {
     setLoading(true);
     setError("");
 
     try {
-      const { data, error: eventsError } = await supabase
-        .from("events")
+      const { data, error: hostsError } = await supabase
+        .from("profiles")
         .select("*")
+        .eq("role", "host")
         .order("created_at", { ascending: false });
 
-      if (eventsError) {
-        throw eventsError;
+      if (hostsError) {
+        throw hostsError;
       }
 
-      setEvents(data || []);
+      setHosts(data || []);
     } catch (err) {
-      console.error("Greška pri učitavanju događaja:", err);
+      console.error("Greška pri učitavanju domaćina:", err);
+
+      setHosts([]);
       setError(
-        err.message || "Događaje trenutno nije moguće učitati."
+        err.message ||
+          "Domaćine trenutno nije moguće učitati."
       );
     } finally {
       setLoading(false);
@@ -288,8 +304,8 @@ export default function Events() {
   const locations = useMemo(() => {
     const uniqueLocations = new Set();
 
-    events.forEach((event) => {
-      const location = [event.location, event.country]
+    hosts.forEach((host) => {
+      const location = [host.city, host.country]
         .filter(Boolean)
         .join(", ");
 
@@ -301,50 +317,101 @@ export default function Events() {
     return Array.from(uniqueLocations).sort((a, b) =>
       a.localeCompare(b)
     );
-  }, [events]);
+  }, [hosts]);
 
-  const filteredEvents = useMemo(() => {
+  const activities = useMemo(() => {
+    const uniqueActivities = new Set();
+
+    hosts.forEach((host) => {
+      if (Array.isArray(host.activities)) {
+        host.activities.forEach((activity) => {
+          if (activity) {
+            uniqueActivities.add(activity);
+          }
+        });
+      }
+    });
+
+    return Array.from(uniqueActivities).sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }, [hosts]);
+
+  const filteredHosts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    return events.filter((event) => {
-      const title = event.title?.toLowerCase() || "";
-      const description = event.description?.toLowerCase() || "";
-      const location = [event.location, event.country]
+    return hosts.filter((host) => {
+      const displayName =
+        host.full_name?.toLowerCase() || "";
+
+      const username =
+        host.username?.toLowerCase() || "";
+
+      const bio =
+        host.bio?.toLowerCase() || "";
+
+      const location = [host.city, host.country]
         .filter(Boolean)
         .join(", ");
+
       const normalizedLocation = location.toLowerCase();
-      const price = Number(event.price || 0);
+
+      const hostActivities = Array.isArray(host.activities)
+        ? host.activities
+        : [];
 
       const matchesSearch =
         !normalizedSearch ||
-        title.includes(normalizedSearch) ||
-        description.includes(normalizedSearch) ||
-        normalizedLocation.includes(normalizedSearch);
+        displayName.includes(normalizedSearch) ||
+        username.includes(normalizedSearch) ||
+        bio.includes(normalizedSearch) ||
+        normalizedLocation.includes(normalizedSearch) ||
+        hostActivities.some((activity) =>
+          activity.toLowerCase().includes(normalizedSearch)
+        );
 
       const matchesLocation =
         !locationFilter || location === locationFilter;
 
-      const matchesPrice =
-        priceFilter === "all" ||
-        (priceFilter === "free" && price <= 0) ||
-        (priceFilter === "under50" && price > 0 && price < 50) ||
-        (priceFilter === "50to100" && price >= 50 && price <= 100) ||
-        (priceFilter === "over100" && price > 100);
+      const matchesActivity =
+        !activityFilter ||
+        hostActivities.includes(activityFilter);
 
-      return matchesSearch && matchesLocation && matchesPrice;
+      const matchesVerified =
+        !verifiedOnly || Boolean(host.is_verified);
+
+      return (
+        matchesSearch &&
+        matchesLocation &&
+        matchesActivity &&
+        matchesVerified
+      );
     });
-  }, [events, search, locationFilter, priceFilter]);
+  }, [
+    hosts,
+    search,
+    locationFilter,
+    activityFilter,
+    verifiedOnly,
+  ]);
 
-  function clearFilters() {
-    setSearch("");
-    setLocationFilter("");
-    setPriceFilter("all");
-  }
+  const verifiedCount = useMemo(
+    () => hosts.filter((host) => host.is_verified).length,
+    [hosts]
+  );
 
   const hasFilters =
     search.trim() ||
     locationFilter ||
-    priceFilter !== "all";
+    activityFilter ||
+    verifiedOnly;
+
+  function clearFilters() {
+    setSearch("");
+    setLocationFilter("");
+    setActivityFilter("");
+    setVerifiedOnly(false);
+  }
 
   if (loading) {
     return <LoadingState />;
@@ -352,60 +419,62 @@ export default function Events() {
 
   return (
     <>
-      <EventsStyles />
+      <HostsStyles />
 
-      <main className="eventsPage">
-        <section className="eventsHero">
-          <div className="eventsHeroOverlay" />
+      <main className="hostsPage">
+        <section className="hostsHero">
+          <div className="hostsHeroOverlay" />
 
-          
+         
 
-          <div className="eventsHeroContent">
+          <div className="hostsHeroContent">
             <span className="heroKicker">
               <span />
-              Događaji na otvorenom
+              MeetOutdoors domaćini
             </span>
 
             <h1>
-              Pronađi svoju
+              Upoznaj ljude
               <br />
-              sledeću avanturu.
+              iza avanture.
             </h1>
 
             <p>
-              Otkrij događaje koje organizuju lokalni domaćini i
-              pridruži se ljudima koji biraju prirodu.
+              Pronađi organizatore koji kreiraju događaje, ture i
+              outdoor iskustva na lokacijama koje želiš da istražiš.
             </p>
           </div>
 
           <div className="heroStats">
-            <div>
-              <strong>{events.length}</strong>
-              <span>objavljenih događaja</span>
-            </div>
+            <article>
+              <strong>{hosts.length}</strong>
+              <span>aktivnih domaćina</span>
+            </article>
 
-            <div>
-              <strong>{locations.length}</strong>
-              <span>različitih lokacija</span>
-            </div>
+            <article>
+              <strong>{verifiedCount}</strong>
+              <span>verifikovanih profila</span>
+            </article>
 
-            <div>
-              <strong>100%</strong>
-              <span>outdoor iskustva</span>
-            </div>
+            <article>
+              <strong>{activities.length}</strong>
+              <span>outdoor aktivnosti</span>
+            </article>
           </div>
         </section>
 
-        <section className="eventsContent">
-          <div className="filterPanel">
+        <section className="hostsContent">
+          <div className="hostsFilters">
             <div className="searchField">
               <Icon name="search" size={19} />
 
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Pretraži događaje, aktivnosti ili lokacije"
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Pretraži domaćine, lokacije ili aktivnosti"
               />
 
               {search && (
@@ -439,21 +508,41 @@ export default function Events() {
             </div>
 
             <div className="filterField">
-              <Icon name="filter" size={17} />
+              <Icon name="activity" size={17} />
 
               <select
-                value={priceFilter}
+                value={activityFilter}
                 onChange={(event) =>
-                  setPriceFilter(event.target.value)
+                  setActivityFilter(event.target.value)
                 }
               >
-                <option value="all">Sve cene</option>
-                <option value="free">Besplatno</option>
-                <option value="under50">Do 50 €</option>
-                <option value="50to100">50 € – 100 €</option>
-                <option value="over100">Preko 100 €</option>
+                <option value="">Sve aktivnosti</option>
+
+                {activities.map((activity) => (
+                  <option key={activity} value={activity}>
+                    {activity}
+                  </option>
+                ))}
               </select>
             </div>
+
+            <label className="verifiedFilter">
+              <input
+                type="checkbox"
+                checked={verifiedOnly}
+                onChange={(event) =>
+                  setVerifiedOnly(event.target.checked)
+                }
+              />
+
+              <span className="verifiedCheckbox">
+                {verifiedOnly && (
+                  <Icon name="verified" size={15} />
+                )}
+              </span>
+
+              Samo verifikovani
+            </label>
 
             {hasFilters && (
               <button
@@ -468,59 +557,62 @@ export default function Events() {
           </div>
 
           {error && (
-            <div className="eventsError" role="alert">
+            <div className="hostsError" role="alert">
               <span>
                 <Icon name="alert" size={18} />
               </span>
 
               <p>{error}</p>
 
-              <button type="button" onClick={loadEvents}>
+              <button type="button" onClick={loadHosts}>
                 Pokušaj ponovo
               </button>
             </div>
           )}
 
-          <div className="eventsSectionHeader">
+          <div className="hostsSectionHeader">
             <div>
               <span className="sectionKicker">
-                Istraži avanture
+                Outdoor organizatori
               </span>
 
               <h2>
                 {hasFilters
                   ? "Rezultati pretrage"
-                  : "Najnoviji događaji"}
+                  : "Pronađi svog domaćina"}
               </h2>
 
               <p>
-                Prikazano {filteredEvents.length} od {events.length}{" "}
-                događaja.
+                Prikazano {filteredHosts.length} od {hosts.length}{" "}
+                domaćina.
               </p>
             </div>
 
-            <span className="resultCount">
-              <Icon name="compass" size={17} />
-              {filteredEvents.length}
+            <span className="hostResultCount">
+              <Icon name="users" size={17} />
+              {filteredHosts.length}
             </span>
           </div>
 
-          {filteredEvents.length === 0 ? (
-            <div className="emptyEvents">
+          {filteredHosts.length === 0 ? (
+            <div className="emptyHosts">
               <span>
-                <Icon name="search" size={28} />
+                <Icon
+                  name={hosts.length === 0 ? "users" : "search"}
+                  size={29}
+                />
               </span>
 
               <h3>
-                {events.length === 0
-                  ? "Još nema objavljenih događaja."
-                  : "Nema događaja za izabrane filtere."}
+                {hosts.length === 0
+                  ? "Još nema registrovanih domaćina."
+                  : "Nema domaćina za izabrane filtere."}
               </h3>
 
               <p>
-                {events.length === 0
-                  ? "Čim domaćini objave nove avanture, pojaviće se ovde."
-                  : "Promeni pretragu, lokaciju ili cenovni rang i pokušaj ponovo."}
+                {hosts.length === 0
+                  ? "Postani prvi organizator i predstavi svoje outdoor avanture MeetOutdoors zajednici."
+                  : "Promeni pretragu, lokaciju ili aktivnost i pokušaj ponovo."}
               </p>
 
               {hasFilters ? (
@@ -529,37 +621,104 @@ export default function Events() {
                   <Icon name="arrowRight" size={16} />
                 </button>
               ) : (
-                <Link to="/">
-                  Nazad na početnu
-                  <Icon name="arrowRight" size={16} />
+                <Link to="/signup">
+                  <Icon name="plus" size={16} />
+                  Postani domaćin
                 </Link>
               )}
             </div>
           ) : (
-            <div className="eventsGrid">
-              {filteredEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
+            <section className="hostsGrid">
+              {filteredHosts.map((host) => (
+                <HostCard key={host.id} host={host} />
               ))}
-            </div>
+            </section>
           )}
 
-          <section className="eventsCta">
-            <div>
+          <section className="hostsTrustSection">
+            <div className="trustIntro">
               <span className="sectionKicker">
-                Organizuješ avanture?
+                Sigurnije istraživanje
               </span>
 
-              <h2>Podeli svoje iskustvo sa zajednicom.</h2>
+              <h2>
+                Izaberi domaćina kome možeš da veruješ.
+              </h2>
 
               <p>
-                Kreiraj događaj, pronađi učesnike i izgradi svoj
-                MeetOutdoors profil.
+                Pregledaj profil, opis, aktivnosti i ponude domaćina
+                pre nego što se prijaviš za događaj ili rezervišeš
+                paket.
               </p>
             </div>
 
-            <Link to="/create-event">
+            <div className="trustCards">
+              <article>
+                <span>
+                  <Icon name="verified" size={21} />
+                </span>
+
+                <div>
+                  <strong>Verifikovani profili</strong>
+
+                  <small>
+                    Jasno označeni domaćini koji su prošli proveru
+                    platforme.
+                  </small>
+                </div>
+              </article>
+
+              <article>
+                <span>
+                  <Icon name="activity" size={21} />
+                </span>
+
+                <div>
+                  <strong>Relevantno iskustvo</strong>
+
+                  <small>
+                    Pregledaj aktivnosti i avanture koje domaćin
+                    organizuje.
+                  </small>
+                </div>
+              </article>
+
+              <article>
+                <span>
+                  <Icon name="shield" size={21} />
+                </span>
+
+                <div>
+                  <strong>Transparentni profili</strong>
+
+                  <small>
+                    Kontakt, lokacija i javne informacije na jednom
+                    mestu.
+                  </small>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section className="hostsCta">
+            <div>
+              <span className="sectionKicker">
+                Organizuješ outdoor iskustva?
+              </span>
+
+              <h2>
+                Predstavi svoje avanture novoj zajednici.
+              </h2>
+
+              <p>
+                Kreiraj host profil, objavi događaje i pakete i poveži
+                se sa ljudima koji žele više vremena u prirodi.
+              </p>
+            </div>
+
+            <Link to="/signup">
               <Icon name="plus" size={17} />
-              Kreiraj događaj
+              Postani domaćin
             </Link>
           </section>
         </section>
@@ -568,7 +727,7 @@ export default function Events() {
   );
 }
 
-function EventsStyles() {
+function HostsStyles() {
   return (
     <style>{`
       * {
@@ -591,8 +750,8 @@ function EventsStyles() {
         -webkit-tap-highlight-color: transparent;
       }
 
-      .eventsPage,
-      .eventsStatePage {
+      .hostsPage,
+      .hostsStatePage {
         min-height: 100vh;
         color: #17271f;
         font-family:
@@ -605,29 +764,29 @@ function EventsStyles() {
           sans-serif;
       }
 
-      .eventsPage {
+      .hostsPage {
         padding: 28px;
         background:
           radial-gradient(
-            circle at 7% 1%,
+            circle at 8% 1%,
             rgba(169, 203, 131, 0.17),
             transparent 25%
           ),
           radial-gradient(
-            circle at 95% 30%,
+            circle at 96% 31%,
             rgba(85, 129, 91, 0.1),
-            transparent 24%
+            transparent 25%
           ),
           #f1f3ec;
       }
 
-      .eventsPage a,
-      .eventsStatePage a {
+      .hostsPage a,
+      .hostsStatePage a {
         color: inherit;
         text-decoration: none;
       }
 
-      .eventsHero {
+      .hostsHero {
         position: relative;
         isolation: isolate;
         width: min(1240px, 100%);
@@ -638,55 +797,52 @@ function EventsStyles() {
         padding: 34px;
         overflow: hidden;
         border-radius: 34px;
-        background:
-          url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1900&q=90")
-          center / cover;
         color: white;
         box-shadow: 0 30px 80px rgba(25, 53, 36, 0.17);
       }
 
-      .eventsHero::before {
+      .hostsHero::before {
         position: absolute;
         inset: 0;
         z-index: -3;
         content: "";
         background:
-          url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1900&q=90")
+          url("https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1900&q=90")
           center / cover;
         transition: transform 0.8s ease;
       }
 
-      .eventsHero:hover::before {
+      .hostsHero:hover::before {
         transform: scale(1.018);
       }
 
-      .eventsHeroOverlay {
+      .hostsHeroOverlay {
         position: absolute;
         inset: 0;
         z-index: -2;
         background:
           linear-gradient(
             180deg,
-            rgba(4, 15, 8, 0.3),
-            rgba(4, 15, 8, 0.25) 28%,
-            rgba(4, 15, 8, 0.77) 75%,
-            rgba(4, 14, 8, 0.96)
+            rgba(4, 15, 8, 0.28),
+            rgba(4, 15, 8, 0.2) 28%,
+            rgba(4, 15, 8, 0.78) 76%,
+            rgba(4, 14, 8, 0.97)
           ),
           linear-gradient(
             90deg,
-            rgba(4, 15, 8, 0.54),
-            transparent 68%
+            rgba(4, 15, 8, 0.58),
+            transparent 70%
           );
       }
 
-      .eventsHeroTop {
+      .hostsHeroTop {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 20px;
       }
 
-      .eventsBrand {
+      .hostsBrand {
         display: inline-flex;
         align-items: center;
         gap: 10px;
@@ -695,7 +851,7 @@ function EventsStyles() {
         letter-spacing: -0.03em;
       }
 
-      .eventsBrand > span {
+      .hostsBrand > span {
         display: grid;
         place-items: center;
         width: 43px;
@@ -707,7 +863,7 @@ function EventsStyles() {
         backdrop-filter: blur(13px);
       }
 
-      .packagesLink {
+      .eventsLink {
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -723,13 +879,13 @@ function EventsStyles() {
         transition: 0.18s ease;
       }
 
-      .packagesLink:hover {
+      .eventsLink:hover {
         gap: 12px;
         background: rgba(255, 255, 255, 0.17);
       }
 
-      .eventsHeroContent {
-        max-width: 850px;
+      .hostsHeroContent {
+        max-width: 900px;
         margin-top: auto;
         padding: 100px 0 55px;
       }
@@ -758,15 +914,15 @@ function EventsStyles() {
         box-shadow: 0 0 0 5px rgba(201, 242, 140, 0.12);
       }
 
-      .eventsHeroContent h1 {
+      .hostsHeroContent h1 {
         margin: 24px 0 0;
         font-size: clamp(58px, 8vw, 104px);
         line-height: 0.9;
         letter-spacing: -0.08em;
       }
 
-      .eventsHeroContent p {
-        max-width: 620px;
+      .hostsHeroContent p {
+        max-width: 640px;
         margin: 25px 0 0;
         color: rgba(255, 255, 255, 0.65);
         font-size: 15px;
@@ -779,10 +935,6 @@ function EventsStyles() {
         gap: 12px;
         padding-top: 22px;
         border-top: 1px solid rgba(255, 255, 255, 0.12);
-      }
-
-      .heroStats > div {
-        min-width: 0;
       }
 
       .heroStats strong,
@@ -800,23 +952,24 @@ function EventsStyles() {
         color: rgba(255, 255, 255, 0.48);
         font-size: 9px;
         font-weight: 750;
-        text-transform: uppercase;
         letter-spacing: 0.07em;
+        text-transform: uppercase;
       }
 
-      .eventsContent {
+      .hostsContent {
         width: min(1240px, 100%);
         margin: 0 auto;
       }
 
-      .filterPanel {
+      .hostsFilters {
         position: relative;
         z-index: 5;
         display: grid;
         grid-template-columns:
-          minmax(280px, 1.7fr)
-          minmax(180px, 0.7fr)
+          minmax(280px, 1.5fr)
           minmax(170px, 0.65fr)
+          minmax(170px, 0.65fr)
+          auto
           auto;
         gap: 10px;
         margin: -33px 28px 0;
@@ -883,6 +1036,47 @@ function EventsStyles() {
         cursor: pointer;
       }
 
+      .verifiedFilter {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 52px;
+        padding: 0 13px;
+        border: 1px solid #dce3d9;
+        border-radius: 14px;
+        background: #f9faf7;
+        color: #526258;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
+      .verifiedFilter input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .verifiedCheckbox {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border: 1px solid #cfd8cc;
+        border-radius: 7px;
+        background: white;
+        color: #183a27;
+      }
+
+      .verifiedFilter input:checked + .verifiedCheckbox {
+        border-color: #c9f28c;
+        background: #c9f28c;
+      }
+
       .clearFilters {
         display: inline-flex;
         align-items: center;
@@ -900,7 +1094,7 @@ function EventsStyles() {
         white-space: nowrap;
       }
 
-      .eventsError {
+      .hostsError {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
@@ -913,7 +1107,7 @@ function EventsStyles() {
         color: #963e34;
       }
 
-      .eventsError > span {
+      .hostsError > span {
         display: grid;
         place-items: center;
         width: 32px;
@@ -922,12 +1116,12 @@ function EventsStyles() {
         background: #f7d7d3;
       }
 
-      .eventsError p {
+      .hostsError p {
         margin: 0;
         font-size: 11px;
       }
 
-      .eventsError button {
+      .hostsError button {
         border: 0;
         background: transparent;
         color: inherit;
@@ -936,7 +1130,7 @@ function EventsStyles() {
         font-weight: 850;
       }
 
-      .eventsSectionHeader {
+      .hostsSectionHeader {
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
@@ -953,8 +1147,9 @@ function EventsStyles() {
         text-transform: uppercase;
       }
 
-      .eventsSectionHeader h2,
-      .eventsCta h2 {
+      .hostsSectionHeader h2,
+      .hostsTrustSection h2,
+      .hostsCta h2 {
         margin: 8px 0 0;
         color: #20342a;
         font-size: clamp(34px, 5vw, 51px);
@@ -962,13 +1157,13 @@ function EventsStyles() {
         letter-spacing: -0.06em;
       }
 
-      .eventsSectionHeader p {
+      .hostsSectionHeader p {
         margin: 10px 0 0;
         color: #818c84;
         font-size: 10px;
       }
 
-      .resultCount {
+      .hostResultCount {
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -981,13 +1176,13 @@ function EventsStyles() {
         font-weight: 850;
       }
 
-      .eventsGrid {
+      .hostsGrid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 18px;
       }
 
-      .eventCard {
+      .hostCard {
         min-width: 0;
         overflow: hidden;
         border: 1px solid #dae2d7;
@@ -997,18 +1192,18 @@ function EventsStyles() {
         transition: 0.22s ease;
       }
 
-      .eventCard:hover {
+      .hostCard:hover {
         transform: translateY(-5px);
         box-shadow: 0 22px 48px rgba(31, 51, 38, 0.11);
       }
 
-      .eventImageWrapper {
+      .hostCover {
         position: relative;
-        height: 245px;
+        height: 180px;
         overflow: hidden;
       }
 
-      .eventImage {
+      .hostCoverImage {
         width: 100%;
         height: 100%;
         display: block;
@@ -1016,25 +1211,25 @@ function EventsStyles() {
         transition: transform 0.55s ease;
       }
 
-      .eventCard:hover .eventImage {
+      .hostCard:hover .hostCoverImage {
         transform: scale(1.045);
       }
 
-      .eventImageOverlay {
+      .hostCoverOverlay {
         position: absolute;
         inset: 0;
         background:
           linear-gradient(
             180deg,
-            rgba(4, 14, 8, 0.06),
-            rgba(4, 14, 8, 0.6)
+            rgba(4, 14, 8, 0.08),
+            rgba(4, 14, 8, 0.63)
           );
       }
 
-      .eventTypeBadge,
-      .eventPriceBadge {
+      .hostStatus {
         position: absolute;
         top: 14px;
+        right: 14px;
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -1043,113 +1238,181 @@ function EventsStyles() {
         border: 1px solid rgba(255, 255, 255, 0.17);
         border-radius: 999px;
         background: rgba(5, 20, 11, 0.54);
-        color: white;
-        font-size: 9px;
+        color: rgba(255, 255, 255, 0.86);
+        font-size: 8px;
         font-weight: 850;
         backdrop-filter: blur(12px);
       }
 
-      .eventTypeBadge {
-        left: 14px;
+      .hostStatus.verified {
+        border-color: rgba(201, 242, 140, 0.3);
+        background: rgba(201, 242, 140, 0.14);
+        color: #daf8ae;
       }
 
-      .eventPriceBadge {
-        right: 14px;
-        color: #d8f7a8;
+      .hostCardBody {
+        padding: 0 19px 19px;
       }
 
-      .eventCardBody {
-        padding: 20px;
+      .hostIdentity {
+        display: flex;
+        align-items: flex-end;
+        gap: 13px;
       }
 
-      .eventKicker {
-        color: #799958;
-        font-size: 8px;
-        font-weight: 900;
-        letter-spacing: 0.11em;
-        text-transform: uppercase;
+      .hostAvatar {
+        flex: 0 0 auto;
+        width: 82px;
+        height: 82px;
+        margin-top: -41px;
+        border: 4px solid white;
+        border-radius: 23px;
+        object-fit: cover;
+        background: #e5ebdf;
+        box-shadow: 0 10px 25px rgba(29, 46, 35, 0.13);
       }
 
-      .eventCardBody h2 {
-        margin: 8px 0 0;
-        color: #24372c;
-        font-size: 24px;
+      .hostIdentityText {
+        min-width: 0;
+        padding-bottom: 3px;
+      }
+
+      .hostIdentityText h2 {
+        overflow: hidden;
+        margin: 0;
+        color: #25382d;
+        font-size: 21px;
         line-height: 1.1;
         letter-spacing: -0.04em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .eventMeta {
-        display: grid;
-        gap: 8px;
-        margin-top: 16px;
+      .hostIdentityText span {
+        display: block;
+        overflow: hidden;
+        margin-top: 4px;
+        color: #879188;
+        font-size: 9px;
+        font-weight: 750;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .eventMeta > span {
+      .hostLocation {
         display: flex;
         align-items: center;
         gap: 7px;
-        color: #7c8880;
+        margin-top: 17px;
+        color: #708078;
         font-size: 9px;
-        line-height: 1.4;
+        font-weight: 750;
       }
 
-      .eventMeta svg {
+      .hostLocation svg {
         flex: 0 0 auto;
-        color: #799557;
+        color: #769657;
       }
 
-      .eventDescription {
-        display: -webkit-box;
-        overflow: hidden;
-        margin: 16px 0 0;
+      .hostBio {
+        min-height: 66px;
+        margin: 14px 0 0;
         color: #77837b;
         font-size: 10px;
         line-height: 1.65;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 3;
       }
 
-      .eventCardFooter {
+      .hostActivities {
         display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 15px;
-        margin-top: 20px;
-        padding-top: 16px;
-        border-top: 1px solid #e2e7df;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 14px;
       }
 
-      .eventCardFooter small,
-      .eventCardFooter strong {
+      .hostActivities > span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 10px;
+        border: 1px solid #d8e0d5;
+        border-radius: 999px;
+        background: #f5f8f1;
+        color: #596b60;
+        font-size: 8px;
+        font-weight: 800;
+      }
+
+      .hostActivities .moreActivities {
+        background: #e7efde;
+        color: #5c7744;
+      }
+
+      .hostCardFooter {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 18px;
+        padding-top: 15px;
+        border-top: 1px solid #e1e7df;
+      }
+
+      .hostTrust {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .hostTrust > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 35px;
+        height: 35px;
+        border-radius: 11px;
+        background: #e8f1dd;
+        color: #5b7840;
+      }
+
+      .hostTrust strong,
+      .hostTrust small {
         display: block;
       }
 
-      .eventCardFooter small {
-        color: #949d96;
+      .hostTrust strong {
+        color: #44564b;
         font-size: 8px;
       }
 
-      .eventCardFooter strong {
-        margin-top: 4px;
-        color: #284334;
-        font-size: 15px;
+      .hostTrust small {
+        margin-top: 3px;
+        color: #929b94;
+        font-size: 7px;
       }
 
-      .eventArrow {
+      .viewHostButton {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 7px;
-        color: #385541;
-        font-size: 9px;
+        flex: 0 0 auto;
+        min-height: 39px;
+        padding: 0 12px;
+        border-radius: 12px;
+        background: #183a27;
+        color: white !important;
+        font-size: 8px;
         font-weight: 850;
         transition: 0.18s ease;
       }
 
-      .eventCard:hover .eventArrow {
+      .viewHostButton:hover {
         gap: 11px;
+        background: #224d35;
       }
 
-      .emptyEvents {
+      .emptyHosts {
         display: grid;
         place-items: center;
         padding: 70px 25px;
@@ -1159,7 +1422,7 @@ function EventsStyles() {
         text-align: center;
       }
 
-      .emptyEvents > span {
+      .emptyHosts > span {
         display: grid;
         place-items: center;
         width: 64px;
@@ -1169,14 +1432,14 @@ function EventsStyles() {
         color: #608047;
       }
 
-      .emptyEvents h3 {
+      .emptyHosts h3 {
         margin: 18px 0 0;
         color: #34483b;
         font-size: 20px;
         letter-spacing: -0.03em;
       }
 
-      .emptyEvents p {
+      .emptyHosts p {
         max-width: 520px;
         margin: 10px auto 0;
         color: #869188;
@@ -1184,8 +1447,8 @@ function EventsStyles() {
         line-height: 1.65;
       }
 
-      .emptyEvents button,
-      .emptyEvents a {
+      .emptyHosts button,
+      .emptyHosts a {
         display: inline-flex;
         align-items: center;
         gap: 7px;
@@ -1200,14 +1463,77 @@ function EventsStyles() {
         font-weight: 850;
       }
 
-      .eventsCta {
+      .hostsTrustSection {
+        display: grid;
+        grid-template-columns: minmax(0, 0.8fr) minmax(520px, 1.2fr);
+        gap: 35px;
+        margin-top: 45px;
+        padding: 34px;
+        border: 1px solid #dbe3d8;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.68);
+        box-shadow: 0 16px 42px rgba(31, 51, 38, 0.05);
+      }
+
+      .trustIntro p {
+        max-width: 520px;
+        margin: 15px 0 0;
+        color: #7d8981;
+        font-size: 11px;
+        line-height: 1.7;
+      }
+
+      .trustCards {
+        display: grid;
+        gap: 11px;
+      }
+
+      .trustCards article {
+        display: flex;
+        align-items: flex-start;
+        gap: 13px;
+        padding: 15px;
+        border: 1px solid #dde4da;
+        border-radius: 17px;
+        background: #f8faf6;
+      }
+
+      .trustCards article > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 42px;
+        height: 42px;
+        border-radius: 13px;
+        background: #e7f0dc;
+        color: #5e7b43;
+      }
+
+      .trustCards strong,
+      .trustCards small {
+        display: block;
+      }
+
+      .trustCards strong {
+        color: #3c5143;
+        font-size: 11px;
+      }
+
+      .trustCards small {
+        margin-top: 5px;
+        color: #89938c;
+        font-size: 9px;
+        line-height: 1.55;
+      }
+
+      .hostsCta {
         position: relative;
         isolation: isolate;
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
         gap: 35px;
-        margin-top: 45px;
+        margin-top: 28px;
         padding: 38px;
         overflow: hidden;
         border-radius: 29px;
@@ -1221,7 +1547,7 @@ function EventsStyles() {
         box-shadow: 0 22px 55px rgba(24, 58, 39, 0.14);
       }
 
-      .eventsCta::after {
+      .hostsCta::after {
         position: absolute;
         right: -100px;
         bottom: -170px;
@@ -1236,24 +1562,24 @@ function EventsStyles() {
           0 0 0 130px rgba(255, 255, 255, 0.012);
       }
 
-      .eventsCta .sectionKicker {
+      .hostsCta .sectionKicker {
         color: #c9f28c;
       }
 
-      .eventsCta h2 {
-        max-width: 730px;
+      .hostsCta h2 {
+        max-width: 760px;
         color: white;
       }
 
-      .eventsCta p {
-        max-width: 610px;
+      .hostsCta p {
+        max-width: 620px;
         margin: 14px 0 0;
         color: rgba(255, 255, 255, 0.57);
         font-size: 11px;
         line-height: 1.65;
       }
 
-      .eventsCta > a {
+      .hostsCta > a {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -1270,12 +1596,12 @@ function EventsStyles() {
         transition: 0.18s ease;
       }
 
-      .eventsCta > a:hover {
+      .hostsCta > a:hover {
         gap: 12px;
         transform: translateY(-2px);
       }
 
-      .eventsStatePage {
+      .hostsStatePage {
         display: grid;
         place-items: center;
         padding: 24px;
@@ -1288,7 +1614,7 @@ function EventsStyles() {
           #f1f3ec;
       }
 
-      .eventsStateCard {
+      .hostsStateCard {
         display: grid;
         place-items: center;
         width: min(500px, 100%);
@@ -1300,111 +1626,112 @@ function EventsStyles() {
         box-shadow: 0 20px 60px rgba(28, 48, 35, 0.08);
       }
 
-      .eventsLoader {
+      .hostsLoader {
         width: 37px;
         height: 37px;
         border: 3px solid #dce5d7;
         border-top-color: #52783c;
         border-radius: 50%;
-        animation: eventsSpin 0.8s linear infinite;
+        animation: hostsSpin 0.8s linear infinite;
       }
 
-      @keyframes eventsSpin {
+      @keyframes hostsSpin {
         to {
           transform: rotate(360deg);
         }
       }
 
-      .eventsStateCard h1 {
+      .hostsStateCard h1 {
         margin: 18px 0 0;
         color: #24372c;
         font-size: 28px;
         letter-spacing: -0.04em;
       }
 
-      .eventsStateCard p {
+      .hostsStateCard p {
         margin: 9px 0 0;
         color: #7e8981;
         font-size: 11px;
       }
 
-      @media (max-width: 1030px) {
-        .filterPanel {
-          grid-template-columns: 1fr 1fr;
+      @media (max-width: 1080px) {
+        .hostsFilters {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .searchField {
           grid-column: 1 / -1;
         }
 
-        .eventsGrid {
+        .hostsGrid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hostsTrustSection {
+          grid-template-columns: 1fr;
         }
       }
 
       @media (max-width: 760px) {
-        .eventsPage {
+        .hostsPage {
           padding: 0 0 70px;
         }
 
-        .eventsHero {
+        .hostsHero {
           min-height: 600px;
           padding: 24px;
           border-radius: 0 0 31px 31px;
         }
 
-        .eventsHeroContent h1 {
+        .hostsHeroContent h1 {
           font-size: clamp(54px, 12vw, 78px);
         }
 
-        .filterPanel {
+        .hostsFilters {
           margin-right: 18px;
           margin-left: 18px;
         }
 
-        .eventsSectionHeader,
-        .eventsGrid,
-        .emptyEvents,
-        .eventsCta,
-        .eventsError {
+        .hostsSectionHeader,
+        .hostsGrid,
+        .emptyHosts,
+        .hostsTrustSection,
+        .hostsCta,
+        .hostsError {
           margin-right: 18px;
           margin-left: 18px;
         }
 
-        .eventsCta {
+        .hostsCta {
           align-items: flex-start;
           flex-direction: column;
         }
       }
 
       @media (max-width: 580px) {
-        .eventsHero {
+        .hostsHero {
           min-height: 570px;
           padding: 20px;
         }
 
-        .eventsBrand {
+        .hostsBrand {
           font-size: 14px;
         }
 
-        .packagesLink {
+        .eventsLink {
           width: 42px;
           padding: 0;
           justify-content: center;
           font-size: 0;
         }
 
-        .eventsHeroContent h1 {
+        .hostsHeroContent h1 {
           font-size: 48px;
         }
 
-        .heroStats {
-          grid-template-columns: 1fr;
-          gap: 14px;
-        }
-
-        .filterPanel,
-        .eventsGrid {
+        .heroStats,
+        .hostsFilters,
+        .hostsGrid {
           grid-template-columns: 1fr;
         }
 
@@ -1412,58 +1739,55 @@ function EventsStyles() {
           grid-column: auto;
         }
 
-        .eventsSectionHeader {
+        .hostsSectionHeader {
           align-items: flex-start;
           flex-direction: column;
         }
 
-        .eventsGrid {
-          display: grid;
+        .hostsTrustSection {
+          padding: 25px;
         }
 
-        .eventImageWrapper {
-          height: 225px;
-        }
-
-        .eventsCta {
+        .hostsCta {
           padding: 27px;
         }
       }
 
       @media (max-width: 420px) {
-        .eventsHero {
+        .hostsHero {
           min-height: 550px;
           padding: 17px;
         }
 
-        .eventsHeroContent h1 {
+        .hostsHeroContent h1 {
           font-size: 42px;
         }
 
-        .eventsHeroContent p {
+        .hostsHeroContent p {
           font-size: 13px;
         }
 
-        .filterPanel,
-        .eventsSectionHeader,
-        .eventsGrid,
-        .emptyEvents,
-        .eventsCta,
-        .eventsError {
+        .hostsFilters,
+        .hostsSectionHeader,
+        .hostsGrid,
+        .emptyHosts,
+        .hostsTrustSection,
+        .hostsCta,
+        .hostsError {
           margin-right: 13px;
           margin-left: 13px;
         }
 
-        .eventCardBody {
-          padding: 17px;
-        }
-
-        .eventCardFooter {
+        .hostCardFooter {
           align-items: flex-start;
           flex-direction: column;
         }
 
-        .eventsCta h2 {
+        .viewHostButton {
+          width: 100%;
+        }
+
+        .hostsCta h2 {
           font-size: 35px;
         }
       }
