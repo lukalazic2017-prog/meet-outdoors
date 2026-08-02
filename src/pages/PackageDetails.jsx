@@ -145,6 +145,24 @@ function externalUrl(value) {
     : `https://${value}`;
 }
 
+function getBookingStatusText(status) {
+  if (status === "approved") return "Rezervacija je odobrena";
+  if (status === "rejected") return "Rezervacija je odbijena";
+  return "Rezervacija je na čekanju";
+}
+
+function getBookingStatusDescription(status) {
+  if (status === "approved") {
+    return "Host je prihvatio tvoj zahtev. Detalje rezervacije možeš da pratiš u sekciji Moje rezervacije.";
+  }
+
+  if (status === "rejected") {
+    return "Host trenutno nije prihvatio zahtev. Možeš poslati novi zahtev za ovaj paket.";
+  }
+
+  return "Zahtev je uspešno poslat hostu. Status će se promeniti čim host donese odluku.";
+}
+
 function LoadingState() {
   return (
     <>
@@ -173,6 +191,7 @@ export default function PackageDetails() {
   const [interested, setInterested] = useState(false);
   const [interestedCount, setInterestedCount] = useState(0);
 
+  const [currentBooking, setCurrentBooking] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
 
   const [comments, setComments] = useState([]);
@@ -206,7 +225,7 @@ export default function PackageDetails() {
       .order("created_at", { ascending: false });
 
     if (commentsError) {
-      alert(commentsError.message);
+      console.error("Greška pri učitavanju komentara:", commentsError);
       return;
     }
 
@@ -233,7 +252,7 @@ export default function PackageDetails() {
       .order("created_at", { ascending: false });
 
     if (reviewsError) {
-      alert(reviewsError.message);
+      console.error("Greška pri učitavanju recenzija:", reviewsError);
       return;
     }
 
@@ -271,7 +290,7 @@ export default function PackageDetails() {
 
       setItem(data);
 
-      const { data: hostData } = await supabase
+      const { data: hostData, error: hostError } = await supabase
         .from("profiles")
         .select(
           "username, full_name, avatar_url, phone, instagram_url, website_url"
@@ -279,43 +298,87 @@ export default function PackageDetails() {
         .eq("id", data.host_id)
         .single();
 
+      if (hostError) {
+        console.error("Greška pri učitavanju hosta:", hostError);
+      }
+
       setHost(hostData || null);
 
-      const { data: galleryData } = await supabase
-        .from("package_images")
-        .select("*")
-        .eq("package_id", data.id)
-        .order("created_at", { ascending: false });
+      const { data: galleryData, error: galleryError } =
+        await supabase
+          .from("package_images")
+          .select("*")
+          .eq("package_id", data.id)
+          .order("created_at", { ascending: false });
+
+      if (galleryError) {
+        console.error("Greška pri učitavanju galerije:", galleryError);
+      }
 
       setGallery(galleryData || []);
 
-      const { count } = await supabase
+      const { count, error: countError } = await supabase
         .from("package_interested")
         .select("*", { count: "exact", head: true })
         .eq("package_id", data.id);
 
+      if (countError) {
+        console.error("Greška pri brojanju interesovanja:", countError);
+      }
+
       setInterestedCount(count || 0);
 
       if (profile?.id) {
-        const { data: existing } = await supabase
-          .from("package_interested")
-          .select("id")
-          .eq("package_id", data.id)
-          .eq("user_id", profile.id)
-          .maybeSingle();
+        const { data: existing, error: interestedError } =
+          await supabase
+            .from("package_interested")
+            .select("id")
+            .eq("package_id", data.id)
+            .eq("user_id", profile.id)
+            .maybeSingle();
+
+        if (interestedError) {
+          console.error(
+            "Greška pri učitavanju interesovanja:",
+            interestedError
+          );
+        }
 
         setInterested(Boolean(existing));
+
+        const { data: bookingData, error: bookingStatusError } =
+          await supabase
+            .from("bookings")
+            .select("id, status, created_at, updated_at")
+            .eq("package_id", data.id)
+            .eq("user_id", profile.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (bookingStatusError) {
+          console.error(
+            "Greška pri učitavanju rezervacije:",
+            bookingStatusError
+          );
+        }
+
+        setCurrentBooking(bookingData || null);
       } else {
         setInterested(false);
+        setCurrentBooking(null);
       }
 
-      await loadComments(data.id);
-      await loadReviews(data.id);
+      await Promise.all([
+        loadComments(data.id),
+        loadReviews(data.id),
+      ]);
     } catch (loadError) {
       console.error(
         "Greška pri učitavanju paketa:",
         loadError
       );
+
       setItem(null);
       setError(
         loadError?.message ||
@@ -335,9 +398,46 @@ export default function PackageDetails() {
     loadPackage();
   }, [loadPackage]);
 
+  useEffect(() => {
+    if (!profile?.id || !item?.id) return undefined;
+
+    const channel = supabase
+      .channel(`package-booking-${item.id}-${profile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "bookings",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const changedBooking = payload.new || payload.old;
+
+          if (
+            Number(changedBooking?.package_id) !== Number(item.id)
+          ) {
+            return;
+          }
+
+          if (payload.eventType === "DELETE") {
+            setCurrentBooking(null);
+            return;
+          }
+
+          setCurrentBooking(changedBooking);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [item?.id, profile?.id]);
+
   async function toggleInterested() {
     if (!profile?.id) {
-      alert("Please login first.");
+      alert("Prijavi se da bi sačuvao paket.");
       return;
     }
 
@@ -378,59 +478,90 @@ export default function PackageDetails() {
     setInterestedCount((previous) => previous + 1);
 
     if (item.host_id !== profile.id) {
-      await supabase.from("notifications").insert({
-        user_id: item.host_id,
-        from_user_id: profile.id,
-        package_id: item.id,
-        type: "package_interested",
-        title: "New package interest",
-        message: `${
-          profile.full_name || profile.username
-        } is interested in your package: ${item.title}`,
-      });
+      const { error: notificationError } = await supabase
+        .from("notifications")
+        .insert({
+          user_id: item.host_id,
+          from_user_id: profile.id,
+          package_id: item.id,
+          type: "package_interested",
+          title: "Novo interesovanje za paket",
+          message: `${
+            profile.full_name || profile.username
+          } je zainteresovan/a za paket: ${item.title}`,
+        });
+
+      if (notificationError) {
+        console.error(
+          "Greška pri slanju notifikacije:",
+          notificationError
+        );
+      }
     }
   }
 
   async function bookNow() {
     if (!profile?.id) {
-      alert("Please login first.");
+      alert("Prijavi se da bi rezervisao paket.");
       return;
     }
 
     if (!item?.id) return;
 
+    if (
+      currentBooking?.status === "pending" ||
+      currentBooking?.status === "approved"
+    ) {
+      return;
+    }
+
     try {
       setBookingLoading(true);
 
-      const { error: bookingError } = await supabase
-        .from("bookings")
-        .insert({
-          package_id: item.id,
-          host_id: item.host_id,
-          user_id: profile.id,
-          guests: 1,
-          status: "pending",
-        });
+      const { data: createdBooking, error: bookingError } =
+        await supabase
+          .from("bookings")
+          .insert({
+            package_id: item.id,
+            host_id: item.host_id,
+            user_id: profile.id,
+            guests: 1,
+            status: "pending",
+          })
+          .select("id, status, created_at, updated_at")
+          .single();
 
       if (bookingError) throw bookingError;
 
+      setCurrentBooking(createdBooking);
+
       if (item.host_id !== profile.id) {
-        await supabase.from("notifications").insert({
-          user_id: item.host_id,
-          from_user_id: profile.id,
-          package_id: item.id,
-          type: "package_booking",
-          title: "New booking request",
-          message: `${
-            profile.full_name || profile.username
-          } requested booking for ${item.title}`,
-        });
+        const { error: notificationError } = await supabase
+          .from("notifications")
+          .insert({
+            user_id: item.host_id,
+            from_user_id: profile.id,
+            package_id: item.id,
+            type: "package_booking",
+            title: "Novi zahtev za rezervaciju",
+            message: `${
+              profile.full_name || profile.username
+            } je poslao/la zahtev za rezervaciju paketa ${item.title}`,
+          });
+
+        if (notificationError) {
+          console.error(
+            "Greška pri slanju notifikacije:",
+            notificationError
+          );
+        }
       }
 
-      alert("Booking request sent!");
+      alert("Zahtev za rezervaciju je poslat.");
     } catch (bookingError) {
       alert(
-        bookingError.message || "Booking failed."
+        bookingError.message ||
+          "Rezervacija nije uspela."
       );
     } finally {
       setBookingLoading(false);
@@ -439,7 +570,7 @@ export default function PackageDetails() {
 
   async function submitComment() {
     if (!profile?.id) {
-      alert("Please login first.");
+      alert("Prijavi se da bi ostavio komentar.");
       return;
     }
 
@@ -466,23 +597,33 @@ export default function PackageDetails() {
       if (commentError) throw commentError;
 
       if (item.host_id !== profile.id) {
-        await supabase.from("notifications").insert({
-          user_id: item.host_id,
-          from_user_id: profile.id,
-          package_id: item.id,
-          type: "package_comment",
-          title: "New package comment",
-          message: `${
-            profile.full_name || profile.username
-          } commented on your package: ${item.title}`,
-        });
+        const { error: notificationError } = await supabase
+          .from("notifications")
+          .insert({
+            user_id: item.host_id,
+            from_user_id: profile.id,
+            package_id: item.id,
+            type: "package_comment",
+            title: "Novi komentar na paketu",
+            message: `${
+              profile.full_name || profile.username
+            } je komentarisao/la paket: ${item.title}`,
+          });
+
+        if (notificationError) {
+          console.error(
+            "Greška pri slanju notifikacije:",
+            notificationError
+          );
+        }
       }
 
       setCommentBody("");
       await loadComments(item.id);
     } catch (commentError) {
       alert(
-        commentError.message || "Comment failed."
+        commentError.message ||
+          "Komentar nije objavljen."
       );
     } finally {
       setCommentLoading(false);
@@ -491,7 +632,7 @@ export default function PackageDetails() {
 
   async function submitReview() {
     if (!profile?.id) {
-      alert("Please login first.");
+      alert("Prijavi se da bi ostavio recenziju.");
       return;
     }
 
@@ -512,26 +653,36 @@ export default function PackageDetails() {
       if (reviewError) throw reviewError;
 
       if (item.host_id !== profile.id) {
-        await supabase.from("notifications").insert({
-          user_id: item.host_id,
-          from_user_id: profile.id,
-          package_id: item.id,
-          type: "package_review",
-          title: "New package review",
-          message: `${
-            profile.full_name || profile.username
-          } rated your package ${rating}/5: ${item.title}`,
-        });
+        const { error: notificationError } = await supabase
+          .from("notifications")
+          .insert({
+            user_id: item.host_id,
+            from_user_id: profile.id,
+            package_id: item.id,
+            type: "package_review",
+            title: "Nova recenzija paketa",
+            message: `${
+              profile.full_name || profile.username
+            } je ocenio/la paket ${rating}/5: ${item.title}`,
+          });
+
+        if (notificationError) {
+          console.error(
+            "Greška pri slanju notifikacije:",
+            notificationError
+          );
+        }
       }
 
       setReviewText("");
       setRating(5);
       await loadReviews(item.id);
 
-      alert("Review submitted!");
+      alert("Recenzija je poslata.");
     } catch (reviewError) {
       alert(
-        reviewError.message || "Review failed."
+        reviewError.message ||
+          "Recenzija nije poslata."
       );
     } finally {
       setReviewLoading(false);
@@ -545,6 +696,14 @@ export default function PackageDetails() {
         .join(", ") || "Lokacija nije navedena",
     [item?.location, item?.country]
   );
+
+  const bookingButtonText = useMemo(() => {
+    if (bookingLoading) return "Slanje...";
+    if (currentBooking?.status === "pending") return "Na čekanju";
+    if (currentBooking?.status === "approved") return "Odobreno";
+    if (currentBooking?.status === "rejected") return "Rezerviši ponovo";
+    return "Rezerviši";
+  }, [bookingLoading, currentBooking?.status]);
 
   if (loading) {
     return <LoadingState />;
@@ -652,10 +811,23 @@ export default function PackageDetails() {
               </span>
 
               <strong>
-                {interested
+                {currentBooking
+                  ? getBookingStatusText(currentBooking.status)
+                  : interested
                   ? "Ovaj paket je na tvojoj listi."
                   : "Sačuvaj paket ili pošalji rezervaciju."}
               </strong>
+
+              {currentBooking && (
+                <div
+                  className={`packageBookingStatus ${
+                    currentBooking.status || "pending"
+                  }`}
+                >
+                  <span />
+                  {getBookingStatusText(currentBooking.status)}
+                </div>
+              )}
             </div>
 
             <div className="packageActionButtons">
@@ -676,15 +848,59 @@ export default function PackageDetails() {
                 type="button"
                 className="packageBookButton"
                 onClick={bookNow}
-                disabled={bookingLoading}
+                disabled={
+                  bookingLoading ||
+                  currentBooking?.status === "pending" ||
+                  currentBooking?.status === "approved"
+                }
               >
                 <Icon name="calendar" size={18} />
-                {bookingLoading
-                  ? "Slanje..."
-                  : "Rezerviši"}
+                {bookingButtonText}
               </button>
             </div>
           </div>
+
+          {currentBooking && (
+            <section
+              className={`packageBookingBanner ${
+                currentBooking.status || "pending"
+              }`}
+              aria-live="polite"
+            >
+              <span className="packageBookingBannerIcon">
+                <Icon
+                  name={
+                    currentBooking.status === "approved"
+                      ? "check"
+                      : currentBooking.status === "rejected"
+                      ? "x"
+                      : "clock"
+                  }
+                  size={21}
+                />
+              </span>
+
+              <div className="packageBookingBannerCopy">
+                <span>Status tvoje rezervacije</span>
+                <strong>
+                  {getBookingStatusText(currentBooking.status)}
+                </strong>
+                <p>
+                  {getBookingStatusDescription(
+                    currentBooking.status
+                  )}
+                </p>
+                <small>
+                  Poslato: {formatDate(currentBooking.created_at)}
+                </small>
+              </div>
+
+              <Link to="/my-bookings">
+                Moje rezervacije
+                <Icon name="arrow" size={16} />
+              </Link>
+            </section>
+          )}
 
           {gallery.length > 0 && (
             <section className="packageGallerySection">
@@ -1150,12 +1366,31 @@ function PackageDetailsStyles() {
       .packageActionBar span,.packageActionBar strong{display:block}
       .packageActionLabel{color:#789456;font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
       .packageActionBar strong{margin-top:6px;color:#3f5447;font-size:12px}
+      .packageBookingStatus{display:inline-flex!important;align-items:center;gap:8px;margin-top:10px;padding:8px 11px;border-radius:999px;font-size:10px;font-weight:850}
+      .packageBookingStatus>span{width:7px;height:7px;border-radius:50%}
+      .packageBookingStatus.pending{background:#fff2d8;color:#94651d}
+      .packageBookingStatus.pending>span{background:#d99b31}
+      .packageBookingStatus.approved{background:#e7f3e1;color:#47733d}
+      .packageBookingStatus.approved>span{background:#5d9a4d}
+      .packageBookingStatus.rejected{background:#fff0ee;color:#a24d43}
+      .packageBookingStatus.rejected>span{background:#c85e52}
+      .packageBookingBanner{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px;margin-top:14px;padding:18px;border:1px solid;border-radius:20px;box-shadow:0 12px 30px rgba(31,51,38,.05)}
+      .packageBookingBanner.pending{border-color:#ead5a5;background:#fff8e9;color:#8a5b16}
+      .packageBookingBanner.approved{border-color:#bfd8b5;background:#edf7e9;color:#416d36}
+      .packageBookingBanner.rejected{border-color:#e8bbb5;background:#fff2f0;color:#9d463d}
+      .packageBookingBannerIcon{display:grid!important;place-items:center;width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.68)}
+      .packageBookingBannerCopy>span,.packageBookingBannerCopy>strong,.packageBookingBannerCopy>small{display:block}
+      .packageBookingBannerCopy>span{font-size:8px;font-weight:900;letter-spacing:.11em;text-transform:uppercase;opacity:.72}
+      .packageBookingBannerCopy>strong{margin-top:4px;font-size:15px}
+      .packageBookingBannerCopy>p{margin:6px 0 0;color:#66736a;font-size:10px;line-height:1.55}
+      .packageBookingBannerCopy>small{margin-top:6px;color:#7f8982;font-size:8px}
+      .packageBookingBanner>a{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 13px;border-radius:12px;background:#183a27;color:white!important;font-size:9px;font-weight:850;white-space:nowrap}
       .packageActionButtons{display:flex;gap:10px}
       .packageActionButtons button,.packageForm button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:45px;padding:0 16px;border-radius:14px;cursor:pointer;font-size:10px;font-weight:850;transition:.2s}
       .packageInterestedButton{border:1px solid #d4dfcf;background:#f8faf6;color:#526758}
       .packageInterestedButton.active{border-color:#d7aaa5;background:#fff0ee;color:#a34c43}
       .packageBookButton,.packageForm button{border:1px solid #244d34;background:#183a27;color:white}
-      .packageActionButtons button:disabled,.packageForm button:disabled{cursor:wait;opacity:.65}
+      .packageActionButtons button:disabled,.packageForm button:disabled{cursor:not-allowed;opacity:.65}
       .packageGallerySection,.packageMainGrid,.packageCommunityGrid{margin-top:18px}
       .packageSectionHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:16px}
       .packageSectionHeader span,.packagePanelKicker{color:#789456;font-size:9px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
@@ -1214,6 +1449,7 @@ function PackageDetailsStyles() {
       .packageStateActions button{border:0;background:#183a27;color:white;cursor:pointer}
       .packageStateActions a{border:1px solid #d5ded2;background:white;color:#51665a}
       @media(max-width:960px){.packageMainGrid,.packageCommunityGrid{grid-template-columns:1fr}.packageHeroStats{grid-template-columns:repeat(2,minmax(0,1fr))}.packageGallery{grid-auto-rows:180px}}
+      @media(max-width:760px){.packageBookingBanner{grid-template-columns:auto minmax(0,1fr)}.packageBookingBanner>a{grid-column:1/-1;justify-content:center;width:100%}}
       @media(max-width:700px){.packagePage{padding:84px 0 64px}.packageStatePage{padding-top:84px}.packageHero{min-height:720px;padding:24px;border-radius:0 0 32px 32px}.packageHeroCopy{padding-top:130px}.packageHeroStats{right:24px;bottom:24px;left:24px}.packageContent{padding:0 18px}.packageActionBar{align-items:flex-start;flex-direction:column}.packageActionButtons{width:100%}.packageActionButtons button{flex:1}.packageGallery{grid-template-columns:1fr;grid-auto-rows:220px}.packageGallery img.featured{grid-column:auto;grid-row:auto}.packageIncludeGrid{grid-template-columns:1fr}}
       @media(max-width:480px){.packageHero{min-height:760px;padding:19px}.packageHeroCopy h1{font-size:48px}.packageHeroStats{right:19px;bottom:19px;left:19px}.packageContent{padding:0 13px}.packageActionButtons{flex-direction:column}.packageActionButtons button{width:100%}.packagePanel{padding:20px}.packageFeedTop{align-items:flex-start;flex-direction:column}}
       @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

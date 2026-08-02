@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 /* =========================================================
-   SVG IKONICE — BEZ DODATNIH BIBLIOTEKA
+   ICONS
 ========================================================= */
 
 function Icon({
@@ -20,28 +20,24 @@ function Icon({
         <path d="m13 6 6 6-6 6" />
       </>
     ),
-
     search: (
       <>
         <circle cx="11" cy="11" r="7" />
         <path d="m20 20-4-4" />
       </>
     ),
-
     mapPin: (
       <>
         <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
         <circle cx="12" cy="10" r="2.5" />
       </>
     ),
-
     compass: (
       <>
         <circle cx="12" cy="12" r="9" />
         <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
       </>
     ),
-
     hiking: (
       <>
         <path d="M3 20 9 9l4 7 3-5 5 9" />
@@ -49,7 +45,6 @@ function Icon({
         <circle cx="17" cy="5" r="2" />
       </>
     ),
-
     camping: (
       <>
         <path d="m4 20 8-15 8 15" />
@@ -57,7 +52,6 @@ function Icon({
         <path d="m12 5 4 15" />
       </>
     ),
-
     rafting: (
       <>
         <path d="M4 15h16l-2 4H6l-2-4Z" />
@@ -66,7 +60,6 @@ function Icon({
         <path d="M3 22c2-1 4-1 6 0 2 1 4 1 6 0 2-1 4-1 6 0" />
       </>
     ),
-
     cycling: (
       <>
         <circle cx="6" cy="17" r="4" />
@@ -77,7 +70,6 @@ function Icon({
         <path d="m10 9 4 8" />
       </>
     ),
-
     climbing: (
       <>
         <circle cx="15" cy="4" r="2" />
@@ -86,14 +78,12 @@ function Icon({
         <path d="m10 11-4 2-2 4" />
       </>
     ),
-
     calendar: (
       <>
         <rect x="3" y="5" width="18" height="16" rx="2" />
         <path d="M8 3v4M16 3v4M3 10h18" />
       </>
     ),
-
     users: (
       <>
         <circle cx="9" cy="8" r="3" />
@@ -102,25 +92,21 @@ function Icon({
         <path d="M17 13a5 5 0 0 1 4 5v2" />
       </>
     ),
-
     shield: (
       <>
         <path d="M12 3 5 6v5c0 4.6 2.9 8.4 7 10 4.1-1.6 7-5.4 7-10V6l-7-3Z" />
         <path d="m9 12 2 2 4-4" />
       </>
     ),
-
     star: (
       <path d="m12 2.8 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9L6.4 20l1.1-6.2L3 9.4l6.2-.9L12 2.8Z" />
     ),
-
     plus: (
       <>
         <path d="M12 5v14" />
         <path d="M5 12h14" />
       </>
     ),
-
     package: (
       <>
         <path d="m4 8 8-4 8 4-8 4-8-4Z" />
@@ -129,7 +115,6 @@ function Icon({
         <path d="M12 12v8" />
       </>
     ),
-
     dashboard: (
       <>
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -138,7 +123,6 @@ function Icon({
         <rect x="14" y="14" width="7" height="7" rx="1" />
       </>
     ),
-
     booking: (
       <>
         <rect x="4" y="4" width="16" height="17" rx="2" />
@@ -146,34 +130,42 @@ function Icon({
         <path d="m8 15 2 2 5-5" />
       </>
     ),
-
+    heart: (
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
+    ),
     eye: (
       <>
         <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
         <circle cx="12" cy="12" r="2.5" />
       </>
     ),
-
     clock: (
       <>
         <circle cx="12" cy="12" r="9" />
         <path d="M12 7v5l3 2" />
       </>
     ),
-
     trend: (
       <>
         <path d="m3 17 6-6 4 4 7-8" />
         <path d="M15 7h5v5" />
       </>
     ),
-
     check: <path d="m5 12 4 4L19 6" />,
-
     sparkles: (
       <>
         <path d="m12 3 1.1 3.4L16.5 8l-3.4 1.6L12 13l-1.1-3.4L7.5 8l3.4-1.6L12 3Z" />
         <path d="m19 14 .7 2.1L22 17l-2.3.9L19 20l-.7-2.1L16 17l2.3-.9L19 14Z" />
+      </>
+    ),
+    filter: (
+      <>
+        <path d="M4 6h16M7 12h10M10 18h4" />
+      </>
+    ),
+    menu: (
+      <>
+        <path d="M4 7h16M4 12h16M4 17h16" />
       </>
     ),
   };
@@ -197,7 +189,7 @@ function Icon({
 }
 
 /* =========================================================
-   PODACI
+   DATA
 ========================================================= */
 
 const categories = [
@@ -218,6 +210,7 @@ const featuredEvents = [
     category: "Planinarenje",
     price: "4.100 RSD",
     rating: "4.9",
+    spots: "6 mesta",
     image:
       "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=88",
   },
@@ -229,6 +222,7 @@ const featuredEvents = [
     category: "Rafting",
     price: "8.800 RSD",
     rating: "4.8",
+    spots: "4 mesta",
     image:
       "https://images.unsplash.com/photo-1530866495561-507c9faab2ed?auto=format&fit=crop&w=1400&q=88",
   },
@@ -240,8 +234,22 @@ const featuredEvents = [
     category: "Kampovanje",
     price: "5.700 RSD",
     rating: "4.9",
+    spots: "8 mesta",
     image:
       "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=1400&q=88",
+  },
+];
+
+const upcomingTrips = [
+  {
+    title: "Vikend na Tari",
+    date: "18–20. avgust",
+    status: "Potvrđeno",
+  },
+  {
+    title: "Uspon na Rtanj",
+    date: "27. avgust",
+    status: "Na čekanju",
   },
 ];
 
@@ -300,10 +308,10 @@ const hostBookings = [
 ];
 
 /* =========================================================
-   ZAJEDNIČKA PRETRAGA
+   SHARED UI
 ========================================================= */
 
-function AdventureSearch({ firstName = "" }) {
+function AdventureSearch({ compact = false, firstName = "" }) {
   const navigate = useNavigate();
 
   const [location, setLocation] = useState("");
@@ -314,21 +322,17 @@ function AdventureSearch({ firstName = "" }) {
 
     const params = new URLSearchParams();
 
-    if (location.trim()) {
-      params.set("location", location.trim());
-    }
+    if (location.trim()) params.set("location", location.trim());
+    if (category) params.set("category", category);
 
-    if (category) {
-      params.set("category", category);
-    }
-
-    const query = params.toString();
-
-    navigate(query ? `/events?${query}` : "/events");
+    navigate(params.toString() ? `/events?${params.toString()}` : "/events");
   }
 
   return (
-    <form className="searchCard" onSubmit={handleSubmit}>
+    <form
+      className={compact ? "searchCard compact" : "searchCard"}
+      onSubmit={handleSubmit}
+    >
       <div className="searchTop">
         <div>
           <span>
@@ -336,25 +340,32 @@ function AdventureSearch({ firstName = "" }) {
               ? `Gde idemo sledeće, ${firstName}?`
               : "Pronađi sledeću avanturu"}
           </span>
-
           <strong>Šta želiš da istražiš?</strong>
         </div>
 
-        <div className="searchTopIcon">
-          <Icon name="sparkles" size={21} />
-        </div>
+        <span className="searchTopIcon">
+          <Icon name="sparkles" size={20} />
+        </span>
       </div>
 
-      <label className="searchInput">
-        <Icon name="mapPin" size={20} />
+      <div className="searchMainRow">
+        <label className="searchInput">
+          <Icon name="mapPin" size={20} />
 
-        <input
-          type="search"
-          value={location}
-          placeholder="Grad, planina ili destinacija"
-          onChange={(event) => setLocation(event.target.value)}
-        />
-      </label>
+          <input
+            type="search"
+            value={location}
+            placeholder="Grad, planina ili destinacija"
+            onChange={(event) => setLocation(event.target.value)}
+          />
+        </label>
+
+        <button type="submit" className="primarySearchButton">
+          <Icon name="search" size={19} />
+          <span>Istraži</span>
+          <Icon name="arrowRight" size={18} />
+        </button>
+      </div>
 
       <div className="categoryRow">
         {categories.map((item) => (
@@ -369,19 +380,28 @@ function AdventureSearch({ firstName = "" }) {
           </button>
         ))}
       </div>
-
-      <button type="submit" className="primarySearchButton">
-        <Icon name="search" size={19} />
-        Istraži avanture
-        <Icon name="arrowRight" size={19} />
-      </button>
     </form>
   );
 }
 
-/* =========================================================
-   KARTICE DOGAĐAJA
-========================================================= */
+function SectionHeader({ kicker, title, description, linkTo, linkLabel }) {
+  return (
+    <div className="sectionHeading">
+      <div>
+        <span>{kicker}</span>
+        <h2>{title}</h2>
+        {description && <p>{description}</p>}
+      </div>
+
+      {linkTo && (
+        <Link to={linkTo} className="sectionLink">
+          {linkLabel}
+          <Icon name="arrowRight" size={18} />
+        </Link>
+      )}
+    </div>
+  );
+}
 
 function EventCards() {
   return (
@@ -393,13 +413,21 @@ function EventCards() {
           className="eventCard"
         >
           <img src={event.image} alt={event.title} />
-
           <div className="eventOverlay" />
 
           <div className="eventTop">
             <span>{event.category}</span>
             <span>{event.date}</span>
           </div>
+
+          <button
+            type="button"
+            className="eventHeart"
+            onClick={(e) => e.preventDefault()}
+            aria-label="Sačuvaj događaj"
+          >
+            <Icon name="heart" size={18} />
+          </button>
 
           <div className="eventBody">
             <div className="eventLocation">
@@ -409,9 +437,12 @@ function EventCards() {
 
             <h3>{event.title}</h3>
 
-            <div className="eventRating">
-              <Icon name="star" size={15} fill="currentColor" />
-              {event.rating}
+            <div className="eventMetaLine">
+              <span>
+                <Icon name="star" size={14} fill="currentColor" />
+                {event.rating}
+              </span>
+              <span>{event.spots}</span>
             </div>
 
             <div className="eventFooter">
@@ -432,15 +463,25 @@ function EventCards() {
 }
 
 /* =========================================================
-   GUEST HOME — PRE PRIJAVE
+   GUEST HOME
 ========================================================= */
 
 function GuestHome() {
   return (
     <main className="home">
       <section className="guestHero">
-        <div className="guestHeroBackground" />
-        <div className="guestHeroOverlay" />
+        <div className="heroMedia guestHeroBackground" />
+        <div className="heroOverlay" />
+
+        <div className="heroTopBar pageContainer">
+            
+
+          <div className="heroTopActions">
+            <Link to="/signup" className="heroJoinLink">
+              Napravi nalog
+            </Link>
+          </div>
+        </div>
 
         <div className="pageContainer guestHeroContent">
           <div className="guestCopy">
@@ -450,69 +491,110 @@ function GuestHome() {
             </span>
 
             <h1>
-              Tvoja sledeća priča
-              <em>počinje napolju.</em>
+              Vikend je prekratak
+              <em>za dosadne planove.</em>
             </h1>
 
             <p>
-              Pronađi outdoor događaje, upoznaj lokalne domaćine ili
-              pretvori svoju strast prema prirodi u iskustva koja drugi
-              mogu da rezervišu.
+              Otkrij outdoor događaje, upoznaj lokalne domaćine i
+              rezerviši iskustva koja se pamte duže od jedne fotografije.
             </p>
 
             <div className="guestActions">
-              <Link to="/signup" className="lightButton">
-                Pridruži se zajednici
+              <Link to="/events" className="lightButton">
+                Istraži avanture
                 <Icon name="arrowRight" />
               </Link>
 
-              <Link to="/login" className="glassButton">
-                Već imam nalog
+              <Link to="/signup" className="glassButton">
+                Pridruži se zajednici
               </Link>
             </div>
 
             <div className="guestProof">
               <div>
                 <strong>350+</strong>
-                <span>avanturista</span>
+                <span>aktivnih avanturista</span>
               </div>
-
               <div>
                 <strong>70+</strong>
-                <span>outdoor događaja</span>
+                <span>outdoor iskustava</span>
               </div>
-
               <div>
                 <strong>4.9</strong>
                 <span>prosečna ocena</span>
               </div>
             </div>
           </div>
-
-          <AdventureSearch />
         </div>
       </section>
 
+      <div className="guestSearchWrap pageContainer">
+        <AdventureSearch />
+      </div>
+
+      <section className="featuredSection pageContainer firstSection">
+        <SectionHeader
+          kicker="Odabrano za tebe"
+          title="Avanture koje se pamte."
+          description="Kratka lista događaja koji imaju najbolji odnos atmosfere, lokacije i host iskustva."
+          linkTo="/events"
+          linkLabel="Pogledaj sve"
+        />
+
+        <EventCards />
+      </section>
+
+      <section className="trustStrip pageContainer">
+        <article>
+          <span>
+            <Icon name="shield" size={22} />
+          </span>
+          <div>
+            <strong>Provereni domaćini</strong>
+            <p>Jasni profili, ocene i iskustva drugih korisnika.</p>
+          </div>
+        </article>
+
+        <article>
+          <span>
+            <Icon name="booking" size={22} />
+          </span>
+          <div>
+            <strong>Jednostavna rezervacija</strong>
+            <p>Bez lutanja po porukama i nepotrebnog čekanja.</p>
+          </div>
+        </article>
+
+        <article>
+          <span>
+            <Icon name="users" size={22} />
+          </span>
+          <div>
+            <strong>Zajednica, ne oglasnik</strong>
+            <p>Ljudi, događaji i priče na jednom mestu.</p>
+          </div>
+        </article>
+      </section>
+
       <section className="roleChoice pageContainer">
-        <div className="sectionHeading centered">
-          <span>Jedna zajednica, dva načina da je doživiš</span>
-          <h2>Pronađi svoju ulogu u prirodi.</h2>
-        </div>
+        <SectionHeader
+          kicker="Jedna platforma, dve uloge"
+          title="Doživi prirodu ili je pretvori u posao."
+          description="MeetOutdoors radi i za ljude koji traže iskustva i za domaćine koji ih kreiraju."
+        />
 
         <div className="roleGrid">
           <article className="roleCard userRole">
             <div className="roleImage roleUserImage" />
-
             <div className="roleGradient" />
 
             <div className="roleContent">
-              <span className="roleNumber">01</span>
-
-              <h3>Tražiš sledeću avanturu?</h3>
-
+              <span className="roleNumber">01 / Avanturista</span>
+              <h3>Pronađi ljude i mesta zbog kojih se vikend pamti.</h3>
               <p>
-                Otkrij događaje, rezerviši mesto i upoznaj ljude koji
-                dele tvoju energiju.
+                Pretraži događaje, sačuvaj favorite i rezerviši sledeću
+                avanturu bez komplikacija.
               </p>
 
               <Link to="/signup">
@@ -524,17 +606,14 @@ function GuestHome() {
 
           <article className="roleCard hostRole">
             <div className="roleImage roleHostImage" />
-
             <div className="roleGradient" />
 
             <div className="roleContent">
-              <span className="roleNumber">02</span>
-
-              <h3>Organizuješ outdoor iskustva?</h3>
-
+              <span className="roleNumber">02 / Domaćin</span>
+              <h3>Pretvori znanje, lokaciju i energiju u iskustvo.</h3>
               <p>
-                Objavi događaje, upravljaj rezervacijama i izgradi
-                reputaciju pouzdanog domaćina.
+                Objavi događaje, upravljaj rezervacijama i gradi reputaciju
+                pouzdanog outdoor domaćina.
               </p>
 
               <Link to="/signup">
@@ -546,22 +625,6 @@ function GuestHome() {
         </div>
       </section>
 
-      <section className="featuredSection pageContainer">
-        <div className="sectionHeading">
-          <div>
-            <span>Odabrano za tebe</span>
-            <h2>Avanture koje se pamte.</h2>
-          </div>
-
-          <Link to="/events" className="sectionLink">
-            Pogledaj sve
-            <Icon name="arrowRight" size={18} />
-          </Link>
-        </div>
-
-        <EventCards />
-      </section>
-
       <section className="guestFinal">
         <div className="guestFinalBackground" />
         <div className="guestFinalOverlay" />
@@ -570,7 +633,7 @@ function GuestHome() {
           <span>MeetOutdoors zajednica</span>
 
           <h2>
-            Manje skrolovanja.
+            Manje planiranja.
             <em>Više života napolju.</em>
           </h2>
 
@@ -590,7 +653,7 @@ function GuestHome() {
 }
 
 /* =========================================================
-   USER HOME — ULOGOVANI KORISNIK
+   USER HOME
 ========================================================= */
 
 function UserHome({ profile }) {
@@ -600,32 +663,52 @@ function UserHome({ profile }) {
   }, [profile]);
 
   return (
-    <main className="home">
-      <section className="userHero">
-        <div className="userHeroBackground" />
-        <div className="userHeroOverlay" />
+    <main className="home userHome">
+      <section className="userTop pageContainer">
+        <div className="userGreeting">
+          <span className="dashboardKicker">
+            <span />
+            Dobrodošao nazad
+          </span>
 
-        <div className="pageContainer userHeroContent">
-          <div className="userHeroCopy">
-            <span className="eyebrow">
-              <span className="eyebrowDot" />
-              Dobrodošao nazad
-            </span>
+          <h1>
+            {firstName ? `${firstName}, ` : ""}
+            šta ti treba od vikenda?
+          </h1>
 
-            <h1>
-              {firstName ? `${firstName}, ` : ""}
-              priroda ima
-              <em>novi plan za tebe.</em>
-            </h1>
-
-            <p>
-              Otkrij događaje prilagođene tvojoj energiji, rezerviši
-              sledeću avanturu i upoznaj ljude sa kojima ćeš je pamtiti.
-            </p>
-          </div>
-
-          <AdventureSearch firstName={firstName} />
+          <p>
+            Izaberi pravac, pronađi događaj i rezerviši mesto bez
+            nepotrebnog skrolovanja.
+          </p>
         </div>
+
+        <div className="userTopActions">
+          <Link to="/my-bookings">
+            <Icon name="booking" size={18} />
+            Moje rezervacije
+          </Link>
+
+          <Link to="/my-interested-events">
+            <Icon name="heart" size={18} />
+            Sačuvano
+          </Link>
+        </div>
+      </section>
+
+      <section className="userSearchStage pageContainer">
+        <div className="userSearchImage" />
+        <div className="userSearchOverlay" />
+
+        <div className="userSearchCopy">
+          <span>Brza pretraga</span>
+          <h2>Nađi avanturu za manje od jednog minuta.</h2>
+          <p>
+            Lokacija, aktivnost i jedan klik. Ostalo ćemo skratiti koliko
+            možemo.
+          </p>
+        </div>
+
+        <AdventureSearch compact firstName={firstName} />
       </section>
 
       <section className="quickLinks pageContainer">
@@ -633,12 +716,10 @@ function UserHome({ profile }) {
           <span>
             <Icon name="compass" />
           </span>
-
           <div>
             <strong>Istraži događaje</strong>
-            <small>Pronađi sledeću avanturu</small>
+            <small>Jednodnevne avanture i okupljanja</small>
           </div>
-
           <Icon name="arrowRight" />
         </Link>
 
@@ -646,12 +727,10 @@ function UserHome({ profile }) {
           <span>
             <Icon name="package" />
           </span>
-
           <div>
             <strong>Adventure paketi</strong>
-            <small>Kompletna outdoor iskustva</small>
+            <small>Kompletna višednevna iskustva</small>
           </div>
-
           <Icon name="arrowRight" />
         </Link>
 
@@ -659,57 +738,77 @@ function UserHome({ profile }) {
           <span>
             <Icon name="users" />
           </span>
-
           <div>
             <strong>Pronađi domaćina</strong>
             <small>Upoznaj lokalne eksperte</small>
           </div>
-
           <Icon name="arrowRight" />
         </Link>
       </section>
 
       <section className="featuredSection pageContainer">
-        <div className="sectionHeading">
-          <div>
-            <span>Preporučeno za tebe</span>
-            <h2>Tvoj sledeći vikend počinje ovde.</h2>
-          </div>
-
-          <Link to="/events" className="sectionLink">
-            Svi događaji
-            <Icon name="arrowRight" size={18} />
-          </Link>
-        </div>
+        <SectionHeader
+          kicker="Preporučeno za tebe"
+          title="Tvoj sledeći vikend počinje ovde."
+          description="Najbolje ocenjeni događaji koji su trenutno otvoreni za rezervaciju."
+          linkTo="/events"
+          linkLabel="Svi događaji"
+        />
 
         <EventCards />
       </section>
 
-      <section className="userBanner pageContainer">
-        <div className="userBannerImage" />
+      <section className="userDashboardGrid pageContainer">
+        <div className="upcomingCard">
+          <div className="miniHeader">
+            <div>
+              <span>Sledeće rezervacije</span>
+              <h3>Planovi koji te čekaju.</h3>
+            </div>
 
-        <div className="userBannerOverlay" />
+            <Link to="/my-bookings">
+              Sve
+              <Icon name="arrowRight" size={16} />
+            </Link>
+          </div>
 
-        <div className="userBannerContent">
-          <span>
-            <Icon name="sparkles" size={16} />
-            Izađi iz rutine
-          </span>
+          <div className="upcomingList">
+            {upcomingTrips.map((trip) => (
+              <article key={trip.title}>
+                <span className="upcomingIcon">
+                  <Icon name="calendar" size={19} />
+                </span>
 
-          <h2>
-            Ne čekaj savršen trenutak.
-            <em>Napravi ga.</em>
-          </h2>
+                <div>
+                  <strong>{trip.title}</strong>
+                  <small>{trip.date}</small>
+                </div>
 
-          <p>
-            Pronađi događaj koji odgovara tvojoj energiji i rezerviši
-            svoje mesto.
-          </p>
+                <span className={`tripStatus ${trip.status === "Potvrđeno" ? "confirmed" : ""}`}>
+                  {trip.status}
+                </span>
+              </article>
+            ))}
+          </div>
+        </div>
 
-          <Link to="/events" className="lightButton">
-            Pronađi avanturu
-            <Icon name="arrowRight" />
-          </Link>
+        <div className="userSidePromo">
+          <div className="userSidePromoImage" />
+          <div className="userSidePromoOverlay" />
+
+          <div>
+            <span>
+              <Icon name="sparkles" size={16} />
+              Izađi iz rutine
+            </span>
+
+            <h3>Ne čekaj savršen trenutak. Napravi ga.</h3>
+
+            <Link to="/events">
+              Pronađi avanturu
+              <Icon name="arrowRight" size={16} />
+            </Link>
+          </div>
         </div>
       </section>
     </main>
@@ -717,7 +816,7 @@ function UserHome({ profile }) {
 }
 
 /* =========================================================
-   HOST HOME — ULOGOVANI DOMAĆIN
+   HOST HOME
 ========================================================= */
 
 function HostHome({ profile }) {
@@ -728,84 +827,97 @@ function HostHome({ profile }) {
 
   return (
     <main className="home hostHome">
-      <section className="hostHero">
-        <div className="hostHeroBackground" />
-        <div className="hostHeroOverlay" />
+      <section className="hostTop pageContainer">
+        <div>
+          <span className="dashboardKicker">
+            <span />
+            Host studio
+          </span>
 
-        <div className="pageContainer hostHeroContent">
-          <div className="hostHeroCopy">
-            <span className="eyebrow">
-              <span className="eyebrowDot" />
-              Host studio
-            </span>
+          <h1>Dobrodošao, {firstName}.</h1>
 
-            <h1>
-              Dobrodošao, {firstName}.
-              <em>Hajde da stvorimo nešto nezaboravno.</em>
-            </h1>
+          <p>
+            Sve što traži tvoju pažnju, najvažnije brojke i brze akcije —
+            bez ogromnog hero-a i bez gubljenja vremena.
+          </p>
+        </div>
 
+        <div className="hostTopActions">
+          <Link to="/create-event" className="hostPrimaryAction">
+            <Icon name="plus" size={18} />
+            Novi događaj
+          </Link>
+
+          <Link to="/dashboard" className="hostSecondaryAction">
+            <Icon name="dashboard" size={18} />
+            Dashboard
+          </Link>
+        </div>
+      </section>
+
+      <section className="hostOverview pageContainer">
+        <div className="hostOverviewHero">
+          <div className="hostOverviewImage" />
+          <div className="hostOverviewOverlay" />
+
+          <div className="hostOverviewCopy">
+            <span>Današnji fokus</span>
+            <h2>Pet novih zahteva čeka odgovor.</h2>
             <p>
-              Upravljaj događajima, rezervacijama i svojim outdoor
-              biznisom sa jednog mesta.
+              Brz odgovor povećava poverenje gostiju i šansu da rezervacija
+              ostane kod tebe.
             </p>
 
-            <div className="hostHeroActions">
-              <Link to="/create-event" className="lightButton">
-                <Icon name="plus" />
-                Kreiraj događaj
-              </Link>
-
-              <Link to="/dashboard" className="glassButton">
-                <Icon name="dashboard" />
-                Otvori dashboard
-              </Link>
-            </div>
-          </div>
-
-          <div className="hostTodayCard">
-            <div className="hostTodayTop">
-              <div>
-                <span>Današnji pregled</span>
-                <strong>Tvoj host studio</strong>
-              </div>
-
-              <div className="onlineBadge">
-                <span />
-                Aktivno
-              </div>
-            </div>
-
-            <div className="hostTodayStats">
-              <article>
-                <Icon name="booking" />
-                <div>
-                  <strong>5</strong>
-                  <span>Nove rezervacije</span>
-                </div>
-              </article>
-
-              <article>
-                <Icon name="eye" />
-                <div>
-                  <strong>218</strong>
-                  <span>Pregleda profila</span>
-                </div>
-              </article>
-
-              <article>
-                <Icon name="users" />
-                <div>
-                  <strong>18</strong>
-                  <span>Novih interesovanja</span>
-                </div>
-              </article>
-            </div>
-
-            <Link to="/dashboard">
-              Pogledaj kompletan pregled
+            <Link to="/host-bookings" className="lightButton">
+              Otvori rezervacije
               <Icon name="arrowRight" />
             </Link>
           </div>
+        </div>
+
+        <div className="hostTodayCard">
+          <div className="hostTodayTop">
+            <div>
+              <span>Današnji pregled</span>
+              <strong>Tvoj host studio</strong>
+            </div>
+
+            <div className="onlineBadge">
+              <span />
+              Aktivno
+            </div>
+          </div>
+
+          <div className="hostTodayStats">
+            <article>
+              <Icon name="booking" />
+              <div>
+                <strong>5</strong>
+                <span>Nove rezervacije</span>
+              </div>
+            </article>
+
+            <article>
+              <Icon name="eye" />
+              <div>
+                <strong>218</strong>
+                <span>Pregleda profila</span>
+              </div>
+            </article>
+
+            <article>
+              <Icon name="users" />
+              <div>
+                <strong>18</strong>
+                <span>Novih interesovanja</span>
+              </div>
+            </article>
+          </div>
+
+          <Link to="/dashboard">
+            Pogledaj kompletan pregled
+            <Icon name="arrowRight" />
+          </Link>
         </div>
       </section>
 
@@ -838,7 +950,7 @@ function HostHome({ profile }) {
               <h2>Novi zahtevi za rezervaciju</h2>
             </div>
 
-            <Link to="/dashboard/bookings">
+            <Link to="/host-bookings">
               Sve rezervacije
               <Icon name="arrowRight" size={17} />
             </Link>
@@ -876,7 +988,7 @@ function HostHome({ profile }) {
                   {booking.status}
                 </span>
 
-                <Link to="/dashboard/bookings">
+                <Link to="/host-bookings">
                   <Icon name="arrowRight" />
                 </Link>
               </article>
@@ -887,7 +999,6 @@ function HostHome({ profile }) {
         <aside className="hostSideColumn">
           <div className="quickCreateCard">
             <span className="hostCardKicker">Brze akcije</span>
-
             <h3>Šta želiš da kreiraš?</h3>
 
             <Link to="/create-event">
@@ -934,7 +1045,7 @@ function HostHome({ profile }) {
               poverenje gostiju.
             </p>
 
-            <Link to="/profile">
+            <Link to="/edit-profile">
               Dovrši profil
               <Icon name="arrowRight" size={17} />
             </Link>
@@ -970,7 +1081,7 @@ function HostHome({ profile }) {
 }
 
 /* =========================================================
-   GLAVNA HOME KOMPONENTA
+   MAIN
 ========================================================= */
 
 export default function Home() {
@@ -1007,7 +1118,7 @@ export default function Home() {
 }
 
 /* =========================================================
-   SVE STILIZACIJE U ISTOM JSX FAJLU
+   STYLES
 ========================================================= */
 
 function HomeStyles() {
@@ -1040,7 +1151,7 @@ function HomeStyles() {
         min-height: 100vh;
         overflow: hidden;
         background:
-          radial-gradient(circle at 12% 20%, rgba(166, 201, 128, 0.15), transparent 28%),
+          radial-gradient(circle at 12% 18%, rgba(166, 201, 128, 0.14), transparent 27%),
           #f4f5ef;
         color: #14251d;
         font-family:
@@ -1063,10 +1174,17 @@ function HomeStyles() {
         margin-inline: auto;
       }
 
-      .eyebrow {
+      .eyebrow,
+      .dashboardKicker {
         display: inline-flex;
         align-items: center;
         gap: 10px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow {
         padding: 9px 14px;
         border: 1px solid rgba(255,255,255,0.22);
         border-radius: 999px;
@@ -1074,12 +1192,15 @@ function HomeStyles() {
         backdrop-filter: blur(15px);
         color: white;
         font-size: 12px;
-        font-weight: 850;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
       }
 
-      .eyebrowDot {
+      .dashboardKicker {
+        color: #6c8b4d;
+        font-size: 10px;
+      }
+
+      .eyebrowDot,
+      .dashboardKicker > span {
         width: 8px;
         height: 8px;
         border-radius: 50%;
@@ -1087,13 +1208,20 @@ function HomeStyles() {
         box-shadow: 0 0 0 5px rgba(201,242,140,0.13);
       }
 
+      .dashboardKicker > span {
+        background: #719b4e;
+        box-shadow: 0 0 0 5px rgba(113,155,78,0.1);
+      }
+
       .lightButton,
-      .glassButton {
+      .glassButton,
+      .hostPrimaryAction,
+      .hostSecondaryAction {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 11px;
-        min-height: 57px;
+        min-height: 56px;
         padding: 0 22px;
         border-radius: 16px;
         font-size: 14px;
@@ -1101,15 +1229,11 @@ function HomeStyles() {
         transition: 0.22s ease;
       }
 
-      .lightButton {
+      .lightButton,
+      .hostPrimaryAction {
         background: #c9f28c;
         color: #153020 !important;
-        box-shadow: 0 17px 38px rgba(0,0,0,0.2);
-      }
-
-      .lightButton:hover {
-        gap: 16px;
-        transform: translateY(-2px);
+        box-shadow: 0 17px 38px rgba(0,0,0,0.18);
       }
 
       .glassButton {
@@ -1119,30 +1243,38 @@ function HomeStyles() {
         backdrop-filter: blur(14px);
       }
 
-      .glassButton:hover {
-        background: rgba(255,255,255,0.16);
+      .hostSecondaryAction {
+        border: 1px solid #d9e1d5;
+        background: white;
+        color: #34513e;
+      }
+
+      .lightButton:hover,
+      .glassButton:hover,
+      .hostPrimaryAction:hover,
+      .hostSecondaryAction:hover {
         transform: translateY(-2px);
       }
 
-      /* GUEST HERO */
+      /* HERO / GUEST */
 
-      .guestHero,
-      .userHero,
-      .hostHero {
+      .guestHero {
         position: relative;
         isolation: isolate;
-        min-height: 850px;
+        min-height: 760px;
         display: flex;
         align-items: center;
-        padding: 130px 0 90px;
+        padding: 135px 0 105px;
         color: white;
       }
 
-      .guestHeroBackground,
-      .userHeroBackground,
-      .hostHeroBackground {
+      .heroMedia,
+      .heroOverlay {
         position: absolute;
         inset: 0;
+      }
+
+      .heroMedia {
         z-index: -3;
         background-size: cover;
         background-position: center;
@@ -1153,76 +1285,102 @@ function HomeStyles() {
           url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2200&q=92");
       }
 
-      .userHeroBackground {
-        background-image:
-          url("https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=2200&q=92");
-      }
-
-      .hostHeroBackground {
-        background-image:
-          url("https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=2200&q=92");
-      }
-
-      .guestHeroOverlay,
-      .userHeroOverlay,
-      .hostHeroOverlay {
-        position: absolute;
-        inset: 0;
+      .heroOverlay {
         z-index: -2;
-      }
-
-      .guestHeroOverlay,
-      .userHeroOverlay {
         background:
-          linear-gradient(90deg, rgba(6,17,11,0.94), rgba(7,20,13,0.65) 55%, rgba(7,18,12,0.28)),
-          linear-gradient(0deg, rgba(6,16,10,0.75), transparent 60%);
+          linear-gradient(90deg, rgba(5,16,10,0.95), rgba(6,18,11,0.72) 58%, rgba(6,18,11,0.22)),
+          linear-gradient(0deg, rgba(6,16,10,0.6), transparent 58%);
       }
 
-      .hostHeroOverlay {
-        background:
-          linear-gradient(90deg, rgba(6,17,11,0.95), rgba(7,20,13,0.72) 60%, rgba(7,18,12,0.25)),
-          linear-gradient(0deg, rgba(6,16,10,0.78), transparent 60%);
-      }
-
-      .guestHeroContent,
-      .userHeroContent,
-      .hostHeroContent {
-        display: grid;
-        grid-template-columns: minmax(0, 1.08fr) minmax(390px, 0.72fr);
+      .heroTopBar {
+        position: absolute;
+        top: 28px;
+        left: 50%;
+        display: flex;
         align-items: center;
-        gap: 75px;
+        justify-content: space-between;
+        transform: translateX(-50%);
       }
 
-      .guestCopy h1,
-      .userHeroCopy h1,
-      .hostHeroCopy h1 {
-        max-width: 790px;
+      .homeBrand {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        color: white !important;
+        font-size: 16px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+      }
+
+      .homeBrand > span {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.1);
+        color: #c9f28c;
+        backdrop-filter: blur(14px);
+      }
+
+      .heroTopActions {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .heroTopActions a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 14px;
+        border-radius: 13px;
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .heroLoginLink {
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.08);
+        color: white !important;
+      }
+
+      .heroJoinLink {
+        background: #c9f28c;
+        color: #173021 !important;
+      }
+
+      .guestHeroContent {
+        display: block;
+      }
+
+      .guestCopy {
+        max-width: 820px;
+      }
+
+      .guestCopy h1 {
         margin: 24px 0 0;
-        font-size: clamp(55px, 7vw, 92px);
-        line-height: 0.96;
+        font-size: clamp(58px, 7vw, 95px);
+        line-height: 0.93;
         letter-spacing: -0.075em;
       }
 
-      .guestCopy h1 em,
-      .userHeroCopy h1 em,
-      .hostHeroCopy h1 em {
+      .guestCopy h1 em {
         display: block;
         color: #c9f28c;
         font-style: normal;
       }
 
-      .guestCopy > p,
-      .userHeroCopy > p,
-      .hostHeroCopy > p {
-        max-width: 630px;
+      .guestCopy > p {
+        max-width: 650px;
         margin: 27px 0 0;
-        color: rgba(255,255,255,0.7);
+        color: rgba(255,255,255,0.72);
         font-size: 17px;
-        line-height: 1.75;
+        line-height: 1.72;
       }
 
-      .guestActions,
-      .hostHeroActions {
+      .guestActions {
         display: flex;
         flex-wrap: wrap;
         gap: 13px;
@@ -1242,7 +1400,7 @@ function HomeStyles() {
       }
 
       .guestProof strong {
-        font-size: 21px;
+        font-size: 22px;
       }
 
       .guestProof span {
@@ -1252,31 +1410,43 @@ function HomeStyles() {
 
       /* SEARCH */
 
+      .guestSearchWrap {
+        position: relative;
+        z-index: 5;
+        margin-top: -67px;
+      }
+
       .searchCard,
       .hostTodayCard {
-        padding: 28px;
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 29px;
-        background: rgba(247,249,243,0.95);
+        padding: 25px;
+        border: 1px solid rgba(34,52,41,0.1);
+        border-radius: 26px;
+        background: rgba(249,250,246,0.97);
         color: #14251d;
-        box-shadow: 0 35px 90px rgba(0,0,0,0.35);
+        box-shadow: 0 28px 75px rgba(22,39,29,0.16);
         backdrop-filter: blur(22px);
+      }
+
+      .searchCard.compact {
+        box-shadow: none;
+        border-color: rgba(255,255,255,0.13);
       }
 
       .searchTop,
       .hostTodayTop {
         display: flex;
+        align-items: flex-start;
         justify-content: space-between;
         gap: 20px;
-        margin-bottom: 21px;
+        margin-bottom: 18px;
       }
 
       .searchTop span,
       .hostTodayTop span {
         display: block;
-        margin-bottom: 6px;
+        margin-bottom: 5px;
         color: #758177;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 850;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -1284,26 +1454,33 @@ function HomeStyles() {
 
       .searchTop strong,
       .hostTodayTop strong {
-        font-size: 23px;
+        font-size: 22px;
         letter-spacing: -0.035em;
       }
 
       .searchTopIcon {
-        display: grid;
+        display: grid !important;
         place-items: center;
         flex: 0 0 auto;
-        width: 45px;
-        height: 45px;
+        width: 43px;
+        height: 43px;
+        margin: 0 !important;
         border-radius: 14px;
         background: #e8f3da;
-        color: #416329;
+        color: #416329 !important;
+      }
+
+      .searchMainRow {
+        display: grid;
+        grid-template-columns: minmax(0,1fr) auto;
+        gap: 10px;
       }
 
       .searchInput {
         display: flex;
         align-items: center;
         gap: 12px;
-        min-height: 58px;
+        min-height: 57px;
         padding: 0 17px;
         border: 1px solid #d8ded5;
         border-radius: 16px;
@@ -1318,17 +1495,34 @@ function HomeStyles() {
 
       .searchInput input {
         width: 100%;
-        min-height: 56px;
+        min-height: 55px;
         border: 0;
         outline: 0;
         background: transparent;
         color: #14251d;
       }
 
+      .primarySearchButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-width: 150px;
+        min-height: 57px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 16px;
+        background: #172f22;
+        color: white;
+        cursor: pointer;
+        font-weight: 850;
+        box-shadow: 0 15px 30px rgba(23,47,34,0.16);
+      }
+
       .categoryRow {
         display: flex;
         gap: 8px;
-        margin: 16px -3px 20px;
+        margin: 14px -3px -2px;
         padding: 3px;
         overflow-x: auto;
         scrollbar-width: none;
@@ -1343,14 +1537,14 @@ function HomeStyles() {
         align-items: center;
         gap: 7px;
         flex: 0 0 auto;
-        min-height: 41px;
-        padding: 0 13px;
+        min-height: 39px;
+        padding: 0 12px;
         border: 1px solid #d9dfd6;
         border-radius: 999px;
         background: transparent;
         color: #69746c;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 750;
       }
 
@@ -1360,57 +1554,36 @@ function HomeStyles() {
         color: white;
       }
 
-      .primarySearchButton {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 11px;
-        width: 100%;
-        min-height: 58px;
-        padding: 0 19px;
-        border: 0;
-        border-radius: 16px;
-        background: #172f22;
-        color: white;
-        cursor: pointer;
-        font-weight: 850;
-        box-shadow: 0 15px 30px rgba(23,47,34,0.19);
+      /* SECTIONS */
+
+      .featuredSection,
+      .roleChoice {
+        padding: 105px 0;
       }
 
-      .primarySearchButton svg:last-child {
-        margin-left: auto;
-      }
-
-      /* ROLE CHOICE */
-
-      .roleChoice,
-      .featuredSection {
-        padding: 115px 0;
+      .firstSection {
+        padding-top: 120px;
       }
 
       .sectionHeading {
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
-        gap: 25px;
-        margin-bottom: 40px;
+        gap: 24px;
+        margin-bottom: 34px;
       }
 
-      .sectionHeading.centered {
-        display: block;
-        max-width: 720px;
-        margin-inline: auto;
-        text-align: center;
-        margin-bottom: 45px;
+      .sectionHeading > div {
+        max-width: 760px;
       }
 
       .sectionHeading span,
       .hostSectionHeader > div > span,
       .hostCardKicker {
         display: block;
-        margin-bottom: 11px;
+        margin-bottom: 10px;
         color: #718d52;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 900;
         letter-spacing: 0.13em;
         text-transform: uppercase;
@@ -1419,9 +1592,17 @@ function HomeStyles() {
       .sectionHeading h2,
       .hostSectionHeader h2 {
         margin: 0;
-        font-size: clamp(39px, 5vw, 60px);
-        line-height: 1.04;
+        font-size: clamp(38px, 5vw, 60px);
+        line-height: 1.02;
         letter-spacing: -0.06em;
+      }
+
+      .sectionHeading p {
+        max-width: 650px;
+        margin: 14px 0 0;
+        color: #758178;
+        font-size: 13px;
+        line-height: 1.65;
       }
 
       .sectionLink,
@@ -1431,21 +1612,222 @@ function HomeStyles() {
         gap: 8px;
         padding-bottom: 5px;
         border-bottom: 1px solid #9ba79e;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 850;
       }
+
+      /* EVENTS */
+
+      .eventGrid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+      }
+
+      .eventCard {
+        position: relative;
+        min-height: 490px;
+        overflow: hidden;
+        border-radius: 27px;
+        color: white;
+        box-shadow: 0 20px 50px rgba(24,41,31,0.14);
+        transition: 0.28s ease;
+      }
+
+      .eventCard:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 30px 70px rgba(24,41,31,0.22);
+      }
+
+      .eventCard > img,
+      .eventOverlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .eventCard > img {
+        object-fit: cover;
+        transition: transform 0.7s ease;
+      }
+
+      .eventCard:hover > img {
+        transform: scale(1.06);
+      }
+
+      .eventOverlay {
+        background:
+          linear-gradient(180deg, rgba(5,14,8,0.08), rgba(5,15,9,0.94));
+      }
+
+      .eventTop {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        right: 64px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .eventTop span {
+        padding: 8px 10px;
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 999px;
+        background: rgba(7,20,12,0.45);
+        backdrop-filter: blur(11px);
+        font-size: 9px;
+        font-weight: 850;
+      }
+
+      .eventHeart {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 2;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 13px;
+        background: rgba(7,20,12,0.45);
+        color: white;
+        cursor: pointer;
+        backdrop-filter: blur(11px);
+      }
+
+      .eventBody {
+        position: absolute;
+        inset: auto 0 0;
+        padding: 22px;
+      }
+
+      .eventLocation,
+      .eventMetaLine,
+      .eventMetaLine span {
+        display: flex;
+        align-items: center;
+      }
+
+      .eventLocation {
+        gap: 6px;
+        color: rgba(255,255,255,0.64);
+        font-size: 11px;
+      }
+
+      .eventBody h3 {
+        margin: 9px 0 13px;
+        font-size: 26px;
+        line-height: 1.08;
+        letter-spacing: -0.045em;
+      }
+
+      .eventMetaLine {
+        justify-content: space-between;
+        gap: 12px;
+        color: rgba(255,255,255,0.7);
+        font-size: 11px;
+      }
+
+      .eventMetaLine span {
+        gap: 6px;
+      }
+
+      .eventMetaLine span:first-child {
+        color: #d0f89a;
+        font-weight: 800;
+      }
+
+      .eventFooter {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-top: 17px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255,255,255,0.15);
+      }
+
+      .eventFooter small,
+      .eventFooter strong {
+        display: block;
+      }
+
+      .eventFooter small {
+        color: rgba(255,255,255,0.55);
+      }
+
+      .eventFooter strong {
+        margin-top: 2px;
+      }
+
+      .eventFooter > span {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #c9f28c;
+        color: #163020;
+      }
+
+      /* TRUST */
+
+      .trustStrip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 8px;
+      }
+
+      .trustStrip article {
+        display: flex;
+        align-items: flex-start;
+        gap: 13px;
+        padding: 20px;
+        border: 1px solid #dde4da;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.72);
+      }
+
+      .trustStrip article > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: #eaf3de;
+        color: #4b6c31;
+      }
+
+      .trustStrip strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .trustStrip p {
+        margin: 5px 0 0;
+        color: #7c887f;
+        font-size: 10px;
+        line-height: 1.55;
+      }
+
+      /* ROLES */
 
       .roleGrid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 22px;
+        gap: 20px;
       }
 
       .roleCard {
         position: relative;
-        min-height: 580px;
+        min-height: 540px;
         overflow: hidden;
-        border-radius: 32px;
+        border-radius: 30px;
         color: white;
         box-shadow: 0 24px 60px rgba(27,44,34,0.15);
       }
@@ -1478,33 +1860,36 @@ function HomeStyles() {
 
       .roleGradient {
         background:
-          linear-gradient(180deg, rgba(5,15,9,0.05), rgba(5,16,10,0.92));
+          linear-gradient(180deg, rgba(5,15,9,0.05), rgba(5,16,10,0.94));
       }
 
       .roleContent {
         position: absolute;
         inset: auto 0 0;
-        padding: 32px;
+        padding: 30px;
       }
 
       .roleNumber {
         color: #c9f28c;
-        font-size: 12px;
+        font-size: 10px;
         font-weight: 850;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
       }
 
       .roleContent h3 {
-        max-width: 470px;
-        margin: 16px 0 13px;
-        font-size: 38px;
+        max-width: 500px;
+        margin: 15px 0 12px;
+        font-size: 35px;
         line-height: 1;
         letter-spacing: -0.055em;
       }
 
       .roleContent p {
-        max-width: 480px;
+        max-width: 500px;
         margin: 0;
         color: rgba(255,255,255,0.68);
+        font-size: 13px;
         line-height: 1.65;
       }
 
@@ -1512,135 +1897,10 @@ function HomeStyles() {
         display: inline-flex;
         align-items: center;
         gap: 9px;
-        margin-top: 24px;
+        margin-top: 23px;
         color: #c9f28c;
-        font-size: 13px;
-        font-weight: 850;
-      }
-
-      /* EVENTS */
-
-      .eventGrid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-      }
-
-      .eventCard {
-        position: relative;
-        min-height: 510px;
-        overflow: hidden;
-        border-radius: 28px;
-        color: white;
-        box-shadow: 0 20px 50px rgba(24,41,31,0.14);
-        transition: 0.3s ease;
-      }
-
-      .eventCard:hover {
-        transform: translateY(-7px);
-        box-shadow: 0 30px 70px rgba(24,41,31,0.22);
-      }
-
-      .eventCard > img,
-      .eventOverlay {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-      }
-
-      .eventCard > img {
-        object-fit: cover;
-        transition: transform 0.7s ease;
-      }
-
-      .eventCard:hover > img {
-        transform: scale(1.06);
-      }
-
-      .eventOverlay {
-        background:
-          linear-gradient(180deg, rgba(5,14,8,0.08), rgba(5,15,9,0.92));
-      }
-
-      .eventTop {
-        position: absolute;
-        top: 17px;
-        left: 17px;
-        right: 17px;
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-      }
-
-      .eventTop span {
-        padding: 8px 11px;
-        border: 1px solid rgba(255,255,255,0.18);
-        border-radius: 999px;
-        background: rgba(7,20,12,0.45);
-        backdrop-filter: blur(11px);
-        font-size: 10px;
-        font-weight: 850;
-      }
-
-      .eventBody {
-        position: absolute;
-        inset: auto 0 0;
-        padding: 24px;
-      }
-
-      .eventLocation,
-      .eventRating {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .eventLocation {
-        color: rgba(255,255,255,0.64);
         font-size: 12px;
-      }
-
-      .eventBody h3 {
-        margin: 9px 0 13px;
-        font-size: 27px;
-        line-height: 1.08;
-        letter-spacing: -0.045em;
-      }
-
-      .eventRating {
-        color: #d0f89a;
-        font-size: 13px;
-        font-weight: 800;
-      }
-
-      .eventFooter {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        margin-top: 18px;
-        padding-top: 17px;
-        border-top: 1px solid rgba(255,255,255,0.15);
-      }
-
-      .eventFooter small {
-        display: block;
-        color: rgba(255,255,255,0.55);
-      }
-
-      .eventFooter strong {
-        display: block;
-        margin-top: 2px;
-      }
-
-      .eventFooter > span {
-        display: grid;
-        place-items: center;
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        background: #c9f28c;
-        color: #163020;
+        font-weight: 850;
       }
 
       /* GUEST FINAL */
@@ -1648,7 +1908,7 @@ function HomeStyles() {
       .guestFinal {
         position: relative;
         isolation: isolate;
-        min-height: 650px;
+        min-height: 620px;
         display: grid;
         place-items: center;
         padding: 80px 24px;
@@ -1671,7 +1931,7 @@ function HomeStyles() {
 
       .guestFinalOverlay {
         z-index: -1;
-        background: rgba(7,20,12,0.78);
+        background: rgba(7,20,12,0.8);
       }
 
       .guestFinalContent {
@@ -1681,7 +1941,7 @@ function HomeStyles() {
       .guestFinalContent > span,
       .hostMotivationContent > span {
         color: #c9f28c;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 900;
         letter-spacing: 0.13em;
         text-transform: uppercase;
@@ -1710,28 +1970,144 @@ function HomeStyles() {
         line-height: 1.7;
       }
 
-      /* USER HOME */
+      /* USER */
+
+      .userHome,
+      .hostHome {
+        padding: 46px 0 100px;
+      }
+
+      .userTop,
+      .hostTop {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 25px;
+        padding-top: 25px;
+      }
+
+      .userGreeting,
+      .hostTop > div:first-child {
+        max-width: 760px;
+      }
+
+      .userGreeting h1,
+      .hostTop h1 {
+        margin: 12px 0 0;
+        font-size: clamp(46px, 6vw, 76px);
+        line-height: 0.95;
+        letter-spacing: -0.07em;
+      }
+
+      .userGreeting p,
+      .hostTop p {
+        max-width: 650px;
+        margin: 17px 0 0;
+        color: #758178;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .userTopActions,
+      .hostTopActions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 9px;
+      }
+
+      .userTopActions a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid #dae2d7;
+        border-radius: 13px;
+        background: white;
+        color: #3c5545;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .userSearchStage {
+        position: relative;
+        isolation: isolate;
+        display: grid;
+        grid-template-columns: minmax(0,0.72fr) minmax(390px,0.78fr);
+        align-items: center;
+        gap: 35px;
+        min-height: 440px;
+        margin-top: 35px;
+        padding: 38px;
+        overflow: hidden;
+        border-radius: 30px;
+        color: white;
+      }
+
+      .userSearchImage,
+      .userSearchOverlay {
+        position: absolute;
+        inset: 0;
+      }
+
+      .userSearchImage {
+        z-index: -2;
+        background:
+          url("https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1900&q=92")
+          center / cover;
+      }
+
+      .userSearchOverlay {
+        z-index: -1;
+        background:
+          linear-gradient(90deg, rgba(5,16,10,0.92), rgba(5,16,10,0.62), rgba(5,16,10,0.38));
+      }
+
+      .userSearchCopy {
+        max-width: 520px;
+      }
+
+      .userSearchCopy > span {
+        color: #c9f28c;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .userSearchCopy h2 {
+        margin: 13px 0 0;
+        font-size: clamp(38px, 5vw, 58px);
+        line-height: 0.98;
+        letter-spacing: -0.06em;
+      }
+
+      .userSearchCopy p {
+        max-width: 480px;
+        margin: 16px 0 0;
+        color: rgba(255,255,255,0.66);
+        font-size: 12px;
+        line-height: 1.65;
+      }
 
       .quickLinks {
-        position: relative;
-        z-index: 5;
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-top: -40px;
+        gap: 14px;
+        margin-top: 18px;
       }
 
       .quickLinks > a {
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;
-        gap: 14px;
-        padding: 23px;
+        gap: 13px;
+        padding: 20px;
         border: 1px solid #dde3db;
-        border-radius: 21px;
-        background: rgba(255,255,255,0.95);
-        box-shadow: 0 20px 50px rgba(27,45,34,0.1);
-        backdrop-filter: blur(14px);
+        border-radius: 20px;
+        background: rgba(255,255,255,0.94);
+        box-shadow: 0 16px 42px rgba(27,45,34,0.07);
         transition: 0.22s ease;
       }
 
@@ -1742,9 +2118,9 @@ function HomeStyles() {
       .quickLinks > a > span {
         display: grid;
         place-items: center;
-        width: 47px;
-        height: 47px;
-        border-radius: 15px;
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
         background: #eaf3de;
         color: #47672e;
       }
@@ -1754,84 +2130,244 @@ function HomeStyles() {
         display: block;
       }
 
+      .quickLinks strong {
+        font-size: 11px;
+      }
+
       .quickLinks small {
         margin-top: 4px;
         color: #7b877f;
+        font-size: 9px;
       }
 
-      .userBanner,
-      .hostMotivation {
+      .userDashboardGrid {
+        display: grid;
+        grid-template-columns: minmax(0,1.1fr) minmax(330px,0.9fr);
+        gap: 18px;
+        margin-bottom: 30px;
+      }
+
+      .upcomingCard {
+        padding: 24px;
+        border: 1px solid #dce3da;
+        border-radius: 24px;
+        background: white;
+      }
+
+      .miniHeader {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .miniHeader span {
+        display: block;
+        color: #718d52;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .miniHeader h3 {
+        margin: 6px 0 0;
+        font-size: 25px;
+        letter-spacing: -0.04em;
+      }
+
+      .miniHeader > a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .upcomingList {
+        display: grid;
+        gap: 10px;
+      }
+
+      .upcomingList article {
+        display: grid;
+        grid-template-columns: auto minmax(0,1fr) auto;
+        align-items: center;
+        gap: 12px;
+        padding: 13px;
+        border: 1px solid #e0e6de;
+        border-radius: 16px;
+        background: #f8faf6;
+      }
+
+      .upcomingIcon {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 13px;
+        background: #e8f1dd;
+        color: #5d7a43;
+      }
+
+      .upcomingList strong,
+      .upcomingList small {
+        display: block;
+      }
+
+      .upcomingList strong {
+        font-size: 10px;
+      }
+
+      .upcomingList small {
+        margin-top: 4px;
+        color: #879289;
+        font-size: 8px;
+      }
+
+      .tripStatus {
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: #fff0d7;
+        color: #9a6318;
+        font-size: 8px;
+        font-weight: 850;
+      }
+
+      .tripStatus.confirmed {
+        background: #e9f5dc;
+        color: #4f772e;
+      }
+
+      .userSidePromo {
         position: relative;
         isolation: isolate;
-        min-height: 620px;
+        min-height: 300px;
         display: flex;
-        align-items: center;
-        margin-bottom: 120px;
+        align-items: flex-end;
         overflow: hidden;
-        border-radius: 34px;
+        border-radius: 24px;
         color: white;
       }
 
-      .userBannerImage,
-      .userBannerOverlay,
-      .hostMotivationImage,
-      .hostMotivationOverlay {
+      .userSidePromoImage,
+      .userSidePromoOverlay {
         position: absolute;
         inset: 0;
       }
 
-      .userBannerImage {
+      .userSidePromoImage {
         z-index: -2;
         background:
-          url("https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1900&q=90")
+          url("https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1300&q=90")
           center / cover;
       }
 
-      .userBannerOverlay,
-      .hostMotivationOverlay {
+      .userSidePromoOverlay {
         z-index: -1;
         background:
-          linear-gradient(90deg, rgba(6,18,11,0.92), rgba(6,18,11,0.57), rgba(6,18,11,0.12));
+          linear-gradient(180deg, rgba(5,16,10,0.08), rgba(5,16,10,0.9));
       }
 
-      .userBannerContent,
-      .hostMotivationContent {
-        max-width: 700px;
-        padding: 70px;
+      .userSidePromo > div:last-child {
+        padding: 24px;
       }
 
-      .userBannerContent > span {
+      .userSidePromo span {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 7px;
         color: #c9f28c;
-        font-size: 11px;
+        font-size: 9px;
         font-weight: 850;
-        text-transform: uppercase;
         letter-spacing: 0.1em;
+        text-transform: uppercase;
       }
 
-      .userBannerContent h2 {
-        margin: 18px 0 0;
-        font-size: clamp(44px, 5.5vw, 70px);
+      .userSidePromo h3 {
+        max-width: 480px;
+        margin: 12px 0 18px;
+        font-size: 30px;
         line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .userSidePromo a {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: #c9f28c;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      /* HOST */
+
+      .hostOverview {
+        display: grid;
+        grid-template-columns: minmax(0,1.35fr) minmax(340px,0.65fr);
+        gap: 18px;
+        margin-top: 34px;
+      }
+
+      .hostOverviewHero {
+        position: relative;
+        isolation: isolate;
+        min-height: 390px;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        border-radius: 28px;
+        color: white;
+      }
+
+      .hostOverviewImage,
+      .hostOverviewOverlay {
+        position: absolute;
+        inset: 0;
+      }
+
+      .hostOverviewImage {
+        z-index: -2;
+        background:
+          url("https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1800&q=92")
+          center / cover;
+      }
+
+      .hostOverviewOverlay {
+        z-index: -1;
+        background:
+          linear-gradient(90deg, rgba(5,16,10,0.94), rgba(5,16,10,0.6), rgba(5,16,10,0.2));
+      }
+
+      .hostOverviewCopy {
+        max-width: 600px;
+        padding: 34px;
+      }
+
+      .hostOverviewCopy > span {
+        color: #c9f28c;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .hostOverviewCopy h2 {
+        margin: 13px 0 0;
+        font-size: clamp(40px, 5vw, 58px);
+        line-height: 0.98;
         letter-spacing: -0.06em;
       }
 
-      .userBannerContent h2 em {
-        display: block;
-        color: #c9f28c;
-        font-style: normal;
+      .hostOverviewCopy p {
+        max-width: 520px;
+        margin: 17px 0 24px;
+        color: rgba(255,255,255,0.68);
+        font-size: 12px;
+        line-height: 1.65;
       }
-
-      .userBannerContent p {
-        max-width: 570px;
-        margin: 23px 0 29px;
-        color: rgba(255,255,255,0.67);
-        line-height: 1.7;
-      }
-
-      /* HOST HOME */
 
       .onlineBadge {
         display: flex;
@@ -1842,7 +2378,7 @@ function HomeStyles() {
         border-radius: 999px;
         background: #e9f5dc;
         color: #426429;
-        font-size: 10px;
+        font-size: 9px;
         font-weight: 850;
       }
 
@@ -1856,16 +2392,16 @@ function HomeStyles() {
 
       .hostTodayStats {
         display: grid;
-        gap: 10px;
+        gap: 9px;
       }
 
       .hostTodayStats article {
         display: flex;
         align-items: center;
-        gap: 13px;
-        padding: 15px;
+        gap: 12px;
+        padding: 14px;
         border: 1px solid #dfe5dc;
-        border-radius: 16px;
+        border-radius: 15px;
         background: white;
       }
 
@@ -1879,13 +2415,13 @@ function HomeStyles() {
       }
 
       .hostTodayStats strong {
-        font-size: 19px;
+        font-size: 18px;
       }
 
       .hostTodayStats span {
         margin: 2px 0 0;
         color: #7d8981;
-        font-size: 11px;
+        font-size: 10px;
         text-transform: none;
         letter-spacing: 0;
       }
@@ -1894,38 +2430,36 @@ function HomeStyles() {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-top: 18px;
-        padding-top: 18px;
+        margin-top: 16px;
+        padding-top: 16px;
         border-top: 1px solid #dfe4dc;
         color: #36543f;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 850;
       }
 
       .hostStats {
-        position: relative;
-        z-index: 5;
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 15px;
-        margin-top: -45px;
+        gap: 14px;
+        margin-top: 18px;
       }
 
       .hostStats article {
-        padding: 22px;
+        padding: 20px;
         border: 1px solid #dce2da;
-        border-radius: 21px;
+        border-radius: 20px;
         background: rgba(255,255,255,0.96);
-        box-shadow: 0 20px 50px rgba(27,45,34,0.1);
+        box-shadow: 0 14px 34px rgba(27,45,34,0.06);
       }
 
       .hostStatIcon {
         display: grid;
         place-items: center;
-        width: 43px;
-        height: 43px;
-        margin-bottom: 20px;
-        border-radius: 14px;
+        width: 42px;
+        height: 42px;
+        margin-bottom: 18px;
+        border-radius: 13px;
         background: #eaf3de;
         color: #4a6d30;
       }
@@ -1935,7 +2469,7 @@ function HomeStyles() {
         justify-content: space-between;
         gap: 10px;
         color: #7a867e;
-        font-size: 12px;
+        font-size: 10px;
       }
 
       .hostStatTop svg {
@@ -1945,19 +2479,20 @@ function HomeStyles() {
       .hostStats article > strong {
         display: block;
         margin-top: 8px;
-        font-size: 35px;
+        font-size: 34px;
         letter-spacing: -0.05em;
       }
 
       .hostStats article > small {
         color: #7e8982;
+        font-size: 8px;
       }
 
       .hostWorkspace {
         display: grid;
         grid-template-columns: minmax(0, 1.45fr) minmax(310px, 0.55fr);
-        gap: 24px;
-        padding: 110px 0;
+        gap: 22px;
+        padding: 90px 0;
       }
 
       .hostSectionHeader {
@@ -1965,17 +2500,17 @@ function HomeStyles() {
         align-items: flex-end;
         justify-content: space-between;
         gap: 20px;
-        margin-bottom: 27px;
+        margin-bottom: 24px;
       }
 
       .hostSectionHeader h2 {
-        font-size: 37px;
+        font-size: 35px;
       }
 
       .bookingList {
         overflow: hidden;
         border: 1px solid #dce2da;
-        border-radius: 24px;
+        border-radius: 23px;
         background: white;
       }
 
@@ -1983,8 +2518,8 @@ function HomeStyles() {
         display: grid;
         grid-template-columns: auto minmax(160px,1fr) auto auto auto;
         align-items: center;
-        gap: 17px;
-        padding: 19px;
+        gap: 16px;
+        padding: 18px;
       }
 
       .bookingItem + .bookingItem {
@@ -1994,8 +2529,8 @@ function HomeStyles() {
       .bookingAvatar {
         display: grid;
         place-items: center;
-        width: 45px;
-        height: 45px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         background: #183a27;
         color: white;
@@ -2007,10 +2542,14 @@ function HomeStyles() {
         display: block;
       }
 
+      .bookingInfo strong {
+        font-size: 10px;
+      }
+
       .bookingInfo span {
         margin-top: 4px;
         color: #7a867e;
-        font-size: 12px;
+        font-size: 10px;
       }
 
       .bookingMeta {
@@ -2023,7 +2562,7 @@ function HomeStyles() {
         align-items: center;
         gap: 5px;
         color: #6f7c73;
-        font-size: 11px;
+        font-size: 9px;
       }
 
       .bookingStatus {
@@ -2031,7 +2570,7 @@ function HomeStyles() {
         border-radius: 999px;
         background: #fff0d7;
         color: #9a6318;
-        font-size: 10px;
+        font-size: 8px;
         font-weight: 850;
       }
 
@@ -2043,30 +2582,30 @@ function HomeStyles() {
       .bookingItem > a {
         display: grid;
         place-items: center;
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
+        width: 37px;
+        height: 37px;
+        border-radius: 11px;
         background: #f1f3ee;
       }
 
       .hostSideColumn {
         display: grid;
-        gap: 18px;
+        gap: 17px;
         align-content: start;
       }
 
       .quickCreateCard,
       .profileProgressCard {
-        padding: 23px;
+        padding: 22px;
         border: 1px solid #dce2da;
-        border-radius: 24px;
+        border-radius: 23px;
         background: white;
       }
 
       .quickCreateCard h3,
       .profileProgressCard h3 {
-        margin: 0 0 18px;
-        font-size: 23px;
+        margin: 0 0 17px;
+        font-size: 22px;
         letter-spacing: -0.035em;
       }
 
@@ -2074,8 +2613,8 @@ function HomeStyles() {
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;
-        gap: 12px;
-        padding: 15px 0;
+        gap: 11px;
+        padding: 14px 0;
       }
 
       .quickCreateCard > a + a {
@@ -2085,9 +2624,9 @@ function HomeStyles() {
       .quickCreateCard > a > span {
         display: grid;
         place-items: center;
-        width: 43px;
-        height: 43px;
-        border-radius: 14px;
+        width: 42px;
+        height: 42px;
+        border-radius: 13px;
         background: #eaf3de;
         color: #4a6c31;
       }
@@ -2097,22 +2636,27 @@ function HomeStyles() {
         display: block;
       }
 
+      .quickCreateCard strong {
+        font-size: 10px;
+      }
+
       .quickCreateCard small {
         margin-top: 3px;
         color: #808c84;
+        font-size: 8px;
       }
 
       .progressTop {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 11px;
-        font-size: 12px;
+        margin-bottom: 10px;
+        font-size: 10px;
         font-weight: 850;
       }
 
       .progressBar {
         height: 8px;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
         overflow: hidden;
         border-radius: 999px;
         background: #e8ece6;
@@ -2128,7 +2672,7 @@ function HomeStyles() {
 
       .profileProgressCard p {
         color: #77837b;
-        font-size: 13px;
+        font-size: 11px;
         line-height: 1.6;
       }
 
@@ -2138,8 +2682,25 @@ function HomeStyles() {
         gap: 7px;
         margin-top: 8px;
         color: #3c5d45;
-        font-size: 12px;
+        font-size: 10px;
         font-weight: 850;
+      }
+
+      .hostMotivation {
+        position: relative;
+        isolation: isolate;
+        min-height: 560px;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        border-radius: 32px;
+        color: white;
+      }
+
+      .hostMotivationImage,
+      .hostMotivationOverlay {
+        position: absolute;
+        inset: 0;
       }
 
       .hostMotivationImage {
@@ -2147,6 +2708,17 @@ function HomeStyles() {
         background:
           url("https://images.unsplash.com/photo-1464278533981-50106e6176b1?auto=format&fit=crop&w=1900&q=90")
           center / cover;
+      }
+
+      .hostMotivationOverlay {
+        z-index: -1;
+        background:
+          linear-gradient(90deg, rgba(6,18,11,0.92), rgba(6,18,11,0.57), rgba(6,18,11,0.12));
+      }
+
+      .hostMotivationContent {
+        max-width: 700px;
+        padding: 60px;
       }
 
       .hostMotivationContent h2 {
@@ -2191,27 +2763,7 @@ function HomeStyles() {
 
       /* RESPONSIVE */
 
-      @media (max-width: 1000px) {
-        .guestHeroContent,
-        .userHeroContent,
-        .hostHeroContent {
-          grid-template-columns: 1fr;
-          gap: 42px;
-        }
-
-        .searchCard,
-        .hostTodayCard {
-          max-width: 620px;
-        }
-
-        .hostStats {
-          grid-template-columns: repeat(2, 1fr);
-        }
-
-        .hostWorkspace {
-          grid-template-columns: 1fr;
-        }
-
+      @media (max-width: 1050px) {
         .eventGrid {
           grid-template-columns: repeat(2, 1fr);
         }
@@ -2219,68 +2771,92 @@ function HomeStyles() {
         .eventCard:first-child {
           grid-column: span 2;
         }
+
+        .hostOverview,
+        .userSearchStage {
+          grid-template-columns: 1fr;
+        }
+
+        .hostStats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .hostWorkspace,
+        .userDashboardGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .searchCard.compact {
+          max-width: 650px;
+        }
       }
 
       @media (max-width: 760px) {
         .pageContainer {
-          width: calc(100% - 36px);
+          width: calc(100% - 32px);
         }
 
-        .guestHero,
-        .userHero,
-        .hostHero {
-          min-height: auto;
-          padding: 112px 0 90px;
+        .guestHero {
+          min-height: 700px;
+          padding: 115px 0 90px;
         }
 
-        .guestCopy h1,
-        .userHeroCopy h1,
-        .hostHeroCopy h1 {
+        .heroTopBar {
+          top: 20px;
+        }
+
+        .homeBrand {
+          font-size: 14px;
+        }
+
+        .homeBrand > span {
+          width: 40px;
+          height: 40px;
+        }
+
+        .heroJoinLink {
+          display: none !important;
+        }
+
+        .guestCopy h1 {
           font-size: 49px;
         }
 
-        .guestCopy > p,
-        .userHeroCopy > p,
-        .hostHeroCopy > p {
+        .guestCopy > p {
           font-size: 15px;
+        }
+
+        .guestSearchWrap {
+          margin-top: -45px;
         }
 
         .searchCard,
         .hostTodayCard {
-          padding: 20px;
-          border-radius: 23px;
+          padding: 18px;
+          border-radius: 22px;
         }
 
-        .roleChoice,
-        .featuredSection {
-          padding: 85px 0;
-        }
-
-        .roleGrid,
-        .eventGrid,
-        .quickLinks,
-        .hostStats {
+        .searchMainRow {
           grid-template-columns: 1fr;
         }
 
-        .eventCard:first-child {
-          grid-column: auto;
+        .primarySearchButton {
+          width: 100%;
         }
 
-        .roleCard {
-          min-height: 500px;
+        .featuredSection,
+        .roleChoice {
+          padding: 80px 0;
         }
 
-        .roleContent h3 {
-          font-size: 32px;
-        }
-
-        .eventCard {
-          min-height: 470px;
+        .firstSection {
+          padding-top: 95px;
         }
 
         .sectionHeading,
-        .hostSectionHeader {
+        .hostSectionHeader,
+        .userTop,
+        .hostTop {
           align-items: flex-start;
           flex-direction: column;
         }
@@ -2289,16 +2865,61 @@ function HomeStyles() {
           display: none;
         }
 
-        .quickLinks {
-          margin-top: -30px;
+        .eventGrid,
+        .roleGrid,
+        .quickLinks,
+        .trustStrip,
+        .hostStats {
+          grid-template-columns: 1fr;
         }
 
-        .hostStats {
-          margin-top: -30px;
+        .eventCard:first-child {
+          grid-column: auto;
+        }
+
+        .eventCard {
+          min-height: 460px;
+        }
+
+        .roleCard {
+          min-height: 490px;
+        }
+
+        .roleContent h3 {
+          font-size: 31px;
+        }
+
+        .userHome,
+        .hostHome {
+          padding-top: 26px;
+        }
+
+        .userGreeting h1,
+        .hostTop h1 {
+          font-size: 46px;
+        }
+
+        .userTopActions,
+        .hostTopActions {
+          justify-content: flex-start;
+        }
+
+        .userSearchStage {
+          min-height: auto;
+          padding: 24px;
+        }
+
+        .userSearchCopy h2,
+        .hostOverviewCopy h2 {
+          font-size: 40px;
+        }
+
+        .hostOverviewHero {
+          min-height: 420px;
         }
 
         .hostWorkspace {
-          padding: 85px 0;
+          padding: 75px 0;
         }
 
         .bookingItem {
@@ -2315,54 +2936,99 @@ function HomeStyles() {
           grid-row: 1 / span 3;
         }
 
-        .userBanner,
         .hostMotivation {
-          width: calc(100% - 36px);
-          min-height: 650px;
-          margin-bottom: 85px;
-          border-radius: 27px;
+          min-height: 620px;
+          border-radius: 26px;
         }
 
-        .userBannerContent,
         .hostMotivationContent {
-          padding: 32px;
+          padding: 30px;
         }
 
-        .userBannerContent h2,
         .hostMotivationContent h2 {
-          font-size: 44px;
+          font-size: 43px;
         }
       }
 
-      @media (max-width: 440px) {
-        .guestCopy h1,
-        .userHeroCopy h1,
-        .hostHeroCopy h1 {
+      @media (max-width: 460px) {
+        .guestHero {
+          min-height: 670px;
+        }
+
+        .guestCopy h1 {
           font-size: 43px;
         }
 
         .guestActions,
-        .hostHeroActions {
+        .hostTopActions {
           flex-direction: column;
           align-items: stretch;
         }
 
+        .guestActions a,
+        .hostTopActions a {
+          width: 100%;
+        }
+
         .guestProof {
-          gap: 20px;
+          gap: 18px;
+        }
+
+        .guestProof strong {
+          font-size: 19px;
+        }
+
+        .guestProof span {
+          font-size: 10px;
         }
 
         .searchTopIcon {
-          display: none;
+          display: none !important;
         }
 
         .sectionHeading h2,
         .hostSectionHeader h2 {
-          font-size: 37px;
+          font-size: 36px;
+        }
+
+        .userGreeting h1,
+        .hostTop h1 {
+          font-size: 41px;
+        }
+
+        .userTopActions {
+          width: 100%;
+        }
+
+        .userTopActions a {
+          flex: 1;
+          justify-content: center;
+        }
+
+        .userSearchStage {
+          padding: 19px;
+        }
+
+        .upcomingList article {
+          grid-template-columns: auto 1fr;
+        }
+
+        .tripStatus {
+          grid-column: 2;
+          justify-self: start;
         }
 
         .bookingMeta {
           flex-direction: column;
           gap: 5px;
+        }
+
+        .hostOverviewCopy {
+          padding: 24px;
+        }
+
+        .hostMotivationContent {
+          padding: 24px;
         }
       }
 
