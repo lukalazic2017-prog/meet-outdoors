@@ -688,7 +688,7 @@ function UserHome({ profile }) {
             Moje rezervacije
           </Link>
 
-          <Link to="/my-interested-events">
+          <Link to="/my-events">
             <Icon name="heart" size={18} />
             Sačuvano
           </Link>
@@ -3029,6 +3029,370 @@ function HomeStyles() {
 
         .hostMotivationContent {
           padding: 24px;
+        }
+      }
+
+
+      /* =========================================================
+         FINAL RESPONSIVE UX HARDENING
+      ========================================================= */
+
+      :root {
+        --home-navbar-clearance: 148px;
+        --home-page-gap: 24px;
+      }
+
+      html,
+      body,
+      #root {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: clip;
+      }
+
+      .home,
+      .home * {
+        min-width: 0;
+      }
+
+      .home {
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: clip;
+      }
+
+      .pageContainer {
+        width: min(1200px, calc(100% - (var(--home-page-gap) * 2)));
+        max-width: 100%;
+      }
+
+      /* Fixed navbar clearance: content never sits beneath navigation. */
+      .userHome,
+      .hostHome {
+        padding-top: var(--home-navbar-clearance);
+      }
+
+      .userTop,
+      .hostTop {
+        position: relative;
+        z-index: 2;
+        padding-top: 0;
+      }
+
+      .userGreeting h1,
+      .hostTop h1,
+      .userSearchCopy h2,
+      .guestCopy h1,
+      .sectionHeading h2,
+      .hostSectionHeader h2 {
+        overflow-wrap: anywhere;
+        text-wrap: balance;
+      }
+
+      .userGreeting p,
+      .hostTop p,
+      .userSearchCopy p,
+      .guestCopy > p,
+      .sectionHeading p {
+        text-wrap: pretty;
+      }
+
+      /* User search stage */
+      .userSearchStage {
+        grid-template-columns: minmax(0, 0.88fr) minmax(360px, 0.72fr);
+        gap: clamp(24px, 4vw, 52px);
+        padding: clamp(28px, 4vw, 48px);
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: 0 28px 75px rgba(14,31,20,0.2);
+      }
+
+      .userSearchStage > * {
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      .searchCard,
+      .searchCard.compact {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      .searchCard.compact {
+        padding: clamp(18px, 2.4vw, 26px);
+        border-color: rgba(255,255,255,0.22);
+        background: rgba(250,251,247,0.97);
+        box-shadow: 0 22px 55px rgba(3,17,9,0.2);
+      }
+
+      .searchTop > div {
+        min-width: 0;
+      }
+
+      .searchTop strong {
+        display: block;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        text-wrap: balance;
+      }
+
+      .searchMainRow {
+        width: 100%;
+        grid-template-columns: minmax(0, 1fr) minmax(132px, auto);
+      }
+
+      .searchInput {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .searchInput input {
+        min-width: 0;
+        max-width: 100%;
+        font-size: 16px;
+      }
+
+      .primarySearchButton {
+        width: auto;
+        min-width: 136px;
+        max-width: 100%;
+        white-space: nowrap;
+      }
+
+      .categoryRow {
+        width: calc(100% + 6px);
+        max-width: calc(100% + 6px);
+        scroll-padding-inline: 3px;
+        overscroll-behavior-inline: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .categoryRow button {
+        white-space: nowrap;
+      }
+
+      /* Cards and action rows never force horizontal overflow. */
+      .userTopActions,
+      .hostTopActions,
+      .guestActions,
+      .quickLinks,
+      .eventGrid,
+      .roleGrid,
+      .hostStats,
+      .userDashboardGrid,
+      .hostWorkspace {
+        max-width: 100%;
+      }
+
+      .userTopActions a,
+      .hostTopActions a,
+      .quickLinks > a,
+      .bookingItem,
+      .upcomingList article {
+        min-width: 0;
+      }
+
+      .quickLinks strong,
+      .quickLinks small,
+      .bookingInfo strong,
+      .bookingInfo span {
+        overflow-wrap: anywhere;
+      }
+
+      @media (max-width: 1050px) {
+        :root {
+          --home-navbar-clearance: 138px;
+        }
+
+        .userSearchStage {
+          grid-template-columns: 1fr;
+          min-height: auto;
+        }
+
+        .userSearchCopy {
+          max-width: 680px;
+        }
+
+        .searchCard.compact {
+          max-width: none;
+        }
+      }
+
+      @media (max-width: 760px) {
+        :root {
+          --home-navbar-clearance: 146px;
+          --home-page-gap: 16px;
+        }
+
+        .userHome,
+        .hostHome {
+          padding-top: var(--home-navbar-clearance);
+          padding-bottom: 72px;
+        }
+
+        .userTop,
+        .hostTop {
+          gap: 20px;
+        }
+
+        .userGreeting h1,
+        .hostTop h1 {
+          font-size: clamp(40px, 11vw, 54px);
+          line-height: 0.98;
+          letter-spacing: -0.06em;
+        }
+
+        .userTopActions,
+        .hostTopActions {
+          width: 100%;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .userTopActions a,
+        .hostTopActions a {
+          width: 100%;
+          min-height: 52px;
+          justify-content: center;
+          padding-inline: 12px;
+          text-align: center;
+        }
+
+        .userSearchStage {
+          gap: 24px;
+          margin-top: 28px;
+          padding: 24px;
+          border-radius: 28px;
+          background: #0c2116;
+        }
+
+        .userSearchCopy h2 {
+          font-size: clamp(38px, 10vw, 52px);
+          line-height: 0.98;
+        }
+
+        .userSearchCopy p {
+          max-width: 100%;
+          font-size: 13px;
+        }
+
+        .searchCard,
+        .searchCard.compact {
+          padding: 20px;
+          border-radius: 24px;
+        }
+
+        .searchTop {
+          gap: 12px;
+        }
+
+        .searchTop strong {
+          font-size: clamp(24px, 7vw, 31px);
+          line-height: 1.08;
+        }
+
+        .searchMainRow {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 12px;
+        }
+
+        .searchInput,
+        .primarySearchButton {
+          width: 100%;
+          min-width: 0;
+          min-height: 58px;
+        }
+
+        .primarySearchButton {
+          justify-content: center;
+        }
+
+        .categoryRow {
+          margin-top: 15px;
+          padding-bottom: 6px;
+        }
+
+        .categoryRow button {
+          min-height: 43px;
+          padding-inline: 14px;
+        }
+
+        .quickLinks {
+          gap: 12px;
+        }
+
+        .quickLinks > a {
+          padding: 18px;
+        }
+      }
+
+      @media (max-width: 460px) {
+        :root {
+          --home-navbar-clearance: 138px;
+          --home-page-gap: 13px;
+        }
+
+        .userTopActions,
+        .hostTopActions {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .userTopActions a,
+        .hostTopActions a {
+          min-height: 54px;
+          font-size: 10px;
+          gap: 7px;
+        }
+
+        .userSearchStage {
+          padding: 19px;
+          border-radius: 26px;
+        }
+
+        .searchCard,
+        .searchCard.compact {
+          padding: 18px;
+          border-radius: 22px;
+        }
+
+        .searchTopIcon {
+          display: none !important;
+        }
+
+        .searchInput {
+          padding-inline: 14px;
+        }
+
+        .primarySearchButton {
+          min-height: 56px;
+        }
+
+        .categoryRow {
+          width: calc(100% + 2px);
+          max-width: calc(100% + 2px);
+          margin-inline: -1px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .userTopActions,
+        .hostTopActions {
+          grid-template-columns: 1fr;
+        }
+
+        .userGreeting h1,
+        .hostTop h1 {
+          font-size: 38px;
+        }
+
+        .userSearchStage {
+          padding: 15px;
+        }
+
+        .searchCard,
+        .searchCard.compact {
+          padding: 16px;
         }
       }
 
