@@ -84,6 +84,27 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M2 15h6l2 3h4l2-3h6" />
       </>
     ),
+    search: (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </>
+    ),
+    phone: (
+      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.7 2.6a2 2 0 0 1-.5 2.1L8 9.7a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.8.4 1.7.6 2.6.7a2 2 0 0 1 2 2.3Z" />
+    ),
+    mail: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
+      </>
+    ),
+    money: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v10M15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 1-3 2.3 0 1.5 1.3 2 3.2 2.4 1.8.4 2.8 1 2.8 2.3 0 1.4-1.2 2.5-3.2 2.5-1.5 0-2.8-.6-3.6-1.6" />
+      </>
+    ),
   };
 
   return (
@@ -140,6 +161,22 @@ function statusMeta(status) {
     };
   }
 
+  if (normalized === "completed") {
+    return {
+      label: "Završeno",
+      tone: "success",
+      icon: "check",
+    };
+  }
+
+  if (normalized === "cancelled") {
+    return {
+      label: "Otkazano",
+      tone: "danger",
+      icon: "x",
+    };
+  }
+
   return {
     label: "Na čekanju",
     tone: "pending",
@@ -169,6 +206,9 @@ export default function HostBookings() {
   const [pageLoading, setPageLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
 
   const loadBookings = useCallback(async () => {
     if (!profile?.id || !isHost) {
@@ -189,24 +229,34 @@ export default function HostBookings() {
           user_id,
           guests,
           note,
+          first_name,
+          last_name,
+          email,
+          phone,
+          total_amount,
+          currency,
+          payment_status,
           status,
           created_at,
           approved_at,
           rejected_at,
+          completed_at,
           packages:package_id (
             id,
             title,
             cover_url,
             location,
             country,
-            price
+            price,
+            currency
           ),
           profiles:user_id (
             id,
             username,
             full_name,
             avatar_url,
-            role
+            role,
+            phone
           )
         `)
         .eq("host_id", profile.id)
@@ -249,6 +299,10 @@ export default function HostBookings() {
           status === "rejected"
             ? now
             : booking.rejected_at,
+        completed_at:
+          status === "completed"
+            ? now
+            : booking.completed_at,
       };
 
       try {
@@ -269,13 +323,12 @@ export default function HostBookings() {
               user_id: booking.user_id,
               from_user_id: profile.id,
               package_id: booking.package_id,
-              type:
-                status === "approved"
-                  ? "booking_approved"
-                  : "booking_rejected",
+              type: `booking_${status}`,
               title:
                 status === "approved"
                   ? "Rezervacija je odobrena"
+                  : status === "completed"
+                  ? "Rezervacija je završena"
                   : "Rezervacija je odbijena",
               message:
                 status === "approved"
@@ -283,6 +336,11 @@ export default function HostBookings() {
                       booking.packages?.title ||
                       "paket"
                     } je odobrena.`
+                  : status === "completed"
+                  ? `Rezervacija za ${
+                      booking.packages?.title ||
+                      "paket"
+                    } je označena kao završena.`
                   : `Tvoja rezervacija za ${
                       booking.packages?.title ||
                       "paket"
@@ -306,6 +364,8 @@ export default function HostBookings() {
                     payload.approved_at,
                   rejected_at:
                     payload.rejected_at,
+                  completed_at:
+                    payload.completed_at,
                 }
               : item
           )
@@ -337,6 +397,8 @@ export default function HostBookings() {
           result.approved += 1;
         } else if (status === "rejected") {
           result.rejected += 1;
+        } else if (status === "completed") {
+          result.completed += 1;
         } else {
           result.pending += 1;
         }
@@ -347,9 +409,112 @@ export default function HostBookings() {
         pending: 0,
         approved: 0,
         rejected: 0,
+        completed: 0,
       }
     );
   }, [bookings]);
+
+  const filteredBookings = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    const rows = bookings.filter((booking) => {
+      const status = String(
+        booking.status || "pending"
+      ).toLowerCase();
+
+      if (
+        statusFilter !== "all" &&
+        status !== statusFilter
+      ) {
+        return false;
+      }
+
+      if (!query) return true;
+
+      const pack = booking.packages;
+      const user = booking.profiles;
+      const fullName = [
+        booking.first_name,
+        booking.last_name,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return [
+        booking.id,
+        fullName,
+        booking.email,
+        booking.phone,
+        user?.full_name,
+        user?.username,
+        pack?.title,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(query)
+        );
+    });
+
+    return [...rows].sort((a, b) => {
+      if (sortOrder === "oldest") {
+        return (
+          new Date(a.created_at).getTime() -
+          new Date(b.created_at).getTime()
+        );
+      }
+
+      if (sortOrder === "guests") {
+        return Number(b.guests || 1) -
+          Number(a.guests || 1);
+      }
+
+      if (sortOrder === "value") {
+        const aValue =
+          Number(a.total_amount) ||
+          Number(a.packages?.price || 0) *
+            Number(a.guests || 1);
+        const bValue =
+          Number(b.total_amount) ||
+          Number(b.packages?.price || 0) *
+            Number(b.guests || 1);
+
+        return bValue - aValue;
+      }
+
+      return (
+        new Date(b.created_at).getTime() -
+        new Date(a.created_at).getTime()
+      );
+    });
+  }, [
+    bookings,
+    searchTerm,
+    sortOrder,
+    statusFilter,
+  ]);
+
+  const totalGuests = useMemo(
+    () =>
+      bookings.reduce(
+        (sum, booking) =>
+          sum + Number(booking.guests || 1),
+        0
+      ),
+    [bookings]
+  );
+
+  const totalValue = useMemo(
+    () =>
+      bookings.reduce((sum, booking) => {
+        const value =
+          Number(booking.total_amount) ||
+          Number(booking.packages?.price || 0) *
+            Number(booking.guests || 1);
+
+        return sum + value;
+      }, 0),
+    [bookings]
+  );
 
   if (loading || pageLoading) {
     return <LoadingState />;
@@ -427,8 +592,8 @@ export default function HostBookings() {
             </article>
 
             <article>
-              <strong>{counts.rejected}</strong>
-              <span>odbijenih</span>
+              <strong>{totalGuests}</strong>
+              <span>ukupno gostiju</span>
             </article>
           </div>
         </section>
@@ -453,6 +618,58 @@ export default function HostBookings() {
             </button>
           </header>
 
+          <section className="hostBookingsControls">
+            <label className="hostBookingsSearch">
+              <Icon name="search" size={17} />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) =>
+                  setSearchTerm(event.target.value)
+                }
+                placeholder="Ime, telefon, email, paket ili ID..."
+              />
+            </label>
+
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value)
+              }
+              aria-label="Filtriraj rezervacije"
+            >
+              <option value="all">Sve rezervacije</option>
+              <option value="pending">Na čekanju</option>
+              <option value="approved">Odobrene</option>
+              <option value="rejected">Odbijene</option>
+              <option value="completed">Završene</option>
+              <option value="cancelled">Otkazane</option>
+            </select>
+
+            <select
+              value={sortOrder}
+              onChange={(event) =>
+                setSortOrder(event.target.value)
+              }
+              aria-label="Sortiraj rezervacije"
+            >
+              <option value="newest">Najnovije</option>
+              <option value="oldest">Najstarije</option>
+              <option value="guests">Najviše osoba</option>
+              <option value="value">Najveća vrednost</option>
+            </select>
+
+            <div className="hostBookingsValue">
+              <Icon name="money" size={17} />
+              <div>
+                <span>Ukupna vrednost</span>
+                <strong>
+                  €{totalValue.toFixed(2)}
+                </strong>
+              </div>
+            </div>
+          </section>
+
           {message && (
             <div className="hostBookingsError" role="alert">
               <span>
@@ -467,7 +684,7 @@ export default function HostBookings() {
             </div>
           )}
 
-          {bookings.length === 0 ? (
+          {filteredBookings.length === 0 ? (
             <section className="hostBookingsEmpty">
               <span>
                 <Icon name="inbox" size={31} />
@@ -487,7 +704,7 @@ export default function HostBookings() {
             </section>
           ) : (
             <section className="hostBookingsList">
-              {bookings.map((booking) => {
+              {filteredBookings.map((booking) => {
                 const pack = booking.packages;
                 const user = booking.profiles;
                 const meta = statusMeta(booking.status);
@@ -499,6 +716,32 @@ export default function HostBookings() {
 
                 const isUpdating =
                   updatingId === booking.id;
+
+                const bookingName =
+                  [
+                    booking.first_name,
+                    booking.last_name,
+                  ]
+                    .filter(Boolean)
+                    .join(" ") ||
+                  user?.full_name ||
+                  user?.username ||
+                  "Gost";
+
+                const bookingPhone =
+                  booking.phone ||
+                  user?.phone ||
+                  "";
+
+                const totalAmount =
+                  Number(booking.total_amount) ||
+                  Number(pack?.price || 0) *
+                    Number(booking.guests || 1);
+
+                const currency =
+                  booking.currency ||
+                  pack?.currency ||
+                  "EUR";
 
                 return (
                   <article
@@ -523,7 +766,7 @@ export default function HostBookings() {
                       <div className="hostBookingTop">
                         <div>
                           <span className="hostBookingKicker">
-                            Zahtev za rezervaciju
+                            Rezervacija #{String(booking.id).slice(0, 8)}
                           </span>
 
                           <h2>
@@ -567,14 +810,38 @@ export default function HostBookings() {
                         </article>
 
                         <article>
-                          <Icon name="package" size={17} />
+                          <Icon name="money" size={17} />
                           <div>
-                            <span>Cena paketa</span>
+                            <span>Ukupna vrednost</span>
                             <strong>
-                              €{pack?.price || 0}
+                              {currency}{" "}
+                              {totalAmount.toFixed(2)}
                             </strong>
                           </div>
                         </article>
+                      </div>
+
+                      <div className="hostBookingContact">
+                        <div>
+                          <span>Kontakt za rezervaciju</span>
+                          <strong>{bookingName}</strong>
+                        </div>
+
+                        <div className="hostBookingContactLinks">
+                          {bookingPhone && (
+                            <a href={`tel:${bookingPhone}`}>
+                              <Icon name="phone" size={15} />
+                              {bookingPhone}
+                            </a>
+                          )}
+
+                          {booking.email && (
+                            <a href={`mailto:${booking.email}`}>
+                              <Icon name="mail" size={15} />
+                              {booking.email}
+                            </a>
+                          )}
+                        </div>
                       </div>
 
                       {booking.note && (
@@ -629,8 +896,7 @@ export default function HostBookings() {
                             <div>
                               <span>Gost</span>
                               <strong>
-                                {user.full_name ||
-                                  user.username}
+                                {bookingName}
                               </strong>
                               <small>
                                 @{user.username}
@@ -673,6 +939,25 @@ export default function HostBookings() {
                               {isUpdating
                                 ? "Čuvanje..."
                                 : "Odobri"}
+                            </button>
+                          )}
+
+                          {booking.status === "approved" && (
+                            <button
+                              type="button"
+                              className="complete"
+                              disabled={isUpdating}
+                              onClick={() =>
+                                updateBookingStatus(
+                                  booking,
+                                  "completed"
+                                )
+                              }
+                            >
+                              <Icon name="check" size={16} />
+                              {isUpdating
+                                ? "Čuvanje..."
+                                : "Završi"}
                             </button>
                           )}
 
@@ -971,6 +1256,23 @@ function HostBookingsStyles() {
         font-size: 9px;
         font-weight: 850;
       }
+
+
+      .hostBookingsControls{position:sticky;top:86px;z-index:20;display:grid;grid-template-columns:minmax(240px,1fr) auto auto auto;gap:10px;margin-bottom:18px;padding:12px;border:1px solid #d8e1d5;border-radius:18px;background:rgba(237,241,233,.92);box-shadow:0 12px 30px rgba(31,51,38,.07);backdrop-filter:blur(16px)}
+      .hostBookingsSearch{display:flex;align-items:center;gap:9px;min-height:44px;padding:0 13px;border:1px solid #d4ded1;border-radius:13px;background:#fff;color:#728078}
+      .hostBookingsSearch input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#263a2f;font-size:10px}
+      .hostBookingsControls select{min-height:44px;padding:0 12px;border:1px solid #d4ded1;border-radius:13px;background:#fff;color:#465b4e;outline:0;font-size:9px;font-weight:800}
+      .hostBookingsValue{display:flex;align-items:center;gap:9px;min-height:44px;padding:0 13px;border-radius:13px;background:#183a27;color:#fff}
+      .hostBookingsValue span,.hostBookingsValue strong{display:block}
+      .hostBookingsValue span{color:rgba(255,255,255,.5);font-size:7px}
+      .hostBookingsValue strong{margin-top:2px;font-size:10px}
+      .hostBookingContact{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:15px;padding:14px;border:1px solid #dbe5d7;border-radius:16px;background:#edf5e6}
+      .hostBookingContact span,.hostBookingContact strong{display:block}
+      .hostBookingContact span{color:#789456;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+      .hostBookingContact strong{margin-top:5px;color:#34483b;font-size:11px}
+      .hostBookingContactLinks{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+      .hostBookingContactLinks a{display:inline-flex;align-items:center;gap:6px;min-height:35px;padding:0 10px;border:1px solid #cfddca;border-radius:11px;background:#fff;color:#4b6253!important;font-size:8px;font-weight:800}
+      .hostBookingActions button.complete{border:1px solid #385d86;background:#e8f1fb;color:#385d86}
 
       .hostBookingsError {
         display: grid;
@@ -1496,6 +1798,12 @@ function HostBookingsStyles() {
         line-height: 1.65;
       }
 
+      @media (max-width: 1100px) {
+        .hostBookingsControls {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
       @media (max-width: 960px) {
         .hostBookingCard {
           grid-template-columns: 1fr;
@@ -1547,6 +1855,21 @@ function HostBookingsStyles() {
         .hostBookingsToolbar {
           align-items: flex-start;
           flex-direction: column;
+        }
+
+        .hostBookingsControls {
+          position: static;
+          grid-template-columns: 1fr;
+        }
+
+        .hostBookingContact {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .hostBookingContactLinks {
+          width: 100%;
+          justify-content: flex-start;
         }
 
         .hostBookingMetaGrid {

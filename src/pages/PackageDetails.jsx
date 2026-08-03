@@ -145,6 +145,18 @@ function externalUrl(value) {
     : `https://${value}`;
 }
 
+function splitFullName(value) {
+  const parts = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return {
+    firstName: parts[0] || "",
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
 function getBookingStatusText(status) {
   if (status === "approved") return "Rezervacija je odobrena";
   if (status === "rejected") return "Rezervacija je odbijena";
@@ -193,6 +205,16 @@ export default function PackageDetails() {
 
   const [currentBooking, setCurrentBooking] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [remainingCapacity, setRemainingCapacity] = useState(0);
+  const [bookingForm, setBookingForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    guests: 1,
+    note: "",
+  });
 
   const [comments, setComments] = useState([]);
   const [commentBody, setCommentBody] = useState("");
@@ -317,6 +339,30 @@ export default function PackageDetails() {
 
       setGallery(galleryData || []);
 
+      const {
+        data: remainingData,
+        error: remainingError,
+      } = await supabase.rpc(
+        "get_package_remaining_capacity",
+        {
+          target_package_id: data.id,
+        }
+      );
+
+      if (remainingError) {
+        console.error(
+          "Greška pri učitavanju kapaciteta:",
+          remainingError
+        );
+        setRemainingCapacity(
+          Math.max(Number(data.capacity || 1), 0)
+        );
+      } else {
+        setRemainingCapacity(
+          Math.max(Number(remainingData || 0), 0)
+        );
+      }
+
       const { count, error: countError } = await supabase
         .from("package_interested")
         .select("*", { count: "exact", head: true })
@@ -415,7 +461,7 @@ export default function PackageDetails() {
           const changedBooking = payload.new || payload.old;
 
           if (
-            Number(changedBooking?.package_id) !== Number(item.id)
+            String(changedBooking?.package_id) !== String(item.id)
           ) {
             return;
           }
@@ -500,7 +546,7 @@ export default function PackageDetails() {
     }
   }
 
-  async function bookNow() {
+  async function openBookingModal() {
     if (!profile?.id) {
       alert("Prijavi se da bi rezervisao paket.");
       return;
@@ -515,39 +561,119 @@ export default function PackageDetails() {
       return;
     }
 
+    const name = splitFullName(profile.full_name);
+
+    let sessionEmail = profile.email || "";
+
+    if (!sessionEmail) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      sessionEmail = user?.email || "";
+    }
+
+    setBookingForm((current) => ({
+      ...current,
+      firstName:
+        current.firstName || name.firstName,
+      lastName:
+        current.lastName || name.lastName,
+      email:
+        current.email || sessionEmail,
+      phone:
+        current.phone || profile.phone || "",
+      guests: Math.min(
+        Math.max(Number(current.guests || 1), 1),
+        Math.max(remainingCapacity, 1)
+      ),
+    }));
+
+    setBookingModalOpen(true);
+  }
+
+  async function submitBooking(event) {
+    event.preventDefault();
+
+    if (!profile?.id || !item?.id) return;
+
+    const guests = Number(bookingForm.guests);
+
+    if (
+      !bookingForm.firstName.trim() ||
+      !bookingForm.lastName.trim() ||
+      !bookingForm.email.trim() ||
+      !bookingForm.phone.trim()
+    ) {
+      alert("Popuni ime, prezime, email i telefon.");
+      return;
+    }
+
+    if (!Number.isInteger(guests) || guests < 1) {
+      alert("Broj osoba mora biti najmanje 1.");
+      return;
+    }
+
+    if (remainingCapacity < 1) {
+      alert("Ovaj paket je trenutno popunjen.");
+      return;
+    }
+
+    if (guests > remainingCapacity) {
+      alert(
+        `Preostalo je još samo ${remainingCapacity} mesta.`
+      );
+      return;
+    }
+
     try {
       setBookingLoading(true);
 
-      const { data: createdBooking, error: bookingError } =
-        await supabase
-          .from("bookings")
-          .insert({
-            package_id: item.id,
-            host_id: item.host_id,
-            user_id: profile.id,
-            guests: 1,
-            status: "pending",
-          })
-          .select("id, status, created_at, updated_at")
-          .single();
+      const { data, error: bookingError } =
+        await supabase.rpc(
+          "create_package_booking",
+          {
+            target_package_id: item.id,
+            booking_first_name:
+              bookingForm.firstName.trim(),
+            booking_last_name:
+              bookingForm.lastName.trim(),
+            booking_email:
+              bookingForm.email.trim(),
+            booking_phone:
+              bookingForm.phone.trim(),
+            booking_guests: guests,
+            booking_note:
+              bookingForm.note.trim() || null,
+          }
+        );
 
       if (bookingError) throw bookingError;
 
+      const createdBooking = Array.isArray(data)
+        ? data[0]
+        : data;
+
       setCurrentBooking(createdBooking);
+      setRemainingCapacity((current) =>
+        Math.max(current - guests, 0)
+      );
+      setBookingModalOpen(false);
 
       if (item.host_id !== profile.id) {
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            user_id: item.host_id,
-            from_user_id: profile.id,
-            package_id: item.id,
-            type: "package_booking",
-            title: "Novi zahtev za rezervaciju",
-            message: `${
-              profile.full_name || profile.username
-            } je poslao/la zahtev za rezervaciju paketa ${item.title}`,
-          });
+        const { error: notificationError } =
+          await supabase
+            .from("notifications")
+            .insert({
+              user_id: item.host_id,
+              from_user_id: profile.id,
+              package_id: item.id,
+              type: "package_booking",
+              title: "Novi zahtev za rezervaciju",
+              message: `${bookingForm.firstName.trim()} ${bookingForm.lastName.trim()} je poslao/la zahtev za ${guests} ${
+                guests === 1 ? "osobu" : "osobe"
+              } za paket ${item.title}.`,
+            });
 
         if (notificationError) {
           console.error(
@@ -794,6 +920,9 @@ export default function PackageDetails() {
             <article>
               <span>Kapacitet</span>
               <strong>{item.capacity || 1}</strong>
+              <small>
+                {remainingCapacity} slobodno
+              </small>
             </article>
 
             <article>
@@ -847,7 +976,7 @@ export default function PackageDetails() {
               <button
                 type="button"
                 className="packageBookButton"
-                onClick={bookNow}
+                onClick={openBookingModal}
                 disabled={
                   bookingLoading ||
                   currentBooking?.status === "pending" ||
@@ -1334,6 +1463,203 @@ export default function PackageDetails() {
             </div>
           </section>
         </section>
+
+        {bookingModalOpen && (
+          <div
+            className="bookingModalBackdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setBookingModalOpen(false);
+              }
+            }}
+          >
+            <section
+              className="bookingModal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="booking-modal-title"
+            >
+              <div className="bookingModalHeader">
+                <div>
+                  <span>Rezervacija paketa</span>
+                  <h2 id="booking-modal-title">
+                    Podaci za rezervaciju
+                  </h2>
+                  <p>
+                    Host će dobiti kontakt i broj osoba.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setBookingModalOpen(false)
+                  }
+                  aria-label="Zatvori rezervaciju"
+                >
+                  <Icon name="x" size={19} />
+                </button>
+              </div>
+
+              <div className="bookingCapacityNotice">
+                <Icon name="users" size={19} />
+                <div>
+                  <strong>
+                    {remainingCapacity} slobodnih mesta
+                  </strong>
+                  <span>
+                    Cena po osobi:{" "}
+                    {item.currency || "EUR"}{" "}
+                    {item.price || 0}
+                  </span>
+                </div>
+              </div>
+
+              <form
+                className="bookingModalForm"
+                onSubmit={submitBooking}
+              >
+                <div className="bookingFieldGrid">
+                  <label>
+                    <span>Ime *</span>
+                    <input
+                      required
+                      value={bookingForm.firstName}
+                      onChange={(event) =>
+                        setBookingForm((current) => ({
+                          ...current,
+                          firstName: event.target.value,
+                        }))
+                      }
+                      autoComplete="given-name"
+                    />
+                  </label>
+
+                  <label>
+                    <span>Prezime *</span>
+                    <input
+                      required
+                      value={bookingForm.lastName}
+                      onChange={(event) =>
+                        setBookingForm((current) => ({
+                          ...current,
+                          lastName: event.target.value,
+                        }))
+                      }
+                      autoComplete="family-name"
+                    />
+                  </label>
+                </div>
+
+                <label>
+                  <span>Email *</span>
+                  <input
+                    required
+                    type="email"
+                    value={bookingForm.email}
+                    onChange={(event) =>
+                      setBookingForm((current) => ({
+                        ...current,
+                        email: event.target.value,
+                      }))
+                    }
+                    autoComplete="email"
+                  />
+                </label>
+
+                <label>
+                  <span>Telefon *</span>
+                  <input
+                    required
+                    type="tel"
+                    value={bookingForm.phone}
+                    onChange={(event) =>
+                      setBookingForm((current) => ({
+                        ...current,
+                        phone: event.target.value,
+                      }))
+                    }
+                    autoComplete="tel"
+                  />
+                </label>
+
+                <label>
+                  <span>Broj osoba *</span>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    max={Math.max(remainingCapacity, 1)}
+                    value={bookingForm.guests}
+                    onChange={(event) =>
+                      setBookingForm((current) => ({
+                        ...current,
+                        guests: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label>
+                  <span>Napomena</span>
+                  <textarea
+                    value={bookingForm.note}
+                    onChange={(event) =>
+                      setBookingForm((current) => ({
+                        ...current,
+                        note: event.target.value,
+                      }))
+                    }
+                    placeholder="Alergije, prevoz, posebni zahtevi..."
+                  />
+                </label>
+
+                <div className="bookingPriceSummary">
+                  <span>Ukupna vrednost</span>
+                  <strong>
+                    {item.currency || "EUR"}{" "}
+                    {(
+                      Number(item.price || 0) *
+                      Math.max(
+                        Number(bookingForm.guests || 1),
+                        1
+                      )
+                    ).toFixed(2)}
+                  </strong>
+                </div>
+
+                <div className="bookingModalActions">
+                  <button
+                    type="button"
+                    className="bookingCancelButton"
+                    onClick={() =>
+                      setBookingModalOpen(false)
+                    }
+                    disabled={bookingLoading}
+                  >
+                    Odustani
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="bookingSubmitButton"
+                    disabled={
+                      bookingLoading ||
+                      remainingCapacity < 1
+                    }
+                  >
+                    <Icon name="calendar" size={17} />
+                    {bookingLoading
+                      ? "Slanje..."
+                      : "Pošalji zahtev"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        )}
+
       </main>
     </>
   );
@@ -1448,9 +1774,40 @@ function PackageDetailsStyles() {
       .packageStateActions button,.packageStateActions a{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:0 14px;border-radius:12px;font-size:10px;font-weight:850}
       .packageStateActions button{border:0;background:#183a27;color:white;cursor:pointer}
       .packageStateActions a{border:1px solid #d5ded2;background:white;color:#51665a}
+
+      .packageHeroStats article small{display:block;margin-top:5px;color:rgba(255,255,255,.46);font-size:8px}
+      .bookingModalBackdrop{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:rgba(5,18,11,.72);backdrop-filter:blur(10px)}
+      .bookingModal{width:min(620px,100%);max-height:min(90vh,820px);overflow:auto;padding:25px;border:1px solid rgba(255,255,255,.55);border-radius:27px;background:#f7f9f4;color:#263a2f;box-shadow:0 35px 100px rgba(0,0,0,.34)}
+      .bookingModalHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+      .bookingModalHeader span{color:#789456;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+      .bookingModalHeader h2{margin:8px 0 0;font-size:32px;line-height:1;letter-spacing:-.055em}
+      .bookingModalHeader p{margin:9px 0 0;color:#7c8880;font-size:10px}
+      .bookingModalHeader>button{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;padding:0;border:1px solid #d8e0d5;border-radius:12px;background:#fff;color:#52665a;cursor:pointer}
+      .bookingCapacityNotice{display:flex;align-items:center;gap:12px;margin-top:20px;padding:14px;border:1px solid #d8e3d2;border-radius:16px;background:#eaf2e1;color:#5d7a44}
+      .bookingCapacityNotice strong,.bookingCapacityNotice span{display:block}
+      .bookingCapacityNotice strong{font-size:11px}
+      .bookingCapacityNotice span{margin-top:3px;color:#7f8b82;font-size:9px}
+      .bookingModalForm{display:grid;gap:13px;margin-top:18px}
+      .bookingFieldGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .bookingModalForm label{display:grid;gap:7px}
+      .bookingModalForm label>span{color:#46594d;font-size:9px;font-weight:850}
+      .bookingModalForm input,.bookingModalForm textarea{width:100%;border:1px solid #d7dfd4;border-radius:14px;background:#fff;color:#263a2f;outline:none}
+      .bookingModalForm input{min-height:49px;padding:0 13px}
+      .bookingModalForm textarea{min-height:92px;padding:13px;resize:vertical}
+      .bookingModalForm input:focus,.bookingModalForm textarea:focus{border-color:#8ba676;box-shadow:0 0 0 4px rgba(126,158,92,.11)}
+      .bookingPriceSummary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:15px;border-radius:16px;background:#183a27;color:#fff}
+      .bookingPriceSummary span{color:rgba(255,255,255,.55);font-size:9px}
+      .bookingPriceSummary strong{font-size:19px}
+      .bookingModalActions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+      .bookingModalActions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:49px;border-radius:14px;cursor:pointer;font-size:10px;font-weight:900}
+      .bookingCancelButton{border:1px solid #d5ded2;background:#fff;color:#53675a}
+      .bookingSubmitButton{border:1px solid #244d34;background:#183a27;color:#fff}
+      .bookingModalActions button:disabled{cursor:wait;opacity:.65}
+
       @media(max-width:960px){.packageMainGrid,.packageCommunityGrid{grid-template-columns:1fr}.packageHeroStats{grid-template-columns:repeat(2,minmax(0,1fr))}.packageGallery{grid-auto-rows:180px}}
       @media(max-width:760px){.packageBookingBanner{grid-template-columns:auto minmax(0,1fr)}.packageBookingBanner>a{grid-column:1/-1;justify-content:center;width:100%}}
       @media(max-width:700px){.packagePage{padding:84px 0 64px}.packageStatePage{padding-top:84px}.packageHero{min-height:720px;padding:24px;border-radius:0 0 32px 32px}.packageHeroCopy{padding-top:130px}.packageHeroStats{right:24px;bottom:24px;left:24px}.packageContent{padding:0 18px}.packageActionBar{align-items:flex-start;flex-direction:column}.packageActionButtons{width:100%}.packageActionButtons button{flex:1}.packageGallery{grid-template-columns:1fr;grid-auto-rows:220px}.packageGallery img.featured{grid-column:auto;grid-row:auto}.packageIncludeGrid{grid-template-columns:1fr}}
+      @media(max-width:600px){.bookingFieldGrid,.bookingModalActions{grid-template-columns:1fr}.bookingModalBackdrop{padding:12px}.bookingModal{padding:20px;border-radius:22px}}
       @media(max-width:480px){.packageHero{min-height:760px;padding:19px}.packageHeroCopy h1{font-size:48px}.packageHeroStats{right:19px;bottom:19px;left:19px}.packageContent{padding:0 13px}.packageActionButtons{flex-direction:column}.packageActionButtons button{width:100%}.packagePanel{padding:20px}.packageFeedTop{align-items:flex-start;flex-direction:column}}
       @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
     `}</style>
