@@ -295,108 +295,205 @@ export default function Signup() {
   }
 
   async function handleSignup(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    if (form.activities.length === 0) {
-      setError("Izaberi najmanje jednu aktivnost.");
-      return;
+  if (form.activities.length === 0) {
+    setError("Izaberi najmanje jednu aktivnost.");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+
+  try {
+    const username = form.username
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "");
+
+    if (username.length < 3) {
+      throw new Error(
+        "Korisničko ime mora imati najmanje 3 karaktera."
+      );
     }
 
-    setLoading(true);
-    setError("");
+    const email = form.email.trim().toLowerCase();
 
-    try {
-      const username = form.username
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, "");
-
-      if (username.length < 3) {
-        throw new Error("Korisničko ime mora imati najmanje 3 karaktera.");
-      }
-
-      const { data, error: signupError } = await supabase.auth.signUp({
-        email: form.email.trim(),
+    const { data, error: signupError } =
+      await supabase.auth.signUp({
+        email,
         password: form.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/login`,
           data: {
             role,
             full_name: form.full_name.trim(),
             username,
+            city: form.city.trim(),
+            country: form.country.trim(),
+            bio: form.bio.trim(),
+            phone:
+              role === "host"
+                ? form.phone.trim()
+                : "",
+            instagram_url:
+              role === "host"
+                ? form.instagram_url.trim()
+                : "",
+            website_url:
+              role === "host"
+                ? form.website_url.trim()
+                : "",
+            promo_video_url:
+              role === "host"
+                ? form.promo_video_url.trim()
+                : "",
+            activities: form.activities,
           },
         },
       });
 
-      if (signupError) {
-        throw signupError;
-      }
-
-      const userId = data.user?.id;
-
-      if (!userId) {
-        throw new Error(
-          "Registracija je uspela, ali korisnički ID nije pronađen."
-        );
-      }
-
-      const avatar_url = await uploadProfileFile({
-        bucket: "avatars",
-        userId,
-        file: avatarFile,
-        folder: "avatar",
-      });
-
-      const cover_url = await uploadProfileFile({
-        bucket: "covers",
-        userId,
-        file: coverFile,
-        folder: "cover",
-      });
-
-      const uploadedVideoUrl =
-        role === "host"
-          ? await uploadProfileFile({
-              bucket: "profile-videos",
-              userId,
-              file: videoFile,
-              folder: "video",
-            })
-          : null;
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          role,
-          full_name: form.full_name.trim(),
-          username,
-          city: form.city.trim(),
-          country: form.country.trim(),
-          bio: form.bio.trim(),
-          phone: role === "host" ? form.phone.trim() : "",
-          instagram_url:
-            role === "host" ? form.instagram_url.trim() : "",
-          website_url: role === "host" ? form.website_url.trim() : "",
-          promo_video_url:
-            role === "host"
-              ? uploadedVideoUrl || form.promo_video_url.trim()
-              : "",
-          activities: form.activities,
-          avatar_url,
-          cover_url,
-        })
-        .eq("id", userId);
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      navigate("/profile");
-    } catch (err) {
-      setError(err.message || "Došlo je do greške prilikom registracije.");
-    } finally {
-      setLoading(false);
+    if (signupError) {
+      throw signupError;
     }
+
+    const userId = data.user?.id;
+
+    if (!userId) {
+      throw new Error(
+        "Registracija je uspela, ali korisnički ID nije pronađen."
+      );
+    }
+
+    /*
+      Kada je Supabase Confirm email uključen,
+      session je null dok korisnik ne potvrdi email.
+
+      Zato tada ne pokušavamo upload ili update profila,
+      jer bi RLS blokirao zahtev.
+    */
+    if (!data.session) {
+      window.alert(
+        `Nalog je uspešno kreiran.\n\n` +
+          `Poslali smo potvrdu na ${email}.\n\n` +
+          `Potvrdi email, zatim se prijavi. ` +
+          `Fotografije možeš dodati kroz Uredi profil.`
+      );
+
+      navigate("/login", {
+        replace: true,
+        state: {
+          registeredEmail: email,
+          emailConfirmationRequired: true,
+        },
+      });
+
+      return;
+    }
+
+    /*
+      Ovaj deo ostaje kao zaštita ako nekad isključiš
+      obaveznu potvrdu emaila. Tada session postoji
+      i stari signup proces nastavlja da radi.
+    */
+    const avatar_url = await uploadProfileFile({
+      bucket: "avatars",
+      userId,
+      file: avatarFile,
+      folder: "avatar",
+    });
+
+    const cover_url = await uploadProfileFile({
+      bucket: "covers",
+      userId,
+      file: coverFile,
+      folder: "cover",
+    });
+
+    const uploadedVideoUrl =
+      role === "host"
+        ? await uploadProfileFile({
+            bucket: "profile-videos",
+            userId,
+            file: videoFile,
+            folder: "video",
+          })
+        : null;
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        role,
+        full_name: form.full_name.trim(),
+        username,
+        city: form.city.trim(),
+        country: form.country.trim(),
+        bio: form.bio.trim(),
+        phone:
+          role === "host"
+            ? form.phone.trim()
+            : "",
+        instagram_url:
+          role === "host"
+            ? form.instagram_url.trim()
+            : "",
+        website_url:
+          role === "host"
+            ? form.website_url.trim()
+            : "",
+        promo_video_url:
+          role === "host"
+            ? uploadedVideoUrl ||
+              form.promo_video_url.trim()
+            : "",
+        activities: form.activities,
+        avatar_url,
+        cover_url,
+      })
+      .eq("id", userId);
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    if (role === "host") {
+      navigate(`/h/${username}`, {
+        replace: true,
+      });
+    } else {
+      navigate(`/u/${username}`, {
+        replace: true,
+      });
+    }
+  } catch (err) {
+    const message = String(err?.message || "");
+
+    if (
+      message
+        .toLowerCase()
+        .includes("user already registered")
+    ) {
+      setError(
+        "Nalog sa ovom email adresom već postoji."
+      );
+    } else if (
+      message
+        .toLowerCase()
+        .includes("rate limit")
+    ) {
+      setError(
+        "Previše pokušaja. Sačekaj malo pa pokušaj ponovo."
+      );
+    } else {
+      setError(
+        message ||
+          "Došlo je do greške prilikom registracije."
+      );
+    }
+  } finally {
+    setLoading(false);
   }
+}
 
   const roleContent =
     role === "host"
