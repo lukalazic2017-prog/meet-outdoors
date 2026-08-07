@@ -1,4 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -165,7 +170,13 @@ function Icon({
   );
 }
 
-function ContactItem({ icon, title, value, href, mutedText }) {
+function ContactItem({
+  icon,
+  title,
+  value,
+  href,
+  mutedText,
+}) {
   const content = (
     <>
       <span className="contactIcon">
@@ -189,8 +200,12 @@ function ContactItem({ icon, title, value, href, mutedText }) {
     return (
       <a
         href={href}
-        target={href.startsWith("tel:") ? undefined : "_blank"}
-        rel={href.startsWith("tel:") ? undefined : "noreferrer"}
+        target={
+          href.startsWith("tel:") ? undefined : "_blank"
+        }
+        rel={
+          href.startsWith("tel:") ? undefined : "noreferrer"
+        }
         className="contactItem active"
       >
         {content}
@@ -198,7 +213,11 @@ function ContactItem({ icon, title, value, href, mutedText }) {
     );
   }
 
-  return <div className="contactItem disabled">{content}</div>;
+  return (
+    <div className="contactItem disabled">
+      {content}
+    </div>
+  );
 }
 
 function LoadingState() {
@@ -245,11 +264,233 @@ function NotFoundState() {
   );
 }
 
+function formatDate(value) {
+  if (!value) return "Termin uskoro";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Termin uskoro";
+  }
+
+  return new Intl.DateTimeFormat("sr-Latn-RS", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatPrice(value) {
+  const number = Number(value || 0);
+
+  if (!Number.isFinite(number) || number <= 0) {
+    return "Besplatno";
+  }
+
+  return new Intl.NumberFormat("sr-Latn-RS", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(number);
+}
+
+function EventCard({ event }) {
+  const location =
+    [event.location, event.country]
+      .filter(Boolean)
+      .join(", ") || "Lokacija nije navedena";
+
+  return (
+    <Link
+      to={`/event/${event.id}`}
+      className="hostListingCard"
+    >
+      <div className="hostListingImage">
+        <img
+          src={event.cover_url || FALLBACK_COVER}
+          alt={event.title || "Događaj"}
+        />
+
+        <div className="listingImageShade" />
+
+        <span className="hostListingType">
+          <Icon name="calendar" size={14} />
+          Događaj
+        </span>
+
+        <span className="listingDateBadge">
+          {formatDate(event.start_date)}
+        </span>
+      </div>
+
+      <div className="hostListingBody">
+        <h3>{event.title || "Outdoor događaj"}</h3>
+
+        <span className="hostListingLocation">
+          <Icon name="mapPin" size={14} />
+          {location}
+        </span>
+
+        {event.description && (
+          <p className="hostListingDescription">
+            {event.description}
+          </p>
+        )}
+
+        <div className="hostListingFooter">
+          <strong>{formatPrice(event.price)}</strong>
+
+          <span>
+            Pogledaj događaj
+            <Icon name="arrowRight" size={15} />
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function PackageCard({ item, reviewSummary }) {
+  const location =
+    [item.location, item.country]
+      .filter(Boolean)
+      .join(", ") || "Lokacija nije navedena";
+
+  return (
+    <article className="hostListingCard packageListingCard">
+      <div className="hostListingImage">
+        <img
+          src={item.cover_url || FALLBACK_COVER}
+          alt={item.title || "Paket"}
+        />
+
+        <div className="listingImageShade" />
+
+        <span className="hostListingType packageType">
+          <Icon name="package" size={14} />
+          Paket
+        </span>
+
+        {reviewSummary?.count > 0 && (
+          <span className="listingRatingBadge">
+            <Icon
+              name="star"
+              size={12}
+              fill="currentColor"
+            />
+            {reviewSummary.average.toFixed(1)}
+          </span>
+        )}
+      </div>
+
+      <div className="hostListingBody">
+        <h3>{item.title || "Outdoor paket"}</h3>
+
+        <span className="hostListingLocation">
+          <Icon name="mapPin" size={14} />
+          {location}
+        </span>
+
+        {item.description && (
+          <p className="hostListingDescription">
+            {item.description}
+          </p>
+        )}
+
+        <div className="packageQuickFacts">
+          <span>
+            <Icon name="users" size={14} />
+            {item.capacity || 1} mesta
+          </span>
+
+          <span>
+            <Icon name="calendar" size={14} />
+            {item.duration || "Trajanje nije navedeno"}
+          </span>
+        </div>
+
+        <div className="hostListingFooter">
+          <strong>{formatPrice(item.price)}</strong>
+
+          <span className="packageOfferLabel">
+            Outdoor iskustvo
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ReviewCard({
+  review,
+  packageTitle,
+  reviewer,
+}) {
+  return (
+    <article className="reviewCard">
+      <div className="reviewCardTop">
+        <div className="reviewerIdentity">
+          <img
+            src={
+              reviewer?.avatar_url ||
+              `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(
+                reviewer?.full_name ||
+                  reviewer?.username ||
+                  "Guest"
+              )}`
+            }
+            alt=""
+          />
+
+          <div>
+            <strong>
+              {reviewer?.full_name ||
+                reviewer?.username ||
+                "MeetOutdoors član"}
+            </strong>
+
+            <small>{packageTitle || "Outdoor paket"}</small>
+          </div>
+        </div>
+
+        <span className="reviewDate">
+          {formatDate(review.created_at)}
+        </span>
+      </div>
+
+      <div className="reviewStars">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Icon
+            key={star}
+            name="star"
+            size={15}
+            fill={
+              star <= Number(review.rating)
+                ? "currentColor"
+                : "none"
+            }
+          />
+        ))}
+      </div>
+
+      <p>
+        {review.review ||
+          "Korisnik je ostavio ocenu bez dodatnog komentara."}
+      </p>
+    </article>
+  );
+}
+
 export default function HostProfile() {
   const { username } = useParams();
 
   const [profile, setProfile] = useState(null);
-  const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserId, setCurrentUserId] =
+    useState(null);
+  const [events, setEvents] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [reviewers, setReviewers] = useState({});
   const [loading, setLoading] = useState(true);
 
   const loadProfile = useCallback(async () => {
@@ -262,21 +503,140 @@ export default function HostProfile() {
 
       setCurrentUserId(user?.id || null);
 
-      const { data, error } = await supabase
+      const {
+        data: hostData,
+        error: hostError,
+      } = await supabase
         .from("profiles")
         .select("*")
         .eq("username", username)
         .eq("role", "host")
         .single();
 
-      if (error) {
-        throw error;
+      if (hostError) {
+        throw hostError;
       }
 
-      setProfile(data);
+      setProfile(hostData);
+
+      const [
+        { data: eventsData, error: eventsError },
+        { data: packagesData, error: packagesError },
+      ] = await Promise.all([
+        supabase
+          .from("events")
+          .select("*")
+          .eq("host_id", hostData.id)
+          .eq("is_active", true)
+          .order("start_date", { ascending: true }),
+
+        supabase
+          .from("packages")
+          .select("*")
+          .eq("host_id", hostData.id)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (eventsError) {
+        console.error(
+          "Greška pri učitavanju događaja:",
+          eventsError
+        );
+      }
+
+      if (packagesError) {
+        console.error(
+          "Greška pri učitavanju paketa:",
+          packagesError
+        );
+      }
+
+      const cleanEvents = eventsData || [];
+      const cleanPackages = packagesData || [];
+
+      setEvents(cleanEvents);
+      setPackages(cleanPackages);
+
+      const packageIds = cleanPackages
+        .map((item) => item.id)
+        .filter(Boolean);
+
+      if (packageIds.length === 0) {
+        setReviews([]);
+        setReviewers({});
+        return;
+      }
+
+      const {
+        data: reviewsData,
+        error: reviewsError,
+      } = await supabase
+        .from("package_reviews")
+        .select("*")
+        .in("package_id", packageIds)
+        .order("created_at", { ascending: false });
+
+      if (reviewsError) {
+        console.error(
+          "Greška pri učitavanju recenzija:",
+          reviewsError
+        );
+        setReviews([]);
+        setReviewers({});
+        return;
+      }
+
+      const cleanReviews = reviewsData || [];
+      setReviews(cleanReviews);
+
+      const reviewerIds = [
+        ...new Set(
+          cleanReviews
+            .map((review) => review.user_id)
+            .filter(Boolean)
+        ),
+      ];
+
+      if (reviewerIds.length === 0) {
+        setReviewers({});
+        return;
+      }
+
+      const {
+        data: reviewerProfiles,
+        error: reviewerError,
+      } = await supabase
+        .from("profiles")
+        .select("id, full_name, username, avatar_url")
+        .in("id", reviewerIds);
+
+      if (reviewerError) {
+        console.error(
+          "Greška pri učitavanju autora recenzija:",
+          reviewerError
+        );
+        setReviewers({});
+        return;
+      }
+
+      const reviewerMap = {};
+
+      (reviewerProfiles || []).forEach((item) => {
+        reviewerMap[item.id] = item;
+      });
+
+      setReviewers(reviewerMap);
     } catch (error) {
-      console.error("Greška pri učitavanju host profila:", error);
+      console.error(
+        "Greška pri učitavanju host profila:",
+        error
+      );
+
       setProfile(null);
+      setEvents([]);
+      setPackages([]);
+      setReviews([]);
+      setReviewers({});
     } finally {
       setLoading(false);
     }
@@ -286,6 +646,94 @@ export default function HostProfile() {
     loadProfile();
   }, [loadProfile]);
 
+  const reviewStats = useMemo(() => {
+    if (reviews.length === 0) {
+      return {
+        average: 0,
+        count: 0,
+        distribution: {
+          5: 0,
+          4: 0,
+          3: 0,
+          2: 0,
+          1: 0,
+        },
+      };
+    }
+
+    const distribution = {
+      5: 0,
+      4: 0,
+      3: 0,
+      2: 0,
+      1: 0,
+    };
+
+    let total = 0;
+
+    reviews.forEach((review) => {
+      const rating = Math.max(
+        1,
+        Math.min(5, Number(review.rating || 0))
+      );
+
+      total += rating;
+
+      if (distribution[rating] !== undefined) {
+        distribution[rating] += 1;
+      }
+    });
+
+    return {
+      average: total / reviews.length,
+      count: reviews.length,
+      distribution,
+    };
+  }, [reviews]);
+
+  const reviewsByPackage = useMemo(() => {
+    const result = {};
+
+    reviews.forEach((review) => {
+      const packageId = review.package_id;
+
+      if (!packageId) return;
+
+      if (!result[packageId]) {
+        result[packageId] = {
+          count: 0,
+          total: 0,
+          average: 0,
+        };
+      }
+
+      result[packageId].count += 1;
+      result[packageId].total += Number(
+        review.rating || 0
+      );
+    });
+
+    Object.keys(result).forEach((packageId) => {
+      result[packageId].average =
+        result[packageId].count > 0
+          ? result[packageId].total /
+            result[packageId].count
+          : 0;
+    });
+
+    return result;
+  }, [reviews]);
+
+  const packageTitleMap = useMemo(() => {
+    const result = {};
+
+    packages.forEach((item) => {
+      result[item.id] = item.title;
+    });
+
+    return result;
+  }, [packages]);
+
   if (loading) {
     return <LoadingState />;
   }
@@ -294,18 +742,25 @@ export default function HostProfile() {
     return <NotFoundState />;
   }
 
-  const isOwnProfile = currentUserId === profile.id;
+  const isOwnProfile =
+    currentUserId === profile.id;
 
   const location =
-    [profile.city, profile.country].filter(Boolean).join(", ") ||
+    [profile.city, profile.country]
+      .filter(Boolean)
+      .join(", ") ||
     "Lokacija još nije dodata";
 
-  const activities = Array.isArray(profile.activities)
+  const activities = Array.isArray(
+    profile.activities
+  )
     ? profile.activities
     : [];
 
   const displayName =
-    profile.full_name || profile.username || "Outdoor Host";
+    profile.full_name ||
+    profile.username ||
+    "Outdoor Host";
 
   return (
     <>
@@ -315,7 +770,9 @@ export default function HostProfile() {
         <section className="profileShell">
           <div className="profileHero">
             <img
-              src={profile.cover_url || FALLBACK_COVER}
+              src={
+                profile.cover_url || FALLBACK_COVER
+              }
               alt=""
               className="coverImage"
             />
@@ -324,7 +781,10 @@ export default function HostProfile() {
 
             <div className="heroProfileInfo">
               <img
-                src={profile.avatar_url || FALLBACK_AVATAR}
+                src={
+                  profile.avatar_url ||
+                  FALLBACK_AVATAR
+                }
                 alt={displayName}
                 className="profileAvatar"
               />
@@ -339,7 +799,11 @@ export default function HostProfile() {
                     }
                   >
                     <Icon
-                      name={profile.is_verified ? "verified" : "shield"}
+                      name={
+                        profile.is_verified
+                          ? "verified"
+                          : "shield"
+                      }
                       size={15}
                     />
 
@@ -347,17 +811,36 @@ export default function HostProfile() {
                       ? "MeetOutdoors verifikovani domaćin"
                       : "MeetOutdoors domaćin"}
                   </span>
+
+                  {reviewStats.count > 0 && (
+                    <span className="heroRatingBadge">
+                      <Icon
+                        name="star"
+                        size={14}
+                        fill="currentColor"
+                      />
+                      {reviewStats.average.toFixed(1)}
+                      <small>
+                        ({reviewStats.count})
+                      </small>
+                    </span>
+                  )}
                 </div>
 
                 <h1>{displayName}</h1>
 
                 <div className="profileMeta">
-                  <span>@{profile.username}</span>
+                  <span>
+                    @{profile.username}
+                  </span>
 
                   <span className="metaDivider" />
 
                   <span>
-                    <Icon name="mapPin" size={15} />
+                    <Icon
+                      name="mapPin"
+                      size={15}
+                    />
                     {location}
                   </span>
                 </div>
@@ -367,8 +850,14 @@ export default function HostProfile() {
 
           <div className="profileContent">
             {isOwnProfile && (
-              <Link to="/edit-profile" className="editButton mobileEdit">
-                <Icon name="edit" size={17} />
+              <Link
+                to="/edit-profile"
+                className="editButton mobileEdit"
+              >
+                <Icon
+                  name="edit"
+                  size={17}
+                />
                 Uredi host profil
               </Link>
             )}
@@ -376,45 +865,71 @@ export default function HostProfile() {
             <section className="hostStats">
               <article>
                 <span>
-                  <Icon name="calendar" size={19} />
+                  <Icon
+                    name="calendar"
+                    size={19}
+                  />
                 </span>
 
                 <div>
-                  <strong>0</strong>
-                  <small>Aktivnih događaja</small>
+                  <strong>{events.length}</strong>
+                  <small>
+                    Aktivnih događaja
+                  </small>
                 </div>
               </article>
 
               <article>
                 <span>
-                  <Icon name="package" size={19} />
+                  <Icon
+                    name="package"
+                    size={19}
+                  />
                 </span>
 
                 <div>
-                  <strong>0</strong>
+                  <strong>
+                    {packages.length}
+                  </strong>
                   <small>Paketa i tura</small>
                 </div>
               </article>
 
               <article>
                 <span>
-                  <Icon name="users" size={19} />
+                  <Icon
+                    name="users"
+                    size={19}
+                  />
                 </span>
 
                 <div>
-                  <strong>0</strong>
-                  <small>Učesnika</small>
+                  <strong>
+                    {reviewStats.count}
+                  </strong>
+                  <small>
+                    Recenzija paketa
+                  </small>
                 </div>
               </article>
 
               <article>
                 <span>
-                  <Icon name="star" size={19} />
+                  <Icon
+                    name="star"
+                    size={19}
+                  />
                 </span>
 
                 <div>
-                  <strong>—</strong>
-                  <small>Prosečna ocena</small>
+                  <strong>
+                    {reviewStats.count > 0
+                      ? reviewStats.average.toFixed(1)
+                      : "—"}
+                  </strong>
+                  <small>
+                    Prosečna ocena
+                  </small>
                 </div>
               </article>
             </section>
@@ -424,12 +939,19 @@ export default function HostProfile() {
                 <section className="contentCard aboutCard">
                   <div className="sectionHeading">
                     <div>
-                      <span className="sectionKicker">O domaćinu</span>
-                      <h2>Iskustvo iza avanture.</h2>
+                      <span className="sectionKicker">
+                        O domaćinu
+                      </span>
+                      <h2>
+                        Iskustvo iza avanture.
+                      </h2>
                     </div>
 
                     <span className="sectionIcon">
-                      <Icon name="compass" size={21} />
+                      <Icon
+                        name="compass"
+                        size={21}
+                      />
                     </span>
                   </div>
 
@@ -440,15 +962,22 @@ export default function HostProfile() {
 
                   <div className="trustMessage">
                     <span>
-                      <Icon name="shield" size={18} />
+                      <Icon
+                        name="shield"
+                        size={18}
+                      />
                     </span>
 
                     <div>
-                      <strong>Profil domaćina</strong>
+                      <strong>
+                        Profil domaćina
+                      </strong>
 
                       <p>
-                        Informacije na profilu pomažu učesnicima da
-                        upoznaju organizatora pre rezervacije.
+                        Informacije na profilu
+                        pomažu učesnicima da
+                        upoznaju organizatora pre
+                        rezervacije.
                       </p>
                     </div>
                   </div>
@@ -461,21 +990,32 @@ export default function HostProfile() {
                         Outdoor aktivnosti
                       </span>
 
-                      <h2>Avanture koje organizuje.</h2>
+                      <h2>
+                        Avanture koje organizuje.
+                      </h2>
                     </div>
                   </div>
 
                   <div className="activityList">
                     {activities.length > 0 ? (
-                      activities.map((activity) => (
-                        <span key={activity} className="activityChip">
-                          <Icon name="check" size={14} />
-                          {activity}
-                        </span>
-                      ))
+                      activities.map(
+                        (activity) => (
+                          <span
+                            key={activity}
+                            className="activityChip"
+                          >
+                            <Icon
+                              name="check"
+                              size={14}
+                            />
+                            {activity}
+                          </span>
+                        )
+                      )
                     ) : (
                       <div className="emptyInline">
-                        Aktivnosti još nisu dodate.
+                        Aktivnosti još nisu
+                        dodate.
                       </div>
                     )}
                   </div>
@@ -486,8 +1026,12 @@ export default function HostProfile() {
                 <section className="contentCard contactCard">
                   <div className="sectionHeading compact">
                     <div>
-                      <span className="sectionKicker">Kontakt</span>
-                      <h2>Poveži se sa domaćinom.</h2>
+                      <span className="sectionKicker">
+                        Kontakt
+                      </span>
+                      <h2>
+                        Poveži se sa domaćinom.
+                      </h2>
                     </div>
                   </div>
 
@@ -498,7 +1042,10 @@ export default function HostProfile() {
                       value={profile.phone}
                       href={
                         profile.phone
-                          ? `tel:${profile.phone.replace(/\s/g, "")}`
+                          ? `tel:${profile.phone.replace(
+                              /\s/g,
+                              ""
+                            )}`
                           : ""
                       }
                       mutedText="Telefon nije dodat"
@@ -512,7 +1059,9 @@ export default function HostProfile() {
                           ? "Otvori Instagram profil"
                           : ""
                       }
-                      href={profile.instagram_url}
+                      href={
+                        profile.instagram_url
+                      }
                       mutedText="Instagram nije dodat"
                     />
 
@@ -520,7 +1069,9 @@ export default function HostProfile() {
                       icon="globe"
                       title="Web-sajt"
                       value={
-                        profile.website_url ? "Poseti web-sajt" : ""
+                        profile.website_url
+                          ? "Poseti web-sajt"
+                          : ""
                       }
                       href={profile.website_url}
                       mutedText="Web-sajt nije dodat"
@@ -534,7 +1085,9 @@ export default function HostProfile() {
                           ? "Pogledaj promo video"
                           : ""
                       }
-                      href={profile.promo_video_url}
+                      href={
+                        profile.promo_video_url
+                      }
                       mutedText="Promo video nije dodat"
                     />
                   </div>
@@ -542,7 +1095,10 @@ export default function HostProfile() {
 
                 <section className="verifiedCard">
                   <span className="verifiedIcon">
-                    <Icon name="shield" size={23} />
+                    <Icon
+                      name="shield"
+                      size={23}
+                    />
                   </span>
 
                   <div>
@@ -551,11 +1107,13 @@ export default function HostProfile() {
                     </span>
 
                     <h3>
-                      Upoznaj domaćina pre nego što rezervišeš.
+                      Upoznaj domaćina pre nego
+                      što rezervišeš.
                     </h3>
 
                     <p>
-                      Pregledaj opis, aktivnosti, događaje i iskustva
+                      Pregledaj opis, aktivnosti,
+                      događaje, pakete i iskustva
                       drugih učesnika.
                     </p>
                   </div>
@@ -566,119 +1124,327 @@ export default function HostProfile() {
             <section className="listingSection">
               <div className="listingHeader">
                 <div>
-                  <span className="sectionKicker">Događaji</span>
-                  <h2>Predstojeće avanture</h2>
+                  <span className="sectionKicker">
+                    Događaji
+                  </span>
+                  <h2>
+                    Predstojeće avanture
+                  </h2>
 
                   <p>
-                    Događaji koje ovaj domaćin organizuje pojaviće se
-                    ovde.
+                    Aktivni događaji koje ovaj
+                    domaćin trenutno organizuje.
                   </p>
                 </div>
 
                 {isOwnProfile && (
-                  <Link to="/create-event" className="sectionAction">
+                  <Link
+                    to="/create-event"
+                    className="sectionAction"
+                  >
                     Kreiraj događaj
-                    <Icon name="arrowRight" size={17} />
+                    <Icon
+                      name="arrowRight"
+                      size={17}
+                    />
                   </Link>
                 )}
               </div>
 
-              <div className="emptyListing">
-                <span>
-                  <Icon name="calendar" size={27} />
-                </span>
+              {events.length > 0 ? (
+                <div className="hostListingsGrid">
+                  {events.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="emptyListing">
+                  <span>
+                    <Icon
+                      name="calendar"
+                      size={27}
+                    />
+                  </span>
 
-                <h3>Trenutno nema objavljenih događaja.</h3>
+                  <h3>
+                    Trenutno nema objavljenih
+                    događaja.
+                  </h3>
 
-                <p>
-                  Kada domaćin objavi novu avanturu, moći ćeš da je
-                  pronađeš ovde.
-                </p>
+                  <p>
+                    Kada domaćin objavi novu
+                    avanturu, moći ćeš da je
+                    pronađeš ovde.
+                  </p>
 
-                {isOwnProfile && (
-                  <Link to="/create-event">
-                    Objavi prvi događaj
-                    <Icon name="arrowRight" size={16} />
-                  </Link>
-                )}
-              </div>
+                  {isOwnProfile && (
+                    <Link to="/create-event">
+                      Objavi prvi događaj
+                      <Icon
+                        name="arrowRight"
+                        size={16}
+                      />
+                    </Link>
+                  )}
+                </div>
+              )}
             </section>
 
             <section className="listingSection packagesSection">
               <div className="listingHeader">
                 <div>
-                  <span className="sectionKicker">Ture i paketi</span>
-                  <h2>Višednevna iskustva</h2>
+                  <span className="sectionKicker">
+                    Ture i paketi
+                  </span>
+                  <h2>
+                    Iskustva koja možeš da
+                    rezervišeš
+                  </h2>
 
                   <p>
-                    Paketi, ture i kompletna outdoor iskustva ovog
+                    Paketi, ture i kompletna
+                    outdoor iskustva ovog
                     domaćina.
                   </p>
                 </div>
 
                 {isOwnProfile && (
-                  <Link to="/create-package" className="sectionAction">
+                  <Link
+                    to="/create-package"
+                    className="sectionAction"
+                  >
                     Kreiraj paket
-                    <Icon name="arrowRight" size={17} />
+                    <Icon
+                      name="arrowRight"
+                      size={17}
+                    />
                   </Link>
                 )}
               </div>
 
-              <div className="emptyListing">
-                <span>
-                  <Icon name="package" size={27} />
-                </span>
+              {packages.length > 0 ? (
+                <div className="hostListingsGrid">
+                  {packages.map((item) => (
+                    <PackageCard
+                      key={item.id}
+                      item={item}
+                      reviewSummary={
+                        reviewsByPackage[
+                          item.id
+                        ]
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="emptyListing">
+                  <span>
+                    <Icon
+                      name="package"
+                      size={27}
+                    />
+                  </span>
 
-                <h3>Trenutno nema aktivnih paketa.</h3>
+                  <h3>
+                    Trenutno nema aktivnih
+                    paketa.
+                  </h3>
 
-                <p>
-                  Novi paketi i ture će se automatski prikazati na ovom
-                  profilu.
-                </p>
+                  <p>
+                    Novi paketi i ture će se
+                    automatski prikazati na ovom
+                    profilu.
+                  </p>
 
-                {isOwnProfile && (
-                  <Link to="/create-package">
-                    Objavi prvi paket
-                    <Icon name="arrowRight" size={16} />
-                  </Link>
-                )}
-              </div>
+                  {isOwnProfile && (
+                    <Link to="/create-package">
+                      Objavi prvi paket
+                      <Icon
+                        name="arrowRight"
+                        size={16}
+                      />
+                    </Link>
+                  )}
+                </div>
+              )}
             </section>
 
             <section className="reviewsSection">
               <div className="reviewsIntro">
-                <span className="sectionKicker">Utisci učesnika</span>
-                <h2>Recenzije domaćina</h2>
+                <span className="sectionKicker">
+                  Utisci učesnika
+                </span>
+                <h2>
+                  Recenzije hostovih paketa
+                </h2>
 
                 <p>
-                  Recenzije će pomoći budućim učesnicima da izaberu
-                  avanturu sa više sigurnosti.
+                  Ocena domaćina se računa iz
+                  recenzija svih paketa koje je
+                  kreirao.
                 </p>
+
+                {reviewStats.count > 0 && (
+                  <div className="overallRating">
+                    <strong>
+                      {reviewStats.average.toFixed(
+                        1
+                      )}
+                    </strong>
+
+                    <div>
+                      <span className="overallStars">
+                        {[1, 2, 3, 4, 5].map(
+                          (star) => (
+                            <Icon
+                              key={star}
+                              name="star"
+                              size={16}
+                              fill={
+                                star <=
+                                Math.round(
+                                  reviewStats.average
+                                )
+                                  ? "currentColor"
+                                  : "none"
+                              }
+                            />
+                          )
+                        )}
+                      </span>
+
+                      <small>
+                        Na osnovu{" "}
+                        {reviewStats.count}{" "}
+                        {reviewStats.count === 1
+                          ? "recenzije"
+                          : "recenzija"}
+                      </small>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="reviewsPlaceholder">
-                <div className="ratingBlock">
-                  <span>
-                    <Icon name="star" size={27} />
-                  </span>
+              <div className="reviewsSummary">
+                <div className="reviewsPlaceholder">
+                  <div className="ratingBlock">
+                    <span>
+                      <Icon
+                        name="star"
+                        size={27}
+                        fill={
+                          reviewStats.count > 0
+                            ? "currentColor"
+                            : "none"
+                        }
+                      />
+                    </span>
 
-                  <strong>Još nema ocena</strong>
-                  <small>Prva recenzija će se pojaviti ovde.</small>
-                </div>
+                    <strong>
+                      {reviewStats.count > 0
+                        ? reviewStats.average.toFixed(
+                            1
+                          )
+                        : "Još nema ocena"}
+                    </strong>
 
-                <div className="reviewBars">
-                  {[5, 4, 3, 2, 1].map((rating) => (
-                    <div key={rating}>
-                      <span>{rating}</span>
-                      <Icon name="star" size={12} />
-                      <div>
-                        <span style={{ width: "0%" }} />
-                      </div>
-                    </div>
-                  ))}
+                    <small>
+                      {reviewStats.count > 0
+                        ? `${reviewStats.count} ukupno`
+                        : "Prva recenzija će se pojaviti ovde."}
+                    </small>
+                  </div>
+
+                  <div className="reviewBars">
+                    {[5, 4, 3, 2, 1].map(
+                      (rating) => {
+                        const count =
+                          reviewStats
+                            .distribution[
+                            rating
+                          ] || 0;
+
+                        const width =
+                          reviewStats.count > 0
+                            ? `${Math.round(
+                                (count /
+                                  reviewStats.count) *
+                                  100
+                              )}%`
+                            : "0%";
+
+                        return (
+                          <div key={rating}>
+                            <span>{rating}</span>
+
+                            <Icon
+                              name="star"
+                              size={12}
+                              fill="currentColor"
+                            />
+
+                            <div>
+                              <span
+                                style={{
+                                  width,
+                                }}
+                              />
+                            </div>
+
+                            <small>
+                              {count}
+                            </small>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
+
+            {reviews.length > 0 && (
+              <section className="reviewFeedSection">
+                <div className="listingHeader">
+                  <div>
+                    <span className="sectionKicker">
+                      Poslednji utisci
+                    </span>
+
+                    <h2>
+                      Šta kažu učesnici
+                    </h2>
+
+                    <p>
+                      Najnovije recenzije paketa
+                      ovog domaćina.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="reviewFeedGrid">
+                  {reviews.map((review) => (
+                    <ReviewCard
+                      key={review.id}
+                      review={review}
+                      packageTitle={
+                        packageTitleMap[
+                          review.package_id
+                        ]
+                      }
+                      reviewer={
+                        reviewers[
+                          review.user_id
+                        ]
+                      }
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         </section>
       </main>
@@ -849,7 +1615,8 @@ function HostProfileStyles() {
         margin-bottom: 14px;
       }
 
-      .hostBadge {
+      .hostBadge,
+      .heroRatingBadge {
         display: inline-flex;
         align-items: center;
         gap: 7px;
@@ -868,6 +1635,17 @@ function HostProfileStyles() {
         border-color: rgba(201, 242, 140, 0.32);
         background: rgba(201, 242, 140, 0.13);
         color: #d9f7ae;
+      }
+
+      .heroRatingBadge {
+        border-color: rgba(255, 225, 138, 0.28);
+        background: rgba(255, 211, 92, 0.12);
+        color: #ffe28a;
+      }
+
+      .heroRatingBadge small {
+        color: rgba(255, 255, 255, 0.62);
+        font-size: 8px;
       }
 
       .heroText h1 {
@@ -972,7 +1750,8 @@ function HostProfileStyles() {
 
       .contentCard,
       .listingSection,
-      .reviewsSection {
+      .reviewsSection,
+      .reviewFeedSection {
         border: 1px solid #dde4da;
         border-radius: 25px;
         background: rgba(255, 255, 255, 0.76);
@@ -1210,7 +1989,8 @@ function HostProfileStyles() {
         line-height: 1.6;
       }
 
-      .listingSection {
+      .listingSection,
+      .reviewFeedSection {
         margin-top: 20px;
         padding: 28px;
       }
@@ -1314,12 +2094,226 @@ function HostProfileStyles() {
           );
       }
 
+      .hostListingsGrid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .hostListingCard {
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid #dce4d9;
+        border-radius: 22px;
+        background: #ffffff;
+        box-shadow: 0 10px 30px rgba(31, 51, 38, 0.05);
+        transition:
+          transform 0.22s ease,
+          box-shadow 0.22s ease,
+          border-color 0.22s ease;
+      }
+
+      .hostListingCard:hover {
+        transform: translateY(-5px);
+        border-color: #a8bb9c;
+        box-shadow: 0 22px 46px rgba(31, 51, 38, 0.11);
+      }
+
+      .hostListingImage {
+        position: relative;
+        height: 190px;
+        overflow: hidden;
+        background: #e4eadf;
+      }
+
+      .hostListingImage img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        transition: transform 0.55s ease;
+      }
+
+      .hostListingCard:hover .hostListingImage img {
+        transform: scale(1.05);
+      }
+
+      .listingImageShade {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(4, 14, 8, 0.08),
+            transparent 45%,
+            rgba(4, 14, 8, 0.55)
+          );
+      }
+
+      .hostListingType,
+      .listingDateBadge,
+      .listingRatingBadge {
+        position: absolute;
+        top: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 31px;
+        padding: 0 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(9, 28, 16, 0.6);
+        color: white;
+        font-size: 8px;
+        font-weight: 900;
+        backdrop-filter: blur(12px);
+      }
+
+      .hostListingType {
+        left: 12px;
+      }
+
+      .hostListingType.packageType {
+        color: #d9f7ae;
+      }
+
+      .listingDateBadge,
+      .listingRatingBadge {
+        right: 12px;
+      }
+
+      .listingRatingBadge {
+        color: #ffe28a;
+      }
+
+      .hostListingBody {
+        padding: 17px;
+      }
+
+      .hostListingBody h3 {
+        margin: 0;
+        color: #293d31;
+        font-size: 18px;
+        line-height: 1.15;
+        letter-spacing: -0.035em;
+      }
+
+      .hostListingLocation {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        color: #748078;
+        font-size: 9px;
+        font-weight: 750;
+      }
+
+      .hostListingLocation svg {
+        flex: 0 0 auto;
+        color: #719252;
+      }
+
+      .hostListingDescription {
+        display: -webkit-box;
+        min-height: 30px;
+        margin: 12px 0 0;
+        overflow: hidden;
+        color: #7a867e;
+        font-size: 9px;
+        line-height: 1.6;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .packageQuickFacts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 13px;
+      }
+
+      .packageQuickFacts > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 29px;
+        padding: 0 9px;
+        border-radius: 999px;
+        background: #f1f5ed;
+        color: #65746b;
+        font-size: 8px;
+        font-weight: 800;
+      }
+
+      .packageQuickFacts svg {
+        color: #719252;
+      }
+
+      .hostListingFooter {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 15px;
+        padding-top: 14px;
+        border-top: 1px solid #e5eae3;
+      }
+
+      .hostListingFooter strong {
+        color: #233d2d;
+        font-size: 13px;
+      }
+
+      .hostListingFooter span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: #638047;
+        font-size: 8px;
+        font-weight: 850;
+      }
+
+      .packageOfferLabel {
+        color: #7b887f !important;
+      }
+
       .reviewsSection {
         display: grid;
         grid-template-columns: minmax(0, 0.8fr) minmax(350px, 1.2fr);
         gap: 30px;
         margin-top: 20px;
         padding: 28px;
+      }
+
+      .overallRating {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 20px;
+      }
+
+      .overallRating > strong {
+        color: #24392d;
+        font-size: 42px;
+        line-height: 1;
+        letter-spacing: -0.06em;
+      }
+
+      .overallRating > div {
+        display: grid;
+        gap: 5px;
+      }
+
+      .overallStars {
+        display: flex;
+        gap: 3px;
+        color: #d7a52f;
+      }
+
+      .overallRating small {
+        color: #8a958d;
+        font-size: 9px;
       }
 
       .reviewsPlaceholder {
@@ -1346,7 +2340,7 @@ function HostProfileStyles() {
         height: 53px;
         border-radius: 17px;
         background: #e9f2de;
-        color: #6b894f;
+        color: #d3a12c;
       }
 
       .ratingBlock strong {
@@ -1368,11 +2362,15 @@ function HostProfileStyles() {
 
       .reviewBars > div {
         display: grid;
-        grid-template-columns: 12px 13px 1fr;
+        grid-template-columns: 12px 13px 1fr 18px;
         align-items: center;
         gap: 6px;
         color: #859087;
         font-size: 9px;
+      }
+
+      .reviewBars > div > svg {
+        color: #d3a12c;
       }
 
       .reviewBars > div > div {
@@ -1387,6 +2385,92 @@ function HostProfileStyles() {
         height: 100%;
         border-radius: inherit;
         background: #88a66b;
+      }
+
+      .reviewBars > div > small {
+        color: #9aa39c;
+        font-size: 8px;
+        text-align: right;
+      }
+
+      .reviewFeedGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .reviewCard {
+        padding: 18px;
+        border: 1px solid #dfe6dc;
+        border-radius: 19px;
+        background: #fafbf8;
+      }
+
+      .reviewCardTop {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 15px;
+      }
+
+      .reviewerIdentity {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .reviewerIdentity img {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 auto;
+        border-radius: 13px;
+        object-fit: cover;
+        background: #e5ebdf;
+      }
+
+      .reviewerIdentity > div {
+        min-width: 0;
+      }
+
+      .reviewerIdentity strong,
+      .reviewerIdentity small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .reviewerIdentity strong {
+        color: #34483b;
+        font-size: 10px;
+      }
+
+      .reviewerIdentity small {
+        margin-top: 4px;
+        color: #8c968f;
+        font-size: 8px;
+      }
+
+      .reviewDate {
+        flex: 0 0 auto;
+        color: #9aa39d;
+        font-size: 8px;
+      }
+
+      .reviewStars {
+        display: flex;
+        gap: 3px;
+        margin-top: 13px;
+        color: #d3a12c;
+      }
+
+      .reviewCard > p {
+        margin: 12px 0 0;
+        color: #6f7c74;
+        font-size: 10px;
+        line-height: 1.65;
       }
 
       .stateCard {
@@ -1470,6 +2554,10 @@ function HostProfileStyles() {
         .reviewsSection {
           grid-template-columns: 1fr;
         }
+
+        .hostListingsGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
 
       @media (max-width: 760px) {
@@ -1525,6 +2613,20 @@ function HostProfileStyles() {
         .reviewsPlaceholder {
           grid-template-columns: 1fr;
         }
+
+        .reviewFeedGrid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .hostListingsGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .hostListingImage {
+          height: 220px;
+        }
       }
 
       @media (max-width: 520px) {
@@ -1563,7 +2665,8 @@ function HostProfileStyles() {
 
         .contentCard,
         .listingSection,
-        .reviewsSection {
+        .reviewsSection,
+        .reviewFeedSection {
           padding: 20px;
           border-radius: 21px;
         }
@@ -1584,6 +2687,10 @@ function HostProfileStyles() {
 
         .contactArrow {
           display: none;
+        }
+
+        .overallRating > strong {
+          font-size: 36px;
         }
       }
 

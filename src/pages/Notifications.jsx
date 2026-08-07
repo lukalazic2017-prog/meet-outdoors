@@ -89,6 +89,7 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="m9 12 2 2 4-4" />
       </>
     ),
+    check: <path d="m5 12 4 4L19 6" />,
   };
 
   return (
@@ -263,7 +264,10 @@ function notificationMeta(notification) {
   };
 }
 
-function NotificationCard({ notification }) {
+function NotificationCard({
+  notification,
+  onOpen,
+}) {
   const meta = notificationMeta(notification);
 
   const target = notification.event_id
@@ -272,9 +276,7 @@ function NotificationCard({ notification }) {
       ? `/package/${notification.package_id}`
       : null;
 
-  const unread =
-    notification.is_read === false ||
-    notification.read === false;
+  const unread = notification.is_read !== true;
 
   const body = (
     <>
@@ -325,12 +327,26 @@ function NotificationCard({ notification }) {
     ? "notificationCard unread"
     : "notificationCard";
 
-  return target ? (
-    <Link to={target} className={className}>
-      {body}
-    </Link>
-  ) : (
-    <article className={className}>
+  if (target) {
+    return (
+      <Link
+        to={target}
+        className={className}
+        onClick={() => onOpen(notification)}
+      >
+        {body}
+      </Link>
+    );
+  }
+
+  return (
+    <article
+      className={className}
+      onClick={() => onOpen(notification)}
+      style={{
+        cursor: unread ? "pointer" : "default",
+      }}
+    >
       {body}
     </article>
   );
@@ -364,6 +380,8 @@ export default function Notifications() {
     useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [markingAll, setMarkingAll] =
+    useState(false);
 
   const loadNotifications = useCallback(async () => {
     if (!profile?.id) {
@@ -407,11 +425,207 @@ export default function Notifications() {
     }
   }, [profile?.id]);
 
+  const markAsRead = useCallback(
+    async (notification) => {
+      if (
+        !profile?.id ||
+        !notification?.id ||
+        notification.is_read === true
+      ) {
+        return;
+      }
+
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id
+            ? {
+                ...item,
+                is_read: true,
+              }
+            : item
+        )
+      );
+
+      const { error: readError } = await supabase
+        .from("notifications")
+        .update({
+          is_read: true,
+        })
+        .eq("id", notification.id)
+        .eq("user_id", profile.id);
+
+      if (readError) {
+        console.error(
+          "Greška pri označavanju obaveštenja kao pročitanog:",
+          readError
+        );
+
+        setNotifications((current) =>
+          current.map((item) =>
+            item.id === notification.id
+              ? {
+                  ...item,
+                  is_read: false,
+                }
+              : item
+          )
+        );
+      }
+    },
+    [profile?.id]
+  );
+
+  const markAllAsRead = useCallback(async () => {
+    if (!profile?.id || markingAll) return;
+
+    const hasUnread = notifications.some(
+      (item) => item.is_read !== true
+    );
+
+    if (!hasUnread) return;
+
+    setMarkingAll(true);
+
+    const previousNotifications = notifications;
+
+    setNotifications((current) =>
+      current.map((item) => ({
+        ...item,
+        is_read: true,
+      }))
+    );
+
+    try {
+      const { error: readAllError } =
+        await supabase
+          .from("notifications")
+          .update({
+            is_read: true,
+          })
+          .eq("user_id", profile.id)
+          .or("is_read.eq.false,is_read.is.null");
+
+      if (readAllError) {
+        throw readAllError;
+      }
+    } catch (readAllError) {
+      console.error(
+        "Greška pri označavanju svih obaveštenja kao pročitanih:",
+        readAllError
+      );
+
+      setNotifications(previousNotifications);
+
+      setError(
+        readAllError.message ||
+          "Nije moguće označiti sva obaveštenja kao pročitana."
+      );
+    } finally {
+      setMarkingAll(false);
+    }
+  }, [
+    profile?.id,
+    markingAll,
+    notifications,
+  ]);
+
   useEffect(() => {
     if (authLoading) return;
 
     loadNotifications();
   }, [authLoading, loadNotifications]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channel = supabase
+      .channel(
+        `notifications-realtime-${profile.id}`
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const newNotification = payload.new;
+
+          setNotifications((current) => {
+            const exists = current.some(
+              (item) =>
+                item.id === newNotification.id
+            );
+
+            if (exists) {
+              return current;
+            }
+
+            return [
+              newNotification,
+              ...current,
+            ];
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const updatedNotification =
+            payload.new;
+
+          setNotifications((current) =>
+            current.map((item) =>
+              item.id ===
+              updatedNotification.id
+                ? updatedNotification
+                : item
+            )
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const deletedId =
+            payload.old?.id;
+
+          if (!deletedId) return;
+
+          setNotifications((current) =>
+            current.filter(
+              (item) =>
+                item.id !== deletedId
+            )
+          );
+        }
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.error(
+            "Realtime notifications channel error"
+          );
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
 
   const groupedNotifications = useMemo(() => {
     const groups = {
@@ -436,8 +650,7 @@ export default function Notifications() {
     () =>
       notifications.filter(
         (notification) =>
-          notification.is_read === false ||
-          notification.read === false
+          notification.is_read !== true
       ).length,
     [notifications]
   );
@@ -512,13 +725,35 @@ export default function Notifications() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={loadNotifications}
-            >
-              <Icon name="refresh" size={16} />
-              Osveži
-            </button>
+            <div className="toolbarActions">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  className="markAllButton"
+                  onClick={markAllAsRead}
+                  disabled={markingAll}
+                >
+                  <Icon
+                    name="check"
+                    size={16}
+                  />
+                  {markingAll
+                    ? "Označavanje..."
+                    : "Označi sve kao pročitano"}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={loadNotifications}
+              >
+                <Icon
+                  name="refresh"
+                  size={16}
+                />
+                Osveži
+              </button>
+            </div>
           </header>
 
           {error && (
@@ -527,7 +762,10 @@ export default function Notifications() {
               role="alert"
             >
               <span>
-                <Icon name="alert" size={18} />
+                <Icon
+                  name="alert"
+                  size={18}
+                />
               </span>
 
               <p>{error}</p>
@@ -544,7 +782,10 @@ export default function Notifications() {
           {!profile?.id ? (
             <div className="emptyState">
               <span>
-                <Icon name="user" size={30} />
+                <Icon
+                  name="user"
+                  size={30}
+                />
               </span>
 
               <h3>
@@ -567,7 +808,10 @@ export default function Notifications() {
           ) : notifications.length === 0 ? (
             <div className="emptyState">
               <span>
-                <Icon name="inbox" size={30} />
+                <Icon
+                  name="inbox"
+                  size={30}
+                />
               </span>
 
               <h3>
@@ -614,9 +858,14 @@ export default function Notifications() {
                       {items.map(
                         (notification) => (
                           <NotificationCard
-                            key={notification.id}
+                            key={
+                              notification.id
+                            }
                             notification={
                               notification
+                            }
+                            onOpen={
+                              markAsRead
                             }
                           />
                         )
@@ -648,7 +897,10 @@ export default function Notifications() {
             <div className="benefits">
               <article>
                 <span>
-                  <Icon name="users" size={20} />
+                  <Icon
+                    name="users"
+                    size={20}
+                  />
                 </span>
 
                 <div>
@@ -679,7 +931,10 @@ export default function Notifications() {
 
               <article>
                 <span>
-                  <Icon name="shield" size={20} />
+                  <Icon
+                    name="shield"
+                    size={20}
+                  />
                 </span>
 
                 <div>
@@ -847,6 +1102,14 @@ function NotificationsStyles() {
         margin: 52px 0 22px;
       }
 
+      .toolbarActions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
       .sectionKicker {
         color: #769450;
         font-size: 9px;
@@ -870,7 +1133,7 @@ function NotificationsStyles() {
         font-size: 10px;
       }
 
-      .toolbar > button,
+      .toolbarActions > button,
       .errorBox button {
         display: inline-flex;
         align-items: center;
@@ -882,11 +1145,22 @@ function NotificationsStyles() {
         font-weight: 850;
       }
 
-      .toolbar > button {
+      .toolbarActions > button {
         min-height: 43px;
         padding: 0 15px;
         border-radius: 13px;
         font-size: 9px;
+      }
+
+      .toolbarActions > button:disabled {
+        cursor: wait;
+        opacity: .65;
+      }
+
+      .toolbarActions .markAllButton {
+        border-color: #bfd2ae;
+        background: #edf5e7;
+        color: #4c6d39;
       }
 
       .groups {
@@ -961,6 +1235,8 @@ function NotificationsStyles() {
             rgba(241,248,234,.98),
             rgba(255,255,255,.9)
           );
+        box-shadow:
+          0 12px 34px rgba(84, 118, 65, .08);
       }
 
       .notificationIcon {
@@ -1062,8 +1338,8 @@ function NotificationsStyles() {
         position: absolute;
         top: 17px;
         right: 17px;
-        width: 8px;
-        height: 8px;
+        width: 9px;
+        height: 9px;
         border: 2px solid white;
         border-radius: 50%;
         background: #79a250;
@@ -1297,6 +1573,11 @@ function NotificationsStyles() {
           flex-direction: column;
         }
 
+        .toolbarActions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
         .stats {
           grid-template-columns: 1fr;
         }
@@ -1313,6 +1594,16 @@ function NotificationsStyles() {
 
         .hero h1 {
           font-size: 49px;
+        }
+
+        .toolbarActions {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .toolbarActions > button {
+          justify-content: center;
+          width: 100%;
         }
 
         .notificationCard {

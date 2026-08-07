@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../supabaseClient";
 
 /* =========================================================
    ICONS
@@ -163,6 +164,12 @@ function Icon({
         <path d="M4 6h16M7 12h10M10 18h4" />
       </>
     ),
+    bell: (
+      <>
+        <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+        <path d="M10 21h4" />
+      </>
+    ),
     menu: (
       <>
         <path d="M4 7h16M4 12h16M4 17h16" />
@@ -306,6 +313,404 @@ const hostBookings = [
     status: "Odobreno",
   },
 ];
+
+
+function notificationTarget(notification) {
+  if (notification?.event_id) return `/event/${notification.event_id}`;
+  if (notification?.package_id) return `/package/${notification.package_id}`;
+  return "/notifications";
+}
+
+function isUnread(notification) {
+  return notification?.is_read === false || notification?.read === false;
+}
+
+function isBookingNotification(notification) {
+  const value = [
+    notification?.type,
+    notification?.title,
+    notification?.message,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return value.includes("booking") || value.includes("rezerv");
+}
+
+function relativeTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (minutes < 1) return "Upravo sada";
+  if (minutes < 60) return `Pre ${minutes} min`;
+  if (hours < 24) return `Pre ${hours} h`;
+  if (days === 1) return "Juče";
+  if (days < 7) return `Pre ${days} dana`;
+  return new Intl.DateTimeFormat("sr-Latn-RS", {
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+}
+
+function HomeNotifications({ notifications, onRead, hostMode = false }) {
+  const latest = notifications.slice(0, 4);
+  const unreadCount = notifications.filter(isUnread).length;
+
+  return (
+    <section className={`homeNotifications pageContainer ${hostMode ? "hostMode" : "userMode"}`}>
+      <div className="homeNotificationsHeader">
+        <div>
+          <span className="dashboardKicker">
+            <span />
+            {hostMode ? "Prioritet" : "Tvoja aktivnost"}
+          </span>
+          <h2>
+            {unreadCount > 0
+              ? `${unreadCount} ${unreadCount === 1 ? "novo obaveštenje" : "nova obaveštenja"}`
+              : "Sve je pregledano."}
+          </h2>
+          <p>
+            {hostMode
+              ? "Nove rezervacije i važne promene vidiš odmah, bez osvežavanja stranice."
+              : "Status rezervacija i važne promene stižu ovde u realnom vremenu."}
+          </p>
+        </div>
+
+        <Link to="/notifications" className="homeNotificationsAll">
+          Sva obaveštenja
+          <Icon name="arrowRight" size={17} />
+        </Link>
+      </div>
+
+      {latest.length > 0 ? (
+        <div className="homeNotificationGrid">
+          {latest.map((notification) => {
+            const unread = isUnread(notification);
+            return (
+              <Link
+                key={notification.id}
+                to={notificationTarget(notification)}
+                className={`homeNotificationCard ${unread ? "unread" : ""}`}
+                onClick={() => onRead(notification)}
+              >
+                <span className="homeNotificationIcon">
+                  <Icon name={isBookingNotification(notification) ? "booking" : "bell"} size={19} />
+                </span>
+
+                <div className="homeNotificationCopy">
+                  <div>
+                    <small>{isBookingNotification(notification) ? "Rezervacija" : "Obaveštenje"}</small>
+                    <span>{relativeTime(notification.created_at)}</span>
+                  </div>
+                  <strong>{notification.title || "Novo obaveštenje"}</strong>
+                  <p>{notification.message || "Imaš novu aktivnost na MeetOutdoors nalogu."}</p>
+                </div>
+
+                {unread && <span className="homeUnreadDot" />}
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="homeNotificationsEmpty">
+          <span><Icon name="bell" size={22} /></span>
+          <div>
+            <strong>Nema novih obaveštenja.</strong>
+            <p>Kada se nešto važno dogodi, pojaviće se ovde odmah.</p>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function useHomeLiveData(profile) {
+  const userId = profile?.id || null;
+  const role = profile?.role || null;
+
+  const [platformStats, setPlatformStats] = useState({
+    users: 0,
+    hosts: 0,
+    events: 0,
+    packages: 0,
+  });
+
+  const [notifications, setNotifications] = useState([]);
+  const [hostOwnStats, setHostOwnStats] = useState({
+    events: 0,
+    packages: 0,
+  });
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadPlatformStats() {
+      try {
+        const [usersRes, hostsRes, eventsRes, packagesRes] =
+          await Promise.all([
+            supabase
+              .from("profiles")
+              .select("id", { count: "exact", head: true }),
+            supabase
+              .from("profiles")
+              .select("id", { count: "exact", head: true })
+              .eq("role", "host"),
+            supabase
+              .from("events")
+              .select("id", { count: "exact", head: true }),
+            supabase
+              .from("packages")
+              .select("id", { count: "exact", head: true }),
+          ]);
+
+        const firstError =
+          usersRes.error ||
+          hostsRes.error ||
+          eventsRes.error ||
+          packagesRes.error;
+
+        if (firstError) {
+          console.error(
+            "Greška pri učitavanju statistike početne strane:",
+            firstError
+          );
+          return;
+        }
+
+        if (!mounted) return;
+
+        setPlatformStats({
+          users: usersRes.count ?? 0,
+          hosts: hostsRes.count ?? 0,
+          events: eventsRes.count ?? 0,
+          packages: packagesRes.count ?? 0,
+        });
+      } catch (error) {
+        console.error(
+          "Greška pri učitavanju statistike početne strane:",
+          error
+        );
+      }
+    }
+
+    void loadPlatformStats();
+
+    const channel = supabase
+      .channel("home-platform-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => void loadPlatformStats()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "events" },
+        () => void loadPlatformStats()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "packages" },
+        () => void loadPlatformStats()
+      )
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    if (!userId) {
+      setNotifications([]);
+      setHostOwnStats({ events: 0, packages: 0 });
+
+      return () => {
+        mounted = false;
+      };
+    }
+
+    async function loadNotifications() {
+      try {
+        const { data, error } = await supabase
+          .from("notifications")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (error) {
+          console.error(
+            "Greška pri učitavanju obaveštenja:",
+            error
+          );
+          return;
+        }
+
+        if (mounted) {
+          setNotifications(data ?? []);
+        }
+      } catch (error) {
+        console.error("Greška pri učitavanju obaveštenja:", error);
+      }
+    }
+
+    async function loadHostOwnStats() {
+      if (role !== "host") {
+        if (mounted) {
+          setHostOwnStats({ events: 0, packages: 0 });
+        }
+        return;
+      }
+
+      try {
+        const [eventsRes, packagesRes] = await Promise.all([
+          supabase
+            .from("events")
+            .select("id", { count: "exact", head: true })
+            .eq("host_id", userId),
+          supabase
+            .from("packages")
+            .select("id", { count: "exact", head: true })
+            .eq("host_id", userId),
+        ]);
+
+        const firstError = eventsRes.error || packagesRes.error;
+
+        if (firstError) {
+          console.error(
+            "Greška pri učitavanju host statistike:",
+            firstError
+          );
+          return;
+        }
+
+        if (!mounted) return;
+
+        setHostOwnStats({
+          events: eventsRes.count ?? 0,
+          packages: packagesRes.count ?? 0,
+        });
+      } catch (error) {
+        console.error(
+          "Greška pri učitavanju host statistike:",
+          error
+        );
+      }
+    }
+
+    void loadNotifications();
+    void loadHostOwnStats();
+
+    const notificationChannel = supabase
+      .channel(`home-notifications-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => void loadNotifications()
+      )
+      .subscribe();
+
+    const hostChannel =
+      role === "host"
+        ? supabase
+            .channel(`home-host-content-${userId}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "*",
+                schema: "public",
+                table: "events",
+                filter: `host_id=eq.${userId}`,
+              },
+              () => void loadHostOwnStats()
+            )
+            .on(
+              "postgres_changes",
+              {
+                event: "*",
+                schema: "public",
+                table: "packages",
+                filter: `host_id=eq.${userId}`,
+              },
+              () => void loadHostOwnStats()
+            )
+            .subscribe()
+        : null;
+
+    return () => {
+      mounted = false;
+      void supabase.removeChannel(notificationChannel);
+
+      if (hostChannel) {
+        void supabase.removeChannel(hostChannel);
+      }
+    };
+  }, [role, userId]);
+
+  async function markRead(notification) {
+    if (!userId || !notification?.id || !isUnread(notification)) {
+      return;
+    }
+
+    setNotifications((current) =>
+      current.map((item) =>
+        item.id === notification.id
+          ? { ...item, is_read: true, read: true }
+          : item
+      )
+    );
+
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", notification.id)
+        .eq("user_id", userId);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error(
+        "Greška pri označavanju obaveštenja kao pročitanog:",
+        error
+      );
+
+      void (async () => {
+        const { data } = await supabase
+          .from("notifications")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (data) {
+          setNotifications(data);
+        }
+      })();
+    }
+  }
+
+  return {
+    platformStats,
+    notifications,
+    hostOwnStats,
+    markRead,
+  };
+}
 
 /* =========================================================
    SHARED UI
@@ -466,7 +871,7 @@ function EventCards() {
    GUEST HOME
 ========================================================= */
 
-function GuestHome() {
+function GuestHome({ platformStats }) {
   return (
     <main className="home">
       <section className="guestHero">
@@ -474,13 +879,9 @@ function GuestHome() {
         <div className="heroOverlay" />
 
         <div className="heroTopBar pageContainer">
-            
 
-          <div className="heroTopActions">
-            <Link to="/signup" className="heroJoinLink">
-              Napravi nalog
-            </Link>
-          </div>
+
+         
         </div>
 
         <div className="pageContainer guestHeroContent">
@@ -511,18 +912,22 @@ function GuestHome() {
               </Link>
             </div>
 
-            <div className="guestProof">
+            <div className="guestProof liveProof">
               <div>
-                <strong>350+</strong>
-                <span>aktivnih avanturista</span>
+                <strong>{platformStats.users}</strong>
+                <span>registrovanih ljudi</span>
               </div>
               <div>
-                <strong>70+</strong>
-                <span>outdoor iskustava</span>
+                <strong>{platformStats.hosts}</strong>
+                <span>aktivnih domaćina</span>
               </div>
               <div>
-                <strong>4.9</strong>
-                <span>prosečna ocena</span>
+                <strong>{platformStats.events}</strong>
+                <span>aktivnih događaja</span>
+              </div>
+              <div>
+                <strong>{platformStats.packages}</strong>
+                <span>paketa i tura</span>
               </div>
             </div>
           </div>
@@ -656,7 +1061,7 @@ function GuestHome() {
    USER HOME
 ========================================================= */
 
-function UserHome({ profile }) {
+function UserHome({ profile, notifications, onRead }) {
   const firstName = useMemo(() => {
     if (!profile?.full_name) return "";
     return profile.full_name.trim().split(" ")[0];
@@ -694,6 +1099,8 @@ function UserHome({ profile }) {
           </Link>
         </div>
       </section>
+
+      <HomeNotifications notifications={notifications} onRead={onRead} />
 
       <section className="userSearchStage pageContainer">
         <div className="userSearchImage" />
@@ -819,11 +1226,43 @@ function UserHome({ profile }) {
    HOST HOME
 ========================================================= */
 
-function HostHome({ profile }) {
+function HostHome({ profile, notifications, onRead, hostOwnStats }) {
   const firstName = useMemo(() => {
     if (!profile?.full_name) return "Domaćine";
     return profile.full_name.trim().split(" ")[0];
   }, [profile]);
+
+  const unreadCount = notifications.filter(isUnread).length;
+  const bookingAlerts = notifications.filter(
+    (notification) => isUnread(notification) && isBookingNotification(notification)
+  ).length;
+
+  const liveStats = [
+    {
+      label: "Aktivni događaji",
+      value: hostOwnStats.events,
+      description: "Objavljeno i aktivno",
+      icon: "calendar",
+    },
+    {
+      label: "Aktivni paketi",
+      value: hostOwnStats.packages,
+      description: "Paketi na tvom profilu",
+      icon: "package",
+    },
+    {
+      label: "Nove rezervacije",
+      value: bookingAlerts,
+      description: "Traže tvoju pažnju",
+      icon: "booking",
+    },
+    {
+      label: "Nepročitano",
+      value: unreadCount,
+      description: "Nova obaveštenja",
+      icon: "bell",
+    },
+  ];
 
   return (
     <main className="home hostHome">
@@ -831,21 +1270,26 @@ function HostHome({ profile }) {
         <div>
           <span className="dashboardKicker">
             <span />
-            Host studio
+            Host studio uživo
           </span>
 
-          <h1>Dobrodošao, {firstName}.</h1>
+          <h1>Dobrodošao nazad, {firstName}.</h1>
 
           <p>
-            Sve što traži tvoju pažnju, najvažnije brojke i brze akcije —
-            bez ogromnog hero-a i bez gubljenja vremena.
+            Rezervacije, obaveštenja i tvoje objave su na jednom mestu.
+            Ono što traži odgovor ide prvo.
           </p>
         </div>
 
-        <div className="hostTopActions">
+        <div className="hostTopActions hostTopActionsTriple">
           <Link to="/create-event" className="hostPrimaryAction">
             <Icon name="plus" size={18} />
             Novi događaj
+          </Link>
+
+          <Link to="/create-package" className="hostSecondaryAction">
+            <Icon name="package" size={18} />
+            Novi paket
           </Link>
 
           <Link to="/dashboard" className="hostSecondaryAction">
@@ -862,14 +1306,21 @@ function HostHome({ profile }) {
 
           <div className="hostOverviewCopy">
             <span>Današnji fokus</span>
-            <h2>Pet novih zahteva čeka odgovor.</h2>
+            <h2>
+              {bookingAlerts > 0
+                ? `${bookingAlerts} ${bookingAlerts === 1 ? "nova rezervacija čeka" : "nove rezervacije čekaju"} odgovor.`
+                : unreadCount > 0
+                  ? `${unreadCount} ${unreadCount === 1 ? "novo obaveštenje čeka" : "nova obaveštenja čekaju"}.`
+                  : "Sve je pod kontrolom."}
+            </h2>
             <p>
-              Brz odgovor povećava poverenje gostiju i šansu da rezervacija
-              ostane kod tebe.
+              {bookingAlerts > 0
+                ? "Odgovori gostima dok je interesovanje sveže. Nove aktivnosti stižu ovde u realnom vremenu."
+                : "Nema hitnih zahteva. Možeš da se fokusiraš na nove događaje i pakete."}
             </p>
 
-            <Link to="/host-bookings" className="lightButton">
-              Otvori rezervacije
+            <Link to={bookingAlerts > 0 ? "/host-bookings" : "/notifications"} className="lightButton">
+              {bookingAlerts > 0 ? "Otvori rezervacije" : "Otvori obaveštenja"}
               <Icon name="arrowRight" />
             </Link>
           </div>
@@ -878,13 +1329,13 @@ function HostHome({ profile }) {
         <div className="hostTodayCard">
           <div className="hostTodayTop">
             <div>
-              <span>Današnji pregled</span>
+              <span>Pregled uživo</span>
               <strong>Tvoj host studio</strong>
             </div>
 
             <div className="onlineBadge">
               <span />
-              Aktivno
+              Realtime
             </div>
           </div>
 
@@ -892,24 +1343,24 @@ function HostHome({ profile }) {
             <article>
               <Icon name="booking" />
               <div>
-                <strong>5</strong>
+                <strong>{bookingAlerts}</strong>
                 <span>Nove rezervacije</span>
               </div>
             </article>
 
             <article>
-              <Icon name="eye" />
+              <Icon name="calendar" />
               <div>
-                <strong>218</strong>
-                <span>Pregleda profila</span>
+                <strong>{hostOwnStats.events}</strong>
+                <span>Aktivni događaji</span>
               </div>
             </article>
 
             <article>
-              <Icon name="users" />
+              <Icon name="package" />
               <div>
-                <strong>18</strong>
-                <span>Novih interesovanja</span>
+                <strong>{hostOwnStats.packages}</strong>
+                <span>Aktivni paketi</span>
               </div>
             </article>
           </div>
@@ -922,13 +1373,10 @@ function HostHome({ profile }) {
       </section>
 
       <section className="hostStats pageContainer">
-        {hostStats.map((stat) => (
+        {liveStats.map((stat) => (
           <article key={stat.label}>
             <div className="hostStatIcon">
-              <Icon
-                name={stat.icon}
-                fill={stat.icon === "star" ? "currentColor" : "none"}
-              />
+              <Icon name={stat.icon} />
             </div>
 
             <div className="hostStatTop">
@@ -942,88 +1390,65 @@ function HostHome({ profile }) {
         ))}
       </section>
 
-      <section className="hostWorkspace pageContainer">
+      <HomeNotifications
+        notifications={notifications}
+        onRead={onRead}
+        hostMode
+      />
+
+      <section className="hostWorkspace pageContainer hostWorkspaceLive">
         <div className="hostMainColumn">
           <div className="hostSectionHeader">
             <div>
-              <span>Potrebna je tvoja pažnja</span>
-              <h2>Novi zahtevi za rezervaciju</h2>
+              <span>Tvoj sadržaj</span>
+              <h2>Objavljuj bez gubljenja vremena.</h2>
             </div>
 
-            <Link to="/host-bookings">
-              Sve rezervacije
+            <Link to="/dashboard">
+              Host studio
               <Icon name="arrowRight" size={17} />
             </Link>
           </div>
 
-          <div className="bookingList">
-            {hostBookings.map((booking) => (
-              <article className="bookingItem" key={booking.id}>
-                <div className="bookingAvatar">
-                  {booking.guest.charAt(0)}
-                </div>
+          <div className="hostCreationGrid">
+            <Link to="/create-event" className="hostCreationCard eventCreation">
+              <span><Icon name="calendar" size={24} /></span>
+              <small>Jednodnevna avantura</small>
+              <h3>Kreiraj novi događaj.</h3>
+              <p>Dodaj termin, lokaciju, kapacitet, cenu i naslovnu fotografiju.</p>
+              <strong>Pokreni kreiranje <Icon name="arrowRight" size={18} /></strong>
+            </Link>
 
-                <div className="bookingInfo">
-                  <strong>{booking.guest}</strong>
-                  <span>{booking.event}</span>
-                </div>
-
-                <div className="bookingMeta">
-                  <span>
-                    <Icon name="calendar" size={15} />
-                    {booking.date}
-                  </span>
-
-                  <span>
-                    <Icon name="users" size={15} />
-                    {booking.people}
-                  </span>
-                </div>
-
-                <span
-                  className={`bookingStatus ${
-                    booking.status === "Odobreno" ? "approved" : ""
-                  }`}
-                >
-                  {booking.status}
-                </span>
-
-                <Link to="/host-bookings">
-                  <Icon name="arrowRight" />
-                </Link>
-              </article>
-            ))}
+            <Link to="/create-package" className="hostCreationCard packageCreation">
+              <span><Icon name="package" size={24} /></span>
+              <small>Kompletno iskustvo</small>
+              <h3>Kreiraj novi paket.</h3>
+              <p>Složi višednevnu ponudu sa sadržajem, terminima i cenom.</p>
+              <strong>Pokreni kreiranje <Icon name="arrowRight" size={18} /></strong>
+            </Link>
           </div>
         </div>
 
         <aside className="hostSideColumn">
-          <div className="quickCreateCard">
-            <span className="hostCardKicker">Brze akcije</span>
-            <h3>Šta želiš da kreiraš?</h3>
+          <div className="quickCreateCard liveSummaryCard">
+            <span className="hostCardKicker">Tvoj profil uživo</span>
+            <h3>Šta je trenutno aktivno?</h3>
 
-            <Link to="/create-event">
-              <span>
-                <Icon name="calendar" />
-              </span>
-
+            <Link to={`/h/${profile.username}`}>
+              <span><Icon name="eye" /></span>
               <div>
-                <strong>Novi događaj</strong>
-                <small>Jednodnevna outdoor aktivnost</small>
+                <strong>Pogledaj javni profil</strong>
+                <small>Proveri kako gost vidi tvoju ponudu</small>
               </div>
-
               <Icon name="arrowRight" />
             </Link>
 
-            <Link to="/create-package">
-              <span>
-                <Icon name="package" />
-              </span>
-
+            <Link to="/notifications">
+              <span><Icon name="bell" /></span>
               <div>
-                <strong>Novi paket</strong>
-                <small>Višednevno kompletno iskustvo</small>
+                <strong>{unreadCount} nepročitanih</strong>
+                <small>Rezervacije i promene naloga</small>
               </div>
-
               <Icon name="arrowRight" />
             </Link>
           </div>
@@ -1031,22 +1456,17 @@ function HostHome({ profile }) {
           <div className="profileProgressCard">
             <div className="progressTop">
               <span>Host profil</span>
-              <strong>82%</strong>
+              <strong>Aktivan</strong>
             </div>
 
-            <div className="progressBar">
-              <span />
-            </div>
-
-            <h3>Tvoj profil je skoro spreman.</h3>
-
+            <div className="progressBar"><span /></div>
+            <h3>Neka profil prodaje iskustvo umesto tebe.</h3>
             <p>
-              Dodaj još fotografija i detaljan opis kako bi povećao
-              poverenje gostiju.
+              Fotografije, opis i jasna ponuda povećavaju poverenje pre nego što gost pošalje rezervaciju.
             </p>
 
             <Link to="/edit-profile">
-              Dovrši profil
+              Uredi profil
               <Icon name="arrowRight" size={17} />
             </Link>
           </div>
@@ -1059,21 +1479,25 @@ function HostHome({ profile }) {
 
         <div className="hostMotivationContent">
           <span>Tvoja zajednica raste</span>
-
           <h2>
             Ne organizuješ samo događaje.
             <em>Stvaraš uspomene.</em>
           </h2>
-
           <p>
-            Svaki novi događaj je prilika da neko otkrije novo mesto,
+            Svaki novi događaj i paket je prilika da neko otkrije novo mesto,
             upozna nove ljude i ponese priču koju će dugo pamtiti.
           </p>
 
-          <Link to="/create-event" className="lightButton">
-            Kreiraj sledeću avanturu
-            <Icon name="arrowRight" />
-          </Link>
+          <div className="hostMotivationActions">
+            <Link to="/create-event" className="lightButton">
+              Kreiraj događaj
+              <Icon name="arrowRight" />
+            </Link>
+            <Link to="/create-package" className="glassButton">
+              Kreiraj paket
+              <Icon name="arrowRight" />
+            </Link>
+          </div>
         </div>
       </section>
     </main>
@@ -1086,17 +1510,21 @@ function HostHome({ profile }) {
 
 export default function Home() {
   const { profile, loading } = useAuth();
+  const {
+    platformStats,
+    notifications,
+    hostOwnStats,
+    markRead,
+  } = useHomeLiveData(profile);
 
   if (loading) {
     return (
       <>
         <HomeStyles />
-
         <div className="homeLoading">
           <div className="loadingLogo">
             <Icon name="compass" size={31} />
           </div>
-
           <span>MeetOutdoors</span>
         </div>
       </>
@@ -1109,10 +1537,22 @@ export default function Home() {
   return (
     <>
       <HomeStyles />
-
-      {!profile && <GuestHome />}
-      {isUser && <UserHome profile={profile} />}
-      {isHost && <HostHome profile={profile} />}
+      {!profile && <GuestHome platformStats={platformStats} />}
+      {isUser && (
+        <UserHome
+          profile={profile}
+          notifications={notifications}
+          onRead={markRead}
+        />
+      )}
+      {isHost && (
+        <HostHome
+          profile={profile}
+          notifications={notifications}
+          onRead={markRead}
+          hostOwnStats={hostOwnStats}
+        />
+      )}
     </>
   );
 }
@@ -2727,6 +3167,411 @@ function HomeStyles() {
 
       .hostMotivationContent p {
         margin-inline: 0;
+      }
+
+
+      /* LIVE HOME / NOTIFICATIONS */
+
+      .liveProof {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, auto));
+        justify-content: start;
+        gap: 0;
+        width: fit-content;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 20px;
+        background: rgba(5,18,10,0.28);
+        backdrop-filter: blur(16px);
+      }
+
+      .liveProof > div {
+        min-width: 145px;
+        padding: 16px 20px;
+      }
+
+      .liveProof > div + div {
+        border-left: 1px solid rgba(255,255,255,0.12);
+      }
+
+      .homeNotifications {
+        margin-top: 24px;
+        padding: 26px;
+        border: 1px solid #d9e2d6;
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 92% 10%, rgba(201,242,140,0.16), transparent 24%),
+          rgba(255,255,255,0.92);
+        box-shadow: 0 20px 55px rgba(28,47,35,0.08);
+      }
+
+      .homeNotifications.hostMode {
+        margin-top: 20px;
+        border-color: #bfd1b4;
+        background:
+          radial-gradient(circle at 93% 0%, rgba(201,242,140,0.19), transparent 27%),
+          linear-gradient(145deg, #f7faF3, #ffffff);
+      }
+
+      .homeNotificationsHeader {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 20px;
+      }
+
+      .homeNotificationsHeader h2 {
+        margin: 10px 0 0;
+        font-size: clamp(28px, 4vw, 43px);
+        line-height: 1;
+        letter-spacing: -0.055em;
+      }
+
+      .homeNotificationsHeader p {
+        max-width: 640px;
+        margin: 10px 0 0;
+        color: #748078;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      .homeNotificationsAll {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex: 0 0 auto;
+        min-height: 43px;
+        padding: 0 14px;
+        border: 1px solid #d5dfd1;
+        border-radius: 13px;
+        background: #fff;
+        color: #35513e !important;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .homeNotificationGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .homeNotificationCard {
+        position: relative;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 12px;
+        min-width: 0;
+        padding: 16px;
+        border: 1px solid #dfe5dc;
+        border-radius: 18px;
+        background: #f8faf6;
+        transition: 0.2s ease;
+      }
+
+      .homeNotificationCard:hover {
+        transform: translateY(-2px);
+        border-color: #aebfa6;
+        background: white;
+        box-shadow: 0 14px 30px rgba(28,47,35,0.08);
+      }
+
+      .homeNotificationCard.unread {
+        border-color: #b8d1a8;
+        background: linear-gradient(135deg, #eff7e7, #fbfdf9);
+      }
+
+      .homeNotificationIcon {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: #e6f0dc;
+        color: #55743c;
+      }
+
+      .homeNotificationCopy {
+        min-width: 0;
+      }
+
+      .homeNotificationCopy > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .homeNotificationCopy small {
+        color: #719050;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .homeNotificationCopy > div > span {
+        color: #929c95;
+        font-size: 8px;
+      }
+
+      .homeNotificationCopy strong {
+        display: block;
+        overflow: hidden;
+        margin-top: 6px;
+        color: #2d4235;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .homeNotificationCopy p {
+        display: -webkit-box;
+        margin: 5px 0 0;
+        overflow: hidden;
+        color: #78847c;
+        font-size: 9px;
+        line-height: 1.55;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+
+      .homeUnreadDot {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 8px;
+        height: 8px;
+        border: 2px solid white;
+        border-radius: 50%;
+        background: #79a250;
+        box-shadow: 0 0 0 4px rgba(121,162,80,0.1);
+      }
+
+      .homeNotificationsEmpty {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 18px;
+        border: 1px dashed #cfd9cb;
+        border-radius: 18px;
+        background: #f8faf6;
+      }
+
+      .homeNotificationsEmpty > span {
+        display: grid;
+        place-items: center;
+        width: 45px;
+        height: 45px;
+        border-radius: 14px;
+        background: #e8f1dd;
+        color: #5b7941;
+      }
+
+      .homeNotificationsEmpty strong {
+        display: block;
+        font-size: 11px;
+      }
+
+      .homeNotificationsEmpty p {
+        margin: 4px 0 0;
+        color: #829087;
+        font-size: 9px;
+      }
+
+      .hostTopActionsTriple {
+        max-width: 520px;
+      }
+
+      .hostCreationGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .hostCreationCard {
+        position: relative;
+        min-height: 300px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 24px;
+        overflow: hidden;
+        border-radius: 25px;
+        color: white !important;
+        box-shadow: 0 20px 48px rgba(21,42,29,0.14);
+        transition: 0.25s ease;
+      }
+
+      .hostCreationCard::before {
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        content: "";
+        background-position: center;
+        background-size: cover;
+        transition: transform 0.6s ease;
+      }
+
+      .hostCreationCard::after {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        content: "";
+        background: linear-gradient(180deg, rgba(5,16,10,0.08), rgba(5,16,10,0.94));
+      }
+
+      .hostCreationCard.eventCreation::before {
+        background-image: url("https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1200&q=88");
+      }
+
+      .hostCreationCard.packageCreation::before {
+        background-image: url("https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=88");
+      }
+
+      .hostCreationCard:hover {
+        transform: translateY(-5px);
+      }
+
+      .hostCreationCard:hover::before {
+        transform: scale(1.05);
+      }
+
+      .hostCreationCard > span {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 15px;
+        background: rgba(255,255,255,0.1);
+        color: #c9f28c;
+        backdrop-filter: blur(12px);
+      }
+
+      .hostCreationCard small {
+        color: #c9f28c;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .hostCreationCard h3 {
+        margin: 10px 0 0;
+        font-size: 28px;
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .hostCreationCard p {
+        margin: 10px 0 0;
+        color: rgba(255,255,255,0.62);
+        font-size: 10px;
+        line-height: 1.55;
+      }
+
+      .hostCreationCard > strong {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 17px;
+        font-size: 9px;
+      }
+
+      .hostMotivationActions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      @media (max-width: 850px) {
+        .homeNotificationGrid,
+        .hostCreationGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .liveProof {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          width: 100%;
+        }
+
+        .liveProof > div:nth-child(3) {
+          border-left: 0;
+          border-top: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .liveProof > div:nth-child(4) {
+          border-top: 1px solid rgba(255,255,255,0.12);
+        }
+      }
+
+      @media (max-width: 700px) {
+        .homeNotifications {
+          margin-top: 18px;
+          padding: 20px;
+          border-radius: 23px;
+        }
+
+        .homeNotificationsHeader {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .homeNotificationsAll {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .hostTopActionsTriple {
+          grid-template-columns: 1fr 1fr !important;
+        }
+
+        .hostTopActionsTriple a:last-child {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 460px) {
+        .liveProof {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .liveProof > div {
+          min-width: 0;
+          padding: 14px;
+        }
+
+        .liveProof strong {
+          font-size: 20px;
+        }
+
+        .liveProof span {
+          font-size: 9px;
+        }
+
+        .homeNotificationCard {
+          grid-template-columns: auto minmax(0, 1fr);
+          padding: 14px;
+        }
+
+        .homeNotificationCopy > div {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .hostTopActionsTriple {
+          grid-template-columns: 1fr !important;
+        }
+
+        .hostTopActionsTriple a:last-child {
+          grid-column: auto;
+        }
       }
 
       /* LOADING */

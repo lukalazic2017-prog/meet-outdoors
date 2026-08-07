@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
@@ -64,6 +64,20 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M3 6h.01M3 12h.01M3 18h.01" />
       </>
     ),
+    upload: (
+      <>
+        <path d="M12 16V4" />
+        <path d="m7 9 5-5 5 5" />
+        <path d="M5 20h14" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M3 6h18" />
+        <path d="M8 6V4h8v2" />
+        <path d="m19 6-1 15H6L5 6" />
+      </>
+    ),
     check: <path d="m5 12 4 4L19 6" />,
     shield: (
       <>
@@ -113,6 +127,7 @@ export default function CreatePackage() {
   const { profile, isHost } = useAuth();
 
   const [saving, setSaving] = useState(false);
+  const [coverFile, setCoverFile] = useState(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -126,8 +141,23 @@ export default function CreatePackage() {
     not_included: "",
     start_date: "",
     end_date: "",
-    cover_url: "",
   });
+
+  const coverPreview = useMemo(() => {
+    if (coverFile) {
+      return URL.createObjectURL(coverFile);
+    }
+
+    return FALLBACK_COVER;
+  }, [coverFile]);
+
+  useEffect(() => {
+    return () => {
+      if (coverFile && coverPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(coverPreview);
+      }
+    };
+  }, [coverFile, coverPreview]);
 
   function updateField(name, value) {
     setForm((prev) => ({
@@ -144,6 +174,31 @@ export default function CreatePackage() {
     try {
       setSaving(true);
 
+      let cover_url = null;
+
+      if (coverFile) {
+        const safeName = coverFile.name
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9.-]/g, "");
+
+        const fileName = `${profile.id}/${Date.now()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("package-covers")
+          .upload(fileName, coverFile);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("package-covers")
+          .getPublicUrl(fileName);
+
+        cover_url = publicUrlData.publicUrl;
+      }
+
       const { error } = await supabase
         .from("packages")
         .insert({
@@ -159,7 +214,7 @@ export default function CreatePackage() {
           not_included: form.not_included,
           start_date: form.start_date || null,
           end_date: form.end_date || null,
-          cover_url: form.cover_url,
+          cover_url,
         });
 
       if (error) throw error;
@@ -528,24 +583,68 @@ export default function CreatePackage() {
                     />
                   </label>
 
-                  <label className="createPackageField full">
-                    <span>URL naslovne fotografije</span>
+                  <div className="createPackageField full">
+                    <span>Naslovna fotografija</span>
 
-                    <div className="createPackageInputIcon">
-                      <Icon name="image" size={17} />
-
+                    <label
+                      className={
+                        coverFile
+                          ? "createPackageUpload selected"
+                          : "createPackageUpload"
+                      }
+                    >
                       <input
-                        placeholder="https://..."
-                        value={form.cover_url}
+                        type="file"
+                        accept="image/*"
                         onChange={(e) =>
-                          updateField(
-                            "cover_url",
-                            e.target.value
+                          setCoverFile(
+                            e.target.files?.[0] || null
                           )
                         }
                       />
-                    </div>
-                  </label>
+
+                      <span className="createPackageUploadPreview">
+                        <img src={coverPreview} alt="" />
+                      </span>
+
+                      <span className="createPackageUploadCopy">
+                        <strong>
+                          {coverFile
+                            ? coverFile.name
+                            : "Izaberi naslovnu fotografiju"}
+                        </strong>
+
+                        <small>
+                          {coverFile
+                            ? `${(
+                                coverFile.size /
+                                1024 /
+                                1024
+                              ).toFixed(2)} MB`
+                            : "JPG, PNG ili WEBP. Fotografiju možeš izabrati sa telefona ili računara."}
+                        </small>
+                      </span>
+
+                      <span className="createPackageUploadAction">
+                        <Icon
+                          name={coverFile ? "check" : "upload"}
+                          size={17}
+                        />
+                        {coverFile ? "Promeni" : "Izaberi"}
+                      </span>
+                    </label>
+
+                    {coverFile && (
+                      <button
+                        type="button"
+                        className="removePackageCover"
+                        onClick={() => setCoverFile(null)}
+                      >
+                        <Icon name="trash" size={15} />
+                        Ukloni fotografiju
+                      </button>
+                    )}
+                  </div>
                 </div>
               </section>
 
@@ -575,7 +674,7 @@ export default function CreatePackage() {
               <article className="createPackagePreviewCard">
                 <div className="createPackagePreviewImage">
                   <img
-                    src={form.cover_url || FALLBACK_COVER}
+                    src={coverPreview}
                     alt={form.title || "Package preview"}
                   />
 
@@ -1037,6 +1136,111 @@ function CreatePackageStyles() {
         padding-left: 40px;
       }
 
+      .createPackageUpload {
+        position: relative;
+        display: grid;
+        grid-template-columns:
+          92px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 14px;
+        min-height: 112px;
+        padding: 12px;
+        overflow: hidden;
+        border: 1px dashed #bac8b5;
+        border-radius: 18px;
+        background: #f8faf6;
+        cursor: pointer;
+        transition: 0.2s ease;
+      }
+
+      .createPackageUpload:hover {
+        border-color: #86a36b;
+        background: white;
+      }
+
+      .createPackageUpload.selected {
+        border-style: solid;
+        border-color: #9db28f;
+        background: #f0f6e9;
+      }
+
+      .createPackageUpload > input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .createPackageUploadPreview {
+        width: 92px;
+        height: 82px;
+        overflow: hidden;
+        border-radius: 14px;
+        background: #e5ebdf;
+      }
+
+      .createPackageUploadPreview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .createPackageUploadCopy {
+        min-width: 0;
+      }
+
+      .createPackageUploadCopy strong,
+      .createPackageUploadCopy small {
+        display: block;
+      }
+
+      .createPackageUploadCopy strong {
+        overflow: hidden;
+        color: #3e5345;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .createPackageUploadCopy small {
+        margin-top: 6px;
+        color: #8c978f;
+        font-size: 8px;
+        line-height: 1.55;
+      }
+
+      .createPackageUploadAction {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 39px;
+        padding: 0 12px;
+        border: 1px solid #d6dfd2;
+        border-radius: 11px;
+        background: white;
+        color: #587143;
+        font-size: 8px;
+        font-weight: 850;
+      }
+
+      .removePackageCover {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        justify-self: start;
+        margin-top: 9px;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 9px;
+        background: #fff0ee;
+        color: #9a463c;
+        cursor: pointer;
+        font-size: 8px;
+        font-weight: 800;
+      }
+
       .createPackageSubmitBar {
         display: flex;
         align-items: center;
@@ -1349,6 +1553,22 @@ function CreatePackageStyles() {
         }
 
         .createPackageSubmitBar button {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .createPackageUpload {
+          grid-template-columns: 76px minmax(0, 1fr);
+        }
+
+        .createPackageUploadPreview {
+          width: 76px;
+          height: 72px;
+        }
+
+        .createPackageUploadAction {
+          grid-column: 1 / -1;
           width: 100%;
         }
       }

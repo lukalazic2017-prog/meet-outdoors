@@ -1,6 +1,8 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../supabaseClient";
 
 function Icon({ name, size = 20, strokeWidth = 2 }) {
   const icons = {
@@ -106,6 +108,7 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="m18 14 .7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14Z" />
       </>
     ),
+    chevron: <path d="m9 18 6-6-6-6" />,
   };
 
   return (
@@ -132,6 +135,7 @@ export default function Navbar() {
 
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     function onScroll() {
@@ -155,6 +159,100 @@ export default function Navbar() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!profile?.id) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let active = true;
+
+    async function loadUnreadCount() {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("user_id", profile.id)
+        .or("is_read.eq.false,is_read.is.null");
+
+      if (!active) return;
+
+      if (error) {
+        console.error(
+          "Greška pri učitavanju broja obaveštenja:",
+          error
+        );
+        return;
+      }
+
+      setUnreadCount(count || 0);
+    }
+
+    loadUnreadCount();
+
+    const channel = supabase
+      .channel(`navbar-notifications-${profile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          if (payload.new?.is_read === true) return;
+
+          setUnreadCount((value) => value + 1);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const wasUnread =
+            payload.old?.is_read !== true;
+          const isUnread =
+            payload.new?.is_read !== true;
+
+          if (wasUnread && !isUnread) {
+            setUnreadCount((value) =>
+              Math.max(0, value - 1)
+            );
+          }
+
+          if (!wasUnread && isUnread) {
+            setUnreadCount((value) => value + 1);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        () => {
+          loadUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
 
   async function handleLogout() {
     await logout();
@@ -193,25 +291,25 @@ export default function Navbar() {
   const mainLinks = [
     {
       to: "/",
-      label: "Explore",
+      label: "Istraži",
       icon: "compass",
       index: "01",
     },
     {
       to: "/events",
-      label: "Events",
+      label: "Događaji",
       icon: "calendar",
       index: "02",
     },
     {
       to: "/packages",
-      label: "Packages",
+      label: "Paketi",
       icon: "package",
       index: "03",
     },
     {
       to: "/hosts",
-      label: "Hosts",
+      label: "Domaćini",
       icon: "users",
       index: "04",
     },
@@ -233,12 +331,12 @@ export default function Navbar() {
 
           <span className="brutalNavLogoCopy">
             <strong>MeetOutdoors</strong>
-            <small>Go beyond ordinary.</small>
+            <small>Idi dalje od običnog.</small>
           </span>
         </Link>
 
         <nav className="brutalNavDesktop">
-          {mainLinks.slice(0, 3).map((link) => (
+          {mainLinks.slice(0, 4).map((link) => (
             <Link
               key={link.to}
               to={link.to}
@@ -254,9 +352,31 @@ export default function Navbar() {
         <div className="brutalNavRight">
           {!loading && profile && (
             <Link
+              to="/notifications"
+              className={`brutalNavBell ${
+                unreadCount > 0 ? "hasUnread" : ""
+              }`}
+              aria-label={
+                unreadCount > 0
+                  ? `Imaš ${unreadCount} nepročitanih obaveštenja`
+                  : "Obaveštenja"
+              }
+            >
+              <Icon name="bell" size={20} strokeWidth={2.15} />
+
+              {unreadCount > 0 && (
+                <span className="brutalNavBellBadge">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
+
+          {!loading && profile && (
+            <Link
               to={profileUrl}
               className="brutalNavProfile"
-              aria-label="Open profile"
+              aria-label="Otvori profil"
             >
               {profile.avatar_url ? (
                 <img
@@ -264,7 +384,7 @@ export default function Navbar() {
                   alt={
                     profile.full_name ||
                     profile.username ||
-                    "Profile"
+                    "Profil"
                   }
                 />
               ) : (
@@ -277,7 +397,7 @@ export default function Navbar() {
             type="button"
             onClick={() => setOpen((value) => !value)}
             className="brutalMenuButton"
-            aria-label={open ? "Close menu" : "Open menu"}
+            aria-label={open ? "Zatvori meni" : "Otvori meni"}
             aria-expanded={open}
           >
             <span className="brutalMenuButtonGlow" />
@@ -291,7 +411,7 @@ export default function Navbar() {
             </span>
 
             <span className="brutalMenuButtonLabel">
-              {open ? "Close" : "Menu"}
+              {open ? "Zatvori" : "Meni"}
             </span>
           </button>
         </div>
@@ -312,18 +432,18 @@ export default function Navbar() {
           <section className="brutalDrawerIntro">
             <span className="brutalDrawerKicker">
               <Icon name="sparkle" size={15} />
-              Navigation
+              Navigacija
             </span>
 
             <h2>
-              Choose your
+              Izaberi
               <br />
-              next move.
+              sledeći potez.
             </h2>
 
             <p>
-              Events, hosts and outdoor experiences — one bold
-              direction at a time.
+              Događaji, domaćini i outdoor iskustva — sve što ti
+              treba da pronađeš ili kreiraš sledeću avanturu.
             </p>
 
             {!loading && profile && (
@@ -338,7 +458,7 @@ export default function Navbar() {
                       alt={
                         profile.full_name ||
                         profile.username ||
-                        "Profile"
+                        "Profil"
                       }
                     />
                   ) : (
@@ -347,7 +467,7 @@ export default function Navbar() {
                 </div>
 
                 <div>
-                  <small>Signed in as</small>
+                  <small>Prijavljen kao</small>
                   <strong>
                     {profile.full_name || profile.username}
                   </strong>
@@ -390,7 +510,7 @@ export default function Navbar() {
               {!loading && !profile && (
                 <>
                   <span className="brutalDrawerAccountLabel">
-                    Your account
+                    Tvoj nalog
                   </span>
 
                   <div className="brutalDrawerAuthGrid">
@@ -399,14 +519,14 @@ export default function Navbar() {
                       className="brutalDrawerSecondary"
                     >
                       <Icon name="login" size={17} />
-                      Log in
+                      Prijavi se
                     </Link>
 
                     <Link
                       to="/signup"
                       className="brutalDrawerPrimary"
                     >
-                      Create account
+                      Kreiraj nalog
                       <Icon name="arrow" size={17} />
                     </Link>
                   </div>
@@ -415,39 +535,73 @@ export default function Navbar() {
 
               {!loading && profile && (
                 <>
-                  <span className="brutalDrawerAccountLabel">
-                    Account shortcuts
-                  </span>
+                  <div className="brutalDrawerAccountTop">
+                    <span className="brutalDrawerAccountLabel">
+                      Brze prečice
+                    </span>
+
+                    <Link
+                      to="/notifications"
+                      className={`drawerNotificationPill ${
+                        unreadCount > 0 ? "hasUnread" : ""
+                      }`}
+                    >
+                      <Icon name="bell" size={15} />
+                      {unreadCount > 0
+                        ? `${unreadCount} novih`
+                        : "Nema novih"}
+                    </Link>
+                  </div>
 
                   <div className="brutalDrawerShortcutGrid">
                     <Link to={profileUrl}>
                       <Icon name="user" size={17} />
-                      My Profile
+                      Moj profil
                     </Link>
 
                     <Link to="/edit-profile">
                       <Icon name="edit" size={17} />
-                      Edit Profile
+                      Uredi profil
                     </Link>
 
                     <Link to="/my-events">
                       <Icon name="calendar" size={17} />
-                      My Events
+                      Moji događaji
                     </Link>
 
-                    <Link to="/notifications">
-                      <Icon name="bell" size={17} />
-                      Notifications
+                    <Link
+                      to="/notifications"
+                      className={
+                        unreadCount > 0
+                          ? "shortcutUnread"
+                          : ""
+                      }
+                    >
+                      <span className="shortcutIconWrap">
+                        <Icon name="bell" size={17} />
+                        {unreadCount > 0 && (
+                          <span className="shortcutDot" />
+                        )}
+                      </span>
+                      Obaveštenja
+                      {unreadCount > 0 && (
+                        <strong className="shortcutCount">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </strong>
+                      )}
                     </Link>
                   </div>
 
                   {profile.role === "host" && (
                     <div className="brutalDrawerHostPanel">
-                      <div>
-                        <span>Host mode</span>
+                      <div className="hostPanelCopy">
+                        <span>Host režim</span>
                         <strong>
-                          Build experiences people remember.
+                          Kreiraj iskustva koja ljudi pamte.
                         </strong>
+                        <small>
+                          Objavi novi događaj ili napravi paket direktno iz menija.
+                        </small>
                       </div>
 
                       <div className="brutalDrawerHostActions">
@@ -456,12 +610,35 @@ export default function Navbar() {
                             name="dashboard"
                             size={17}
                           />
-                          Host Studio
+                          Host studio
+                          <Icon
+                            name="chevron"
+                            size={15}
+                          />
                         </Link>
 
-                        <Link to="/create-event">
-                          <Icon name="plus" size={17} />
-                          Create Event
+                        <Link
+                          to="/create-event"
+                          className="hostActionPrimary"
+                        >
+                          <Icon name="calendar" size={17} />
+                          Kreiraj događaj
+                          <Icon
+                            name="plus"
+                            size={15}
+                          />
+                        </Link>
+
+                        <Link
+                          to="/create-package"
+                          className="hostActionPrimary"
+                        >
+                          <Icon name="package" size={17} />
+                          Kreiraj paket
+                          <Icon
+                            name="plus"
+                            size={15}
+                          />
                         </Link>
                       </div>
                     </div>
@@ -473,7 +650,7 @@ export default function Navbar() {
                     className="brutalDrawerLogout"
                   >
                     <Icon name="logout" size={17} />
-                    Logout
+                    Odjavi se
                   </button>
                 </>
               )}
@@ -483,7 +660,7 @@ export default function Navbar() {
 
         <footer className="brutalDrawerFooter">
           <span>MeetOutdoors</span>
-          <span>Adventure starts before the trail.</span>
+          <span>Avantura počinje pre prve staze.</span>
         </footer>
       </div>
     </>
@@ -554,7 +731,12 @@ function NavbarStyles() {
         padding: 9px 10px 9px 14px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 24px;
-        background: rgba(7, 18, 12, 0.66);
+        background:
+          linear-gradient(
+            120deg,
+            rgba(6, 17, 11, 0.88),
+            rgba(9, 29, 17, 0.74)
+          );
         box-shadow:
           0 20px 70px rgba(0, 0, 0, 0.34),
           inset 0 1px 0 rgba(255, 255, 255, 0.07);
@@ -638,13 +820,15 @@ function NavbarStyles() {
         font-weight: 850;
         transition:
           color 0.2s ease,
-          background 0.2s ease;
+          background 0.2s ease,
+          transform 0.2s ease;
       }
 
       .brutalNavDesktop a:hover,
       .brutalNavDesktop a.active {
         background: rgba(255, 255, 255, 0.1);
         color: white;
+        transform: translateY(-1px);
       }
 
       .brutalNavDesktop a.active::after {
@@ -656,6 +840,7 @@ function NavbarStyles() {
         border-radius: 999px;
         background: #baff9e;
         content: "";
+        box-shadow: 0 0 14px rgba(186, 255, 158, 0.7);
       }
 
       .brutalNavRight {
@@ -663,6 +848,92 @@ function NavbarStyles() {
         align-items: center;
         justify-self: end;
         gap: 8px;
+      }
+
+      .brutalNavBell {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 45px;
+        height: 45px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 15px;
+        background:
+          linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.11),
+            rgba(255, 255, 255, 0.045)
+          );
+        color: rgba(255, 255, 255, 0.8) !important;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 12px 30px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(18px);
+        transition:
+          transform 0.18s ease,
+          background 0.18s ease,
+          color 0.18s ease;
+      }
+
+      .brutalNavBell:hover {
+        transform: translateY(-2px);
+        color: white !important;
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+      .brutalNavBell.hasUnread {
+        border-color: rgba(186, 255, 158, 0.36);
+        background:
+          linear-gradient(
+            145deg,
+            rgba(186, 255, 158, 0.18),
+            rgba(255, 255, 255, 0.06)
+          );
+        color: #d8ffc8 !important;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.1),
+          0 0 0 1px rgba(186, 255, 158, 0.07),
+          0 16px 34px rgba(0, 0, 0, 0.24);
+      }
+
+      .brutalNavBell.hasUnread::before {
+        position: absolute;
+        inset: -5px;
+        border: 1px solid rgba(186, 255, 158, 0.16);
+        border-radius: 19px;
+        content: "";
+        animation: notificationPulse 2s ease-in-out infinite;
+      }
+
+      .brutalNavBellBadge {
+        position: absolute;
+        top: -7px;
+        right: -7px;
+        display: grid;
+        place-items: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border: 2px solid #07120c;
+        border-radius: 999px;
+        background: #baff9e;
+        color: #0c2416;
+        font-size: 8px;
+        font-weight: 950;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+      }
+
+      @keyframes notificationPulse {
+        0%,
+        100% {
+          opacity: 0.35;
+          transform: scale(0.98);
+        }
+
+        50% {
+          opacity: 1;
+          transform: scale(1.06);
+        }
       }
 
       .brutalNavProfile {
@@ -676,6 +947,14 @@ function NavbarStyles() {
         background: rgba(255, 255, 255, 0.09);
         color: #0c2517;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+        transition:
+          transform 0.18s ease,
+          border-color 0.18s ease;
+      }
+
+      .brutalNavProfile:hover {
+        transform: translateY(-2px);
+        border-color: rgba(186, 255, 158, 0.38);
       }
 
       .brutalNavProfile img {
@@ -802,14 +1081,14 @@ function NavbarStyles() {
         background:
           linear-gradient(
             90deg,
-            rgba(5, 15, 9, 0.97) 0%,
-            rgba(5, 15, 9, 0.86) 42%,
-            rgba(5, 15, 9, 0.45) 100%
+            rgba(5, 15, 9, 0.98) 0%,
+            rgba(5, 15, 9, 0.9) 42%,
+            rgba(5, 15, 9, 0.56) 100%
           ),
           linear-gradient(
             180deg,
-            rgba(5, 15, 9, 0.2),
-            rgba(5, 15, 9, 0.96)
+            rgba(5, 15, 9, 0.14),
+            rgba(5, 15, 9, 0.98)
           );
       }
 
@@ -1027,8 +1306,23 @@ function NavbarStyles() {
         padding: 18px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 22px;
-        background: rgba(2, 8, 4, 0.34);
+        background:
+          linear-gradient(
+            145deg,
+            rgba(2, 8, 4, 0.54),
+            rgba(15, 40, 23, 0.3)
+          );
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.04),
+          0 22px 55px rgba(0, 0, 0, 0.16);
         backdrop-filter: blur(20px);
+      }
+
+      .brutalDrawerAccountTop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
       }
 
       .brutalDrawerAccountLabel {
@@ -1037,6 +1331,26 @@ function NavbarStyles() {
         font-weight: 900;
         letter-spacing: 0.11em;
         text-transform: uppercase;
+      }
+
+      .drawerNotificationPill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 30px;
+        padding: 0 9px;
+        border: 1px solid rgba(255, 255, 255, 0.11);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.58) !important;
+        font-size: 7px;
+        font-weight: 900;
+      }
+
+      .drawerNotificationPill.hasUnread {
+        border-color: rgba(186, 255, 158, 0.3);
+        background: rgba(186, 255, 158, 0.1);
+        color: #d9ffcb !important;
       }
 
       .brutalDrawerAuthGrid,
@@ -1063,9 +1377,61 @@ function NavbarStyles() {
 
       .brutalDrawerSecondary,
       .brutalDrawerShortcutGrid a {
+        position: relative;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
         color: white;
+        transition:
+          transform 0.18s ease,
+          background 0.18s ease,
+          border-color 0.18s ease;
+      }
+
+      .brutalDrawerShortcutGrid a:hover {
+        transform: translateY(-2px);
+        border-color: rgba(186, 255, 158, 0.2);
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      .brutalDrawerShortcutGrid a.shortcutUnread {
+        border-color: rgba(186, 255, 158, 0.25);
+        background:
+          linear-gradient(
+            145deg,
+            rgba(186, 255, 158, 0.12),
+            rgba(255, 255, 255, 0.05)
+          );
+      }
+
+      .shortcutIconWrap {
+        position: relative;
+        display: inline-grid;
+        place-items: center;
+      }
+
+      .shortcutDot {
+        position: absolute;
+        top: -4px;
+        right: -5px;
+        width: 7px;
+        height: 7px;
+        border: 1px solid #07120c;
+        border-radius: 50%;
+        background: #baff9e;
+      }
+
+      .shortcutCount {
+        margin-left: auto;
+        display: inline-grid;
+        place-items: center;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: #baff9e;
+        color: #0b2516;
+        font-size: 8px;
+        font-weight: 950;
       }
 
       .brutalDrawerPrimary {
@@ -1076,45 +1442,85 @@ function NavbarStyles() {
 
       .brutalDrawerHostPanel {
         display: grid;
-        gap: 13px;
-        padding: 15px;
-        border: 1px solid rgba(186, 255, 158, 0.18);
-        border-radius: 17px;
+        gap: 15px;
+        padding: 16px;
+        border: 1px solid rgba(186, 255, 158, 0.2);
+        border-radius: 19px;
         background:
+          radial-gradient(
+            circle at 100% 0%,
+            rgba(186, 255, 158, 0.13),
+            transparent 36%
+          ),
           linear-gradient(
             145deg,
             rgba(186, 255, 158, 0.12),
-            rgba(186, 255, 158, 0.04)
+            rgba(8, 25, 13, 0.28)
           );
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.05),
+          0 18px 42px rgba(0, 0, 0, 0.15);
       }
 
-      .brutalDrawerHostPanel span,
-      .brutalDrawerHostPanel strong {
+      .hostPanelCopy span,
+      .hostPanelCopy strong,
+      .hostPanelCopy small {
         display: block;
       }
 
-      .brutalDrawerHostPanel span {
+      .hostPanelCopy span {
         color: #baff9e;
         font-size: 8px;
         font-weight: 900;
         text-transform: uppercase;
       }
 
-      .brutalDrawerHostPanel strong {
+      .hostPanelCopy strong {
         margin-top: 5px;
-        font-size: 11px;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .hostPanelCopy small {
+        margin-top: 6px;
+        max-width: 440px;
+        color: rgba(255, 255, 255, 0.45);
+        font-size: 8px;
+        line-height: 1.55;
       }
 
       .brutalDrawerHostActions {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
 
       .brutalDrawerHostActions a {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(3, 10, 5, 0.25);
         color: white;
+        transition:
+          transform 0.18s ease,
+          border-color 0.18s ease,
+          background 0.18s ease;
+      }
+
+      .brutalDrawerHostActions a:first-child {
+        grid-column: 1 / -1;
+      }
+
+      .brutalDrawerHostActions a:hover {
+        transform: translateY(-2px);
+        border-color: rgba(186, 255, 158, 0.24);
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .brutalDrawerHostActions a.hostActionPrimary {
+        border-color: rgba(186, 255, 158, 0.26);
+        background: rgba(186, 255, 158, 0.1);
+        color: #e7ffdd;
       }
 
       .brutalDrawerLogout {
@@ -1123,6 +1529,14 @@ function NavbarStyles() {
         background: rgba(255, 71, 71, 0.09);
         color: #ffc6c6;
         cursor: pointer;
+        transition:
+          transform 0.18s ease,
+          background 0.18s ease;
+      }
+
+      .brutalDrawerLogout:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 71, 71, 0.14);
       }
 
       .brutalDrawerFooter {
@@ -1137,6 +1551,16 @@ function NavbarStyles() {
         font-weight: 800;
         letter-spacing: 0.09em;
         text-transform: uppercase;
+      }
+
+      @media (max-width: 1100px) {
+        .brutalNavDesktop {
+          gap: 1px;
+        }
+
+        .brutalNavDesktop a {
+          padding-inline: 12px;
+        }
       }
 
       @media (max-width: 980px) {
@@ -1185,6 +1609,10 @@ function NavbarStyles() {
           display: none;
         }
 
+        .brutalNavLogoCopy strong {
+          font-size: 12px;
+        }
+
         .brutalMenuButton {
           min-width: 48px;
           width: 48px;
@@ -1197,10 +1625,19 @@ function NavbarStyles() {
           display: none;
         }
 
+        .brutalNavBell,
         .brutalNavProfile {
           width: 43px;
           height: 43px;
           border-radius: 14px;
+        }
+
+        .brutalNavBellBadge {
+          top: -6px;
+          right: -6px;
+          min-width: 20px;
+          height: 20px;
+          font-size: 7px;
         }
 
         .brutalDrawerInner {
@@ -1231,9 +1668,48 @@ function NavbarStyles() {
           grid-template-columns: 1fr;
         }
 
+        .brutalDrawerHostActions a:first-child {
+          grid-column: auto;
+        }
+
         .brutalDrawerFooter {
           flex-direction: column;
           padding: 0 18px 22px;
+        }
+      }
+
+      @media (max-width: 440px) {
+        .brutalNav {
+          padding-inline: 12px;
+        }
+
+        .brutalNavLogo {
+          gap: 8px;
+        }
+
+        .brutalNavLogoMark {
+          width: 40px;
+          height: 40px;
+        }
+
+        .brutalNavLogoCopy strong {
+          font-size: 10px;
+        }
+
+        .brutalNavRight {
+          gap: 6px;
+        }
+
+        .brutalNavBell,
+        .brutalNavProfile,
+        .brutalMenuButton {
+          width: 40px;
+          height: 40px;
+        }
+
+        .brutalDrawerAccountTop {
+          align-items: flex-start;
+          flex-direction: column;
         }
       }
 

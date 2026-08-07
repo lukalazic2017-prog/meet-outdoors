@@ -105,6 +105,31 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M12 7v10M15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 1-3 2.3 0 1.5 1.3 2 3.2 2.4 1.8.4 2.8 1 2.8 2.3 0 1.4-1.2 2.5-3.2 2.5-1.5 0-2.8-.6-3.6-1.6" />
       </>
     ),
+    bolt: (
+      <>
+        <path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z" />
+      </>
+    ),
+    filter: (
+      <>
+        <path d="M4 6h16" />
+        <path d="M7 12h10" />
+        <path d="M10 18h4" />
+      </>
+    ),
+    chevron: <path d="m9 18 6-6-6-6" />,
+    eye: (
+      <>
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+    sparkle: (
+      <>
+        <path d="m12 3 1.1 3.3L16 8l-2.9 1.7L12 13l-1.1-3.3L8 8l2.9-1.7L12 3Z" />
+        <path d="m18 14 .7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14Z" />
+      </>
+    ),
   };
 
   return (
@@ -142,8 +167,23 @@ function formatDate(value) {
   }).format(date);
 }
 
+function formatCurrency(value, currency = "EUR") {
+  const amount = Number(value || 0);
+
+  try {
+    return new Intl.NumberFormat("sr-Latn-RS", {
+      style: "currency",
+      currency: currency || "EUR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currency || "EUR"} ${amount.toFixed(2)}`;
+  }
+}
+
 function statusMeta(status) {
-  const normalized = String(status || "").toLowerCase();
+  const normalized = String(status || "pending").toLowerCase();
 
   if (normalized === "approved") {
     return {
@@ -164,7 +204,7 @@ function statusMeta(status) {
   if (normalized === "completed") {
     return {
       label: "Završeno",
-      tone: "success",
+      tone: "completed",
       icon: "check",
     };
   }
@@ -172,30 +212,129 @@ function statusMeta(status) {
   if (normalized === "cancelled") {
     return {
       label: "Otkazano",
-      tone: "danger",
+      tone: "muted",
       icon: "x",
     };
   }
 
   return {
-    label: "Na čekanju",
+    label: "Čeka odgovor",
     tone: "pending",
     icon: "clock",
   };
+}
+
+function getBookingValue(booking) {
+  const totalAmount = Number(booking?.total_amount);
+
+  if (Number.isFinite(totalAmount) && totalAmount > 0) {
+    return totalAmount;
+  }
+
+  return (
+    Number(booking?.packages?.price || 0) *
+    Number(booking?.guests || 1)
+  );
 }
 
 function LoadingState() {
   return (
     <>
       <HostBookingsStyles />
+
       <main className="hostBookingsStatePage">
         <div className="hostBookingsStateCard">
           <span className="hostBookingsLoader" />
           <h1>Učitavanje rezervacija</h1>
-          <p>Pripremamo zahteve za tvoje pakete.</p>
+          <p>Pripremamo tvoj host kontrolni centar.</p>
         </div>
       </main>
     </>
+  );
+}
+
+function ConfirmModal({
+  action,
+  booking,
+  onCancel,
+  onConfirm,
+  loading,
+}) {
+  if (!action || !booking) return null;
+
+  const bookingName =
+    [booking.first_name, booking.last_name]
+      .filter(Boolean)
+      .join(" ") ||
+    booking.profiles?.full_name ||
+    booking.profiles?.username ||
+    "Gost";
+
+  const packageTitle =
+    booking.packages?.title || "ovaj paket";
+
+  const isReject = action === "rejected";
+
+  return (
+    <div className="bookingModalBackdrop" role="presentation">
+      <div
+        className="bookingModal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-modal-title"
+      >
+        <span
+          className={`bookingModalIcon ${
+            isReject ? "danger" : "success"
+          }`}
+        >
+          <Icon
+            name={isReject ? "x" : "check"}
+            size={24}
+          />
+        </span>
+
+        <span className="bookingModalKicker">
+          Potvrda odluke
+        </span>
+
+        <h2 id="booking-modal-title">
+          {isReject
+            ? "Odbiti rezervaciju?"
+            : "Označiti rezervaciju kao završenu?"}
+        </h2>
+
+        <p>
+          {isReject
+            ? `Odbićeš rezervaciju gosta ${bookingName} za “${packageTitle}”.`
+            : `Rezervaciju gosta ${bookingName} za “${packageTitle}” označićeš kao završenu.`}
+        </p>
+
+        <div className="bookingModalActions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Odustani
+          </button>
+
+          <button
+            type="button"
+            className={isReject ? "danger" : "success"}
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading
+              ? "Čuvanje..."
+              : isReject
+              ? "Da, odbij"
+              : "Da, završi"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -205,86 +344,143 @@ export default function HostBookings() {
   const [bookings, setBookings] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [sortOrder, setSortOrder] = useState("newest");
+  const [confirmState, setConfirmState] = useState({
+    action: null,
+    booking: null,
+  });
 
-  const loadBookings = useCallback(async () => {
-    if (!profile?.id || !isHost) {
-      setBookings([]);
-      setPageLoading(false);
-      return;
-    }
+  const loadBookings = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!profile?.id || !isHost) {
+        setBookings([]);
+        setPageLoading(false);
+        return;
+      }
 
-    setPageLoading(true);
-    setMessage("");
+      if (!silent) {
+        setPageLoading(true);
+      }
 
-    try {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          id,
-          package_id,
-          user_id,
-          guests,
-          note,
-          first_name,
-          last_name,
-          email,
-          phone,
-          total_amount,
-          currency,
-          payment_status,
-          status,
-          created_at,
-          approved_at,
-          rejected_at,
-          completed_at,
-          packages:package_id (
+      setMessage("");
+
+      try {
+        const { data, error } = await supabase
+          .from("bookings")
+          .select(`
             id,
-            title,
-            cover_url,
-            location,
-            country,
-            price,
-            currency
-          ),
-          profiles:user_id (
-            id,
-            username,
-            full_name,
-            avatar_url,
-            role,
-            phone
-          )
-        `)
-        .eq("host_id", profile.id)
-        .order("created_at", { ascending: false });
+            host_id,
+            package_id,
+            user_id,
+            guests,
+            note,
+            first_name,
+            last_name,
+            email,
+            phone,
+            total_amount,
+            currency,
+            payment_status,
+            status,
+            created_at,
+            updated_at,
+            approved_at,
+            rejected_at,
+            completed_at,
+            packages:package_id (
+              id,
+              title,
+              cover_url,
+              location,
+              country,
+              price,
+              currency,
+              start_date,
+              end_date
+            ),
+            profiles:user_id (
+              id,
+              username,
+              full_name,
+              avatar_url,
+              role,
+              phone
+            )
+          `)
+          .eq("host_id", profile.id)
+          .order("created_at", { ascending: false });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setBookings(data || []);
-    } catch (error) {
-      console.error("Greška pri učitavanju rezervacija:", error);
-      setBookings([]);
-      setMessage(
-        error?.message ||
-          "Rezervacije trenutno nije moguće učitati."
-      );
-    } finally {
-      setPageLoading(false);
-    }
-  }, [isHost, profile?.id]);
+        setBookings(data || []);
+      } catch (error) {
+        console.error(
+          "Greška pri učitavanju rezervacija:",
+          error
+        );
+        setBookings([]);
+        setMessage(
+          error?.message ||
+            "Rezervacije trenutno nije moguće učitati."
+        );
+      } finally {
+        if (!silent) {
+          setPageLoading(false);
+        }
+      }
+    },
+    [isHost, profile?.id]
+  );
 
   useEffect(() => {
     if (loading) return;
-    loadBookings();
+
+    void loadBookings();
   }, [loading, loadBookings]);
+
+  useEffect(() => {
+    if (!profile?.id || !isHost) return undefined;
+
+    const channel = supabase
+      .channel(`host-bookings-${profile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "bookings",
+          filter: `host_id=eq.${profile.id}`,
+        },
+        () => {
+          void loadBookings({ silent: true });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [isHost, loadBookings, profile?.id]);
+
+  useEffect(() => {
+    if (!successMessage) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setSuccessMessage("");
+    }, 3500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [successMessage]);
 
   const updateBookingStatus = useCallback(
     async (booking, status) => {
-      if (!profile?.id) return;
+      if (!profile?.id || !booking?.id) return;
 
       const now = new Date().toISOString();
 
@@ -308,44 +504,46 @@ export default function HostBookings() {
       try {
         setUpdatingId(booking.id);
         setMessage("");
+        setSuccessMessage("");
 
         const { error } = await supabase
           .from("bookings")
           .update(payload)
-          .eq("id", booking.id);
+          .eq("id", booking.id)
+          .eq("host_id", profile.id);
 
         if (error) throw error;
 
+        const notificationTitle =
+          status === "approved"
+            ? "Rezervacija je odobrena"
+            : status === "completed"
+            ? "Rezervacija je završena"
+            : "Rezervacija je odbijena";
+
+        const notificationMessage =
+          status === "approved"
+            ? `Tvoja rezervacija za ${
+                booking.packages?.title || "paket"
+              } je odobrena.`
+            : status === "completed"
+            ? `Rezervacija za ${
+                booking.packages?.title || "paket"
+              } je označena kao završena.`
+            : `Tvoja rezervacija za ${
+                booking.packages?.title || "paket"
+              } je odbijena.`;
+
         const { error: notificationError } =
-          await supabase
-            .from("notifications")
-            .insert({
-              user_id: booking.user_id,
-              from_user_id: profile.id,
-              package_id: booking.package_id,
-              type: `booking_${status}`,
-              title:
-                status === "approved"
-                  ? "Rezervacija je odobrena"
-                  : status === "completed"
-                  ? "Rezervacija je završena"
-                  : "Rezervacija je odbijena",
-              message:
-                status === "approved"
-                  ? `Tvoja rezervacija za ${
-                      booking.packages?.title ||
-                      "paket"
-                    } je odobrena.`
-                  : status === "completed"
-                  ? `Rezervacija za ${
-                      booking.packages?.title ||
-                      "paket"
-                    } je označena kao završena.`
-                  : `Tvoja rezervacija za ${
-                      booking.packages?.title ||
-                      "paket"
-                    } je odbijena.`,
-            });
+          await supabase.from("notifications").insert({
+            user_id: booking.user_id,
+            from_user_id: profile.id,
+            package_id: booking.package_id,
+            type: `booking_${status}`,
+            title: notificationTitle,
+            message: notificationMessage,
+            is_read: false,
+          });
 
         if (notificationError) {
           console.error(
@@ -359,28 +557,35 @@ export default function HostBookings() {
             item.id === booking.id
               ? {
                   ...item,
-                  status,
-                  approved_at:
-                    payload.approved_at,
-                  rejected_at:
-                    payload.rejected_at,
-                  completed_at:
-                    payload.completed_at,
+                  ...payload,
                 }
               : item
           )
+        );
+
+        setSuccessMessage(
+          status === "approved"
+            ? "Rezervacija je odobrena i korisnik je obavešten."
+            : status === "completed"
+            ? "Rezervacija je označena kao završena."
+            : "Rezervacija je odbijena i korisnik je obavešten."
         );
       } catch (error) {
         console.error(
           "Greška pri promeni statusa:",
           error
         );
+
         setMessage(
           error?.message ||
             "Status rezervacije nije moguće promeniti."
         );
       } finally {
         setUpdatingId(null);
+        setConfirmState({
+          action: null,
+          booking: null,
+        });
       }
     },
     [profile?.id]
@@ -390,7 +595,7 @@ export default function HostBookings() {
     return bookings.reduce(
       (result, booking) => {
         const status = String(
-          booking.status || ""
+          booking.status || "pending"
         ).toLowerCase();
 
         if (status === "approved") {
@@ -399,6 +604,8 @@ export default function HostBookings() {
           result.rejected += 1;
         } else if (status === "completed") {
           result.completed += 1;
+        } else if (status === "cancelled") {
+          result.cancelled += 1;
         } else {
           result.pending += 1;
         }
@@ -410,9 +617,61 @@ export default function HostBookings() {
         approved: 0,
         rejected: 0,
         completed: 0,
+        cancelled: 0,
       }
     );
   }, [bookings]);
+
+  const approvedValue = useMemo(
+    () =>
+      bookings.reduce((sum, booking) => {
+        if (
+          String(booking.status || "").toLowerCase() !==
+          "approved"
+        ) {
+          return sum;
+        }
+
+        return sum + getBookingValue(booking);
+      }, 0),
+    [bookings]
+  );
+
+  const pendingValue = useMemo(
+    () =>
+      bookings.reduce((sum, booking) => {
+        const status = String(
+          booking.status || "pending"
+        ).toLowerCase();
+
+        if (
+          status === "approved" ||
+          status === "rejected" ||
+          status === "completed" ||
+          status === "cancelled"
+        ) {
+          return sum;
+        }
+
+        return sum + getBookingValue(booking);
+      }, 0),
+    [bookings]
+  );
+
+  const approvedGuests = useMemo(
+    () =>
+      bookings.reduce((sum, booking) => {
+        if (
+          String(booking.status || "").toLowerCase() !==
+          "approved"
+        ) {
+          return sum;
+        }
+
+        return sum + Number(booking.guests || 1);
+      }, 0),
+    [bookings]
+  );
 
   const filteredBookings = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -422,9 +681,16 @@ export default function HostBookings() {
         booking.status || "pending"
       ).toLowerCase();
 
+      const normalizedStatus =
+        ["approved", "rejected", "completed", "cancelled"].includes(
+          status
+        )
+          ? status
+          : "pending";
+
       if (
         statusFilter !== "all" &&
-        status !== statusFilter
+        normalizedStatus !== statusFilter
       ) {
         return false;
       }
@@ -433,6 +699,7 @@ export default function HostBookings() {
 
       const pack = booking.packages;
       const user = booking.profiles;
+
       const fullName = [
         booking.first_name,
         booking.last_name,
@@ -448,6 +715,8 @@ export default function HostBookings() {
         user?.full_name,
         user?.username,
         pack?.title,
+        pack?.location,
+        pack?.country,
       ]
         .filter(Boolean)
         .some((value) =>
@@ -464,21 +733,14 @@ export default function HostBookings() {
       }
 
       if (sortOrder === "guests") {
-        return Number(b.guests || 1) -
-          Number(a.guests || 1);
+        return (
+          Number(b.guests || 1) -
+          Number(a.guests || 1)
+        );
       }
 
       if (sortOrder === "value") {
-        const aValue =
-          Number(a.total_amount) ||
-          Number(a.packages?.price || 0) *
-            Number(a.guests || 1);
-        const bValue =
-          Number(b.total_amount) ||
-          Number(b.packages?.price || 0) *
-            Number(b.guests || 1);
-
-        return bValue - aValue;
+        return getBookingValue(b) - getBookingValue(a);
       }
 
       return (
@@ -493,27 +755,40 @@ export default function HostBookings() {
     statusFilter,
   ]);
 
-  const totalGuests = useMemo(
-    () =>
-      bookings.reduce(
-        (sum, booking) =>
-          sum + Number(booking.guests || 1),
-        0
-      ),
-    [bookings]
-  );
-
-  const totalValue = useMemo(
-    () =>
-      bookings.reduce((sum, booking) => {
-        const value =
-          Number(booking.total_amount) ||
-          Number(booking.packages?.price || 0) *
-            Number(booking.guests || 1);
-
-        return sum + value;
-      }, 0),
-    [bookings]
+  const tabs = useMemo(
+    () => [
+      {
+        value: "pending",
+        label: "Čeka odgovor",
+        count: counts.pending,
+      },
+      {
+        value: "all",
+        label: "Sve",
+        count: bookings.length,
+      },
+      {
+        value: "approved",
+        label: "Odobrene",
+        count: counts.approved,
+      },
+      {
+        value: "completed",
+        label: "Završene",
+        count: counts.completed,
+      },
+      {
+        value: "rejected",
+        label: "Odbijene",
+        count: counts.rejected,
+      },
+      {
+        value: "cancelled",
+        label: "Otkazane",
+        count: counts.cancelled,
+      },
+    ],
+    [bookings.length, counts]
   );
 
   if (loading || pageLoading) {
@@ -556,44 +831,113 @@ export default function HostBookings() {
       <HostBookingsStyles />
 
       <main className="hostBookingsPage">
+        {successMessage && (
+          <div className="hostBookingsSuccessToast">
+            <span>
+              <Icon name="check" size={17} />
+            </span>
+            <p>{successMessage}</p>
+          </div>
+        )}
+
         <section className="hostBookingsHero">
+          <div className="hostBookingsHeroGrid" />
+
           <div className="hostBookingsHeroCopy">
             <span className="hostBookingsEyebrow">
               <span />
-              Host dashboard
+              Host kontrolni centar
             </span>
 
             <h1>
-              Zahtevi koji
+              Rezervacije
               <br />
-              čekaju tvoju odluku.
+              bez čekanja.
             </h1>
 
             <p>
-              Pregledaj goste, detalje paketa i odobri ili
-              odbij rezervacije sa jednog mesta.
+              Najvažniji zahtevi su uvek prvi. Odgovori gostima,
+              prati vrednost rezervacija i vodi iskustvo od
+              zahteva do završene avanture.
             </p>
+
+            {counts.pending > 0 ? (
+              <div className="hostBookingsHeroUrgent">
+                <span>
+                  <Icon name="bolt" size={19} />
+                </span>
+
+                <div>
+                  <strong>
+                    {counts.pending}{" "}
+                    {counts.pending === 1
+                      ? "zahtev čeka"
+                      : "zahteva čekaju"}{" "}
+                    tvoj odgovor
+                  </strong>
+                  <small>
+                    Potencijalna vrednost:{" "}
+                    {formatCurrency(pendingValue, "EUR")}
+                  </small>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("pending")}
+                >
+                  Pregledaj
+                  <Icon name="arrowRight" size={15} />
+                </button>
+              </div>
+            ) : (
+              <div className="hostBookingsHeroClear">
+                <Icon name="check" size={18} />
+                Sve rezervacije su obrađene.
+              </div>
+            )}
           </div>
 
           <div className="hostBookingsHeroStats">
-            <article>
-              <strong>{bookings.length}</strong>
-              <span>ukupno zahteva</span>
+            <article className="urgent">
+              <span>
+                <Icon name="clock" size={18} />
+              </span>
+              <div>
+                <strong>{counts.pending}</strong>
+                <small>čeka odgovor</small>
+              </div>
             </article>
 
             <article>
-              <strong>{counts.pending}</strong>
-              <span>na čekanju</span>
+              <span>
+                <Icon name="check" size={18} />
+              </span>
+              <div>
+                <strong>{counts.approved}</strong>
+                <small>odobreno</small>
+              </div>
             </article>
 
             <article>
-              <strong>{counts.approved}</strong>
-              <span>odobrenih</span>
+              <span>
+                <Icon name="users" size={18} />
+              </span>
+              <div>
+                <strong>{approvedGuests}</strong>
+                <small>odobrenih gostiju</small>
+              </div>
             </article>
 
             <article>
-              <strong>{totalGuests}</strong>
-              <span>ukupno gostiju</span>
+              <span>
+                <Icon name="money" size={18} />
+              </span>
+              <div>
+                <strong>
+                  {formatCurrency(approvedValue, "EUR")}
+                </strong>
+                <small>vrednost odobrenih</small>
+              </div>
             </article>
           </div>
         </section>
@@ -602,69 +946,93 @@ export default function HostBookings() {
           <header className="hostBookingsToolbar">
             <div>
               <span className="hostBookingsSectionLabel">
-                Upravljanje rezervacijama
+                Operativni pregled
               </span>
 
-              <h2>Najnoviji zahtevi.</h2>
+              <h2>
+                Ono što traži akciju — prvo.
+              </h2>
 
               <p>
-                Zahtevi su prikazani od najnovijeg ka starijem.
+                Rezervacije se osvežavaju u realnom vremenu.
               </p>
             </div>
 
-            <button type="button" onClick={loadBookings}>
+            <button
+              type="button"
+              onClick={() => void loadBookings()}
+            >
               <Icon name="refresh" size={16} />
               Osveži
             </button>
           </header>
 
+          <section className="hostBookingsTabs">
+            {tabs.map((tab) => (
+              <button
+                type="button"
+                key={tab.value}
+                className={
+                  statusFilter === tab.value ? "active" : ""
+                }
+                onClick={() => setStatusFilter(tab.value)}
+              >
+                <span>{tab.label}</span>
+                <strong>{tab.count}</strong>
+              </button>
+            ))}
+          </section>
+
           <section className="hostBookingsControls">
             <label className="hostBookingsSearch">
               <Icon name="search" size={17} />
+
               <input
                 type="search"
                 value={searchTerm}
                 onChange={(event) =>
                   setSearchTerm(event.target.value)
                 }
-                placeholder="Ime, telefon, email, paket ili ID..."
+                placeholder="Ime gosta, telefon, email, paket ili ID..."
               />
+
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  aria-label="Obriši pretragu"
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              )}
             </label>
 
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value)
-              }
-              aria-label="Filtriraj rezervacije"
-            >
-              <option value="all">Sve rezervacije</option>
-              <option value="pending">Na čekanju</option>
-              <option value="approved">Odobrene</option>
-              <option value="rejected">Odbijene</option>
-              <option value="completed">Završene</option>
-              <option value="cancelled">Otkazane</option>
-            </select>
+            <div className="hostBookingsSort">
+              <Icon name="filter" size={16} />
 
-            <select
-              value={sortOrder}
-              onChange={(event) =>
-                setSortOrder(event.target.value)
-              }
-              aria-label="Sortiraj rezervacije"
-            >
-              <option value="newest">Najnovije</option>
-              <option value="oldest">Najstarije</option>
-              <option value="guests">Najviše osoba</option>
-              <option value="value">Najveća vrednost</option>
-            </select>
+              <select
+                value={sortOrder}
+                onChange={(event) =>
+                  setSortOrder(event.target.value)
+                }
+                aria-label="Sortiraj rezervacije"
+              >
+                <option value="newest">Najnovije prvo</option>
+                <option value="oldest">Najstarije prvo</option>
+                <option value="guests">Najviše gostiju</option>
+                <option value="value">Najveća vrednost</option>
+              </select>
+            </div>
 
             <div className="hostBookingsValue">
-              <Icon name="money" size={17} />
+              <span>
+                <Icon name="money" size={17} />
+              </span>
+
               <div>
-                <span>Ukupna vrednost</span>
+                <small>Odobrena vrednost</small>
                 <strong>
-                  €{totalValue.toFixed(2)}
+                  {formatCurrency(approvedValue, "EUR")}
                 </strong>
               </div>
             </div>
@@ -678,7 +1046,10 @@ export default function HostBookings() {
 
               <p>{message}</p>
 
-              <button type="button" onClick={loadBookings}>
+              <button
+                type="button"
+                onClick={() => void loadBookings()}
+              >
                 Pokušaj ponovo
               </button>
             </div>
@@ -690,17 +1061,35 @@ export default function HostBookings() {
                 <Icon name="inbox" size={31} />
               </span>
 
-              <h2>Još nema zahteva za rezervaciju.</h2>
+              <h2>
+                {statusFilter === "pending"
+                  ? "Nema zahteva koji čekaju odgovor."
+                  : "Nema rezervacija za ovaj prikaz."}
+              </h2>
 
               <p>
-                Kada korisnik rezerviše neki od tvojih paketa,
-                njegov zahtev će se pojaviti ovde.
+                {statusFilter === "pending"
+                  ? "Odlično — trenutno nema gostiju koji čekaju tvoju odluku."
+                  : "Promeni filter ili pretragu i pokušaj ponovo."}
               </p>
 
-              <Link to="/dashboard">
-                Nazad na dashboard
-                <Icon name="arrowRight" size={16} />
-              </Link>
+              {statusFilter !== "all" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter("all");
+                    setSearchTerm("");
+                  }}
+                >
+                  Prikaži sve rezervacije
+                  <Icon name="arrowRight" size={16} />
+                </button>
+              ) : (
+                <Link to="/dashboard">
+                  Nazad na dashboard
+                  <Icon name="arrowRight" size={16} />
+                </Link>
+              )}
             </section>
           ) : (
             <section className="hostBookingsList">
@@ -729,24 +1118,34 @@ export default function HostBookings() {
                   "Gost";
 
                 const bookingPhone =
-                  booking.phone ||
-                  user?.phone ||
-                  "";
+                  booking.phone || user?.phone || "";
 
                 const totalAmount =
-                  Number(booking.total_amount) ||
-                  Number(pack?.price || 0) *
-                    Number(booking.guests || 1);
+                  getBookingValue(booking);
 
                 const currency =
                   booking.currency ||
                   pack?.currency ||
                   "EUR";
 
+                const currentStatus = String(
+                  booking.status || "pending"
+                ).toLowerCase();
+
+                const isPending =
+                  ![
+                    "approved",
+                    "rejected",
+                    "completed",
+                    "cancelled",
+                  ].includes(currentStatus);
+
                 return (
                   <article
                     key={booking.id}
-                    className="hostBookingCard"
+                    className={`hostBookingCard ${
+                      isPending ? "priority" : ""
+                    }`}
                   >
                     <div className="hostBookingImageWrap">
                       <img
@@ -754,40 +1153,107 @@ export default function HostBookings() {
                         alt={pack?.title || "Paket"}
                       />
 
+                      <div className="hostBookingImageOverlay" />
+
                       <span
                         className={`hostBookingStatus ${meta.tone}`}
                       >
                         <Icon name={meta.icon} size={14} />
                         {meta.label}
                       </span>
+
+                      {isPending && (
+                        <span className="hostBookingPriorityTag">
+                          <Icon name="bolt" size={13} />
+                          Potrebna akcija
+                        </span>
+                      )}
+
+                      <div className="hostBookingImageBottom">
+                        <span>
+                          <Icon name="calendar" size={14} />
+                          {pack?.start_date
+                            ? formatDate(pack.start_date)
+                            : "Termin paketa"}
+                        </span>
+
+                        <span>
+                          <Icon name="users" size={14} />
+                          {booking.guests || 1}{" "}
+                          {Number(booking.guests || 1) === 1
+                            ? "gost"
+                            : "gostiju"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="hostBookingBody">
                       <div className="hostBookingTop">
                         <div>
                           <span className="hostBookingKicker">
-                            Rezervacija #{String(booking.id).slice(0, 8)}
+                            Rezervacija #
+                            {String(booking.id).slice(0, 8)}
                           </span>
 
                           <h2>
-                            {pack?.title ||
-                              "Paket je obrisan"}
+                            {pack?.title || "Paket je obrisan"}
                           </h2>
+
+                          <div className="hostBookingCreated">
+                            <Icon name="clock" size={13} />
+                            Zahtev poslat{" "}
+                            {formatDate(booking.created_at)}
+                          </div>
                         </div>
 
-                        <small>
-                          {formatDate(
-                            booking.created_at
-                          )}
-                        </small>
+                        <div className="hostBookingValueStrong">
+                          <span>Vrednost</span>
+                          <strong>
+                            {formatCurrency(
+                              totalAmount,
+                              currency
+                            )}
+                          </strong>
+                        </div>
                       </div>
 
-                      <div className="hostBookingMetaGrid">
-                        <article>
-                          <Icon name="mapPin" size={17} />
+                      <div className="hostBookingGuestPanel">
+                        <div className="hostBookingGuestIdentity">
+                          <img
+                            src={
+                              user?.avatar_url ||
+                              FALLBACK_AVATAR
+                            }
+                            alt={bookingName}
+                          />
+
                           <div>
-                            <span>Lokacija</span>
-                            <strong>
+                            <span>Gost</span>
+                            <strong>{bookingName}</strong>
+                            <small>
+                              {user?.username
+                                ? `@${user.username}`
+                                : "MeetOutdoors korisnik"}
+                            </small>
+                          </div>
+                        </div>
+
+                        <div className="hostBookingGuestFacts">
+                          <article>
+                            <Icon name="users" size={16} />
+                            <span>
+                              {booking.guests || 1}{" "}
+                              {Number(
+                                booking.guests || 1
+                              ) === 1
+                                ? "osoba"
+                                : "osobe"}
+                            </span>
+                          </article>
+
+                          <article>
+                            <Icon name="mapPin" size={16} />
+                            <span>
                               {[
                                 pack?.location,
                                 pack?.country,
@@ -795,36 +1261,17 @@ export default function HostBookings() {
                                 .filter(Boolean)
                                 .join(", ") ||
                                 "Lokacija nije navedena"}
-                            </strong>
-                          </div>
-                        </article>
-
-                        <article>
-                          <Icon name="users" size={17} />
-                          <div>
-                            <span>Broj gostiju</span>
-                            <strong>
-                              {booking.guests || 1}
-                            </strong>
-                          </div>
-                        </article>
-
-                        <article>
-                          <Icon name="money" size={17} />
-                          <div>
-                            <span>Ukupna vrednost</span>
-                            <strong>
-                              {currency}{" "}
-                              {totalAmount.toFixed(2)}
-                            </strong>
-                          </div>
-                        </article>
+                            </span>
+                          </article>
+                        </div>
                       </div>
 
                       <div className="hostBookingContact">
                         <div>
-                          <span>Kontakt za rezervaciju</span>
-                          <strong>{bookingName}</strong>
+                          <span>Kontakt</span>
+                          <strong>
+                            Javi se gostu ako treba dodatna potvrda.
+                          </strong>
                         </div>
 
                         <div className="hostBookingContactLinks">
@@ -852,7 +1299,8 @@ export default function HostBookings() {
                       )}
 
                       {(booking.approved_at ||
-                        booking.rejected_at) && (
+                        booking.rejected_at ||
+                        booking.completed_at) && (
                         <div className="hostBookingHistory">
                           {booking.approved_at && (
                             <span className="approved">
@@ -873,110 +1321,100 @@ export default function HostBookings() {
                               )}
                             </span>
                           )}
+
+                          {booking.completed_at && (
+                            <span className="completed">
+                              <Icon name="check" size={14} />
+                              Završeno{" "}
+                              {formatDate(
+                                booking.completed_at
+                              )}
+                            </span>
+                          )}
                         </div>
                       )}
 
-                      <div className="hostBookingFooter">
-                        {user ? (
-                          <Link
-                            to={userUrl}
-                            className="hostBookingUser"
-                          >
-                            <img
-                              src={
-                                user.avatar_url ||
-                                FALLBACK_AVATAR
-                              }
-                              alt={
-                                user.full_name ||
-                                user.username
-                              }
-                            />
-
-                            <div>
-                              <span>Gost</span>
-                              <strong>
-                                {bookingName}
-                              </strong>
-                              <small>
-                                @{user.username}
-                              </small>
-                            </div>
-                          </Link>
-                        ) : (
-                          <div className="hostBookingUserMissing">
-                            Korisnik nije dostupan
-                          </div>
-                        )}
-
-                        <div className="hostBookingActions">
-                          {pack && (
-                            <Link
-                              to={`/package/${pack.id}`}
-                              className="hostBookingPackageLink"
-                            >
-                              Paket
-                              <Icon
-                                name="arrowRight"
-                                size={15}
-                              />
+                      <div
+                        className={`hostBookingFooter ${
+                          isPending ? "stickyActions" : ""
+                        }`}
+                      >
+                        <div className="hostBookingSecondaryActions">
+                          {user?.username && (
+                            <Link to={userUrl}>
+                              <Icon name="eye" size={15} />
+                              Profil gosta
                             </Link>
                           )}
 
-                          {booking.status !== "approved" && (
-                            <button
-                              type="button"
-                              className="approve"
-                              disabled={isUpdating}
-                              onClick={() =>
-                                updateBookingStatus(
-                                  booking,
-                                  "approved"
-                                )
-                              }
+                          {pack && (
+                            <Link
+                              to={`/package/${pack.id}`}
                             >
-                              <Icon name="check" size={16} />
-                              {isUpdating
-                                ? "Čuvanje..."
-                                : "Odobri"}
-                            </button>
+                              <Icon name="package" size={15} />
+                              Otvori paket
+                            </Link>
+                          )}
+                        </div>
+
+                        <div className="hostBookingActions">
+                          {isPending && (
+                            <>
+                              <button
+                                type="button"
+                                className="approve"
+                                disabled={isUpdating}
+                                onClick={() =>
+                                  updateBookingStatus(
+                                    booking,
+                                    "approved"
+                                  )
+                                }
+                              >
+                                <Icon
+                                  name="check"
+                                  size={17}
+                                />
+                                {isUpdating
+                                  ? "Čuvanje..."
+                                  : "Odobri rezervaciju"}
+                              </button>
+
+                              <button
+                                type="button"
+                                className="reject"
+                                disabled={isUpdating}
+                                onClick={() =>
+                                  setConfirmState({
+                                    action: "rejected",
+                                    booking,
+                                  })
+                                }
+                              >
+                                <Icon name="x" size={16} />
+                                Odbij
+                              </button>
+                            </>
                           )}
 
-                          {booking.status === "approved" && (
+                          {currentStatus ===
+                            "approved" && (
                             <button
                               type="button"
                               className="complete"
                               disabled={isUpdating}
                               onClick={() =>
-                                updateBookingStatus(
+                                setConfirmState({
+                                  action: "completed",
                                   booking,
-                                  "completed"
-                                )
+                                })
                               }
                             >
-                              <Icon name="check" size={16} />
-                              {isUpdating
-                                ? "Čuvanje..."
-                                : "Završi"}
-                            </button>
-                          )}
-
-                          {booking.status !== "rejected" && (
-                            <button
-                              type="button"
-                              className="reject"
-                              disabled={isUpdating}
-                              onClick={() =>
-                                updateBookingStatus(
-                                  booking,
-                                  "rejected"
-                                )
-                              }
-                            >
-                              <Icon name="x" size={16} />
-                              {isUpdating
-                                ? "Čuvanje..."
-                                : "Odbij"}
+                              <Icon
+                                name="check"
+                                size={16}
+                              />
+                              Označi kao završeno
                             </button>
                           )}
                         </div>
@@ -995,12 +1433,13 @@ export default function HostBookings() {
               </span>
 
               <h2>
-                Jasne odluke. Bolje iskustvo za goste.
+                Brz odgovor gradi poverenje.
               </h2>
 
               <p>
-                Redovno proveravaj nove zahteve i odgovori
-                korisnicima dok je njihovo interesovanje sveže.
+                Novi zahtevi se pojavljuju automatski. Prioritet je
+                da gost što pre dobije jasan odgovor, bez čekanja i
+                dodatnog proveravanja stranice.
               </p>
             </div>
 
@@ -1010,6 +1449,31 @@ export default function HostBookings() {
             </Link>
           </section>
         </section>
+
+        <ConfirmModal
+          action={confirmState.action}
+          booking={confirmState.booking}
+          loading={
+            updatingId === confirmState.booking?.id
+          }
+          onCancel={() =>
+            setConfirmState({
+              action: null,
+              booking: null,
+            })
+          }
+          onConfirm={() => {
+            if (
+              confirmState.booking &&
+              confirmState.action
+            ) {
+              void updateBookingStatus(
+                confirmState.booking,
+                confirmState.action
+              );
+            }
+          }}
+        />
       </main>
     </>
   );
@@ -1024,10 +1488,12 @@ function HostBookingsStyles() {
 
       body {
         margin: 0;
-        background: #edf1e9;
+        background: #e9eee5;
       }
 
-      button {
+      button,
+      input,
+      select {
         font: inherit;
       }
 
@@ -1039,7 +1505,7 @@ function HostBookingsStyles() {
       .hostBookingsPage,
       .hostBookingsStatePage {
         min-height: 100vh;
-        color: #203229;
+        color: #17271f;
         font-family:
           Inter,
           ui-sans-serif,
@@ -1051,19 +1517,20 @@ function HostBookingsStyles() {
       }
 
       .hostBookingsPage {
-        padding: 118px 28px 70px;
+        position: relative;
+        padding: 118px 28px 72px;
         background:
           radial-gradient(
             circle at 7% 0%,
-            rgba(177, 211, 139, 0.18),
+            rgba(177, 211, 139, 0.2),
             transparent 27%
           ),
           radial-gradient(
-            circle at 94% 25%,
-            rgba(64, 106, 75, 0.1),
-            transparent 24%
+            circle at 96% 31%,
+            rgba(59, 113, 73, 0.11),
+            transparent 26%
           ),
-          #edf1e9;
+          #e9eee5;
       }
 
       .hostBookingsPage a {
@@ -1071,51 +1538,109 @@ function HostBookingsStyles() {
         text-decoration: none;
       }
 
+      .hostBookingsSuccessToast {
+        position: fixed;
+        top: 96px;
+        right: 24px;
+        z-index: 5000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: min(430px, calc(100vw - 32px));
+        padding: 12px 14px;
+        border: 1px solid rgba(142, 199, 109, 0.34);
+        border-radius: 16px;
+        background: rgba(17, 48, 29, 0.94);
+        color: white;
+        box-shadow: 0 20px 55px rgba(17, 44, 27, 0.25);
+        backdrop-filter: blur(18px);
+      }
+
+      .hostBookingsSuccessToast > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        background: #baff9e;
+        color: #173b27;
+      }
+
+      .hostBookingsSuccessToast p {
+        margin: 0;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
       .hostBookingsHero {
         position: relative;
         isolation: isolate;
-        width: min(1200px, 100%);
-        min-height: 610px;
+        width: min(1240px, 100%);
+        min-height: 650px;
         margin: 0 auto;
-        padding: 34px;
+        padding: 40px;
         overflow: hidden;
-        border-radius: 36px;
+        border-radius: 38px;
         background:
           radial-gradient(
-            circle at 84% 17%,
-            rgba(202, 241, 148, 0.14),
-            transparent 27%
+            circle at 84% 12%,
+            rgba(186, 255, 158, 0.15),
+            transparent 26%
           ),
           linear-gradient(
             135deg,
-            #0d2a1a,
-            #173f28 58%,
-            #28563a
+            #071b10,
+            #10311d 52%,
+            #24553a
           );
         color: white;
         box-shadow:
-          0 34px 90px rgba(23, 54, 36, 0.18);
+          0 38px 100px rgba(18, 49, 31, 0.24);
       }
 
       .hostBookingsHero::before {
         position: absolute;
-        top: -170px;
-        right: -140px;
-        z-index: -1;
-        width: 550px;
-        height: 550px;
-        border:
-          1px solid rgba(255, 255, 255, 0.07);
+        top: -220px;
+        right: -170px;
+        z-index: -2;
+        width: 650px;
+        height: 650px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
         border-radius: 50%;
         content: "";
         box-shadow:
-          0 0 0 80px rgba(255, 255, 255, 0.02),
-          0 0 0 160px rgba(255, 255, 255, 0.012);
+          0 0 0 90px rgba(255, 255, 255, 0.018),
+          0 0 0 180px rgba(255, 255, 255, 0.01);
+      }
+
+      .hostBookingsHeroGrid {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.15;
+        background-image:
+          linear-gradient(
+            rgba(255, 255, 255, 0.05) 1px,
+            transparent 1px
+          ),
+          linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.05) 1px,
+            transparent 1px
+          );
+        background-size: 42px 42px;
+        mask-image:
+          linear-gradient(
+            180deg,
+            rgba(0, 0, 0, 0.7),
+            transparent 80%
+          );
       }
 
       .hostBookingsHeroCopy {
-        max-width: 880px;
-        padding-top: 105px;
+        max-width: 900px;
+        padding-top: 76px;
       }
 
       .hostBookingsEyebrow {
@@ -1123,13 +1648,10 @@ function HostBookingsStyles() {
         align-items: center;
         gap: 9px;
         padding: 9px 13px;
-        border:
-          1px solid rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 999px;
-        background:
-          rgba(255, 255, 255, 0.07);
-        color:
-          rgba(255, 255, 255, 0.76);
+        background: rgba(255, 255, 255, 0.07);
+        color: rgba(255, 255, 255, 0.74);
         font-size: 9px;
         font-weight: 900;
         letter-spacing: 0.12em;
@@ -1141,71 +1663,167 @@ function HostBookingsStyles() {
         width: 7px;
         height: 7px;
         border-radius: 50%;
-        background: #cef39a;
+        background: #baff9e;
         box-shadow:
-          0 0 0 5px rgba(206, 243, 154, 0.12);
+          0 0 0 5px rgba(186, 255, 158, 0.13);
       }
 
       .hostBookingsHeroCopy h1 {
-        margin: 24px 0 0;
-        font-size:
-          clamp(56px, 7.3vw, 94px);
-        line-height: 0.9;
-        letter-spacing: -0.075em;
+        margin: 25px 0 0;
+        font-size: clamp(64px, 8vw, 106px);
+        line-height: 0.85;
+        letter-spacing: -0.08em;
       }
 
-      .hostBookingsHeroCopy p {
-        max-width: 610px;
-        margin: 25px 0 0;
-        color:
-          rgba(255, 255, 255, 0.63);
+      .hostBookingsHeroCopy > p {
+        max-width: 650px;
+        margin: 26px 0 0;
+        color: rgba(255, 255, 255, 0.61);
         font-size: 14px;
         line-height: 1.75;
       }
 
+      .hostBookingsHeroUrgent,
+      .hostBookingsHeroClear {
+        margin-top: 28px;
+      }
+
+      .hostBookingsHeroUrgent {
+        display: grid;
+        grid-template-columns:
+          auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 13px;
+        width: min(640px, 100%);
+        padding: 13px;
+        border: 1px solid rgba(186, 255, 158, 0.2);
+        border-radius: 18px;
+        background:
+          linear-gradient(
+            145deg,
+            rgba(186, 255, 158, 0.12),
+            rgba(255, 255, 255, 0.045)
+          );
+        backdrop-filter: blur(18px);
+      }
+
+      .hostBookingsHeroUrgent > span {
+        display: grid;
+        place-items: center;
+        width: 43px;
+        height: 43px;
+        border-radius: 14px;
+        background: #baff9e;
+        color: #173b27;
+      }
+
+      .hostBookingsHeroUrgent strong,
+      .hostBookingsHeroUrgent small {
+        display: block;
+      }
+
+      .hostBookingsHeroUrgent strong {
+        font-size: 11px;
+      }
+
+      .hostBookingsHeroUrgent small {
+        margin-top: 4px;
+        color: rgba(255, 255, 255, 0.52);
+        font-size: 8px;
+      }
+
+      .hostBookingsHeroUrgent button {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 38px;
+        padding: 0 11px;
+        border: 0;
+        border-radius: 11px;
+        background: #baff9e;
+        color: #173b27;
+        cursor: pointer;
+        font-size: 8px;
+        font-weight: 900;
+      }
+
+      .hostBookingsHeroClear {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1px solid rgba(186, 255, 158, 0.18);
+        border-radius: 999px;
+        background: rgba(186, 255, 158, 0.09);
+        color: #d8ffca;
+        font-size: 9px;
+        font-weight: 850;
+      }
+
       .hostBookingsHeroStats {
         position: absolute;
-        right: 34px;
-        bottom: 34px;
-        left: 34px;
+        right: 40px;
+        bottom: 40px;
+        left: 40px;
         display: grid;
         grid-template-columns:
           repeat(4, minmax(0, 1fr));
-        gap: 12px;
+        gap: 11px;
       }
 
       .hostBookingsHeroStats article {
-        padding: 17px;
-        border:
-          1px solid rgba(255, 255, 255, 0.13);
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        min-width: 0;
+        padding: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 17px;
-        background:
-          rgba(12, 35, 21, 0.34);
+        background: rgba(6, 24, 13, 0.36);
         backdrop-filter: blur(16px);
       }
 
+      .hostBookingsHeroStats article.urgent {
+        border-color: rgba(186, 255, 158, 0.24);
+        background: rgba(186, 255, 158, 0.09);
+      }
+
+      .hostBookingsHeroStats article > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: rgba(186, 255, 158, 0.1);
+        color: #baff9e;
+      }
+
       .hostBookingsHeroStats strong,
-      .hostBookingsHeroStats span {
+      .hostBookingsHeroStats small {
         display: block;
       }
 
       .hostBookingsHeroStats strong {
-        font-size: 19px;
-        letter-spacing: -0.03em;
+        overflow: hidden;
+        color: white;
+        font-size: 18px;
+        letter-spacing: -0.035em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .hostBookingsHeroStats span {
-        margin-top: 6px;
-        color:
-          rgba(255, 255, 255, 0.48);
-        font-size: 8px;
+      .hostBookingsHeroStats small {
+        margin-top: 4px;
+        color: rgba(255, 255, 255, 0.42);
+        font-size: 7px;
         font-weight: 800;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.07em;
         text-transform: uppercase;
       }
 
       .hostBookingsContent {
-        width: min(1100px, 100%);
+        width: min(1140px, 100%);
         margin: 0 auto;
       }
 
@@ -1214,11 +1832,11 @@ function HostBookingsStyles() {
         align-items: flex-end;
         justify-content: space-between;
         gap: 20px;
-        margin: 50px 0 22px;
+        margin: 52px 0 19px;
       }
 
       .hostBookingsSectionLabel {
-        color: #789456;
+        color: #6f914e;
         font-size: 9px;
         font-weight: 900;
         letter-spacing: 0.13em;
@@ -1227,12 +1845,11 @@ function HostBookingsStyles() {
 
       .hostBookingsToolbar h2,
       .hostBookingsSummary h2 {
-        margin: 8px 0 0;
-        color: #2f4437;
-        font-size:
-          clamp(34px, 5vw, 52px);
-        line-height: 1;
-        letter-spacing: -0.06em;
+        margin: 9px 0 0;
+        color: #20352a;
+        font-size: clamp(37px, 5vw, 57px);
+        line-height: 0.95;
+        letter-spacing: -0.065em;
       }
 
       .hostBookingsToolbar p {
@@ -1247,32 +1864,182 @@ function HostBookingsStyles() {
         gap: 7px;
         min-height: 43px;
         padding: 0 15px;
-        border: 1px solid #d5dfd1;
+        border: 1px solid #d4dfd1;
         border-radius: 13px;
-        background:
-          rgba(255, 255, 255, 0.8);
-        color: #4c6255;
+        background: rgba(255, 255, 255, 0.84);
+        color: #48604f;
         cursor: pointer;
         font-size: 9px;
         font-weight: 850;
+        box-shadow: 0 10px 24px rgba(30, 51, 38, 0.05);
       }
 
+      .hostBookingsTabs {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 5px;
+        scrollbar-width: none;
+      }
 
-      .hostBookingsControls{position:sticky;top:86px;z-index:20;display:grid;grid-template-columns:minmax(240px,1fr) auto auto auto;gap:10px;margin-bottom:18px;padding:12px;border:1px solid #d8e1d5;border-radius:18px;background:rgba(237,241,233,.92);box-shadow:0 12px 30px rgba(31,51,38,.07);backdrop-filter:blur(16px)}
-      .hostBookingsSearch{display:flex;align-items:center;gap:9px;min-height:44px;padding:0 13px;border:1px solid #d4ded1;border-radius:13px;background:#fff;color:#728078}
-      .hostBookingsSearch input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#263a2f;font-size:10px}
-      .hostBookingsControls select{min-height:44px;padding:0 12px;border:1px solid #d4ded1;border-radius:13px;background:#fff;color:#465b4e;outline:0;font-size:9px;font-weight:800}
-      .hostBookingsValue{display:flex;align-items:center;gap:9px;min-height:44px;padding:0 13px;border-radius:13px;background:#183a27;color:#fff}
-      .hostBookingsValue span,.hostBookingsValue strong{display:block}
-      .hostBookingsValue span{color:rgba(255,255,255,.5);font-size:7px}
-      .hostBookingsValue strong{margin-top:2px;font-size:10px}
-      .hostBookingContact{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:15px;padding:14px;border:1px solid #dbe5d7;border-radius:16px;background:#edf5e6}
-      .hostBookingContact span,.hostBookingContact strong{display:block}
-      .hostBookingContact span{color:#789456;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
-      .hostBookingContact strong{margin-top:5px;color:#34483b;font-size:11px}
-      .hostBookingContactLinks{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
-      .hostBookingContactLinks a{display:inline-flex;align-items:center;gap:6px;min-height:35px;padding:0 10px;border:1px solid #cfddca;border-radius:11px;background:#fff;color:#4b6253!important;font-size:8px;font-weight:800}
-      .hostBookingActions button.complete{border:1px solid #385d86;background:#e8f1fb;color:#385d86}
+      .hostBookingsTabs::-webkit-scrollbar {
+        display: none;
+      }
+
+      .hostBookingsTabs button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex: 0 0 auto;
+        min-height: 42px;
+        padding: 0 12px;
+        border: 1px solid #d5dfd2;
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.68);
+        color: #647168;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 850;
+        transition: 0.18s ease;
+      }
+
+      .hostBookingsTabs button strong {
+        display: grid;
+        place-items: center;
+        min-width: 23px;
+        height: 23px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: #e8eee4;
+        color: #4d6355;
+        font-size: 8px;
+      }
+
+      .hostBookingsTabs button:hover {
+        transform: translateY(-1px);
+        border-color: #b5c6af;
+      }
+
+      .hostBookingsTabs button.active {
+        border-color: #173b27;
+        background: #173b27;
+        color: white;
+        box-shadow: 0 11px 26px rgba(23, 59, 39, 0.15);
+      }
+
+      .hostBookingsTabs button.active strong {
+        background: #baff9e;
+        color: #173b27;
+      }
+
+      .hostBookingsControls {
+        position: sticky;
+        top: 86px;
+        z-index: 20;
+        display: grid;
+        grid-template-columns:
+          minmax(300px, 1fr)
+          minmax(185px, auto)
+          minmax(190px, auto);
+        gap: 10px;
+        margin: 11px 0 20px;
+        padding: 11px;
+        border: 1px solid rgba(202, 216, 198, 0.95);
+        border-radius: 19px;
+        background: rgba(233, 238, 229, 0.91);
+        box-shadow:
+          0 16px 38px rgba(31, 51, 38, 0.08);
+        backdrop-filter: blur(18px);
+      }
+
+      .hostBookingsSearch,
+      .hostBookingsSort {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 46px;
+        padding: 0 13px;
+        border: 1px solid #d4ded1;
+        border-radius: 13px;
+        background: white;
+        color: #728078;
+      }
+
+      .hostBookingsSearch input {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: #263a2f;
+        font-size: 10px;
+      }
+
+      .hostBookingsSearch button {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 0;
+        border-radius: 8px;
+        background: #edf1ea;
+        color: #728078;
+        cursor: pointer;
+      }
+
+      .hostBookingsSort select {
+        min-width: 155px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: #465b4e;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      .hostBookingsValue {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 46px;
+        padding: 0 13px;
+        border-radius: 13px;
+        background:
+          linear-gradient(
+            135deg,
+            #173b27,
+            #25563a
+          );
+        color: white;
+      }
+
+      .hostBookingsValue > span {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: rgba(186, 255, 158, 0.1);
+        color: #baff9e;
+      }
+
+      .hostBookingsValue small,
+      .hostBookingsValue strong {
+        display: block;
+      }
+
+      .hostBookingsValue small {
+        color: rgba(255, 255, 255, 0.46);
+        font-size: 7px;
+      }
+
+      .hostBookingsValue strong {
+        margin-top: 2px;
+        font-size: 10px;
+      }
 
       .hostBookingsError {
         display: grid;
@@ -1319,98 +2086,148 @@ function HostBookingsStyles() {
       .hostBookingCard {
         display: grid;
         grid-template-columns:
-          minmax(270px, 0.68fr)
-          minmax(0, 1.32fr);
+          minmax(300px, 0.72fr)
+          minmax(0, 1.28fr);
         overflow: hidden;
-        border: 1px solid #dbe4d8;
-        border-radius: 27px;
-        background:
-          rgba(255, 255, 255, 0.8);
+        border: 1px solid #d8e2d5;
+        border-radius: 29px;
+        background: rgba(255, 255, 255, 0.82);
         box-shadow:
-          0 16px 42px rgba(31, 51, 38, 0.06);
-        transition: 0.22s ease;
+          0 17px 44px rgba(31, 51, 38, 0.065);
+        transition:
+          transform 0.22s ease,
+          box-shadow 0.22s ease,
+          border-color 0.22s ease;
       }
 
       .hostBookingCard:hover {
-        border-color: #bccbb7;
-        background: white;
+        transform: translateY(-4px);
+        border-color: #b9c9b5;
         box-shadow:
-          0 23px 52px rgba(31, 51, 38, 0.1);
-        transform: translateY(-3px);
+          0 26px 62px rgba(31, 51, 38, 0.11);
+      }
+
+      .hostBookingCard.priority {
+        border-color: #aeca99;
+        box-shadow:
+          0 18px 50px rgba(71, 111, 60, 0.11);
       }
 
       .hostBookingImageWrap {
         position: relative;
-        min-height: 350px;
+        min-height: 390px;
         overflow: hidden;
-      }
-
-      .hostBookingImageWrap::after {
-        position: absolute;
-        inset: 0;
-        background:
-          linear-gradient(
-            180deg,
-            transparent 48%,
-            rgba(11, 29, 18, 0.54)
-          );
-        content: "";
       }
 
       .hostBookingImageWrap img {
         width: 100%;
         height: 100%;
+        display: block;
         object-fit: cover;
-        transition: transform 0.45s ease;
+        transition: transform 0.5s ease;
       }
 
-      .hostBookingCard:hover
-        .hostBookingImageWrap img {
+      .hostBookingCard:hover .hostBookingImageWrap img {
         transform: scale(1.035);
       }
 
-      .hostBookingStatus {
+      .hostBookingImageOverlay {
         position: absolute;
-        top: 16px;
-        left: 16px;
+        inset: 0;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(5, 17, 10, 0.08),
+            rgba(5, 17, 10, 0.12) 38%,
+            rgba(5, 17, 10, 0.82)
+          );
+      }
+
+      .hostBookingStatus,
+      .hostBookingPriorityTag {
+        position: absolute;
         z-index: 2;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        min-height: 34px;
-        padding: 0 11px;
-        border:
-          1px solid rgba(255, 255, 255, 0.22);
+        min-height: 33px;
+        padding: 0 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 999px;
         backdrop-filter: blur(13px);
         font-size: 8px;
         font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+      }
+
+      .hostBookingStatus {
+        top: 16px;
+        left: 16px;
+      }
+
+      .hostBookingPriorityTag {
+        top: 16px;
+        right: 16px;
+        background: #baff9e;
+        color: #173b27;
       }
 
       .hostBookingStatus.pending {
-        background:
-          rgba(119, 91, 27, 0.56);
-        color: #ffeab2;
+        border-color: rgba(255, 236, 168, 0.3);
+        background: rgba(93, 70, 20, 0.58);
+        color: #fff0b8;
       }
 
       .hostBookingStatus.success {
-        background:
-          rgba(42, 92, 48, 0.58);
-        color: #d7f5be;
+        border-color: rgba(186, 255, 158, 0.28);
+        background: rgba(31, 79, 40, 0.6);
+        color: #dcffcf;
+      }
+
+      .hostBookingStatus.completed {
+        background: rgba(45, 87, 111, 0.58);
+        color: #d9efff;
       }
 
       .hostBookingStatus.danger {
-        background:
-          rgba(114, 48, 43, 0.58);
-        color: #ffd5d1;
+        background: rgba(112, 44, 40, 0.62);
+        color: #ffd9d5;
+      }
+
+      .hostBookingStatus.muted {
+        background: rgba(48, 55, 50, 0.58);
+        color: rgba(255, 255, 255, 0.68);
+      }
+
+      .hostBookingImageBottom {
+        position: absolute;
+        right: 16px;
+        bottom: 17px;
+        left: 16px;
+        z-index: 2;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .hostBookingImageBottom span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 31px;
+        padding: 0 9px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+        background: rgba(4, 17, 9, 0.5);
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 8px;
+        font-weight: 800;
+        backdrop-filter: blur(11px);
       }
 
       .hostBookingBody {
         display: flex;
         min-width: 0;
-        padding: 24px;
+        padding: 25px;
         flex-direction: column;
       }
 
@@ -1422,7 +2239,7 @@ function HostBookingsStyles() {
       }
 
       .hostBookingKicker {
-        color: #789456;
+        color: #6f914e;
         font-size: 8px;
         font-weight: 900;
         letter-spacing: 0.11em;
@@ -1430,59 +2247,198 @@ function HostBookingsStyles() {
       }
 
       .hostBookingTop h2 {
-        margin: 9px 0 0;
-        color: #304538;
-        font-size: 29px;
-        line-height: 1.05;
-        letter-spacing: -0.05em;
+        margin: 8px 0 0;
+        color: #263d31;
+        font-size: 31px;
+        line-height: 1.02;
+        letter-spacing: -0.055em;
       }
 
-      .hostBookingTop > small {
-        flex: 0 0 auto;
-        color: #929b95;
-        font-size: 8px;
-      }
-
-      .hostBookingMetaGrid {
-        display: grid;
-        grid-template-columns:
-          repeat(3, minmax(0, 1fr));
-        gap: 10px;
-        margin-top: 22px;
-      }
-
-      .hostBookingMetaGrid article {
-        display: flex;
+      .hostBookingCreated {
+        display: inline-flex;
         align-items: center;
-        gap: 10px;
-        padding: 13px;
-        border: 1px solid #e0e7dd;
-        border-radius: 15px;
-        background: #f8faf6;
-        color: #66804d;
-      }
-
-      .hostBookingMetaGrid span,
-      .hostBookingMetaGrid strong {
-        display: block;
-      }
-
-      .hostBookingMetaGrid span {
+        gap: 6px;
+        margin-top: 9px;
         color: #8b958e;
         font-size: 8px;
       }
 
-      .hostBookingMetaGrid strong {
+      .hostBookingValueStrong {
+        flex: 0 0 auto;
+        min-width: 110px;
+        padding: 11px 12px;
+        border: 1px solid #dce5d9;
+        border-radius: 14px;
+        background: #f5f8f2;
+        text-align: right;
+      }
+
+      .hostBookingValueStrong span,
+      .hostBookingValueStrong strong {
+        display: block;
+      }
+
+      .hostBookingValueStrong span {
+        color: #8b958e;
+        font-size: 7px;
+        text-transform: uppercase;
+      }
+
+      .hostBookingValueStrong strong {
+        margin-top: 5px;
+        color: #294233;
+        font-size: 13px;
+      }
+
+      .hostBookingGuestPanel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 20px;
+        padding: 14px;
+        border: 1px solid #dce5d9;
+        border-radius: 17px;
+        background:
+          linear-gradient(
+            145deg,
+            #f8faf6,
+            #eef5e9
+          );
+      }
+
+      .hostBookingGuestIdentity {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        min-width: 0;
+      }
+
+      .hostBookingGuestIdentity img {
+        flex: 0 0 auto;
+        width: 52px;
+        height: 52px;
+        border-radius: 15px;
+        object-fit: cover;
+        box-shadow: 0 8px 20px rgba(31, 51, 38, 0.1);
+      }
+
+      .hostBookingGuestIdentity span,
+      .hostBookingGuestIdentity strong,
+      .hostBookingGuestIdentity small {
+        display: block;
+      }
+
+      .hostBookingGuestIdentity span {
+        color: #7e995f;
+        font-size: 7px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hostBookingGuestIdentity strong {
         margin-top: 3px;
-        color: #405347;
+        overflow: hidden;
+        color: #354b3e;
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hostBookingGuestIdentity small {
+        margin-top: 3px;
+        color: #879188;
+        font-size: 8px;
+      }
+
+      .hostBookingGuestFacts {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 7px;
+      }
+
+      .hostBookingGuestFacts article {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 34px;
+        padding: 0 10px;
+        border: 1px solid #d3dfcf;
+        border-radius: 11px;
+        background: white;
+        color: #5a7544;
+      }
+
+      .hostBookingGuestFacts span {
+        color: #5c6e62;
+        font-size: 8px;
+        font-weight: 800;
+      }
+
+      .hostBookingContact {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-top: 12px;
+        padding: 13px 14px;
+        border: 1px solid #dbe5d7;
+        border-radius: 16px;
+        background: #edf5e6;
+      }
+
+      .hostBookingContact span,
+      .hostBookingContact strong {
+        display: block;
+      }
+
+      .hostBookingContact span {
+        color: #729052;
+        font-size: 7px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .hostBookingContact strong {
+        margin-top: 4px;
+        color: #43564a;
         font-size: 9px;
-        line-height: 1.35;
+      }
+
+      .hostBookingContactLinks {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 7px;
+      }
+
+      .hostBookingContactLinks a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 35px;
+        padding: 0 10px;
+        border: 1px solid #cfddca;
+        border-radius: 11px;
+        background: white;
+        color: #4b6253 !important;
+        font-size: 8px;
+        font-weight: 800;
+        transition: 0.18s ease;
+      }
+
+      .hostBookingContactLinks a:hover {
+        transform: translateY(-1px);
+        border-color: #9fb597;
       }
 
       .hostBookingNote {
-        margin-top: 15px;
-        padding: 14px;
-        border: 1px solid #e2e8df;
+        margin-top: 12px;
+        padding: 13px 14px;
+        border: 1px solid #e1e8de;
         border-radius: 15px;
         background: #fbfcfa;
       }
@@ -1506,7 +2462,7 @@ function HostBookingsStyles() {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 14px;
+        margin-top: 12px;
       }
 
       .hostBookingHistory span {
@@ -1529,59 +2485,44 @@ function HostBookingsStyles() {
         color: #a34d43;
       }
 
+      .hostBookingHistory .completed {
+        background: #e9f1f8;
+        color: #456b87;
+      }
+
       .hostBookingFooter {
         display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 18px;
-        margin-top: auto;
-        padding-top: 20px;
-      }
-
-      .hostBookingUser {
-        display: grid;
-        grid-template-columns:
-          auto minmax(0, 1fr);
         align-items: center;
-        gap: 11px;
-        min-width: 0;
+        justify-content: space-between;
+        gap: 14px;
+        margin-top: auto;
+        padding-top: 19px;
       }
 
-      .hostBookingUser img {
-        width: 51px;
-        height: 51px;
-        border-radius: 15px;
-        object-fit: cover;
+      .hostBookingSecondaryActions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
       }
 
-      .hostBookingUser span,
-      .hostBookingUser strong,
-      .hostBookingUser small {
-        display: block;
-      }
-
-      .hostBookingUser span {
-        color: #929b95;
-        font-size: 7px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-
-      .hostBookingUser strong {
-        margin-top: 4px;
-        color: #3d5144;
-        font-size: 10px;
-      }
-
-      .hostBookingUser small {
-        margin-top: 3px;
-        color: #8b958e;
+      .hostBookingSecondaryActions a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 38px;
+        padding: 0 11px;
+        border: 1px solid #d6dfd2;
+        border-radius: 11px;
+        background: #f8faf6;
+        color: #53665a;
         font-size: 8px;
+        font-weight: 850;
+        transition: 0.18s ease;
       }
 
-      .hostBookingUserMissing {
-        color: #8b958e;
-        font-size: 9px;
+      .hostBookingSecondaryActions a:hover {
+        transform: translateY(-1px);
+        background: white;
       }
 
       .hostBookingActions {
@@ -1591,37 +2532,50 @@ function HostBookingsStyles() {
         gap: 8px;
       }
 
-      .hostBookingActions a,
       .hostBookingActions button {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        min-height: 41px;
+        gap: 7px;
+        min-height: 43px;
         padding: 0 13px;
         border-radius: 12px;
         cursor: pointer;
         font-size: 9px;
-        font-weight: 850;
-        transition: 0.2s ease;
-      }
-
-      .hostBookingPackageLink {
-        border: 1px solid #d4ded1;
-        background: #f8faf6;
-        color: #4b6253;
+        font-weight: 900;
+        transition:
+          transform 0.18s ease,
+          box-shadow 0.18s ease,
+          background 0.18s ease;
       }
 
       .hostBookingActions button.approve {
-        border: 1px solid #49753b;
-        background: #426d35;
+        min-width: 150px;
+        border: 1px solid #173b27;
+        background: #173b27;
         color: white;
+        box-shadow: 0 11px 24px rgba(23, 59, 39, 0.17);
+      }
+
+      .hostBookingActions button.approve:hover:not(:disabled) {
+        background: #224f35;
+        box-shadow: 0 14px 30px rgba(23, 59, 39, 0.22);
       }
 
       .hostBookingActions button.reject {
-        border: 1px solid #d8a39d;
-        background: #fff0ee;
+        border: 1px solid #ddb1ab;
+        background: #fff1ef;
         color: #a34d43;
+      }
+
+      .hostBookingActions button.complete {
+        border: 1px solid #486e8c;
+        background: #eaf2f8;
+        color: #3f6582;
+      }
+
+      .hostBookingActions button:hover:not(:disabled) {
+        transform: translateY(-2px);
       }
 
       .hostBookingActions button:disabled {
@@ -1629,19 +2583,13 @@ function HostBookingsStyles() {
         opacity: 0.62;
       }
 
-      .hostBookingActions a:hover,
-      .hostBookingActions button:hover:not(:disabled) {
-        transform: translateY(-2px);
-      }
-
       .hostBookingsEmpty {
         display: grid;
         place-items: center;
         padding: 76px 25px;
-        border: 1px dashed #cad6c6;
+        border: 1px dashed #c9d6c6;
         border-radius: 27px;
-        background:
-          rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.58);
         text-align: center;
       }
 
@@ -1671,15 +2619,18 @@ function HostBookingsStyles() {
       }
 
       .hostBookingsEmpty a,
+      .hostBookingsEmpty button,
       .hostBookingsStatePrimary {
         display: inline-flex;
         align-items: center;
         gap: 7px;
         margin-top: 20px;
         padding: 12px 15px;
+        border: 0;
         border-radius: 12px;
-        background: #183a27;
+        background: #173b27;
         color: white !important;
+        cursor: pointer;
         font-size: 10px;
         font-weight: 850;
         text-decoration: none;
@@ -1690,12 +2641,16 @@ function HostBookingsStyles() {
         align-items: center;
         justify-content: space-between;
         gap: 30px;
-        margin-top: 24px;
-        padding: 31px;
-        border: 1px solid #dbe4d8;
-        border-radius: 27px;
+        margin-top: 26px;
+        padding: 32px;
+        border: 1px solid #d9e3d6;
+        border-radius: 28px;
         background:
-          rgba(255, 255, 255, 0.72);
+          linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.78),
+            rgba(238, 245, 233, 0.76)
+          );
         box-shadow:
           0 14px 38px rgba(31, 51, 38, 0.05);
       }
@@ -1717,7 +2672,7 @@ function HostBookingsStyles() {
         min-height: 45px;
         padding: 0 16px;
         border-radius: 14px;
-        background: #183a27;
+        background: #173b27;
         color: white !important;
         font-size: 10px;
         font-weight: 850;
@@ -1730,6 +2685,114 @@ function HostBookingsStyles() {
         background: #214b32;
       }
 
+      .bookingModalBackdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 6000;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        background: rgba(4, 13, 8, 0.72);
+        backdrop-filter: blur(13px);
+      }
+
+      .bookingModal {
+        width: min(470px, 100%);
+        padding: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 24px;
+        background:
+          radial-gradient(
+            circle at 100% 0%,
+            rgba(186, 255, 158, 0.1),
+            transparent 34%
+          ),
+          #10271a;
+        color: white;
+        box-shadow: 0 35px 100px rgba(0, 0, 0, 0.4);
+      }
+
+      .bookingModalIcon {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+      }
+
+      .bookingModalIcon.danger {
+        background: rgba(255, 123, 112, 0.13);
+        color: #ffb4ad;
+      }
+
+      .bookingModalIcon.success {
+        background: rgba(186, 255, 158, 0.12);
+        color: #baff9e;
+      }
+
+      .bookingModalKicker {
+        display: block;
+        margin-top: 20px;
+        color: #baff9e;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .bookingModal h2 {
+        margin: 8px 0 0;
+        font-size: 31px;
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .bookingModal p {
+        margin: 12px 0 0;
+        color: rgba(255, 255, 255, 0.57);
+        font-size: 10px;
+        line-height: 1.7;
+      }
+
+      .bookingModalActions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 9px;
+        margin-top: 23px;
+      }
+
+      .bookingModalActions button {
+        min-height: 43px;
+        padding: 0 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 900;
+      }
+
+      .bookingModalActions button.secondary {
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        background: rgba(255, 255, 255, 0.06);
+        color: white;
+      }
+
+      .bookingModalActions button.danger {
+        border: 1px solid #ff9c93;
+        background: #a54840;
+        color: white;
+      }
+
+      .bookingModalActions button.success {
+        border: 1px solid #baff9e;
+        background: #baff9e;
+        color: #173b27;
+      }
+
+      .bookingModalActions button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
       .hostBookingsStatePage {
         display: grid;
         place-items: center;
@@ -1740,7 +2803,7 @@ function HostBookingsStyles() {
             rgba(166, 203, 126, 0.18),
             transparent 30%
           ),
-          #edf1e9;
+          #e9eee5;
       }
 
       .hostBookingsStateCard {
@@ -1750,8 +2813,7 @@ function HostBookingsStyles() {
         padding: 50px 30px;
         border: 1px solid #dce3d9;
         border-radius: 28px;
-        background:
-          rgba(255, 255, 255, 0.84);
+        background: rgba(255, 255, 255, 0.84);
         text-align: center;
         box-shadow:
           0 20px 60px rgba(28, 48, 35, 0.08);
@@ -1798,28 +2860,49 @@ function HostBookingsStyles() {
         line-height: 1.65;
       }
 
-      @media (max-width: 1100px) {
-        .hostBookingsControls {
-          grid-template-columns: 1fr 1fr;
-        }
-      }
-
-      @media (max-width: 960px) {
-        .hostBookingCard {
-          grid-template-columns: 1fr;
-        }
-
-        .hostBookingImageWrap {
-          min-height: 280px;
-        }
-
+      @media (max-width: 1050px) {
         .hostBookingsHeroStats {
           grid-template-columns:
             repeat(2, minmax(0, 1fr));
         }
 
         .hostBookingsHero {
-          min-height: 710px;
+          min-height: 760px;
+        }
+
+        .hostBookingCard {
+          grid-template-columns:
+            minmax(260px, 0.6fr)
+            minmax(0, 1.4fr);
+        }
+
+        .hostBookingsControls {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .hostBookingsValue {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 880px) {
+        .hostBookingCard {
+          grid-template-columns: 1fr;
+        }
+
+        .hostBookingImageWrap {
+          min-height: 320px;
+        }
+
+        .hostBookingGuestPanel,
+        .hostBookingFooter {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .hostBookingGuestFacts,
+        .hostBookingActions {
+          justify-content: flex-start;
         }
       }
 
@@ -1833,13 +2916,13 @@ function HostBookingsStyles() {
         }
 
         .hostBookingsHero {
-          min-height: 740px;
+          min-height: 800px;
           padding: 24px;
           border-radius: 0 0 32px 32px;
         }
 
         .hostBookingsHeroCopy {
-          padding-top: 110px;
+          padding-top: 95px;
         }
 
         .hostBookingsHeroStats {
@@ -1862,6 +2945,10 @@ function HostBookingsStyles() {
           grid-template-columns: 1fr;
         }
 
+        .hostBookingsValue {
+          grid-column: auto;
+        }
+
         .hostBookingContact {
           align-items: flex-start;
           flex-direction: column;
@@ -1872,8 +2959,20 @@ function HostBookingsStyles() {
           justify-content: flex-start;
         }
 
-        .hostBookingMetaGrid {
-          grid-template-columns: 1fr;
+        .hostBookingFooter.stickyActions {
+          position: sticky;
+          bottom: 0;
+          z-index: 4;
+          margin: 18px -20px -20px;
+          padding: 13px 20px 18px;
+          border-top: 1px solid #dce5d8;
+          background:
+            linear-gradient(
+              180deg,
+              rgba(255, 255, 255, 0.88),
+              white
+            );
+          backdrop-filter: blur(14px);
         }
 
         .hostBookingsSummary {
@@ -1882,20 +2981,31 @@ function HostBookingsStyles() {
         }
       }
 
-      @media (max-width: 480px) {
+      @media (max-width: 500px) {
         .hostBookingsHero {
-          min-height: 780px;
+          min-height: 850px;
           padding: 19px;
         }
 
         .hostBookingsHeroCopy h1 {
-          font-size: 47px;
+          font-size: 50px;
+        }
+
+        .hostBookingsHeroUrgent {
+          grid-template-columns: auto 1fr;
+        }
+
+        .hostBookingsHeroUrgent button {
+          grid-column: 1 / -1;
+          width: 100%;
+          justify-content: center;
         }
 
         .hostBookingsHeroStats {
           right: 19px;
           bottom: 19px;
           left: 19px;
+          grid-template-columns: 1fr 1fr;
         }
 
         .hostBookingsContent {
@@ -1906,24 +3016,49 @@ function HostBookingsStyles() {
           padding: 20px;
         }
 
-        .hostBookingTop,
-        .hostBookingFooter {
-          align-items: flex-start;
+        .hostBookingTop {
           flex-direction: column;
         }
 
-        .hostBookingActions {
+        .hostBookingValueStrong {
           width: 100%;
-          justify-content: flex-start;
+          text-align: left;
         }
 
-        .hostBookingActions a,
+        .hostBookingGuestFacts {
+          width: 100%;
+        }
+
+        .hostBookingGuestFacts article {
+          flex: 1;
+        }
+
+        .hostBookingSecondaryActions,
+        .hostBookingActions {
+          width: 100%;
+        }
+
+        .hostBookingSecondaryActions a,
         .hostBookingActions button {
           flex: 1;
         }
 
+        .hostBookingActions button.approve {
+          min-width: 0;
+          width: 100%;
+          flex-basis: 100%;
+        }
+
         .hostBookingsSummary {
-          padding: 22px;
+          padding: 23px;
+        }
+
+        .bookingModalActions {
+          flex-direction: column-reverse;
+        }
+
+        .bookingModalActions button {
+          width: 100%;
         }
       }
 

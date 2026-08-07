@@ -101,6 +101,8 @@ function Icon({
       </>
     ),
 
+    check: <path d="m5 12 4 4L19 6" />,
+
     activity: (
       <>
         <path d="M4 18 10 8l3 5 2-3 5 8" />
@@ -158,57 +160,69 @@ function HostCard({ host }) {
     host.full_name || host.username || "Outdoor Host";
 
   const description = host.bio
-    ? host.bio.length > 145
-      ? `${host.bio.slice(0, 145)}...`
+    ? host.bio.length > 130
+      ? `${host.bio.slice(0, 130)}...`
       : host.bio
     : "Ovaj domaćin još nije dodao opis svog iskustva i avantura.";
 
   return (
     <article className="hostCard">
-      <div className="hostCover">
+      <Link
+        to={`/h/${host.username}`}
+        className="hostMedia"
+        aria-label={`Pogledaj profil ${displayName}`}
+      >
         <img
           src={host.cover_url || FALLBACK_COVER}
           alt=""
           className="hostCoverImage"
         />
 
-        <div className="hostCoverOverlay" />
+        <div className="hostMediaShade" />
 
-        <span
-          className={
-            host.is_verified
-              ? "hostStatus verified"
-              : "hostStatus"
-          }
-        >
-          <Icon
-            name={host.is_verified ? "verified" : "shield"}
-            size={14}
-          />
+        <div className="hostMediaTop">
+          <span className={host.is_verified ? "hostStatus verified" : "hostStatus"}>
+            <Icon
+              name={host.is_verified ? "verified" : "shield"}
+              size={14}
+            />
+            {host.is_verified ? "Verifikovan host" : "MeetOutdoors host"}
+          </span>
 
-          {host.is_verified
-            ? "Verifikovani domaćin"
-            : "MeetOutdoors domaćin"}
-        </span>
-      </div>
+          <span className="hostMediaArrow">
+            <Icon name="arrowRight" size={17} />
+          </span>
+        </div>
+
+        <div className="hostMediaBottom">
+          <span>
+            <Icon name="mapPin" size={14} />
+            {location}
+          </span>
+        </div>
+      </Link>
 
       <div className="hostCardBody">
         <div className="hostIdentity">
-          <img
-            src={host.avatar_url || FALLBACK_AVATAR}
-            alt={displayName}
-            className="hostAvatar"
-          />
+          <Link to={`/h/${host.username}`} className="hostAvatarWrap">
+            <img
+              src={host.avatar_url || FALLBACK_AVATAR}
+              alt={displayName}
+              className="hostAvatar"
+            />
+            {host.is_verified && (
+              <span className="avatarVerified">
+                <Icon name="check" size={12} strokeWidth={3} />
+              </span>
+            )}
+          </Link>
 
           <div className="hostIdentityText">
-            <h2>{displayName}</h2>
-            <span>@{host.username}</span>
+            <div className="hostNameRow">
+              <h2>{displayName}</h2>
+            </div>
+            <span>@{host.username || "host"}</span>
           </div>
-        </div>
-
-        <div className="hostLocation">
-          <Icon name="mapPin" size={15} />
-          {location}
         </div>
 
         <p className="hostBio">{description}</p>
@@ -216,15 +230,12 @@ function HostCard({ host }) {
         <div className="hostActivities">
           {activities.length > 0 ? (
             <>
-              {activities.slice(0, 4).map((activity) => (
-                <span key={activity}>
-                  {activity}
-                </span>
+              {activities.slice(0, 3).map((activity) => (
+                <span key={activity}>{activity}</span>
               ))}
-
-              {activities.length > 4 && (
+              {activities.length > 3 && (
                 <span className="moreActivities">
-                  +{activities.length - 4}
+                  +{activities.length - 3}
                 </span>
               )}
             </>
@@ -235,21 +246,18 @@ function HostCard({ host }) {
 
         <div className="hostCardFooter">
           <div className="hostTrust">
-            <span>
-              <Icon name="users" size={16} />
+            <span className="hostTrustIcon">
+              <Icon name="compass" size={17} />
             </span>
 
             <div>
               <strong>Outdoor organizator</strong>
-              <small>Profil na MeetOutdoors platformi</small>
+              <small>Profil na MeetOutdoors</small>
             </div>
           </div>
 
-          <Link
-            to={`/h/${host.username}`}
-            className="viewHostButton"
-          >
-            Pogledaj profil
+          <Link to={`/h/${host.username}`} className="viewHostButton">
+            Profil
             <Icon name="arrowRight" size={16} />
           </Link>
         </div>
@@ -424,8 +432,6 @@ export default function Hosts() {
       <main className="hostsPage">
         <section className="hostsHero">
           <div className="hostsHeroOverlay" />
-
-         
 
           <div className="hostsHeroContent">
             <span className="heroKicker">
@@ -765,7 +771,7 @@ function HostsStyles() {
       }
 
       .hostsPage {
-        padding: 28px;
+        padding: 118px 28px 90px;
         background:
           radial-gradient(
             circle at 8% 1%,
@@ -833,55 +839,6 @@ function HostsStyles() {
             rgba(4, 15, 8, 0.58),
             transparent 70%
           );
-      }
-
-      .hostsHeroTop {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-      }
-
-      .hostsBrand {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 16px;
-        font-weight: 900;
-        letter-spacing: -0.03em;
-      }
-
-      .hostsBrand > span {
-        display: grid;
-        place-items: center;
-        width: 43px;
-        height: 43px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.1);
-        color: #c9f28c;
-        backdrop-filter: blur(13px);
-      }
-
-      .eventsLink {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        min-height: 42px;
-        padding: 0 14px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 13px;
-        background: rgba(255, 255, 255, 0.09);
-        color: white !important;
-        font-size: 10px;
-        font-weight: 850;
-        backdrop-filter: blur(13px);
-        transition: 0.18s ease;
-      }
-
-      .eventsLink:hover {
-        gap: 12px;
-        background: rgba(255, 255, 255, 0.17);
       }
 
       .hostsHeroContent {
@@ -1179,27 +1136,35 @@ function HostsStyles() {
       .hostsGrid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 18px;
+        gap: 20px;
       }
 
       .hostCard {
         min-width: 0;
         overflow: hidden;
-        border: 1px solid #dae2d7;
-        border-radius: 24px;
-        background: rgba(255, 255, 255, 0.78);
-        box-shadow: 0 12px 35px rgba(31, 51, 38, 0.045);
-        transition: 0.22s ease;
+        border: 1px solid rgba(40, 65, 49, 0.1);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow:
+          0 12px 35px rgba(31, 51, 38, 0.05),
+          0 2px 8px rgba(31, 51, 38, 0.03);
+        transition:
+          transform 0.22s ease,
+          box-shadow 0.22s ease,
+          border-color 0.22s ease;
       }
 
       .hostCard:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 22px 48px rgba(31, 51, 38, 0.11);
+        transform: translateY(-6px);
+        border-color: rgba(111, 145, 94, 0.25);
+        box-shadow:
+          0 26px 58px rgba(31, 51, 38, 0.12),
+          0 5px 15px rgba(31, 51, 38, 0.04);
       }
 
       .hostCover {
         position: relative;
-        height: 180px;
+        height: 220px;
         overflow: hidden;
       }
 
@@ -1208,11 +1173,11 @@ function HostsStyles() {
         height: 100%;
         display: block;
         object-fit: cover;
-        transition: transform 0.55s ease;
+        transition: transform 0.58s ease;
       }
 
       .hostCard:hover .hostCoverImage {
-        transform: scale(1.045);
+        transform: scale(1.055);
       }
 
       .hostCoverOverlay {
@@ -1221,8 +1186,9 @@ function HostsStyles() {
         background:
           linear-gradient(
             180deg,
-            rgba(4, 14, 8, 0.08),
-            rgba(4, 14, 8, 0.63)
+            rgba(4, 14, 8, 0.04),
+            rgba(4, 14, 8, 0.08) 42%,
+            rgba(4, 14, 8, 0.72)
           );
       }
 
@@ -1235,55 +1201,58 @@ function HostsStyles() {
         gap: 6px;
         min-height: 31px;
         padding: 0 10px;
-        border: 1px solid rgba(255, 255, 255, 0.17);
+        border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 999px;
-        background: rgba(5, 20, 11, 0.54);
-        color: rgba(255, 255, 255, 0.86);
+        background: rgba(5, 20, 11, 0.58);
+        color: rgba(255, 255, 255, 0.9);
         font-size: 8px;
-        font-weight: 850;
+        font-weight: 900;
         backdrop-filter: blur(12px);
       }
 
       .hostStatus.verified {
-        border-color: rgba(201, 242, 140, 0.3);
-        background: rgba(201, 242, 140, 0.14);
+        border-color: rgba(201, 242, 140, 0.34);
+        background: rgba(24, 58, 39, 0.72);
         color: #daf8ae;
       }
 
       .hostCardBody {
-        padding: 0 19px 19px;
+        padding: 0 20px 20px;
       }
 
       .hostIdentity {
         display: flex;
         align-items: flex-end;
-        gap: 13px;
+        gap: 14px;
+        min-width: 0;
       }
 
       .hostAvatar {
         flex: 0 0 auto;
-        width: 82px;
-        height: 82px;
-        margin-top: -41px;
+        width: 86px;
+        height: 86px;
+        margin-top: -43px;
         border: 4px solid white;
-        border-radius: 23px;
+        border-radius: 25px;
         object-fit: cover;
         background: #e5ebdf;
-        box-shadow: 0 10px 25px rgba(29, 46, 35, 0.13);
+        box-shadow:
+          0 14px 30px rgba(29, 46, 35, 0.14),
+          0 3px 8px rgba(29, 46, 35, 0.05);
       }
 
       .hostIdentityText {
         min-width: 0;
-        padding-bottom: 3px;
+        padding: 14px 0 3px;
       }
 
       .hostIdentityText h2 {
         overflow: hidden;
         margin: 0;
         color: #25382d;
-        font-size: 21px;
-        line-height: 1.1;
-        letter-spacing: -0.04em;
+        font-size: 22px;
+        line-height: 1.08;
+        letter-spacing: -0.045em;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
@@ -1291,7 +1260,7 @@ function HostsStyles() {
       .hostIdentityText span {
         display: block;
         overflow: hidden;
-        margin-top: 4px;
+        margin-top: 5px;
         color: #879188;
         font-size: 9px;
         font-weight: 750;
@@ -1300,13 +1269,17 @@ function HostsStyles() {
       }
 
       .hostLocation {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 7px;
-        margin-top: 17px;
-        color: #708078;
+        margin-top: 18px;
+        padding: 8px 10px;
+        border: 1px solid #dfe6dc;
+        border-radius: 999px;
+        background: #f6f8f3;
+        color: #65756c;
         font-size: 9px;
-        font-weight: 750;
+        font-weight: 800;
       }
 
       .hostLocation svg {
@@ -1315,18 +1288,22 @@ function HostsStyles() {
       }
 
       .hostBio {
-        min-height: 66px;
-        margin: 14px 0 0;
-        color: #77837b;
+        display: -webkit-box;
+        min-height: 58px;
+        margin: 15px 0 0;
+        overflow: hidden;
+        color: #707d75;
         font-size: 10px;
-        line-height: 1.65;
+        line-height: 1.7;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
       }
 
       .hostActivities {
         display: flex;
         flex-wrap: wrap;
         gap: 7px;
-        margin-top: 14px;
+        margin-top: 15px;
       }
 
       .hostActivities > span {
@@ -1339,28 +1316,29 @@ function HostsStyles() {
         background: #f5f8f1;
         color: #596b60;
         font-size: 8px;
-        font-weight: 800;
+        font-weight: 850;
       }
 
       .hostActivities .moreActivities {
+        border-color: #cad9be;
         background: #e7efde;
         color: #5c7744;
       }
 
       .hostCardFooter {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        justify-content: space-between;
         gap: 12px;
-        margin-top: 18px;
-        padding-top: 15px;
+        margin-top: 20px;
+        padding-top: 17px;
         border-top: 1px solid #e1e7df;
       }
 
       .hostTrust {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 9px;
         min-width: 0;
       }
 
@@ -1368,9 +1346,9 @@ function HostsStyles() {
         display: grid;
         place-items: center;
         flex: 0 0 auto;
-        width: 35px;
-        height: 35px;
-        border-radius: 11px;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
         background: #e8f1dd;
         color: #5b7840;
       }
@@ -1382,7 +1360,7 @@ function HostsStyles() {
 
       .hostTrust strong {
         color: #44564b;
-        font-size: 8px;
+        font-size: 9px;
       }
 
       .hostTrust small {
@@ -1397,18 +1375,23 @@ function HostsStyles() {
         justify-content: center;
         gap: 7px;
         flex: 0 0 auto;
-        min-height: 39px;
-        padding: 0 12px;
-        border-radius: 12px;
+        min-height: 42px;
+        padding: 0 14px;
+        border-radius: 13px;
         background: #183a27;
         color: white !important;
         font-size: 8px;
-        font-weight: 850;
-        transition: 0.18s ease;
+        font-weight: 900;
+        box-shadow: 0 10px 22px rgba(24, 58, 39, 0.14);
+        transition:
+          gap 0.18s ease,
+          transform 0.18s ease,
+          background 0.18s ease;
       }
 
       .viewHostButton:hover {
         gap: 11px;
+        transform: translateY(-1px);
         background: #224d35;
       }
 
@@ -1604,7 +1587,7 @@ function HostsStyles() {
       .hostsStatePage {
         display: grid;
         place-items: center;
-        padding: 24px;
+        padding: 118px 24px 24px;
         background:
           radial-gradient(
             circle at top left,
@@ -1674,7 +1657,7 @@ function HostsStyles() {
 
       @media (max-width: 760px) {
         .hostsPage {
-          padding: 0 0 70px;
+          padding: 94px 0 70px;
         }
 
         .hostsHero {
@@ -1714,17 +1697,6 @@ function HostsStyles() {
           padding: 20px;
         }
 
-        .hostsBrand {
-          font-size: 14px;
-        }
-
-        .eventsLink {
-          width: 42px;
-          padding: 0;
-          justify-content: center;
-          font-size: 0;
-        }
-
         .hostsHeroContent h1 {
           font-size: 48px;
         }
@@ -1742,6 +1714,35 @@ function HostsStyles() {
         .hostsSectionHeader {
           align-items: flex-start;
           flex-direction: column;
+        }
+
+        .hostCard {
+          border-radius: 25px;
+        }
+
+        .hostCover {
+          height: 235px;
+        }
+
+        .hostCardBody {
+          padding: 0 17px 18px;
+        }
+
+        .hostAvatar {
+          width: 80px;
+          height: 80px;
+          margin-top: -40px;
+          border-radius: 23px;
+        }
+
+        .hostCardFooter {
+          grid-template-columns: 1fr;
+        }
+
+        .viewHostButton {
+          width: 100%;
+          min-height: 48px;
+          font-size: 9px;
         }
 
         .hostsTrustSection {
@@ -1778,17 +1779,428 @@ function HostsStyles() {
           margin-left: 13px;
         }
 
+        .hostsCta h2 {
+          font-size: 35px;
+        }
+      }
+
+
+      /* =========================================================
+         HOST CARDS — PREMIUM REDESIGN
+         ========================================================= */
+
+      .hostsSectionHeader {
+        margin-top: 68px;
+        margin-bottom: 26px;
+      }
+
+      .hostsGrid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .hostCard {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid rgba(36, 60, 44, 0.09);
+        border-radius: 30px;
+        background: #ffffff;
+        box-shadow:
+          0 10px 30px rgba(31, 51, 38, 0.055),
+          0 1px 0 rgba(255, 255, 255, 0.85) inset;
+        transition:
+          transform 0.25s ease,
+          box-shadow 0.25s ease,
+          border-color 0.25s ease;
+      }
+
+      .hostCard::after {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        border: 1px solid transparent;
+        border-radius: inherit;
+        pointer-events: none;
+        content: "";
+        transition: border-color 0.25s ease;
+      }
+
+      .hostCard:hover {
+        transform: translateY(-8px);
+        border-color: rgba(96, 130, 77, 0.22);
+        box-shadow:
+          0 30px 70px rgba(29, 49, 36, 0.14),
+          0 8px 24px rgba(29, 49, 36, 0.05);
+      }
+
+      .hostMedia {
+        position: relative;
+        display: block;
+        height: 250px;
+        overflow: hidden;
+        background: #dce5d6;
+      }
+
+      .hostCover,
+      .hostCoverOverlay,
+      .hostLocation {
+        display: none;
+      }
+
+      .hostCoverImage {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition:
+          transform 0.75s cubic-bezier(0.2, 0.7, 0.2, 1),
+          filter 0.3s ease;
+      }
+
+      .hostCard:hover .hostCoverImage {
+        transform: scale(1.065);
+        filter: saturate(1.05);
+      }
+
+      .hostMediaShade {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(5, 17, 10, 0.22) 0%,
+            rgba(5, 17, 10, 0.02) 42%,
+            rgba(5, 17, 10, 0.78) 100%
+          );
+      }
+
+      .hostMediaTop {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        left: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .hostStatus {
+        position: static;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 33px;
+        padding: 0 11px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        background: rgba(6, 22, 12, 0.58);
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        backdrop-filter: blur(15px);
+      }
+
+      .hostStatus.verified {
+        border-color: rgba(211, 247, 163, 0.34);
+        background: rgba(26, 63, 42, 0.76);
+        color: #d8f7aa;
+      }
+
+      .hostMediaArrow {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.12);
+        color: white;
+        backdrop-filter: blur(15px);
+        transition:
+          transform 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .hostCard:hover .hostMediaArrow {
+        transform: translateX(2px);
+        background: rgba(255, 255, 255, 0.22);
+      }
+
+      .hostMediaBottom {
+        position: absolute;
+        right: 16px;
+        bottom: 17px;
+        left: 16px;
+      }
+
+      .hostMediaBottom > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        max-width: 100%;
+        min-height: 31px;
+        padding: 0 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        background: rgba(5, 18, 10, 0.42);
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 8px;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        backdrop-filter: blur(12px);
+      }
+
+      .hostMediaBottom svg {
+        flex: 0 0 auto;
+        color: #d5f4a6;
+      }
+
+      .hostCardBody {
+        position: relative;
+        z-index: 1;
+        padding: 0 21px 21px;
+      }
+
+      .hostIdentity {
+        display: flex;
+        align-items: flex-end;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      .hostAvatarWrap {
+        position: relative;
+        flex: 0 0 auto;
+        display: block;
+      }
+
+      .hostAvatar {
+        display: block;
+        width: 88px;
+        height: 88px;
+        margin-top: -43px;
+        border: 5px solid #ffffff;
+        border-radius: 27px;
+        object-fit: cover;
+        background: #e5ebdf;
+        box-shadow:
+          0 14px 32px rgba(29, 46, 35, 0.17),
+          0 3px 8px rgba(29, 46, 35, 0.06);
+        transition: transform 0.2s ease;
+      }
+
+      .hostAvatarWrap:hover .hostAvatar {
+        transform: translateY(-2px);
+      }
+
+      .avatarVerified {
+        position: absolute;
+        right: -3px;
+        bottom: 3px;
+        display: grid;
+        place-items: center;
+        width: 25px;
+        height: 25px;
+        border: 3px solid white;
+        border-radius: 50%;
+        background: #c9f28c;
+        color: #183a27;
+        box-shadow: 0 5px 12px rgba(24, 58, 39, 0.16);
+      }
+
+      .hostIdentityText {
+        min-width: 0;
+        flex: 1;
+        padding: 16px 0 3px;
+      }
+
+      .hostNameRow {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .hostIdentityText h2 {
+        overflow: hidden;
+        margin: 0;
+        color: #20352a;
+        font-size: 22px;
+        line-height: 1.05;
+        letter-spacing: -0.045em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hostIdentityText > span {
+        display: block;
+        overflow: hidden;
+        margin-top: 5px;
+        color: #8a958d;
+        font-size: 9px;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hostBio {
+        display: -webkit-box;
+        min-height: 61px;
+        margin: 18px 0 0;
+        overflow: hidden;
+        color: #6f7d74;
+        font-size: 10px;
+        line-height: 1.7;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+      }
+
+      .hostActivities {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        min-height: 31px;
+        margin-top: 16px;
+      }
+
+      .hostActivities > span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 10px;
+        border: 1px solid #dce5d8;
+        border-radius: 999px;
+        background: #f5f8f2;
+        color: #52665a;
+        font-size: 8px;
+        font-weight: 850;
+      }
+
+      .hostActivities .moreActivities {
+        border-color: #d4e1ca;
+        background: #eaf2e2;
+        color: #587640;
+      }
+
+      .hostCardFooter {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 19px;
+        padding-top: 17px;
+        border-top: 1px solid #e6ebe3;
+      }
+
+      .hostTrust {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+
+      .hostTrustIcon {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 37px;
+        height: 37px;
+        border-radius: 12px;
+        background: #e9f2df;
+        color: #58773e;
+      }
+
+      .hostTrust strong,
+      .hostTrust small {
+        display: block;
+      }
+
+      .hostTrust strong {
+        color: #405348;
+        font-size: 8px;
+      }
+
+      .hostTrust small {
+        margin-top: 3px;
+        color: #98a199;
+        font-size: 7px;
+      }
+
+      .viewHostButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        flex: 0 0 auto;
+        min-height: 41px;
+        padding: 0 13px;
+        border-radius: 13px;
+        background: #183a27;
+        color: white !important;
+        font-size: 8px;
+        font-weight: 900;
+        box-shadow: 0 8px 18px rgba(24, 58, 39, 0.13);
+        transition:
+          gap 0.18s ease,
+          transform 0.18s ease,
+          background 0.18s ease;
+      }
+
+      .viewHostButton:hover {
+        gap: 11px;
+        transform: translateY(-1px);
+        background: #224d35;
+      }
+
+      @media (max-width: 1080px) {
+        .hostsGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 580px) {
+        .hostsGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .hostMedia {
+          height: 235px;
+        }
+
+        .hostCard {
+          border-radius: 26px;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .hostMedia {
+          height: 220px;
+        }
+
+        .hostAvatar {
+          width: 80px;
+          height: 80px;
+          margin-top: -39px;
+          border-radius: 24px;
+        }
+
+        .hostIdentityText h2 {
+          font-size: 20px;
+        }
+
         .hostCardFooter {
-          align-items: flex-start;
-          flex-direction: column;
+          align-items: center;
+          flex-direction: row;
         }
 
         .viewHostButton {
-          width: 100%;
-        }
-
-        .hostsCta h2 {
-          font-size: 35px;
+          width: auto;
         }
       }
 
