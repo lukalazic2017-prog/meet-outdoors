@@ -260,60 +260,6 @@ const upcomingTrips = [
   },
 ];
 
-const hostStats = [
-  {
-    label: "Aktivni događaji",
-    value: "8",
-    description: "+2 ovog meseca",
-    icon: "calendar",
-  },
-  {
-    label: "Rezervacije",
-    value: "24",
-    description: "5 novih zahteva",
-    icon: "booking",
-  },
-  {
-    label: "Zainteresovani",
-    value: "137",
-    description: "+18 ove nedelje",
-    icon: "users",
-  },
-  {
-    label: "Host ocena",
-    value: "4.9",
-    description: "Na osnovu 46 ocena",
-    icon: "star",
-  },
-];
-
-const hostBookings = [
-  {
-    id: 1,
-    guest: "Nikola Jovanović",
-    event: "Uspon na Midžor",
-    people: 2,
-    date: "14. avgust",
-    status: "Na čekanju",
-  },
-  {
-    id: 2,
-    guest: "Ana Petrović",
-    event: "Vikend na Tari",
-    people: 1,
-    date: "18. avgust",
-    status: "Na čekanju",
-  },
-  {
-    id: 3,
-    guest: "Marko Ilić",
-    event: "Kampovanje na Zlatiboru",
-    people: 3,
-    date: "24. avgust",
-    status: "Odobreno",
-  },
-];
-
 
 function notificationTarget(notification) {
   if (notification?.event_id) return `/event/${notification.event_id}`;
