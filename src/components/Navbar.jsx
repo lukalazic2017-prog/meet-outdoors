@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -34,6 +33,12 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
       <>
         <circle cx="12" cy="12" r="9" />
         <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+      </>
+    ),
+    mapPin: (
+      <>
+        <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+        <circle cx="12" cy="10" r="2.5" />
       </>
     ),
     calendar: (
@@ -296,22 +301,28 @@ export default function Navbar() {
       index: "01",
     },
     {
+      to: "/explore",
+      label: "Mapa",
+      icon: "mapPin",
+      index: "02",
+    },
+    {
       to: "/events",
       label: "Događaji",
       icon: "calendar",
-      index: "02",
+      index: "03",
     },
     {
       to: "/packages",
       label: "Paketi",
       icon: "package",
-      index: "03",
+      index: "04",
     },
     {
       to: "/hosts",
       label: "Domaćini",
       icon: "users",
-      index: "04",
+      index: "05",
     },
   ];
 
@@ -336,7 +347,7 @@ export default function Navbar() {
         </Link>
 
         <nav className="brutalNavDesktop">
-          {mainLinks.slice(0, 4).map((link) => (
+          {mainLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}

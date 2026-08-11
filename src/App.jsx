@@ -28,6 +28,9 @@ import BookingRequests from "./pages/BookingRequests";
 import MyBookings from "./pages/MyBookings";
 import EditPackageGallery from "./pages/EditPackageGallery";
 import HostBookings from "./pages/HostBookings";
+import ExploreMap from "./pages/ExploreMap";
+import AddPlace from "./pages/AddPlace";
+import PlaceDetails from "./pages/PlaceDetails";
 
 function App() {
   return (
@@ -64,6 +67,9 @@ function App() {
 <Route path="/my-bookings" element={<MyBookings />} />
 <Route path="/edit-package/:id/gallery" element={<EditPackageGallery />} />
 <Route path="/host-bookings" element={<HostBookings />} />
+<Route path="/explore" element={<ExploreMap />} />
+<Route path="/explore/add" element={<AddPlace />} />
+<Route path="/explore/:id" element={<PlaceDetails />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
