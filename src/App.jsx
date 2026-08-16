@@ -31,6 +31,7 @@ import HostBookings from "./pages/HostBookings";
 import ExploreMap from "./pages/ExploreMap";
 import AddPlace from "./pages/AddPlace";
 import PlaceDetails from "./pages/PlaceDetails";
+import AdminExplore from "./pages/AdminExplore";
 
 function App() {
   return (
@@ -70,6 +71,8 @@ function App() {
 <Route path="/explore" element={<ExploreMap />} />
 <Route path="/explore/add" element={<AddPlace />} />
 <Route path="/explore/:id" element={<PlaceDetails />} />
+<Route path="/admin/explore" element={<AdminExplore />}
+/>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
