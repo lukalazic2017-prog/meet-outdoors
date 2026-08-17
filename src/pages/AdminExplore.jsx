@@ -1879,12 +1879,17 @@ function AdminStyles() {
   return (
     <style>{`
       *{box-sizing:border-box}
-      body{margin:0;background:#07110b}
+      :root{--admin-bg:#07110b;--admin-surface:#0b1810;--admin-surface-2:#0f2116;--admin-line:rgba(255,255,255,.08);--admin-text:#f7fbf7;--admin-muted:rgba(255,255,255,.46);--admin-accent:#baff9e;--admin-accent-2:#83d96d;--admin-warn:#ffd374;--admin-danger:#ff8c80;--admin-radius:24px}
+      body{margin:0;background:var(--admin-bg)}
       button,input,textarea{font:inherit}
+      button{touch-action:manipulation}
       .adminExplore,.adminLoading{min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-      .adminExplore{padding:112px 20px 70px;background:radial-gradient(circle at 8% 0%,rgba(186,255,158,.08),transparent 23%),#07110b;color:#fff}
+      .adminExplore{padding:116px 24px 84px;background:radial-gradient(circle at 10% 0%,rgba(186,255,158,.10),transparent 24%),radial-gradient(circle at 88% 16%,rgba(99,141,255,.07),transparent 22%),linear-gradient(180deg,#07110b 0%,#08130d 38%,#06100a 100%);color:var(--admin-text)}
       .adminExplore a{color:inherit;text-decoration:none}
-      .adminHero{position:relative;isolation:isolate;width:min(1440px,100%);min-height:540px;margin:0 auto;padding:28px;overflow:hidden;border:1px solid rgba(255,255,255,.09);border-radius:34px;background:radial-gradient(circle at 85% 16%,rgba(186,255,158,.15),transparent 25%),radial-gradient(circle at 68% 90%,rgba(68,120,255,.08),transparent 28%),linear-gradient(135deg,#06110a,#0d2818 58%,#163b25);box-shadow:0 32px 90px rgba(0,0,0,.32)}
+      .adminExplore h1,.adminExplore h2,.adminExplore h3,.adminExplore p,.adminExplore strong,.adminExplore span,.adminExplore small,.adminExplore em,.adminExplore b{overflow-wrap:anywhere}
+      .adminExplore img{display:block;max-width:100%}
+
+      .adminHero{position:relative;isolation:isolate;width:min(1480px,100%);min-height:560px;margin:0 auto;padding:30px;overflow:hidden;border:1px solid rgba(255,255,255,.10);border-radius:36px;background:radial-gradient(circle at 86% 14%,rgba(186,255,158,.17),transparent 24%),radial-gradient(circle at 70% 88%,rgba(88,125,255,.09),transparent 26%),linear-gradient(135deg,#06110a,#0d2818 56%,#173d26);box-shadow:0 36px 100px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.04)}
       .adminHeroNoise{position:absolute;inset:0;z-index:-1;opacity:.06;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E")}
       .adminHeroTop{display:flex;align-items:center;justify-content:space-between;gap:14px}
       .adminBrand{display:flex;align-items:center;gap:10px}
@@ -1896,16 +1901,16 @@ function AdminStyles() {
       .adminHeroCopy{max-width:980px;padding-top:82px}
       .adminEyebrow{display:inline-flex;align-items:center;gap:7px;color:#baff9e;font-size:7px;font-weight:950;letter-spacing:.12em}
       .adminEyebrow i{width:7px;height:7px;border-radius:50%;background:#baff9e;box-shadow:0 0 0 5px rgba(186,255,158,.09)}
-      .adminHeroCopy h1{margin:15px 0 0;font-size:clamp(56px,7vw,104px);line-height:.83;letter-spacing:-.08em}
-      .adminHeroCopy p{max-width:620px;margin:19px 0 0;color:rgba(255,255,255,.49);font-size:10px;line-height:1.7}
+      .adminHeroCopy h1{max-width:1080px;margin:16px 0 0;font-size:clamp(58px,7.2vw,108px);line-height:.86;letter-spacing:-.075em;text-wrap:balance}
+      .adminHeroCopy p{max-width:680px;margin:20px 0 0;color:rgba(255,255,255,.52);font-size:11px;line-height:1.75}
       .adminHeroStats{position:absolute;right:28px;bottom:28px;left:28px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-      .adminHeroStats article{padding:14px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(3,12,6,.37);backdrop-filter:blur(18px)}
+      .adminHeroStats article{min-width:0;padding:16px;border:1px solid rgba(255,255,255,.10);border-radius:17px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
       .adminHeroStats span,.adminHeroStats strong,.adminHeroStats small{display:block}
       .adminHeroStats span{color:rgba(255,255,255,.42);font-size:6px;font-weight:850;text-transform:uppercase}
       .adminHeroStats strong{margin-top:5px;font-size:24px}
       .adminHeroStats small{margin-top:3px;color:#baff9e;font-size:6px}
-      .adminWorkspace{display:grid;grid-template-columns:245px minmax(0,1fr);gap:14px;width:min(1440px,100%);margin:14px auto 0}
-      .adminSidebar{position:sticky;top:94px;align-self:start;padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:22px;background:linear-gradient(180deg,rgba(13,32,20,.96),rgba(8,21,13,.96));box-shadow:0 20px 60px rgba(0,0,0,.2)}
+      .adminWorkspace{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;width:min(1480px,100%);margin:16px auto 0}
+      .adminSidebar{position:sticky;top:94px;align-self:start;padding:16px;border:1px solid rgba(255,255,255,.085);border-radius:24px;background:linear-gradient(180deg,rgba(14,34,21,.98),rgba(8,21,13,.98));box-shadow:0 24px 70px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.035)}
       .adminSidebarTitle{padding:5px 5px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
       .adminSidebarTitle span,.adminSidebarTitle strong{display:block}
       .adminSidebarTitle span{color:#baff9e;font-size:6px;font-weight:900;letter-spacing:.11em}
@@ -1924,10 +1929,10 @@ function AdminStyles() {
       .adminSidebarHealth strong,.adminSidebarHealth small{display:block}
       .adminSidebarHealth strong{margin-top:7px;font-size:7px}
       .adminSidebarHealth small{margin-top:4px;color:rgba(255,255,255,.34);font-size:6px;line-height:1.5}
-      .adminMain{min-width:0;padding:19px;border:1px solid rgba(255,255,255,.08);border-radius:23px;background:#0b1810;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+      .adminMain{min-width:0;padding:22px;border:1px solid rgba(255,255,255,.085);border-radius:26px;background:linear-gradient(180deg,rgba(14,31,20,.98),rgba(9,21,14,.98));box-shadow:0 24px 70px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.025)}
       .adminMainHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,.07)}
       .adminMainHeader>div>span{color:#baff9e;font-size:6px;font-weight:900;letter-spacing:.11em}
-      .adminMainHeader h2{margin:5px 0 0;font-size:27px;letter-spacing:-.05em}
+      .adminMainHeader h2{margin:5px 0 0;font-size:30px;line-height:1.1;letter-spacing:-.045em;text-wrap:balance}
       .adminSearch{display:flex;align-items:center;gap:7px;width:min(330px,100%);min-height:41px;padding:0 10px;border:1px solid rgba(255,255,255,.08);border-radius:11px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.35)}
       .adminSearch input{width:100%;border:0;outline:0;background:transparent;color:#fff;font-size:7px}
       .adminSearch button{display:grid;place-items:center;width:25px;height:25px;border:0;border-radius:8px;background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
@@ -1941,7 +1946,7 @@ function AdminStyles() {
       .adminPriority>header h3,.adminPulseHead h3{margin:4px 0 0;font-size:18px;letter-spacing:-.035em}
       .adminPriority>header>b{display:grid;place-items:center;min-width:42px;height:42px;border-radius:13px;background:#baff9e;color:#102619;font-size:12px}
       .adminPriorityGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
-      .adminPriorityGrid>button{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:9px;padding:11px;border:1px solid rgba(255,255,255,.065);border-radius:14px;background:rgba(255,255,255,.025);color:#fff;text-align:left;cursor:pointer}
+      .adminPriorityGrid>button{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:11px;min-width:0;padding:13px;border:1px solid rgba(255,255,255,.07);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,.018));color:#fff;text-align:left;cursor:pointer;transition:transform .18s ease,border-color .18s ease,background .18s ease}
       .adminPriorityGrid>button>span{display:grid;place-items:center;width:44px;height:44px;border-radius:13px}
       .adminPriorityGrid>button>span.green{background:rgba(186,255,158,.09);color:#baff9e}
       .adminPriorityGrid>button>span.amber{background:rgba(255,211,116,.09);color:#ffd374}
@@ -1949,10 +1954,10 @@ function AdminStyles() {
       .adminPriorityGrid small,.adminPriorityGrid strong,.adminPriorityGrid p{display:block}
       .adminPriorityGrid small{color:rgba(255,255,255,.35);font-size:5px;font-weight:900}
       .adminPriorityGrid strong{margin-top:3px;font-size:18px}
-      .adminPriorityGrid p{margin:3px 0 0;color:rgba(255,255,255,.34);font-size:6px;line-height:1.4}
+      .adminPriorityGrid p{margin:4px 0 0;color:rgba(255,255,255,.38);font-size:7px;line-height:1.45}
       .adminPulseHead>button{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:#baff9e;cursor:pointer;font-size:6px;font-weight:850}
       .adminCards{display:grid;gap:10px;margin-top:14px}
-      .adminPlaceCard{display:grid;grid-template-columns:245px minmax(0,1fr);overflow:hidden;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(255,255,255,.025)}
+      .adminPlaceCard{display:grid;grid-template-columns:minmax(240px,300px) minmax(0,1fr);overflow:hidden;border:1px solid rgba(255,255,255,.075);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.018));box-shadow:0 14px 36px rgba(0,0,0,.14)}
       .adminPlaceImage{position:relative;min-height:275px}
       .adminPlaceImage>img{width:100%;height:100%;object-fit:cover}
       .adminPlaceImage:after{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,15,9,.06),rgba(5,15,9,.55));content:""}
@@ -1960,10 +1965,10 @@ function AdminStyles() {
       .adminPlaceImage .status.pending{color:#ffd374}
       .adminPlaceImage .status.flagged{color:#ff9b90}
       .adminPlaceImage>b{position:absolute;right:10px;bottom:10px;left:10px;z-index:2;display:flex;align-items:center;gap:6px;padding:8px;border-radius:9px;background:rgba(3,11,6,.7);color:#f1d17f;font-size:6px}
-      .adminPlaceBody{padding:14px}
+      .adminPlaceBody{min-width:0;padding:17px}
       .adminPlaceBody>header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
       .adminPlaceBody>header span{color:#baff9e;font-size:6px;font-weight:900;text-transform:uppercase}
-      .adminPlaceBody>header h3{margin:4px 0 0;font-size:22px;letter-spacing:-.045em}
+      .adminPlaceBody>header h3{margin:5px 0 0;font-size:24px;line-height:1.08;letter-spacing:-.04em;text-wrap:balance}
       .adminPlaceBody>header p{display:flex;align-items:center;gap:5px;margin:5px 0 0;color:rgba(255,255,255,.38);font-size:6px}
       .adminPlaceBody>header>a{display:inline-flex;align-items:center;gap:5px;min-height:33px;padding:0 9px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(255,255,255,.035);font-size:6px;font-weight:850}
       .adminUserBadge{display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;margin-top:12px}
@@ -1971,7 +1976,7 @@ function AdminStyles() {
       .adminUserBadge strong,.adminUserBadge span{display:block}
       .adminUserBadge strong{font-size:7px}
       .adminUserBadge span{margin-top:2px;color:rgba(255,255,255,.35);font-size:6px}
-      .adminPlaceMeta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:12px}
+      .adminPlaceMeta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:14px}
       .adminPlaceMeta article{padding:8px;border:1px solid rgba(255,255,255,.055);border-radius:10px;background:rgba(255,255,255,.025)}
       .adminPlaceMeta span,.adminPlaceMeta strong{display:block}
       .adminPlaceMeta span{color:rgba(255,255,255,.3);font-size:5px;text-transform:uppercase}
@@ -1982,7 +1987,7 @@ function AdminStyles() {
       button.approve{border:1px solid rgba(186,255,158,.2);background:rgba(186,255,158,.09);color:#d8ffc7}
       button.flag{border:1px solid rgba(255,211,116,.18);background:rgba(255,211,116,.07);color:#ffd374}
       button.reject,button.remove{border:1px solid rgba(255,121,108,.2);background:rgba(255,76,57,.08);color:#ffaaa1}
-      .adminCheckinCard{padding:14px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(255,255,255,.025)}
+      .adminCheckinCard{min-width:0;padding:17px;border:1px solid rgba(255,255,255,.075);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.018));box-shadow:0 14px 36px rgba(0,0,0,.14)}
       .adminCheckinTop{display:flex;align-items:center;justify-content:space-between;gap:12px}
       .adminCheckinPlace{display:flex;align-items:center;gap:10px;min-width:0}
       .adminCheckinPlace>img{width:72px;height:72px;border-radius:14px;object-fit:cover}
@@ -1993,7 +1998,7 @@ function AdminStyles() {
       .adminSource{display:inline-flex;align-items:center;gap:5px;padding:7px 8px;border-radius:999px;font-size:6px;font-weight:900}
       .adminSource.offline{background:rgba(255,211,116,.09);color:#ffd374}
       .adminSource.online{background:rgba(186,255,158,.08);color:#baff9e}
-      .adminRiskGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:12px}
+      .adminRiskGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
       .adminRiskGrid article{padding:10px;border:1px solid rgba(255,255,255,.055);border-radius:11px;background:rgba(255,255,255,.025)}
       .adminRiskGrid span,.adminRiskGrid strong,.adminRiskGrid small{display:block}
       .adminRiskGrid span{color:rgba(255,255,255,.3);font-size:5px;font-weight:900}
@@ -2008,7 +2013,7 @@ function AdminStyles() {
       .adminCheckinCard>footer>div{display:flex;gap:6px}
       .adminLogList{display:grid;gap:6px;margin-top:14px}
       .adminLogList.compact{margin-top:10px}
-      .adminLogList>article{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:8px;padding:9px;border:1px solid rgba(255,255,255,.05);border-radius:11px;background:rgba(255,255,255,.02)}
+      .adminLogList>article{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0;padding:11px;border:1px solid rgba(255,255,255,.055);border-radius:13px;background:rgba(255,255,255,.022)}
       .adminLogIcon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px}
       .adminLogIcon.approve{background:rgba(186,255,158,.08);color:#baff9e}
       .adminLogIcon.remove,.adminLogIcon.reject{background:rgba(255,108,93,.08);color:#ff8c80}
@@ -2043,6 +2048,14 @@ function AdminStyles() {
       .adminLoading>span{width:38px;height:38px;border:3px solid rgba(255,255,255,.12);border-top-color:#baff9e;border-radius:50%;animation:adminSpin .8s linear infinite}
       @keyframes adminSpin{to{transform:rotate(360deg)}}
       .adminLoading strong{font-size:12px}
+      .adminRefresh,.adminSidebar nav button,.adminPriorityGrid>button,.adminPlaceBody>footer button,.adminCheckinCard footer button,.adminModal footer button,.adminSearch button{transition:transform .18s ease,border-color .18s ease,background .18s ease,opacity .18s ease}
+      .adminRefresh:hover,.adminPriorityGrid>button:hover,.adminPlaceBody>footer button:hover,.adminCheckinCard footer button:hover{transform:translateY(-1px)}
+      .adminPriorityGrid>button:hover{border-color:rgba(186,255,158,.16);background:rgba(186,255,158,.035)}
+      .adminSidebar nav button:hover{background:rgba(255,255,255,.035);color:#fff}
+      .adminSearch:focus-within{border-color:rgba(186,255,158,.28);box-shadow:0 0 0 3px rgba(186,255,158,.05)}
+      .adminPlaceMeta strong,.adminRiskGrid strong,.adminLogList strong,.adminUserBadge strong{min-width:0;overflow:hidden;text-overflow:ellipsis}
+      .adminPlaceDescription,.adminRiskReason strong,.adminLogList p,.adminLogList em{word-break:break-word}
+      .adminMainHeader>div,.adminPlaceBody>header>div,.adminCheckinPlace>div,.adminUserBadge>div,.adminPulseHead>div{min-width:0}
 
       @media(max-width:1100px){
         .adminWorkspace{grid-template-columns:1fr}
@@ -2067,7 +2080,7 @@ function AdminStyles() {
         .adminExplore{padding:82px 9px 50px}
         .adminHero{min-height:690px;padding:18px;border-radius:0 0 28px 28px}
         .adminHeroCopy{padding-top:88px}
-        .adminHeroCopy h1{font-size:52px}
+        .adminHeroCopy h1{font-size:50px;line-height:.9}
         .adminHeroStats{right:18px;bottom:18px;left:18px}
         .adminRefresh{width:40px;padding:0;justify-content:center}
         .adminRefresh{font-size:0}
@@ -2075,17 +2088,17 @@ function AdminStyles() {
         .adminSidebarTitle{display:none}
         .adminSidebar nav{display:flex;margin:0;min-width:max-content}
         .adminSidebar nav button{grid-template-columns:32px auto;min-width:max-content;padding-right:10px}
-        .adminMain{padding:13px}
+        .adminMain{padding:14px;border-radius:20px}
         .adminMainHeader{align-items:stretch;flex-direction:column}
         .adminSearch{width:100%}
       }
 
       @media(max-width:500px){
-        .adminHeroCopy h1{font-size:44px}
+        .adminHeroCopy h1{font-size:42px;line-height:.92}
         .adminHeroStats{gap:5px}
         .adminHeroStats article{padding:10px}
         .adminPlaceBody>header{flex-direction:column}
-        .adminPlaceBody>footer{display:grid;grid-template-columns:1fr 1fr}
+        .adminPlaceBody>footer{display:grid;grid-template-columns:1fr 1fr;gap:8px}
         .adminPlaceBody>footer button{justify-content:center}
         .adminPlaceBody>footer .reject{grid-column:1/-1}
         .adminCheckinTop{align-items:flex-start;flex-direction:column}
@@ -2095,6 +2108,229 @@ function AdminStyles() {
         .adminCheckinCard>footer button{justify-content:center;width:100%}
         .adminLogList>article{grid-template-columns:36px minmax(0,1fr)}
         .adminLogList>article>small{grid-column:2}
+      }
+
+      /* ===== PREMIUM ADMIN UX OVERRIDES ===== */
+      :root{
+        --admin-bg:#061009;
+        --admin-panel:#0b1810;
+        --admin-panel-2:#0f2016;
+        --admin-line:rgba(255,255,255,.085);
+        --admin-line-strong:rgba(255,255,255,.14);
+        --admin-muted:rgba(255,255,255,.52);
+        --admin-soft:rgba(255,255,255,.34);
+        --admin-green:#baff9e;
+        --admin-amber:#ffd374;
+        --admin-red:#ff9488;
+      }
+
+      .adminExplore{
+        padding:104px 24px 80px;
+        background:
+          radial-gradient(circle at 12% -5%,rgba(186,255,158,.10),transparent 25%),
+          radial-gradient(circle at 92% 14%,rgba(74,140,255,.06),transparent 24%),
+          linear-gradient(180deg,#061009 0%,#07120b 58%,#061009 100%);
+      }
+
+      .adminHero{
+        min-height:470px;
+        padding:30px 32px;
+        border-radius:30px;
+        border-color:rgba(255,255,255,.10);
+        background:
+          radial-gradient(circle at 88% 12%,rgba(186,255,158,.17),transparent 23%),
+          radial-gradient(circle at 70% 94%,rgba(63,111,255,.08),transparent 28%),
+          linear-gradient(135deg,#07130c 0%,#0e2b1a 58%,#163e27 100%);
+      }
+
+      .adminHeroTop{position:relative;z-index:2}
+      .adminBrand>span{width:50px;height:50px;border-radius:16px}
+      .adminBrand small{font-size:7px;letter-spacing:.16em}
+      .adminBrand strong{font-size:13px;letter-spacing:-.02em}
+      .adminRefresh{min-height:44px;padding:0 14px;border-radius:13px;font-size:8px;transition:.18s ease}
+      .adminRefresh:hover{transform:translateY(-1px);border-color:rgba(186,255,158,.25);background:rgba(186,255,158,.08)}
+
+      .adminHeroCopy{max-width:900px;padding-top:64px}
+      .adminEyebrow{font-size:8px;letter-spacing:.14em}
+      .adminHeroCopy h1{max-width:980px;margin-top:17px;font-size:clamp(52px,6.8vw,96px);line-height:.86;letter-spacing:-.072em;text-wrap:balance}
+      .adminHeroCopy p{max-width:680px;margin-top:20px;font-size:12px;line-height:1.72;color:rgba(255,255,255,.58)}
+
+      .adminHeroStats{right:32px;bottom:28px;left:32px;gap:10px}
+      .adminHeroStats article{min-height:92px;padding:15px 16px;border-radius:16px;background:rgba(2,10,5,.42)}
+      .adminHeroStats span{font-size:7px;letter-spacing:.05em}
+      .adminHeroStats strong{font-size:28px;line-height:1}
+      .adminHeroStats small{font-size:7px;line-height:1.35}
+
+      .adminWorkspace{grid-template-columns:260px minmax(0,1fr);gap:16px;margin-top:16px}
+      .adminSidebar{top:92px;padding:14px;border-radius:20px;background:linear-gradient(180deg,rgba(13,31,20,.98),rgba(8,19,12,.98));box-shadow:0 22px 70px rgba(0,0,0,.22)}
+      .adminSidebarTitle{padding:7px 7px 16px}
+      .adminSidebarTitle span{font-size:7px}
+      .adminSidebarTitle strong{font-size:18px;letter-spacing:-.03em}
+      .adminSidebar nav{gap:6px;margin-top:12px}
+      .adminSidebar nav button{grid-template-columns:38px minmax(0,1fr) auto;gap:10px;min-height:52px;padding:7px 8px;border-radius:13px;transition:.18s ease}
+      .adminSidebar nav button:hover{background:rgba(255,255,255,.045);color:#fff}
+      .adminSidebar nav button>span{width:38px;height:38px;border-radius:11px}
+      .adminSidebar nav button strong{min-width:0;font-size:8px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+      .adminSidebar nav button b{min-width:25px;height:25px;font-size:7px}
+      .adminSidebarHealth{padding:13px;border-radius:14px}
+      .adminSidebarHealth strong{font-size:8px;line-height:1.4}
+      .adminSidebarHealth small{font-size:7px;line-height:1.55}
+
+      .adminMain{padding:22px;border-radius:22px;background:linear-gradient(180deg,#0b1910,#09160e);box-shadow:0 22px 70px rgba(0,0,0,.19)}
+      .adminMainHeader{align-items:center;gap:16px;padding-bottom:18px}
+      .adminMainHeader>div{min-width:0}
+      .adminMainHeader>div>span{font-size:7px;letter-spacing:.13em}
+      .adminMainHeader h2{margin-top:6px;font-size:clamp(23px,3vw,34px);line-height:1.08;text-wrap:balance}
+      .adminSearch{width:min(360px,100%);min-height:46px;padding:0 12px;border-radius:13px}
+      .adminSearch input{font-size:8px}
+
+      .adminMessage{padding:12px 14px;border-radius:13px;font-size:8px;line-height:1.5}
+      .adminOverview{gap:14px;margin-top:16px}
+      .adminPriority,.adminPulse{padding:18px;border-radius:18px}
+      .adminPriority>header h3,.adminPulseHead h3{font-size:21px}
+      .adminPriority>header>b{min-width:46px;height:46px;font-size:14px}
+      .adminPriorityGrid{gap:10px;margin-top:14px}
+      .adminPriorityGrid>button{grid-template-columns:48px minmax(0,1fr) auto;gap:11px;min-height:108px;padding:14px;border-radius:15px;transition:.18s ease}
+      .adminPriorityGrid>button:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.045)}
+      .adminPriorityGrid>button>span{width:48px;height:48px;border-radius:14px}
+      .adminPriorityGrid small{font-size:6px}
+      .adminPriorityGrid strong{font-size:22px}
+      .adminPriorityGrid p{font-size:7px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+
+      .adminCards{gap:12px;margin-top:16px}
+      .adminPlaceCard{grid-template-columns:minmax(220px,30%) minmax(0,1fr);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.018));box-shadow:0 12px 34px rgba(0,0,0,.10)}
+      .adminPlaceImage{min-height:310px}
+      .adminPlaceImage .status{top:12px;left:12px;padding:8px 10px;font-size:7px}
+      .adminPlaceImage>b{right:12px;bottom:12px;left:12px;padding:9px 10px;font-size:7px;line-height:1.35}
+      .adminPlaceBody{min-width:0;padding:18px}
+      .adminPlaceBody>header{gap:16px}
+      .adminPlaceBody>header>div{min-width:0}
+      .adminPlaceBody>header span{font-size:7px}
+      .adminPlaceBody>header h3{max-width:100%;margin-top:5px;font-size:clamp(22px,2.4vw,31px);line-height:1.04;letter-spacing:-.045em;overflow-wrap:anywhere;text-wrap:balance}
+      .adminPlaceBody>header p{font-size:7px;line-height:1.4;white-space:normal}
+      .adminPlaceBody>header>a{flex:0 0 auto;min-height:38px;padding:0 11px;border-radius:10px;font-size:7px}
+      .adminUserBadge{margin-top:14px;min-width:0}
+      .adminUserBadge img{width:42px;height:42px;border-radius:12px}
+      .adminUserBadge>div{min-width:0}
+      .adminUserBadge strong{max-width:250px;font-size:8px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .adminUserBadge span{font-size:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .adminPlaceMeta{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
+      .adminPlaceMeta article{min-width:0;padding:10px;border-radius:11px}
+      .adminPlaceMeta span{font-size:6px;letter-spacing:.04em}
+      .adminPlaceMeta strong{margin-top:4px;font-size:7px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
+      .adminPlaceDescription{margin-top:12px;font-size:8px;line-height:1.65}
+      .adminPlaceBody>footer{flex-wrap:wrap;gap:8px;margin-top:15px;padding-top:14px}
+      .adminPlaceBody>footer button,.adminCheckinCard footer button{min-height:42px;padding:0 12px;border-radius:11px;font-size:7px}
+
+      .adminCheckinCard{padding:18px;border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.018))}
+      .adminCheckinTop{gap:14px}
+      .adminCheckinPlace{min-width:0}
+      .adminCheckinPlace>img{flex:0 0 auto;width:82px;height:82px;border-radius:15px}
+      .adminCheckinPlace>div{min-width:0}
+      .adminCheckinPlace span{font-size:6px}
+      .adminCheckinPlace h3{max-width:100%;margin-top:5px;font-size:20px;line-height:1.1;overflow-wrap:anywhere}
+      .adminCheckinPlace p{font-size:7px;line-height:1.4;white-space:normal}
+      .adminSource{flex:0 0 auto;padding:8px 10px;font-size:7px}
+      .adminRiskGrid{gap:8px;margin-top:14px}
+      .adminRiskGrid article{min-width:0;padding:12px;border-radius:12px}
+      .adminRiskGrid span{font-size:6px}
+      .adminRiskGrid strong{font-size:11px;line-height:1.3;overflow-wrap:anywhere}
+      .adminRiskGrid small{font-size:6px;line-height:1.4;white-space:normal}
+      .adminRiskReason{margin-top:10px;padding:12px;border-radius:12px}
+      .adminRiskReason span{font-size:6px}
+      .adminRiskReason strong{font-size:8px;line-height:1.55;overflow-wrap:anywhere}
+      .adminCheckinCard>footer{flex-wrap:wrap;gap:10px;margin-top:14px;padding-top:14px}
+      .adminCheckinCard>footer>a{font-size:7px}
+
+      .adminLogList{gap:8px;margin-top:16px}
+      .adminLogList>article{grid-template-columns:40px minmax(0,1fr) auto;gap:10px;padding:11px 12px;border-radius:12px}
+      .adminLogIcon{width:40px;height:40px;border-radius:11px}
+      .adminLogList>article>div{min-width:0}
+      .adminLogList strong{font-size:8px}
+      .adminLogList p{font-size:7px;line-height:1.45;overflow-wrap:anywhere}
+      .adminLogList em{font-size:7px;line-height:1.45}
+      .adminLogList>article>small{font-size:6px;white-space:nowrap}
+
+      .adminEmpty{padding:76px 24px;border-radius:20px}
+      .adminEmpty>span{width:66px;height:66px;border-radius:20px}
+      .adminEmpty strong{font-size:16px}
+      .adminEmpty p{font-size:8px;line-height:1.6}
+
+      .adminModal>section{padding:20px;border-radius:22px}
+      .adminModal header h2{font-size:26px;line-height:1.08}
+      .adminModal header p{font-size:8px;line-height:1.6}
+      .adminModal label>span{font-size:7px}
+      .adminModal textarea{min-height:135px;padding:12px;border-radius:12px;font-size:9px;line-height:1.55}
+      .adminModal footer button{min-height:42px;padding:0 13px;font-size:8px}
+
+      /* Global anti-overlap rules for admin UI */
+      .adminExplore *{min-width:0}
+      .adminExplore h1,.adminExplore h2,.adminExplore h3,.adminExplore p,.adminExplore strong,.adminExplore small,.adminExplore span{overflow-wrap:anywhere}
+      .adminExplore button{line-height:1.2}
+      .adminExplore img{max-width:100%}
+
+      @media(max-width:1180px){
+        .adminWorkspace{grid-template-columns:220px minmax(0,1fr)}
+        .adminPriorityGrid{grid-template-columns:1fr}
+        .adminPlaceMeta{grid-template-columns:repeat(2,minmax(0,1fr))}
+      }
+
+      @media(max-width:980px){
+        .adminExplore{padding-inline:14px}
+        .adminWorkspace{grid-template-columns:1fr}
+        .adminSidebar{position:static;overflow-x:auto;padding:9px}
+        .adminSidebarTitle,.adminSidebarHealth{display:none}
+        .adminSidebar nav{display:flex;min-width:max-content;margin:0}
+        .adminSidebar nav button{grid-template-columns:36px auto auto;min-width:max-content;padding-right:12px}
+        .adminSidebar nav button strong{white-space:nowrap}
+        .adminPlaceCard{grid-template-columns:1fr}
+        .adminPlaceImage{height:320px;min-height:0}
+        .adminRiskGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      }
+
+      @media(max-width:760px){
+        .adminExplore{padding:82px 8px 50px}
+        .adminHero{min-height:620px;padding:18px;border-radius:0 0 28px 28px}
+        .adminHeroCopy{padding-top:74px}
+        .adminHeroCopy h1{font-size:clamp(44px,13vw,64px)}
+        .adminHeroCopy p{font-size:10px}
+        .adminHeroStats{right:18px;bottom:18px;left:18px;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+        .adminHeroStats article{min-height:82px;padding:12px}
+        .adminHeroStats strong{font-size:23px}
+        .adminRefresh{width:44px;padding:0;justify-content:center;font-size:0}
+        .adminMain{padding:14px}
+        .adminMainHeader{align-items:stretch;flex-direction:column}
+        .adminSearch{width:100%}
+        .adminPlaceBody{padding:15px}
+        .adminPlaceBody>header{flex-direction:column}
+        .adminPlaceBody>header>a{align-self:flex-start}
+        .adminCheckinTop{align-items:flex-start;flex-direction:column}
+        .adminSource{align-self:flex-start}
+      }
+
+      @media(max-width:520px){
+        .adminHero{min-height:660px}
+        .adminHeroTop{align-items:flex-start}
+        .adminBrand strong{font-size:11px}
+        .adminHeroCopy{padding-top:78px}
+        .adminHeroCopy h1{font-size:46px}
+        .adminHeroStats{grid-template-columns:1fr 1fr}
+        .adminHeroStats span{font-size:6px}
+        .adminHeroStats strong{font-size:21px}
+        .adminWorkspace{margin-top:10px}
+        .adminMain{border-radius:18px}
+        .adminMainHeader h2{font-size:24px}
+        .adminPlaceImage{height:250px}
+        .adminPlaceMeta{grid-template-columns:1fr 1fr}
+        .adminPlaceBody>footer{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .adminPlaceBody>footer button{justify-content:center;width:100%}
+        .adminPlaceBody>footer .reject{grid-column:1/-1}
+        .adminRiskGrid{grid-template-columns:1fr 1fr}
+        .adminCheckinCard>footer{align-items:stretch;flex-direction:column}
+        .adminCheckinCard>footer>div{display:grid;grid-template-columns:1fr;width:100%}
+        .adminCheckinCard>footer button{justify-content:center;width:100%}
+        .adminLogList>article{grid-template-columns:40px minmax(0,1fr)}
+        .adminLogList>article>small{grid-column:2;white-space:normal}
       }
 
       @media(prefers-reduced-motion:reduce){

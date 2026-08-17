@@ -22,7 +22,7 @@ import {
 } from "../utils/offlineCheckins";
 
 const FALLBACK_COVER =
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&auto=format&fit=crop";
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1800&auto=format&fit=crop";
 const FALLBACK_AVATAR =
   "https://api.dicebear.com/8.x/initials/svg?seed=Explorer";
 
@@ -32,6 +32,12 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
       <>
         <path d="M19 12H5" />
         <path d="m11 18-6-6 6-6" />
+      </>
+    ),
+    arrowRight: (
+      <>
+        <path d="M5 12h14" />
+        <path d="m13 6 6 6-6 6" />
       </>
     ),
     mapPin: (
@@ -105,6 +111,25 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M4 17a8 8 0 0 0 13.5 2" />
       </>
     ),
+    sparkle: (
+      <>
+        <path d="m12 3 1.1 3.3L16 8l-2.9 1.7L12 13l-1.1-3.3L8 8l2.9-1.7L12 3Z" />
+        <path d="m18 14 .7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14Z" />
+      </>
+    ),
+    route: (
+      <>
+        <circle cx="6" cy="18" r="2" />
+        <circle cx="18" cy="6" r="2" />
+        <path d="M8 18h2a4 4 0 0 0 4-4v-4a4 4 0 0 1 4-4" />
+      </>
+    ),
+    compass: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+      </>
+    ),
   };
 
   return (
@@ -126,9 +151,9 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
 
 const markerIcon = L.divIcon({
   className: "detailPinShell",
-  html: `<div class="detailPin"><span>●</span></div>`,
-  iconSize: [48, 58],
-  iconAnchor: [24, 52],
+  html: `<div class="detailPin"><span>●</span><i></i></div>`,
+  iconSize: [54, 64],
+  iconAnchor: [27, 58],
 });
 
 function formatDate(value) {
@@ -188,7 +213,6 @@ export default function PlaceDetails() {
       .single();
 
     if (placeError) throw placeError;
-
     setPlace(data);
   }, [id]);
 
@@ -261,17 +285,9 @@ export default function PlaceDetails() {
         .limit(100),
     ]);
 
-    if (!checkinsResult.error) {
-      setCheckins(checkinsResult.data || []);
-    }
-
-    if (!photosResult.error) {
-      setPhotos(photosResult.data || []);
-    }
-
-    if (!commentsResult.error) {
-      setComments(commentsResult.data || []);
-    }
+    if (!checkinsResult.error) setCheckins(checkinsResult.data || []);
+    if (!photosResult.error) setPhotos(photosResult.data || []);
+    if (!commentsResult.error) setComments(commentsResult.data || []);
   }, [id]);
 
   const loadMine = useCallback(async () => {
@@ -281,33 +297,27 @@ export default function PlaceDetails() {
       return;
     }
 
-    const [saveResult, checkinResult] =
-      await Promise.all([
-        supabase
-          .from("place_saves")
-          .select("id")
-          .eq("place_id", id)
-          .eq("user_id", profile.id)
-          .maybeSingle(),
+    const [saveResult, checkinResult] = await Promise.all([
+      supabase
+        .from("place_saves")
+        .select("id")
+        .eq("place_id", id)
+        .eq("user_id", profile.id)
+        .maybeSingle(),
 
-        supabase
-          .from("place_checkins")
-          .select("id, created_at")
-          .eq("place_id", id)
-          .eq("user_id", profile.id)
-          .eq("is_gps_verified", true)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
+      supabase
+        .from("place_checkins")
+        .select("id, created_at")
+        .eq("place_id", id)
+        .eq("user_id", profile.id)
+        .eq("is_gps_verified", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
-    if (!saveResult.error) {
-      setSaved(Boolean(saveResult.data));
-    }
-
-    if (!checkinResult.error) {
-      setMyCheckin(checkinResult.data || null);
-    }
+    if (!saveResult.error) setSaved(Boolean(saveResult.data));
+    if (!checkinResult.error) setMyCheckin(checkinResult.data || null);
   }, [id, profile?.id]);
 
   const refreshPending = useCallback(async () => {
@@ -318,22 +328,13 @@ export default function PlaceDetails() {
     }
 
     try {
-      const items = await getPendingCheckins(
-        profile.id
-      );
-
+      const items = await getPendingCheckins(profile.id);
       setPendingTotal(items.length);
-
       setPendingHere(
-        items.find(
-          (item) => item.place_id === id
-        ) || null
+        items.find((item) => item.place_id === id) || null
       );
     } catch (pendingError) {
-      console.warn(
-        "Offline queue:",
-        pendingError
-      );
+      console.warn("Offline queue:", pendingError);
     }
   }, [id, profile?.id]);
 
@@ -380,9 +381,7 @@ export default function PlaceDetails() {
       setSyncing(true);
 
       try {
-        const result = await syncPendingCheckins(
-          profile.id
-        );
+        const result = await syncPendingCheckins(profile.id);
 
         await refreshPending();
 
@@ -398,10 +397,7 @@ export default function PlaceDetails() {
               ? "Offline check-in je automatski sinhronizovan ✓"
               : `${result.synced} offline check-ina su sinhronizovana ✓`
           );
-        } else if (
-          result.failed > 0 &&
-          !silent
-        ) {
+        } else if (result.failed > 0 && !silent) {
           setError(
             "Internet se vratio, ali jedan offline check-in još nije mogao da se potvrdi."
           );
@@ -437,32 +433,18 @@ export default function PlaceDetails() {
       setOnline(false);
     }
 
-    window.addEventListener(
-      "online",
-      handleOnline
-    );
-    window.addEventListener(
-      "offline",
-      handleOffline
-    );
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener(
-        "online",
-        handleOnline
-      );
-      window.removeEventListener(
-        "offline",
-        handleOffline
-      );
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, [syncOffline]);
 
   useEffect(() => {
     if (profile?.id && navigator.onLine) {
-      syncOffline({
-        silent: true,
-      });
+      syncOffline({ silent: true });
     }
   }, [profile?.id, syncOffline]);
 
@@ -538,9 +520,7 @@ export default function PlaceDetails() {
 
   function checkIn() {
     if (!profile?.id) {
-      setError(
-        "Prijavi se da napraviš GPS check-in."
-      );
+      setError("Prijavi se da napraviš GPS check-in.");
       return;
     }
 
@@ -562,18 +542,14 @@ export default function PlaceDetails() {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const deviceTimestamp =
-          new Date().toISOString();
+        const deviceTimestamp = new Date().toISOString();
 
         const payload = {
           userId: profile.id,
           placeId: id,
-          latitude:
-            position.coords.latitude,
-          longitude:
-            position.coords.longitude,
-          accuracy:
-            position.coords.accuracy,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
           deviceTimestamp,
           caption: null,
           visibility: "public",
@@ -581,10 +557,7 @@ export default function PlaceDetails() {
 
         if (!navigator.onLine) {
           try {
-            const queued =
-              await queueOfflineCheckin(
-                payload
-              );
+            const queued = await queueOfflineCheckin(payload);
 
             setPendingHere(queued);
             await refreshPending();
@@ -605,23 +578,18 @@ export default function PlaceDetails() {
         }
 
         try {
-          const { data, error: rpcError } =
-            await supabase.rpc(
-              "create_verified_checkin",
-              {
-                p_place_id: id,
-                p_latitude:
-                  payload.latitude,
-                p_longitude:
-                  payload.longitude,
-                p_accuracy_m:
-                  payload.accuracy,
-                p_caption: null,
-                p_visibility: "public",
-                p_device_timestamp:
-                  deviceTimestamp,
-              }
-            );
+          const { data, error: rpcError } = await supabase.rpc(
+            "create_verified_checkin",
+            {
+              p_place_id: id,
+              p_latitude: payload.latitude,
+              p_longitude: payload.longitude,
+              p_accuracy_m: payload.accuracy,
+              p_caption: null,
+              p_visibility: "public",
+              p_device_timestamp: deviceTimestamp,
+            }
+          );
 
           if (rpcError) {
             const looksLikeNetworkProblem =
@@ -631,10 +599,7 @@ export default function PlaceDetails() {
               );
 
             if (looksLikeNetworkProblem) {
-              const queued =
-                await queueOfflineCheckin(
-                  payload
-                );
+              const queued = await queueOfflineCheckin(payload);
 
               setPendingHere(queued);
               await refreshPending();
@@ -724,15 +689,14 @@ export default function PlaceDetails() {
 
       const path = `${profile.id}/${place.id}/${crypto.randomUUID()}.${extension}`;
 
-      const { error: uploadError } =
-        await supabase.storage
-          .from("place-media")
-          .upload(path, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType:
-              file.type || undefined,
-          });
+      const { error: uploadError } = await supabase.storage
+        .from("place-media")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType:
+            file.type || undefined,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -813,7 +777,6 @@ export default function PlaceDetails() {
     }
 
     setComment("");
-
     await loadCommunity();
   }
 
@@ -838,10 +801,13 @@ export default function PlaceDetails() {
         <DetailsStyles />
 
         <main className="detailState">
-          <span />
-          <strong>
-            Učitavanje mesta...
-          </strong>
+          <span className="detailStateOrb">
+            <Icon name="compass" size={28} />
+          </span>
+
+          <small>MEETOUTDOORS</small>
+          <strong>Učitavanje mesta...</strong>
+          <p>Fotografije, tragovi i community podaci stižu.</p>
         </main>
       </>
     );
@@ -853,11 +819,12 @@ export default function PlaceDetails() {
         <DetailsStyles />
 
         <main className="detailState">
-          <Icon name="alert" size={28} />
+          <span className="detailStateOrb error">
+            <Icon name="alert" size={28} />
+          </span>
 
-          <strong>
-            Mesto nije pronađeno.
-          </strong>
+          <small>EXPLORE</small>
+          <strong>Mesto nije pronađeno.</strong>
 
           <Link to="/explore">
             Nazad na mapu
@@ -879,18 +846,14 @@ export default function PlaceDetails() {
       <main className="detailPage">
         {!online && (
           <div className="detailOfflineBar">
-            <Icon
-              name="offline"
-              size={15}
-            />
-
-            <span>
-              OFFLINE MODE
+            <span className="detailOfflineIcon">
+              <Icon name="offline" size={15} />
             </span>
 
-            <strong>
-              GPS check-in i dalje radi.
-            </strong>
+            <div>
+              <span>OFFLINE MODE</span>
+              <strong>GPS check-in i dalje radi.</strong>
+            </div>
           </div>
         )}
 
@@ -898,54 +861,94 @@ export default function PlaceDetails() {
           <button
             type="button"
             className="detailPendingSync"
-            disabled={
-              !online || syncing
-            }
-            onClick={() =>
-              syncOffline()
-            }
+            disabled={!online || syncing}
+            onClick={() => syncOffline()}
           >
-            <Icon
-              name="sync"
-              size={15}
-            />
-
             <span>
-              {syncing
-                ? "Sinhronizacija..."
-                : `${pendingTotal} offline ${
-                    pendingTotal === 1
-                      ? "check-in"
-                      : "check-ina"
-                  }`}
+              <Icon name="sync" size={15} />
             </span>
+
+            <div>
+              <small>OFFLINE QUEUE</small>
+
+              <strong>
+                {syncing
+                  ? "Sinhronizacija..."
+                  : `${pendingTotal} offline ${
+                      pendingTotal === 1
+                        ? "check-in"
+                        : "check-ina"
+                    }`}
+              </strong>
+            </div>
           </button>
         )}
 
         <section
           className="detailHero"
           style={{
-            backgroundImage: `linear-gradient(180deg,rgba(5,17,10,.06),rgba(5,17,10,.92)),url(${heroImage})`,
+            backgroundImage: `linear-gradient(180deg,rgba(5,17,10,.06),rgba(5,17,10,.96)),url(${heroImage})`,
           }}
         >
-          <Link
-            to="/explore"
-            className="detailBack"
-          >
-            <Icon
-              name="arrowLeft"
-              size={16}
-            />
-            Explore
-          </Link>
+          <div className="detailHeroNoise" />
+
+          <div className="detailHeroTop">
+            <Link
+              to="/explore"
+              className="detailBack"
+            >
+              <span>
+                <Icon
+                  name="arrowLeft"
+                  size={16}
+                />
+              </span>
+
+              <div>
+                <small>NAZAD</small>
+                <strong>Explore mapa</strong>
+              </div>
+            </Link>
+
+            <div className="detailHeroStatus">
+              <span>
+                <Icon
+                  name={
+                    place.location_precision === "exact"
+                      ? "navigation"
+                      : "shield"
+                  }
+                  size={15}
+                />
+              </span>
+
+              <div>
+                <small>LOKACIJA</small>
+
+                <strong>
+                  {place.location_precision === "exact"
+                    ? "GPS tačka"
+                    : "Zaštićena tačka"}
+                </strong>
+              </div>
+            </div>
+          </div>
 
           <div className="detailHeroCopy">
-            <span>
-              <i />
+            <div className="detailHeroEyebrow">
+              <span>
+                <Icon name="sparkle" size={13} />
+              </span>
 
-              {place.place_categories?.name ||
-                "Outdoor mesto"}
-            </span>
+              <div>
+                <small>MEETOUTDOORS PLACE</small>
+
+                <strong>
+                  {place.place_categories?.name ||
+                    "Outdoor mesto"}
+                </strong>
+              </div>
+            </div>
 
             <h1>{place.name}</h1>
 
@@ -963,39 +966,55 @@ export default function PlaceDetails() {
 
           <div className="detailHeroStats">
             <article>
-              <strong>
-                {place.visitors_count || 0}
-              </strong>
-              <span>
-                ljudi bilo ovde
+              <span className="detailHeroStatIcon">
+                <Icon name="users" size={17} />
               </span>
+
+              <div>
+                <strong>
+                  {place.visitors_count || 0}
+                </strong>
+                <span>ljudi bilo ovde</span>
+              </div>
             </article>
 
             <article>
-              <strong>
-                {place.checkins_count || 0}
-              </strong>
-              <span>
-                GPS check-inova
+              <span className="detailHeroStatIcon">
+                <Icon name="navigation" size={17} />
               </span>
+
+              <div>
+                <strong>
+                  {place.checkins_count || 0}
+                </strong>
+                <span>GPS check-inova</span>
+              </div>
             </article>
 
             <article>
-              <strong>
-                {place.photos_count || 0}
-              </strong>
-              <span>
-                fotografija
+              <span className="detailHeroStatIcon">
+                <Icon name="camera" size={17} />
               </span>
+
+              <div>
+                <strong>
+                  {place.photos_count || 0}
+                </strong>
+                <span>fotografija</span>
+              </div>
             </article>
 
             <article>
-              <strong>
-                {place.saves_count || 0}
-              </strong>
-              <span>
-                želi da poseti
+              <span className="detailHeroStatIcon">
+                <Icon name="heart" size={17} />
               </span>
+
+              <div>
+                <strong>
+                  {place.saves_count || 0}
+                </strong>
+                <span>želi da poseti</span>
+              </div>
             </article>
           </div>
         </section>
@@ -1003,45 +1022,63 @@ export default function PlaceDetails() {
         <section className="detailContent">
           <section
             className={`detailActionDock ${
-              pendingHere
-                ? "hasPending"
-                : ""
+              pendingHere ? "hasPending" : ""
             }`}
           >
-            <div>
-              <span>
-                {pendingHere
-                  ? "OFFLINE GPS SAČUVAN"
-                  : "GPS VERIFIED VISIT"}
+            <div className="detailActionLead">
+              <span className="detailActionIcon">
+                <Icon
+                  name={
+                    pendingHere
+                      ? "offline"
+                      : "navigation"
+                  }
+                  size={19}
+                />
               </span>
 
-              <strong>
-                {pendingHere
-                  ? `Zabeleženo ${formatDate(
-                      pendingHere.device_timestamp
-                    )}. Poslaćemo automatski čim se internet vrati.`
-                  : myCheckin
-                    ? `Poslednji check-in ${formatDate(
-                        myCheckin.created_at
-                      )}`
-                    : "Dođi na lokaciju i potvrdi da si stvarno bio/la ovde."}
-              </strong>
+              <div>
+                <small>
+                  {pendingHere
+                    ? "OFFLINE GPS SAČUVAN"
+                    : "GPS VERIFIED VISIT"}
+                </small>
+
+                <strong>
+                  {pendingHere
+                    ? `Zabeleženo ${formatDate(
+                        pendingHere.device_timestamp
+                      )}. Poslaćemo automatski čim se internet vrati.`
+                    : myCheckin
+                      ? `Poslednji check-in ${formatDate(
+                          myCheckin.created_at
+                        )}`
+                      : "Dođi na lokaciju i potvrdi da si stvarno bio/la ovde."}
+                </strong>
+              </div>
             </div>
 
-            <div>
+            <div className="detailActionButtons">
               <button
                 type="button"
                 className="light"
                 onClick={toggleSave}
               >
-                <Icon
-                  name="heart"
-                  size={17}
-                />
+                <span>
+                  <Icon
+                    name="heart"
+                    size={17}
+                  />
+                </span>
 
-                {saved
-                  ? "Sačuvano"
-                  : "Želim da idem"}
+                <div>
+                  <small>LISTA</small>
+                  <strong>
+                    {saved
+                      ? "Sačuvano"
+                      : "Želim da idem"}
+                  </strong>
+                </div>
               </button>
 
               <button
@@ -1054,22 +1091,30 @@ export default function PlaceDetails() {
                 disabled={checkingIn}
                 onClick={checkIn}
               >
-                <Icon
-                  name={
-                    pendingHere
-                      ? "offline"
-                      : "navigation"
-                  }
-                  size={17}
-                />
+                <span>
+                  <Icon
+                    name={
+                      pendingHere
+                        ? "offline"
+                        : "navigation"
+                    }
+                    size={17}
+                  />
+                </span>
 
-                {checkingIn
-                  ? "GPS provera..."
-                  : pendingHere
-                    ? "Čeka internet"
-                    : online
-                      ? "Čekiraj se"
-                      : "Offline check-in"}
+                <div>
+                  <small>GPS VISIT</small>
+
+                  <strong>
+                    {checkingIn
+                      ? "GPS provera..."
+                      : pendingHere
+                        ? "Čeka internet"
+                        : online
+                          ? "Čekiraj se"
+                          : "Offline check-in"}
+                  </strong>
+                </div>
               </button>
 
               <button
@@ -1080,14 +1125,22 @@ export default function PlaceDetails() {
                   fileRef.current?.click()
                 }
               >
-                <Icon
-                  name="camera"
-                  size={17}
-                />
+                <span>
+                  <Icon
+                    name="camera"
+                    size={17}
+                  />
+                </span>
 
-                {uploading
-                  ? "Upload..."
-                  : "Dodaj sliku"}
+                <div>
+                  <small>COMMUNITY</small>
+
+                  <strong>
+                    {uploading
+                      ? "Upload..."
+                      : "Dodaj sliku"}
+                  </strong>
+                </div>
               </button>
 
               {place.created_by === profile?.id && (
@@ -1097,14 +1150,22 @@ export default function PlaceDetails() {
                   disabled={removingPlace}
                   onClick={removeOwnPlace}
                 >
-                  <Icon
-                    name="trash"
-                    size={17}
-                  />
+                  <span>
+                    <Icon
+                      name="trash"
+                      size={17}
+                    />
+                  </span>
 
-                  {removingPlace
-                    ? "Uklanjamo..."
-                    : "Ukloni moje mesto"}
+                  <div>
+                    <small>MOJE MESTO</small>
+
+                    <strong>
+                      {removingPlace
+                        ? "Uklanjamo..."
+                        : "Ukloni"}
+                    </strong>
+                  </div>
                 </button>
               )}
 
@@ -1120,38 +1181,58 @@ export default function PlaceDetails() {
 
           {error && (
             <div className="detailMessage error">
-              <Icon
-                name="alert"
-                size={16}
-              />
-              {error}
+              <span>
+                <Icon
+                  name="alert"
+                  size={16}
+                />
+              </span>
+
+              <div>
+                <strong>Nešto treba proveriti</strong>
+                <p>{error}</p>
+              </div>
             </div>
           )}
 
           {notice && (
             <div className="detailMessage success">
-              <Icon
-                name={
-                  pendingHere
-                    ? "offline"
-                    : "check"
-                }
-                size={16}
-              />
-              {notice}
+              <span>
+                <Icon
+                  name={
+                    pendingHere
+                      ? "offline"
+                      : "check"
+                  }
+                  size={16}
+                />
+              </span>
+
+              <div>
+                <strong>Gotovo</strong>
+                <p>{notice}</p>
+              </div>
             </div>
           )}
 
           <div className="detailGrid">
             <div className="detailMain">
-              <section className="detailPanel">
-                <span className="detailKicker">
-                  O MESTU
-                </span>
+              <section className="detailPanel detailStoryPanel">
+                <div className="detailSectionHead story">
+                  <div>
+                    <span className="detailKicker">
+                      01 · O MESTU
+                    </span>
 
-                <h2>
-                  Ovo je razlog da skreneš sa puta.
-                </h2>
+                    <h2>
+                      Ovo je razlog da skreneš sa puta.
+                    </h2>
+                  </div>
+
+                  <span className="detailSectionIcon">
+                    <Icon name="route" size={20} />
+                  </span>
+                </div>
 
                 <p className="detailDescription">
                   {place.description ||
@@ -1163,39 +1244,32 @@ export default function PlaceDetails() {
                   <article>
                     <span>Težina</span>
                     <strong>
-                      {place.difficulty ||
-                        "—"}
+                      {place.difficulty || "—"}
                     </strong>
                   </article>
 
                   <article>
                     <span>Pristup</span>
                     <strong>
-                      {place.access_type ||
-                        "—"}
+                      {place.access_type || "—"}
                     </strong>
                   </article>
 
                   <article>
                     <span>Deca</span>
                     <strong>
-                      {place.child_friendly ===
-                      true
+                      {place.child_friendly === true
                         ? "Da"
-                        : place.child_friendly ===
-                            false
+                        : place.child_friendly === false
                           ? "Ne"
                           : "—"}
                     </strong>
                   </article>
 
                   <article>
-                    <span>
-                      GPS zaštita
-                    </span>
+                    <span>GPS zaštita</span>
                     <strong>
-                      {place.location_precision ===
-                      "exact"
+                      {place.location_precision === "exact"
                         ? "Tačna"
                         : "Zaštićena"}
                     </strong>
@@ -1203,11 +1277,11 @@ export default function PlaceDetails() {
                 </div>
               </section>
 
-              <section className="detailPanel">
+              <section className="detailPanel detailGalleryPanel">
                 <div className="detailSectionHead">
                   <div>
                     <span className="detailKicker">
-                      COMMUNITY GALERIJA
+                      02 · COMMUNITY GALERIJA
                     </span>
 
                     <h2>
@@ -1222,14 +1296,20 @@ export default function PlaceDetails() {
 
                 {photos.length === 0 ? (
                   <div className="detailEmpty">
-                    <Icon
-                      name="camera"
-                      size={28}
-                    />
+                    <span>
+                      <Icon
+                        name="camera"
+                        size={28}
+                      />
+                    </span>
 
                     <strong>
                       Još nema fotografija.
                     </strong>
+
+                    <p>
+                      Budi prvi koji će pokazati kako ovo mesto izgleda uživo.
+                    </p>
                   </div>
                 ) : (
                   <div className="detailGallery">
@@ -1244,11 +1324,11 @@ export default function PlaceDetails() {
                           }
                         >
                           <img
-                            src={
-                              photo.image_url
-                            }
+                            src={photo.image_url}
                             alt={place.name}
                           />
+
+                          <div className="detailGalleryShade" />
 
                           <footer>
                             <img
@@ -1261,15 +1341,19 @@ export default function PlaceDetails() {
                               alt=""
                             />
 
-                            <span>
-                              {photo
-                                .profiles
-                                ?.full_name ||
-                                photo
+                            <div>
+                              <small>FOTO</small>
+
+                              <span>
+                                {photo
                                   .profiles
-                                  ?.username ||
-                                "Explorer"}
-                            </span>
+                                  ?.full_name ||
+                                  photo
+                                    .profiles
+                                    ?.username ||
+                                  "Explorer"}
+                              </span>
+                            </div>
                           </footer>
                         </article>
                       )
@@ -1282,7 +1366,7 @@ export default function PlaceDetails() {
                 <div className="detailSectionHead">
                   <div>
                     <span className="detailKicker">
-                      RAZGOVOR
+                      03 · RAZGOVOR
                     </span>
 
                     <h2>
@@ -1314,21 +1398,28 @@ export default function PlaceDetails() {
                       !comment.trim()
                     }
                   >
-                    <Icon
-                      name="message"
-                      size={16}
-                    />
+                    <span>
+                      <Icon
+                        name="message"
+                        size={16}
+                      />
+                    </span>
 
-                    {commenting
-                      ? "Objavljivanje..."
-                      : "Objavi"}
+                    <div>
+                      <small>COMMUNITY NOTE</small>
+
+                      <strong>
+                        {commenting
+                          ? "Objavljivanje..."
+                          : "Objavi savet"}
+                      </strong>
+                    </div>
                   </button>
                 </div>
 
                 <div className="detailComments">
                   {comments.map((item) => {
-                    const user =
-                      item.profiles;
+                    const user = item.profiles;
 
                     const userUrl =
                       user?.role === "host"
@@ -1362,9 +1453,7 @@ export default function PlaceDetails() {
                             </small>
                           </div>
 
-                          <p>
-                            {item.body}
-                          </p>
+                          <p>{item.body}</p>
                         </div>
                       </article>
                     );
@@ -1374,34 +1463,36 @@ export default function PlaceDetails() {
             </div>
 
             <aside className="detailSide">
-              <section className="detailPanel">
-                <span className="detailKicker">
-                  LOKACIJA
-                </span>
+              <section className="detailPanel detailMapPanel">
+                <div className="detailSectionHead compact">
+                  <div>
+                    <span className="detailKicker">
+                      LOKACIJA
+                    </span>
 
-                <h2>
-                  Pronađi trag.
-                </h2>
+                    <h2>Pronađi trag.</h2>
+                  </div>
+
+                  <span className="detailSectionIcon">
+                    <Icon
+                      name="navigation"
+                      size={19}
+                    />
+                  </span>
+                </div>
 
                 <div className="detailMiniMap">
                   <MapContainer
                     center={[
-                      Number(
-                        place.latitude
-                      ),
-                      Number(
-                        place.longitude
-                      ),
+                      Number(place.latitude),
+                      Number(place.longitude),
                     ]}
                     zoom={
-                      place.location_precision ===
-                      "exact"
+                      place.location_precision === "exact"
                         ? 13
                         : 10
                     }
-                    scrollWheelZoom={
-                      false
-                    }
+                    scrollWheelZoom={false}
                     dragging={false}
                     className="detailLeaflet"
                   >
@@ -1412,29 +1503,47 @@ export default function PlaceDetails() {
 
                     <Marker
                       position={[
-                        Number(
-                          place.latitude
-                        ),
-                        Number(
-                          place.longitude
-                        ),
+                        Number(place.latitude),
+                        Number(place.longitude),
                       ]}
                       icon={markerIcon}
                     />
                   </MapContainer>
-                </div>
 
-                {place.location_precision !==
-                  "exact" && (
-                  <div className="detailProtected">
+                  <div className="detailMapBadge">
                     <Icon
-                      name="shield"
-                      size={16}
+                      name={
+                        place.location_precision === "exact"
+                          ? "navigation"
+                          : "shield"
+                      }
+                      size={13}
                     />
 
+                    {place.location_precision === "exact"
+                      ? "GPS lokacija"
+                      : "Zaštićena lokacija"}
+                  </div>
+                </div>
+
+                {place.location_precision !== "exact" && (
+                  <div className="detailProtected">
                     <span>
-                      Javna tačka je namerno približna.
+                      <Icon
+                        name="shield"
+                        size={16}
+                      />
                     </span>
+
+                    <div>
+                      <strong>
+                        Sensitive location
+                      </strong>
+
+                      <p>
+                        Javna tačka je namerno približna.
+                      </p>
+                    </div>
                   </div>
                 )}
               </section>
@@ -1450,42 +1559,53 @@ export default function PlaceDetails() {
                       {visitors.length} ljudi
                     </h2>
                   </div>
+
+                  <small>
+                    {visitors.length}
+                  </small>
                 </div>
 
-                <div className="detailVisitors">
-                  {visitors
-                    .slice(0, 20)
-                    .map((user) => (
-                      <Link
-                        key={user.id}
-                        to={
-                          user.role ===
-                          "host"
-                            ? `/h/${user.username}`
-                            : `/u/${user.username}`
-                        }
-                        title={
-                          user.full_name ||
-                          user.username
-                        }
-                      >
-                        <img
-                          src={
-                            user.avatar_url ||
-                            FALLBACK_AVATAR
+                {visitors.length > 0 ? (
+                  <div className="detailVisitors">
+                    {visitors
+                      .slice(0, 20)
+                      .map((user) => (
+                        <Link
+                          key={user.id}
+                          to={
+                            user.role === "host"
+                              ? `/h/${user.username}`
+                              : `/u/${user.username}`
                           }
-                          alt=""
-                        />
-                      </Link>
-                    ))}
-                </div>
+                          title={
+                            user.full_name ||
+                            user.username
+                          }
+                        >
+                          <img
+                            src={
+                              user.avatar_url ||
+                              FALLBACK_AVATAR
+                            }
+                            alt=""
+                          />
+                        </Link>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="detailVisitorsEmpty">
+                    Prvi GPS check-in još čeka.
+                  </div>
+                )}
               </section>
 
               <section className="detailPassport">
-                <Icon
-                  name="trophy"
-                  size={24}
-                />
+                <span className="detailPassportIcon">
+                  <Icon
+                    name="trophy"
+                    size={24}
+                  />
+                </span>
 
                 <span>
                   OUTDOOR PASSPORT
@@ -1500,6 +1620,11 @@ export default function PlaceDetails() {
                 <p>
                   GPS potvrđena lokacija ulazi u tvoj Explore identitet.
                 </p>
+
+                <div>
+                  <Icon name="sparkle" size={14} />
+                  VERIFIED OUTDOOR MEMORY
+                </div>
               </section>
             </aside>
           </div>
@@ -1513,133 +1638,225 @@ function DetailsStyles() {
   return (
     <style>{`
       *{box-sizing:border-box}
-      body{margin:0;background:#e8ece4}
+      html,body,#root{min-height:100%}
+      body{margin:0;background:#e7ece5}
       button,textarea{font:inherit}
-      .detailPage,.detailState{min-height:100vh;color:#1d3025;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-      .detailPage{position:relative;padding:118px 24px 70px;background:radial-gradient(circle at 6% 0%,rgba(186,255,158,.13),transparent 24%),#e8ece4}
+      .detailPage,.detailState{min-height:100vh;color:#1b3023;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .detailPage{position:relative;padding:118px 24px 76px;background:radial-gradient(circle at 5% 0%,rgba(186,255,158,.18),transparent 23%),radial-gradient(circle at 95% 18%,rgba(90,131,96,.11),transparent 20%),#e7ece5}
       .detailPage a{color:inherit;text-decoration:none}
-      .detailOfflineBar{position:fixed;top:88px;left:50%;z-index:3200;display:flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid rgba(255,202,116,.32);border-radius:999px;background:rgba(44,35,15,.92);color:#ffdb93;box-shadow:0 12px 30px rgba(0,0,0,.18);transform:translateX(-50%);backdrop-filter:blur(16px)}
-      .detailOfflineBar span{font-size:6px;font-weight:950;letter-spacing:.1em}
-      .detailOfflineBar strong{color:#fff;font-size:7px}
-      .detailPendingSync{position:fixed;right:18px;bottom:18px;z-index:3200;display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:0 12px;border:1px solid rgba(186,255,158,.28);border-radius:13px;background:rgba(14,42,26,.94);color:#dfffd1;box-shadow:0 15px 38px rgba(0,0,0,.22);cursor:pointer;font-size:7px;font-weight:900;backdrop-filter:blur(16px)}
+      .detailOfflineBar{position:fixed;top:88px;left:50%;z-index:3200;display:flex;align-items:center;gap:9px;padding:7px 11px 7px 7px;border:1px solid rgba(255,202,116,.35);border-radius:16px;background:linear-gradient(145deg,rgba(48,38,16,.96),rgba(62,48,18,.92));color:#ffdb93;box-shadow:0 18px 42px rgba(0,0,0,.22);transform:translateX(-50%);backdrop-filter:blur(18px)}
+      .detailOfflineIcon{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:rgba(255,219,147,.1)}
+      .detailOfflineBar div span,.detailOfflineBar div strong{display:block}
+      .detailOfflineBar div span{font-size:5px;font-weight:950;letter-spacing:.1em}
+      .detailOfflineBar div strong{margin-top:2px;color:#fff;font-size:7px}
+      .detailPendingSync{position:fixed;right:18px;bottom:18px;z-index:3200;display:flex;align-items:center;gap:8px;min-height:46px;padding:6px 11px 6px 7px;border:1px solid rgba(186,255,158,.28);border-radius:15px;background:linear-gradient(145deg,rgba(14,42,26,.96),rgba(18,55,32,.92));color:#dfffd1;box-shadow:0 20px 48px rgba(0,0,0,.24);cursor:pointer;backdrop-filter:blur(18px)}
+      .detailPendingSync>span{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(186,255,158,.09)}
+      .detailPendingSync small,.detailPendingSync strong{display:block;text-align:left}
+      .detailPendingSync small{color:#baff9e;font-size:5px;font-weight:900;letter-spacing:.08em}
+      .detailPendingSync strong{margin-top:2px;font-size:7px}
       .detailPendingSync:disabled{cursor:default;opacity:.65}
-      .detailHero{position:relative;isolation:isolate;width:min(1280px,100%);min-height:690px;margin:0 auto;padding:32px;overflow:hidden;border-radius:36px;background-position:center;background-size:cover;color:#fff;box-shadow:0 32px 90px rgba(24,55,36,.22)}
-      .detailBack{display:inline-flex;align-items:center;gap:7px;min-height:39px;padding:0 12px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(4,14,8,.25);color:#fff!important;font-size:8px;font-weight:850;backdrop-filter:blur(12px)}
-      .detailHeroCopy{max-width:970px;padding-top:140px}
-      .detailHeroCopy>span{display:inline-flex;align-items:center;gap:7px;color:#baff9e;font-size:8px;font-weight:950;letter-spacing:.11em;text-transform:uppercase}
-      .detailHeroCopy i{width:7px;height:7px;border-radius:50%;background:#baff9e}
-      .detailHero h1{margin:19px 0 0;font-size:clamp(60px,8vw,108px);line-height:.84;letter-spacing:-.08em}
-      .detailHeroCopy>p{display:flex;align-items:center;gap:7px;margin:19px 0 0;color:rgba(255,255,255,.65);font-size:9px}
-      .detailHeroStats{position:absolute;right:32px;bottom:32px;left:32px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
-      .detailHeroStats article{padding:15px;border:1px solid rgba(255,255,255,.11);border-radius:15px;background:rgba(4,14,8,.38);backdrop-filter:blur(14px)}
+      .detailHero{position:relative;isolation:isolate;width:min(1320px,100%);min-height:720px;margin:0 auto;padding:34px;overflow:hidden;border-radius:40px;background-position:center;background-size:cover;color:#fff;box-shadow:0 42px 110px rgba(24,55,36,.28)}
+      .detailHero::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,rgba(3,11,6,.52),transparent 48%),linear-gradient(180deg,rgba(4,14,8,.12),transparent 35%,rgba(4,14,8,.2) 55%,rgba(4,14,8,.92) 100%)}
+      .detailHeroNoise{position:absolute;inset:0;pointer-events:none;opacity:.2;background-image:radial-gradient(rgba(255,255,255,.16) .55px,transparent .55px);background-size:4px 4px;mix-blend-mode:soft-light}
+      .detailHeroTop{position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px}
+      .detailBack,.detailHeroStatus{display:flex;align-items:center;gap:9px;min-height:46px;padding:6px 11px 6px 7px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:linear-gradient(145deg,rgba(4,14,8,.42),rgba(8,24,14,.32));color:#fff!important;box-shadow:0 16px 38px rgba(0,0,0,.16);backdrop-filter:blur(20px)}
+      .detailBack>span,.detailHeroStatus>span{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.06)}
+      .detailBack small,.detailBack strong,.detailHeroStatus small,.detailHeroStatus strong{display:block}
+      .detailBack small,.detailHeroStatus small{color:rgba(255,255,255,.34);font-size:5px;font-weight:900;letter-spacing:.09em}
+      .detailBack strong,.detailHeroStatus strong{margin-top:2px;font-size:7px}
+      .detailHeroCopy{position:relative;z-index:2;max-width:980px;padding-top:146px}
+      .detailHeroEyebrow{display:inline-flex;align-items:center;gap:9px}
+      .detailHeroEyebrow>span{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(186,255,158,.15);border-radius:11px;background:rgba(186,255,158,.08);color:#baff9e}
+      .detailHeroEyebrow small,.detailHeroEyebrow strong{display:block}
+      .detailHeroEyebrow small{color:#baff9e;font-size:6px;font-weight:950;letter-spacing:.12em}
+      .detailHeroEyebrow strong{margin-top:2px;color:rgba(255,255,255,.68);font-size:6px}
+      .detailHero h1{margin:20px 0 0;font-size:clamp(64px,8.3vw,116px);line-height:.82;letter-spacing:-.082em;text-wrap:balance}
+      .detailHeroCopy>p{display:flex;align-items:center;gap:7px;margin:20px 0 0;color:rgba(255,255,255,.66);font-size:9px}
+      .detailHeroStats{position:absolute;right:34px;bottom:34px;left:34px;z-index:3;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+      .detailHeroStats article{display:grid;grid-template-columns:42px minmax(0,1fr);align-items:center;gap:10px;padding:11px;border:1px solid rgba(255,255,255,.11);border-radius:17px;background:linear-gradient(145deg,rgba(4,14,8,.47),rgba(8,24,14,.33));box-shadow:inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(18px)}
+      .detailHeroStatIcon{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:rgba(186,255,158,.08);color:#baff9e}
       .detailHeroStats strong,.detailHeroStats span{display:block}
       .detailHeroStats strong{font-size:20px}
-      .detailHeroStats span{margin-top:5px;color:rgba(255,255,255,.4);font-size:6px;font-weight:850;text-transform:uppercase}
-      .detailContent{width:min(1180px,100%);margin:18px auto 0}
-      .detailActionDock{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid #d8e0d5;border-radius:19px;background:#fff;box-shadow:0 14px 35px rgba(28,48,35,.06)}
+      .detailHeroStats article>div>span{margin-top:3px;color:rgba(255,255,255,.42);font-size:6px;font-weight:850;text-transform:uppercase}
+      .detailContent{width:min(1220px,100%);margin:18px auto 0}
+      .detailActionDock{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(0,1.1fr);align-items:center;gap:15px;padding:12px;border:1px solid #d6dfd3;border-radius:22px;background:rgba(255,255,255,.88);box-shadow:0 18px 44px rgba(28,48,35,.07),inset 0 1px 0 rgba(255,255,255,.8);backdrop-filter:blur(18px)}
       .detailActionDock.hasPending{border-color:#e3cf98;background:linear-gradient(135deg,#fff,#fff9e6)}
-      .detailActionDock>div:first-child span,.detailActionDock>div:first-child strong{display:block}
-      .detailActionDock>div:first-child span{color:#789456;font-size:7px;font-weight:900;letter-spacing:.1em}
-      .detailActionDock.hasPending>div:first-child span{color:#a47f23}
-      .detailActionDock>div:first-child strong{margin-top:4px;color:#465b4e;font-size:8px}
-      .detailActionDock>div:last-child{display:flex;gap:7px}
-      .detailActionDock button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 12px;border-radius:12px;cursor:pointer;font-size:8px;font-weight:850}
-      .detailActionDock .light{border:1px solid #d6dfd2;background:#f7f9f5;color:#53675a}
-      .detailActionDock .primary{border:1px solid #173b27;background:#173b27;color:#fff}
-      .detailActionDock .offlinePrimary{border:1px solid #d9bd6e;background:#fff3cc;color:#80651e}
-      .detailActionDock .accent{border:1px solid #c8e5b6;background:#eaf7df;color:#4d7138}
-      .detailActionDock button:disabled{opacity:.5}
-      .detailMessage{display:flex;align-items:center;gap:7px;margin-top:9px;padding:11px 13px;border-radius:12px;font-size:8px}
+      .detailActionLead{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:10px;padding:5px 8px}
+      .detailActionIcon{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#173b27;color:#baff9e}
+      .detailActionDock.hasPending .detailActionIcon{background:#fff3cc;color:#80651e}
+      .detailActionLead small,.detailActionLead strong{display:block}
+      .detailActionLead small{color:#789456;font-size:6px;font-weight:900;letter-spacing:.1em}
+      .detailActionDock.hasPending .detailActionLead small{color:#a47f23}
+      .detailActionLead strong{margin-top:4px;color:#465b4e;font-size:8px;line-height:1.45}
+      .detailActionButtons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+      .detailActionButtons button{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:7px;min-height:50px;padding:7px;border-radius:14px;cursor:pointer;text-align:left}
+      .detailActionButtons button>span{display:grid;place-items:center;width:34px;height:34px;border-radius:11px}
+      .detailActionButtons small,.detailActionButtons strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .detailActionButtons small{font-size:5px;font-weight:900;letter-spacing:.07em}
+      .detailActionButtons strong{margin-top:2px;font-size:7px}
+      .detailActionButtons .light{border:1px solid #d6dfd2;background:#f7f9f5;color:#53675a}
+      .detailActionButtons .light>span{background:#edf2ea}
+      .detailActionButtons .primary{border:1px solid #173b27;background:#173b27;color:#fff}
+      .detailActionButtons .primary>span{background:rgba(186,255,158,.1);color:#baff9e}
+      .detailActionButtons .offlinePrimary{border:1px solid #d9bd6e;background:#fff3cc;color:#80651e}
+      .detailActionButtons .offlinePrimary>span{background:rgba(128,101,30,.08)}
+      .detailActionButtons .accent{border:1px solid #c8e5b6;background:#eaf7df;color:#4d7138}
+      .detailActionButtons .accent>span{background:#dff0d2}
+      .detailActionButtons .danger{border:1px solid #edc4be;background:#fff0ee;color:#9a4b42}
+      .detailActionButtons .danger>span{background:#ffe2de}
+      .detailActionButtons button:disabled{cursor:not-allowed;opacity:.5}
+      .detailMessage{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:9px;margin-top:10px;padding:10px;border-radius:13px}
+      .detailMessage>span{display:grid;place-items:center;width:38px;height:38px;border-radius:11px}
+      .detailMessage strong,.detailMessage p{display:block}
+      .detailMessage strong{font-size:7px}
+      .detailMessage p{margin:3px 0 0;font-size:7px;line-height:1.45}
       .detailMessage.error{border:1px solid #efc2bc;background:#fff0ee;color:#98463c}
+      .detailMessage.error>span{background:#ffe0dc}
       .detailMessage.success{border:1px solid #cbe0c1;background:#eef8e8;color:#4f733b}
-      .detailGrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:15px;margin-top:15px}
-      .detailMain,.detailSide{display:grid;align-content:start;gap:15px}
-      .detailPanel{padding:22px;border:1px solid #d8e0d5;border-radius:23px;background:rgba(255,255,255,.85);box-shadow:0 13px 34px rgba(28,48,35,.045)}
+      .detailMessage.success>span{background:#e0f0d7}
+      .detailGrid{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(320px,.58fr);gap:16px;margin-top:16px}
+      .detailMain,.detailSide{display:grid;align-content:start;gap:16px}
+      .detailPanel{padding:24px;border:1px solid #d7e0d4;border-radius:26px;background:rgba(255,255,255,.86);box-shadow:0 16px 40px rgba(28,48,35,.05),inset 0 1px 0 rgba(255,255,255,.75);backdrop-filter:blur(14px)}
       .detailKicker{color:#789456;font-size:7px;font-weight:900;letter-spacing:.11em}
-      .detailPanel>h2,.detailSectionHead h2{margin:7px 0 0;color:#293e31;font-size:29px;line-height:1.05;letter-spacing:-.05em}
-      .detailDescription{margin:15px 0 0;color:#6e7b72;font-size:10px;line-height:1.8;white-space:pre-wrap}
-      .detailFacts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:17px}
-      .detailFacts article{padding:10px;border:1px solid #e0e6dd;border-radius:12px;background:#f7f9f5}
+      .detailPanel>h2,.detailSectionHead h2{margin:7px 0 0;color:#293e31;font-size:31px;line-height:1.03;letter-spacing:-.052em;text-wrap:balance}
+      .detailSectionHead{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:15px}
+      .detailSectionHead.story{align-items:flex-start}
+      .detailSectionHead.compact{margin-bottom:11px}
+      .detailSectionHead>small{display:grid;place-items:center;min-width:34px;height:34px;border-radius:11px;background:#eaf2e2;color:#5b7842;font-size:8px;font-weight:900}
+      .detailSectionIcon{display:grid!important;place-items:center;flex:0 0 auto;width:42px;height:42px;border-radius:13px;background:#eef5e9;color:#5c7d47}
+      .detailDescription{margin:17px 0 0;color:#66756b;font-size:10px;line-height:1.86;white-space:pre-wrap}
+      .detailFacts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:18px}
+      .detailFacts article{padding:11px;border:1px solid #e0e6dd;border-radius:13px;background:#f7f9f5}
       .detailFacts span,.detailFacts strong{display:block}
       .detailFacts span{color:#929b95;font-size:6px}
       .detailFacts strong{margin-top:4px;color:#415549;font-size:8px}
-      .detailSectionHead{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:14px}
-      .detailSectionHead.compact{margin-bottom:10px}
-      .detailSectionHead small{display:grid;place-items:center;min-width:30px;height:30px;border-radius:10px;background:#eaf2e2;color:#5b7842;font-size:8px;font-weight:900}
-      .detailGallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-      .detailGallery article{position:relative;height:230px;overflow:hidden;border-radius:14px;background:#dce5d8}
-      .detailGallery article.featured{grid-column:1/-1;height:340px}
-      .detailGallery>article>img{width:100%;height:100%;object-fit:cover}
-      .detailGallery footer{position:absolute;right:8px;bottom:8px;left:8px;display:flex;align-items:center;gap:6px;padding:7px;border-radius:10px;background:rgba(5,17,10,.68);color:#fff;backdrop-filter:blur(10px)}
-      .detailGallery footer img{width:25px;height:25px;border-radius:8px;object-fit:cover}
-      .detailGallery footer span{font-size:7px;font-weight:800}
-      .detailEmpty{display:grid;place-items:center;padding:45px 20px;border:1px dashed #ccd6c8;border-radius:15px;background:#f8faf6;color:#718276;text-align:center}
-      .detailEmpty strong{margin-top:8px;font-size:9px}
-      .detailCommentForm{display:grid;gap:8px}
-      .detailCommentForm textarea{min-height:88px;padding:11px;border:1px solid #d9e2d6;border-radius:11px;background:#f7f9f5;color:#33483b;outline:0;resize:vertical;font-size:9px;line-height:1.55}
-      .detailCommentForm button{justify-self:start;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 11px;border:0;border-radius:10px;background:#173b27;color:#fff;cursor:pointer;font-size:8px;font-weight:850}
-      .detailComments{display:grid;gap:7px;margin-top:13px}
-      .detailComments>article{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;padding:10px;border:1px solid #e0e6dd;border-radius:12px;background:#f8faf6}
-      .detailComments>article>a img{width:38px;height:38px;border-radius:11px;object-fit:cover}
+      .detailGallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+      .detailGallery article{position:relative;height:250px;overflow:hidden;border-radius:17px;background:#dce5d8;box-shadow:0 12px 28px rgba(26,54,34,.08)}
+      .detailGallery article.featured{grid-column:1/-1;height:380px}
+      .detailGallery>article>img{width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
+      .detailGallery>article:hover>img{transform:scale(1.025)}
+      .detailGalleryShade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(5,17,10,.72))}
+      .detailGallery footer{position:absolute;right:10px;bottom:10px;left:10px;display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(255,255,255,.11);border-radius:12px;background:rgba(5,17,10,.52);color:#fff;backdrop-filter:blur(12px)}
+      .detailGallery footer img{width:30px;height:30px;border-radius:9px;object-fit:cover}
+      .detailGallery footer small,.detailGallery footer span{display:block}
+      .detailGallery footer small{color:#baff9e;font-size:5px;font-weight:900}
+      .detailGallery footer span{margin-top:2px;font-size:7px;font-weight:800}
+      .detailEmpty{display:grid;place-items:center;padding:52px 20px;border:1px dashed #ccd6c8;border-radius:18px;background:#f8faf6;color:#718276;text-align:center}
+      .detailEmpty>span{display:grid;place-items:center;width:58px;height:58px;border-radius:18px;background:#edf4e9;color:#688453}
+      .detailEmpty strong{margin-top:10px;font-size:9px}
+      .detailEmpty p{max-width:330px;margin:5px 0 0;color:#98a29b;font-size:7px;line-height:1.5}
+      .detailCommentForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+      .detailCommentForm textarea{min-height:102px;padding:12px;border:1px solid #d9e2d6;border-radius:13px;background:#f7f9f5;color:#33483b;outline:0;resize:vertical;font-size:9px;line-height:1.6}
+      .detailCommentForm textarea:focus{border-color:#9ab88c;box-shadow:0 0 0 3px rgba(119,155,85,.09)}
+      .detailCommentForm button{display:grid;grid-template-columns:34px auto;align-items:center;gap:7px;min-height:50px;padding:7px 11px 7px 7px;border:0;border-radius:13px;background:#173b27;color:#fff;cursor:pointer}
+      .detailCommentForm button>span{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(186,255,158,.1);color:#baff9e}
+      .detailCommentForm button small,.detailCommentForm button strong{display:block;text-align:left}
+      .detailCommentForm button small{color:rgba(255,255,255,.34);font-size:5px;font-weight:900}
+      .detailCommentForm button strong{margin-top:2px;font-size:7px}
+      .detailComments{display:grid;gap:8px;margin-top:14px}
+      .detailComments>article{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:11px;border:1px solid #e0e6dd;border-radius:13px;background:#f8faf6}
+      .detailComments>article>a img{width:42px;height:42px;border-radius:12px;object-fit:cover}
       .detailComments>article>div>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
       .detailComments a{font-size:8px;font-weight:850}
       .detailComments small{color:#929b95;font-size:6px}
-      .detailComments p{margin:5px 0 0;color:#6f7b73;font-size:8px;line-height:1.5}
-      .detailMiniMap{height:270px;margin-top:13px;overflow:hidden;border-radius:15px}
+      .detailComments p{margin:5px 0 0;color:#6f7b73;font-size:8px;line-height:1.55}
+      .detailMapPanel{overflow:hidden}
+      .detailMiniMap{position:relative;height:300px;margin-top:14px;overflow:hidden;border-radius:18px;box-shadow:inset 0 0 0 1px rgba(23,59,39,.06)}
       .detailLeaflet{width:100%;height:100%}
+      .detailMapBadge{position:absolute;right:10px;bottom:10px;z-index:500;display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(6,18,10,.7);color:#dfffd1;font-size:6px;font-weight:850;backdrop-filter:blur(10px)}
       .detailPinShell{background:transparent!important;border:0!important}
-      .detailPin{display:grid;place-items:center;width:44px;height:44px;border:3px solid #fff;border-radius:15px 15px 15px 4px;background:#173b27;color:#baff9e;box-shadow:0 13px 28px rgba(9,31,17,.3);transform:rotate(-45deg)}
+      .detailPin{position:relative;display:grid;place-items:center;width:48px;height:48px;border:3px solid #fff;border-radius:16px 16px 16px 4px;background:#173b27;color:#baff9e;box-shadow:0 14px 30px rgba(9,31,17,.34);transform:rotate(-45deg)}
       .detailPin span{transform:rotate(45deg)}
-      .detailProtected{display:flex;align-items:flex-start;gap:7px;margin-top:9px;padding:10px;border-radius:11px;background:#fff7dc;color:#806a25;font-size:7px;line-height:1.45}
-      .detailVisitors{display:flex;flex-wrap:wrap;gap:6px}
-      .detailVisitors a{display:block;width:44px;height:44px;padding:2px;border:1px solid #d4dfd0;border-radius:14px;background:#fff}
-      .detailVisitors img{width:100%;height:100%;border-radius:11px;object-fit:cover}
-      .detailPassport{padding:22px;border-radius:23px;background:linear-gradient(145deg,#0e2a1a,#1d4b31);color:#baff9e;box-shadow:0 18px 40px rgba(23,58,39,.16)}
-      .detailPassport>span{display:block;margin-top:12px;font-size:7px;font-weight:900;letter-spacing:.11em}
-      .detailPassport h3{margin:7px 0 0;color:#fff;font-size:23px;line-height:1.05;letter-spacing:-.04em}
-      .detailPassport p{margin:9px 0 0;color:rgba(255,255,255,.49);font-size:8px;line-height:1.55}
-      .detailState{display:grid;place-items:center;align-content:center;gap:10px;background:#e8ece4;text-align:center}
-      .detailState>span{width:38px;height:38px;border:3px solid #d0d9cc;border-top-color:#52783c;border-radius:50%;animation:detailSpin .8s linear infinite}
-      @keyframes detailSpin{to{transform:rotate(360deg)}}
-      .detailState a{padding:11px 13px;border-radius:11px;background:#173b27;color:#fff;text-decoration:none;font-size:8px;font-weight:850}
+      .detailPin i{position:absolute;inset:-8px;border:1px solid rgba(186,255,158,.28);border-radius:22px 22px 22px 7px;animation:detailPinPulse 1.8s ease-out infinite}
+      @keyframes detailPinPulse{0%{opacity:.7;transform:scale(.84)}100%{opacity:0;transform:scale(1.28)}}
+      .detailProtected{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:8px;margin-top:10px;padding:10px;border:1px solid #eadca6;border-radius:12px;background:#fff8df;color:#806a25}
+      .detailProtected>span{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#fff0b8}
+      .detailProtected strong,.detailProtected p{display:block}
+      .detailProtected strong{font-size:7px}
+      .detailProtected p{margin:3px 0 0;font-size:6px;line-height:1.45}
+      .detailVisitors{display:flex;flex-wrap:wrap;gap:7px}
+      .detailVisitors a{display:block;width:48px;height:48px;padding:2px;border:1px solid #d4dfd0;border-radius:15px;background:#fff;box-shadow:0 8px 18px rgba(29,50,35,.06);transition:transform .16s ease}
+      .detailVisitors a:hover{transform:translateY(-2px)}
+      .detailVisitors img{width:100%;height:100%;border-radius:12px;object-fit:cover}
+      .detailVisitorsEmpty{padding:18px;border:1px dashed #d3ddd0;border-radius:13px;background:#f7f9f5;color:#88938b;font-size:7px;text-align:center}
+      .detailPassport{position:relative;overflow:hidden;padding:24px;border-radius:26px;background:radial-gradient(circle at 85% 10%,rgba(186,255,158,.14),transparent 24%),linear-gradient(145deg,#0c2718,#1c4a30);color:#baff9e;box-shadow:0 22px 48px rgba(23,58,39,.18)}
+      .detailPassport::after{content:"";position:absolute;right:-45px;bottom:-50px;width:150px;height:150px;border:1px solid rgba(186,255,158,.12);border-radius:50%}
+      .detailPassportIcon{display:grid!important;place-items:center;width:46px;height:46px;border-radius:14px;background:rgba(186,255,158,.1)}
+      .detailPassport>span{display:block;margin-top:13px;font-size:7px;font-weight:900;letter-spacing:.11em}
+      .detailPassport h3{margin:8px 0 0;color:#fff;font-size:25px;line-height:1.03;letter-spacing:-.045em}
+      .detailPassport p{margin:10px 0 0;color:rgba(255,255,255,.5);font-size:8px;line-height:1.58}
+      .detailPassport>div{display:inline-flex;align-items:center;gap:6px;margin-top:13px;padding:7px 9px;border:1px solid rgba(186,255,158,.14);border-radius:999px;background:rgba(186,255,158,.06);font-size:5px;font-weight:900;letter-spacing:.07em}
+      .detailState{display:grid;place-items:center;align-content:center;gap:8px;padding:24px;background:radial-gradient(circle at 50% 42%,rgba(186,255,158,.13),transparent 20%),#e7ece5;text-align:center}
+      .detailStateOrb{display:grid;place-items:center;width:68px;height:68px;border-radius:21px;background:#173b27;color:#baff9e;box-shadow:0 18px 42px rgba(28,56,37,.16);animation:detailStatePulse 1.5s ease-in-out infinite}
+      .detailStateOrb.error{background:#8f443b;color:#fff}
+      .detailState>small{margin-top:5px;color:#789456;font-size:6px;font-weight:900;letter-spacing:.12em}
+      .detailState>strong{font-size:17px}
+      .detailState>p{margin:0;color:#7c8780;font-size:8px}
+      .detailState a{margin-top:4px;padding:11px 13px;border-radius:11px;background:#173b27;color:#fff;text-decoration:none;font-size:8px;font-weight:850}
+      @keyframes detailStatePulse{0%,100%{transform:scale(.97);opacity:.72}50%{transform:scale(1.04);opacity:1}}
+
+      @media(max-width:1080px){
+        .detailActionDock{grid-template-columns:1fr}
+        .detailActionButtons{grid-template-columns:repeat(4,minmax(0,1fr))}
+      }
 
       @media(max-width:960px){
         .detailGrid{grid-template-columns:1fr}
         .detailHeroStats{grid-template-columns:repeat(2,minmax(0,1fr))}
-        .detailHero{min-height:750px}
+        .detailHero{min-height:790px}
+        .detailHeroCopy{padding-top:135px}
       }
 
       @media(max-width:720px){
-        .detailPage{padding:84px 0 55px}
-        .detailOfflineBar{top:70px;max-width:calc(100% - 20px);white-space:nowrap}
-        .detailHero{min-height:780px;padding:21px;border-radius:0 0 30px 30px}
-        .detailHeroCopy{padding-top:125px}
-        .detailHeroStats{right:21px;bottom:21px;left:21px}
-        .detailContent{padding:0 12px}
-        .detailActionDock{align-items:flex-start;flex-direction:column}
-        .detailActionDock>div:last-child{display:grid;grid-template-columns:1fr 1fr;width:100%}
-        .detailActionDock .accent{grid-column:1/-1}
-        .detailGallery article.featured{height:280px}
+        .detailPage{padding:84px 0 58px}
+        .detailOfflineBar{top:70px;max-width:calc(100% - 20px)}
+        .detailHero{min-height:830px;padding:20px;border-radius:0 0 32px 32px}
+        .detailHeroTop{align-items:flex-start}
+        .detailHeroStatus{display:none}
+        .detailBack{width:44px;height:44px;min-height:44px;padding:0;display:grid;place-items:center}
+        .detailBack>span{width:auto;height:auto;background:transparent}
+        .detailBack>div{display:none}
+        .detailHeroCopy{padding-top:132px}
+        .detailHero h1{font-size:58px}
+        .detailHeroStats{right:20px;bottom:20px;left:20px}
+        .detailContent{padding:0 11px}
+        .detailActionDock{padding:10px}
+        .detailActionButtons{grid-template-columns:1fr 1fr}
+        .detailPanel{padding:20px}
+        .detailGallery article.featured{height:310px}
         .detailPendingSync{right:10px;bottom:10px}
       }
 
-      @media(max-width:480px){
-        .detailHero{min-height:820px;padding:17px}
+      @media(max-width:520px){
+        .detailHero{min-height:870px;padding:17px}
+        .detailHeroCopy{padding-top:126px}
         .detailHero h1{font-size:50px}
-        .detailHeroStats{right:17px;bottom:17px;left:17px}
-        .detailContent{padding:0 9px}
-        .detailActionDock>div:last-child{grid-template-columns:1fr}
-        .detailActionDock .accent{grid-column:auto}
-        .detailPanel{padding:18px}
+        .detailHeroStats{right:17px;bottom:17px;left:17px;gap:7px}
+        .detailHeroStats article{grid-template-columns:36px minmax(0,1fr);gap:7px;padding:8px}
+        .detailHeroStatIcon{width:36px;height:36px}
+        .detailHeroStats strong{font-size:16px}
+        .detailContent{padding:0 8px}
+        .detailActionButtons{grid-template-columns:1fr}
+        .detailActionLead{grid-template-columns:40px minmax(0,1fr)}
+        .detailActionIcon{width:40px;height:40px}
+        .detailPanel{padding:17px;border-radius:21px}
+        .detailPanel>h2,.detailSectionHead h2{font-size:26px}
         .detailFacts{grid-template-columns:repeat(2,minmax(0,1fr))}
         .detailGallery{grid-template-columns:1fr}
-        .detailGallery article.featured{grid-column:auto;height:260px}
-        .detailGallery article{height:240px}
+        .detailGallery article.featured{grid-column:auto;height:280px}
+        .detailGallery article{height:250px}
+        .detailCommentForm{grid-template-columns:1fr}
+        .detailCommentForm button{width:100%}
+        .detailMiniMap{height:260px}
         .detailOfflineBar strong{display:none}
       }
 
       @media(prefers-reduced-motion:reduce){
-        *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+        *,*::before,*::after{
+          animation:none!important;
+          transition:none!important;
+          scroll-behavior:auto!important
+        }
       }
     `}</style>
   );
