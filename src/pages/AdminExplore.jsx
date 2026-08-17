@@ -392,16 +392,15 @@ export default function AdminExplore() {
           location_precision
         ),
         place_checkin_verifications (
-          id,
+          checkin_id,
+          user_id,
+          place_id,
+          latitude,
+          longitude,
           accuracy_m,
           distance_from_place_m,
           allowed_radius_m,
-          device_timestamp,
-          submitted_at,
-          is_offline,
-          offline_delay_seconds,
-          review_status,
-          review_reason
+          device_timestamp
         )
       `)
       .in("review_status", [
@@ -464,7 +463,7 @@ export default function AdminExplore() {
   }, []);
 
   const loadAll = useCallback(async () => {
-    if (profile?.role !== "admin") {
+    if (!profile?.is_admin) {
       setLoading(false);
       return;
     }
@@ -493,7 +492,7 @@ export default function AdminExplore() {
     loadLogs,
     loadPlaces,
     loadReports,
-    profile?.role,
+    profile?.is_admin,
   ]);
 
   useEffect(() => {
@@ -501,7 +500,7 @@ export default function AdminExplore() {
   }, [loadAll]);
 
   useEffect(() => {
-    if (profile?.role !== "admin") return;
+    if (!profile?.is_admin) return;
 
     const channel = supabase
       .channel("admin-explore-live")
@@ -541,7 +540,7 @@ export default function AdminExplore() {
     loadCheckins,
     loadLogs,
     loadPlaces,
-    profile?.role,
+    profile?.is_admin,
   ]);
 
   const stats = useMemo(() => {
@@ -724,16 +723,29 @@ export default function AdminExplore() {
     });
   }
 
-  if (authLoading) return null;
+  if (authLoading || !profile) {
+  return (
+    <>
+      <AdminStyles />
 
-  if (profile?.role !== "admin") {
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    );
-  }
+      <main className="adminLoading">
+        <span />
+        <strong>
+          Proveravamo admin pristup...
+        </strong>
+      </main>
+    </>
+  );
+}
+
+if (!profile.is_admin) {
+  return (
+    <Navigate
+      to="/"
+      replace
+    />
+  );
+}
 
   if (loading) {
     return (
