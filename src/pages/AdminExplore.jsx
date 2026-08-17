@@ -464,7 +464,7 @@ export default function AdminExplore() {
   }, []);
 
   const loadAll = useCallback(async () => {
-    if (!profile?.is_admin) {
+    if (profile?.role !== "admin") {
       setLoading(false);
       return;
     }
@@ -493,7 +493,7 @@ export default function AdminExplore() {
     loadLogs,
     loadPlaces,
     loadReports,
-    profile?.is_admin,
+    profile?.role,
   ]);
 
   useEffect(() => {
@@ -501,7 +501,7 @@ export default function AdminExplore() {
   }, [loadAll]);
 
   useEffect(() => {
-    if (!profile?.is_admin) return;
+    if (profile?.role !== "admin") return;
 
     const channel = supabase
       .channel("admin-explore-live")
@@ -541,7 +541,7 @@ export default function AdminExplore() {
     loadCheckins,
     loadLogs,
     loadPlaces,
-    profile?.is_admin,
+    profile?.role,
   ]);
 
   const stats = useMemo(() => {
@@ -724,29 +724,16 @@ export default function AdminExplore() {
     });
   }
 
-  if (authLoading || !profile) {
-  return (
-    <>
-      <AdminStyles />
+  if (authLoading) return null;
 
-      <main className="adminLoading">
-        <span />
-        <strong>
-          Proveravamo admin pristup...
-        </strong>
-      </main>
-    </>
-  );
-}
-
-if (!profile.is_admin) {
-  return (
-    <Navigate
-      to="/"
-      replace
-    />
-  );
-}
+  if (profile?.role !== "admin") {
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    );
+  }
 
   if (loading) {
     return (
