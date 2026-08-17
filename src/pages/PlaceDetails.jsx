@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   MapContainer,
   Marker,
@@ -83,6 +83,13 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M12 13v4M8 21h8M9 17h6" />
       </>
     ),
+    trash: (
+      <>
+        <path d="M4 7h16" />
+        <path d="M9 7V4h6v3" />
+        <path d="m7 7 1 13h8l1-13" />
+      </>
+    ),
     offline: (
       <>
         <path d="M3 3l18 18" />
@@ -138,6 +145,7 @@ function formatDate(value) {
 
 export default function PlaceDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const fileRef = useRef(null);
   const syncInFlightRef = useRef(false);
@@ -160,6 +168,7 @@ export default function PlaceDetails() {
   const [uploading, setUploading] = useState(false);
   const [comment, setComment] = useState("");
   const [commenting, setCommenting] = useState(false);
+  const [removingPlace, setRemovingPlace] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
@@ -456,6 +465,49 @@ export default function PlaceDetails() {
       });
     }
   }, [profile?.id, syncOffline]);
+
+  async function removeOwnPlace() {
+    if (!profile?.id || !place?.id) return;
+
+    if (place.created_by !== profile.id) {
+      setError("Samo autor može da ukloni ovo mesto.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Da li sigurno želiš da ukloniš ovo mesto sa MeetOutdoors mape? Mesto neće biti trajno obrisano i ostaje sačuvano u sistemu."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setRemovingPlace(true);
+      setError("");
+      setNotice("");
+
+      const { error: removeError } = await supabase.rpc(
+        "remove_own_place",
+        {
+          p_place_id: place.id,
+        }
+      );
+
+      if (removeError) throw removeError;
+
+      navigate("/explore", {
+        replace: true,
+      });
+    } catch (removeError) {
+      console.error("Remove place:", removeError);
+
+      setError(
+        removeError?.message ||
+          "Mesto trenutno nije moguće ukloniti."
+      );
+    } finally {
+      setRemovingPlace(false);
+    }
+  }
 
   async function toggleSave() {
     if (!profile?.id) {
@@ -1037,6 +1089,24 @@ export default function PlaceDetails() {
                   ? "Upload..."
                   : "Dodaj sliku"}
               </button>
+
+              {place.created_by === profile?.id && (
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={removingPlace}
+                  onClick={removeOwnPlace}
+                >
+                  <Icon
+                    name="trash"
+                    size={17}
+                  />
+
+                  {removingPlace
+                    ? "Uklanjamo..."
+                    : "Ukloni moje mesto"}
+                </button>
+              )}
 
               <input
                 ref={fileRef}

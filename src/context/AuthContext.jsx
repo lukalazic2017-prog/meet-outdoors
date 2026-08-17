@@ -62,17 +62,18 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        loading,
-        isLoggedIn: !!user,
-        isHost: profile?.role === "host",
-        isUser: profile?.role === "user",
-        logout,
-        reloadAuth: loadAuth,
-      }}
-    >
+  value={{
+    user,
+    profile,
+    loading,
+    isLoggedIn: !!user,
+    isHost: profile?.role === "host",
+    isUser: profile?.role === "user",
+    isAdmin: profile?.is_admin === true,
+    logout,
+    reloadAuth: loadAuth,
+  }}
+>
       {children}
     </AuthContext.Provider>
   );
