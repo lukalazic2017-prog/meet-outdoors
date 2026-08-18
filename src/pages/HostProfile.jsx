@@ -628,22 +628,31 @@ export default function HostProfile() {
           .select(`
             id,
             place_id,
+            checkin_id,
             image_url,
             caption,
             created_at,
             moderation_status,
-            places:place_id (
+            places:place_id!inner (
               id,
               name,
               cover_url,
               latitude,
               longitude,
               locality,
-              region
+              region,
+              is_active
+            ),
+            place_checkins:checkin_id (
+              id,
+              review_status,
+              visibility,
+              is_gps_verified
             )
           `)
           .eq("user_id", hostData.id)
           .eq("moderation_status", "approved")
+          .eq("places.is_active", true)
           .order("created_at", { ascending: false })
           .limit(30),
 
@@ -655,18 +664,24 @@ export default function HostProfile() {
             visited_at,
             created_at,
             is_gps_verified,
-            places:place_id (
+            visibility,
+            review_status,
+            places:place_id!inner (
               id,
               name,
               cover_url,
               latitude,
               longitude,
               locality,
-              region
+              region,
+              is_active
             )
           `)
           .eq("user_id", hostData.id)
           .eq("is_gps_verified", true)
+          .eq("visibility", "public")
+          .eq("review_status", "approved")
+          .eq("places.is_active", true)
           .order("created_at", { ascending: false })
           .limit(300),
 
@@ -690,9 +705,22 @@ export default function HostProfile() {
       setPackages(cleanPackages);
 
       if (!photosResult.error) {
-        setHostPhotos(
-          photosResult.data || []
+        const visibleHostPhotos = (photosResult.data || []).filter(
+          (photo) => {
+            if (!photo.places?.is_active) return false;
+
+            if (!photo.checkin_id) return true;
+
+            return Boolean(
+              photo.place_checkins &&
+                photo.place_checkins.review_status === "approved" &&
+                photo.place_checkins.visibility === "public" &&
+                photo.place_checkins.is_gps_verified === true
+            );
+          }
         );
+
+        setHostPhotos(visibleHostPhotos);
       } else {
         console.warn(
           "Host place photos:",
@@ -866,6 +894,52 @@ export default function HostProfile() {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`host-profile-live-${username}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "places",
+        },
+        loadProfile
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "place_checkins",
+        },
+        loadProfile
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "place_photos",
+        },
+        loadProfile
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "place_host_tags",
+        },
+        loadProfile
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadProfile, username]);
 
   const reviewStats = useMemo(() => {
     if (reviews.length === 0) {

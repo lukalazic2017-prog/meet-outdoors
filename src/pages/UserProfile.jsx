@@ -310,7 +310,8 @@ export default function UserProfile() {
             created_at,
             is_gps_verified,
             visibility,
-            places:place_id (
+            review_status,
+            places:place_id!inner (
               id,
               name,
               latitude,
@@ -329,6 +330,8 @@ export default function UserProfile() {
           .eq("user_id", userProfile.id)
           .eq("is_gps_verified", true)
           .eq("visibility", "public")
+          .eq("review_status", "approved")
+          .eq("places.is_active", true)
           .order("created_at", {
             ascending: false,
           })
@@ -339,20 +342,23 @@ export default function UserProfile() {
           .select(`
             id,
             place_id,
+            checkin_id,
             image_url,
             caption,
             created_at,
             moderation_status,
-            places:place_id (
+            places:place_id!inner (
               id,
               name,
               cover_url,
               locality,
-              region
+              region,
+              is_active
             )
           `)
           .eq("user_id", userProfile.id)
           .eq("moderation_status", "approved")
+          .eq("places.is_active", true)
           .order("created_at", {
             ascending: false,
           })
@@ -364,7 +370,7 @@ export default function UserProfile() {
             id,
             place_id,
             created_at,
-            places:place_id (
+            places:place_id!inner (
               id,
               name,
               cover_url,
@@ -381,18 +387,23 @@ export default function UserProfile() {
             )
           `)
           .eq("user_id", userProfile.id)
+          .eq("places.is_active", true)
           .order("created_at", {
             ascending: false,
           })
           .limit(100),
       ]);
 
+      const validCheckins = checkinsResult.error
+        ? []
+        : checkinsResult.data || [];
+
+      const validCheckinIds = new Set(
+        validCheckins.map((item) => item.id)
+      );
+
       if (!checkinsResult.error) {
-        setCheckins(
-          (checkinsResult.data || []).filter(
-            (item) => item.places
-          )
-        );
+        setCheckins(validCheckins);
       } else {
         console.warn(
           "User checkins:",
@@ -402,7 +413,13 @@ export default function UserProfile() {
       }
 
       if (!photosResult.error) {
-        setPhotos(photosResult.data || []);
+        setPhotos(
+          (photosResult.data || []).filter(
+            (photo) =>
+              !photo.checkin_id ||
+              validCheckinIds.has(photo.checkin_id)
+          )
+        );
       } else {
         console.warn(
           "User photos:",
@@ -412,11 +429,7 @@ export default function UserProfile() {
       }
 
       if (!savesResult.error) {
-        setSavedPlaces(
-          (savesResult.data || []).filter(
-            (item) => item.places
-          )
-        );
+        setSavedPlaces(savesResult.data || []);
       } else {
         console.warn(
           "User saves:",
@@ -447,6 +460,56 @@ export default function UserProfile() {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    const refreshProfile = () => {
+      loadProfile();
+    };
+
+    const channel = supabase
+      .channel(`user-profile-live-${username}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "places",
+        },
+        refreshProfile
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "place_checkins",
+        },
+        refreshProfile
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "place_photos",
+        },
+        refreshProfile
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "place_saves",
+        },
+        refreshProfile
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadProfile, username]);
 
   const isOwnProfile =
     currentUserId === profile?.id;
