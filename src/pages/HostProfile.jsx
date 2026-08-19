@@ -1414,6 +1414,10 @@ export default function HostProfile() {
                   profile.cover_url ||
                   FALLBACK_COVER
                 }
+                avatar={
+                  profile.avatar_url ||
+                  FALLBACK_AVATAR
+                }
                 location={location}
                 url={`${window.location.origin}/h/${profile.username}`}
                 triggerClassName="hostAction hostShareAction"
