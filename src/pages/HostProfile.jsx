@@ -17,6 +17,7 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "../supabaseClient";
+import ShareSheet from "../components/ShareSheet";
 
 const FALLBACK_AVATAR =
   "https://api.dicebear.com/8.x/initials/svg?seed=Host";
@@ -1405,6 +1406,20 @@ export default function HostProfile() {
                   </div>
                 </a>
               )}
+
+              <ShareSheet
+                type="host"
+                title={displayName}
+                image={
+                  profile.cover_url ||
+                  FALLBACK_COVER
+                }
+                location={location}
+                url={`${window.location.origin}/h/${profile.username}`}
+                triggerClassName="hostAction hostShareAction"
+                triggerEyebrow="PODELI"
+                triggerLabel="Profil"
+              />
             </section>
 
             <section className="hostStats">
@@ -2314,14 +2329,16 @@ function HostProfileStyles() {
       .heroTrustStrip strong{font-size:21px;letter-spacing:-.04em}
       .heroTrustStrip span{margin-top:4px;color:rgba(255,255,255,.42);font-size:6px;font-weight:850;text-transform:uppercase}
       .profileContent{position:relative;padding:30px}
-      .hostActionBar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:18px}
-      .hostAction{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:9px;min-height:64px;padding:9px;border:1px solid #dce4d9;border-radius:17px;background:#fff}
+      .hostActionBar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-bottom:18px}
+      .hostAction{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:9px;min-height:64px;padding:9px;border:1px solid #dce4d9;border-radius:17px;background:#fff;color:inherit;text-align:left;cursor:pointer}
       .hostAction>svg{justify-self:center;color:#5b7741}
       .hostAction small,.hostAction strong{display:block}
       .hostAction small{color:#9aa39d;font-size:5px;font-weight:900;letter-spacing:.08em}
       .hostAction strong{margin-top:2px;font-size:8px}
       .hostAction.primary{border-color:#173b27;background:#173b27;color:white}
       .hostAction.primary>svg{color:#baff9e}
+      .hostShareAction{border-color:#cfe0c3;background:linear-gradient(145deg,#f7fbf3,#eef6e8)}
+      .hostShareAction>svg{color:#173b27!important}
       .hostStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
       .hostStats article{display:flex;align-items:center;gap:12px;min-width:0;padding:16px;border:1px solid #dfe5dc;border-radius:18px;background:rgba(255,255,255,.75)}
       .hostStats article>span{display:grid;place-items:center;flex:0 0 auto;width:42px;height:42px;border-radius:13px;background:#e9f2de;color:#58743f}

@@ -7,6 +7,7 @@ import React, {
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import ShareSheet from "../components/ShareSheet";
 
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600";
@@ -986,6 +987,19 @@ export default function PackageDetails() {
                 <Icon name="calendar" size={18} />
                 {bookingButtonText}
               </button>
+
+              <ShareSheet
+                type="package"
+                title={item.title}
+                image={item.cover_url || FALLBACK_COVER}
+                location={location}
+                subtitle={`${formatDate(item.start_date)} · ${
+                  item.currency || "EUR"
+                } ${item.price || 0}`}
+                triggerClassName="packageShareButton"
+                triggerEyebrow="PODELI"
+                triggerLabel="Paket"
+              />
             </div>
           </div>
 
@@ -1716,6 +1730,11 @@ function PackageDetailsStyles() {
       .packageInterestedButton{border:1px solid #d4dfcf;background:#f8faf6;color:#526758}
       .packageInterestedButton.active{border-color:#d7aaa5;background:#fff0ee;color:#a34c43}
       .packageBookButton,.packageForm button{border:1px solid #244d34;background:#183a27;color:white}
+      .packageShareButton{display:inline-grid!important;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;min-height:45px;padding:0 15px;border:1px solid #d4dfcf;border-radius:14px;background:#f8faf6;color:#526758;cursor:pointer;text-align:left;transition:.2s}
+      .packageShareButton:hover{transform:translateY(-2px);border-color:#a8bb9c;background:#fff}
+      .packageShareButton small,.packageShareButton strong{display:block}
+      .packageShareButton small{color:#87958b;font-size:5px;font-weight:900;letter-spacing:.09em}
+      .packageShareButton strong{margin-top:2px;color:#385044;font-size:9px}
       .packageActionButtons button:disabled,.packageForm button:disabled{cursor:not-allowed;opacity:.65}
       .packageGallerySection,.packageMainGrid,.packageCommunityGrid{margin-top:18px}
       .packageSectionHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:16px}

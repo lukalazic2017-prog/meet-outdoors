@@ -7,6 +7,7 @@ import React, {
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import ShareSheet from "../components/ShareSheet";
 
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&auto=format&fit=crop";
@@ -813,6 +814,18 @@ export default function EventDetails() {
             </div>
 
             <div className="eventActionButtons">
+              <ShareSheet
+                type="event"
+                title={event.title || "Outdoor događaj"}
+                image={event.cover_url || FALLBACK_COVER}
+                location={location}
+                subtitle={`${formatDate(event.start_date)} · €${event.price || 0}`}
+                url={`https://meetoutdoors.app/event/${event.id}`}
+                triggerClassName="eventShareButton"
+                triggerEyebrow="PODELI"
+                triggerLabel="Događaj"
+              />
+
               {canJoin && (
                 <button
                   type="button"
@@ -1690,6 +1703,49 @@ function EventDetailsStyles() {
         background: #f8faf6;
         color: #4f6657;
         cursor: pointer;
+      }
+
+      .eventShareButton {
+        display: inline-grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        min-height: 46px;
+        padding: 7px 14px;
+        border: 1px solid #d5dfd2;
+        border-radius: 14px;
+        background: #f8faf6;
+        color: #4f6657;
+        cursor: pointer;
+        text-align: left;
+        transition: 0.2s ease;
+      }
+
+      .eventShareButton:hover {
+        transform: translateY(-2px);
+        border-color: #b7c8b2;
+        background: #ffffff;
+      }
+
+      .eventShareButton > div {
+        min-width: 0;
+      }
+
+      .eventShareButton small,
+      .eventShareButton strong {
+        display: block;
+      }
+
+      .eventShareButton small {
+        color: #7c9664;
+        font-size: 6px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+
+      .eventShareButton strong {
+        margin-top: 2px;
+        font-size: 9px;
       }
 
       .eventParticipantsPanel {
