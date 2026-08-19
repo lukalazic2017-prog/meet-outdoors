@@ -120,6 +120,14 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M5 16h14" />
       </>
     ),
+    grid: (
+      <>
+        <rect x="4" y="4" width="6" height="6" rx="1.5" />
+        <rect x="14" y="4" width="6" height="6" rx="1.5" />
+        <rect x="4" y="14" width="6" height="6" rx="1.5" />
+        <rect x="14" y="14" width="6" height="6" rx="1.5" />
+      </>
+    ),
   };
 
   return (
@@ -298,6 +306,16 @@ export default function AdminExplore() {
   const [checkins, setCheckins] = useState([]);
   const [logs, setLogs] = useState([]);
   const [reports, setReports] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [placeComments, setPlaceComments] = useState([]);
+  const [eventComments, setEventComments] = useState([]);
+  const [packageComments, setPackageComments] = useState([]);
+  const [hostDocuments, setHostDocuments] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState(null);
@@ -309,6 +327,319 @@ export default function AdminExplore() {
     type: null,
     entity: null,
   });
+
+  const [suspendModal, setSuspendModal] = useState({
+    open: false,
+    entity: null,
+  });
+
+  const loadProfiles = useCallback(async () => {
+    const { data, error: profilesError } = await supabase
+      .from("profiles")
+      .select(`
+        id,
+        role,
+        full_name,
+        username,
+        city,
+        country,
+        avatar_url,
+        phone,
+        is_verified,
+        is_admin,
+        account_status,
+        ban_reason,
+        banned_at,
+        suspended_until,
+        created_at,
+        updated_at
+      `)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    if (profilesError) throw profilesError;
+    setProfiles(data || []);
+  }, []);
+
+  const loadEvents = useCallback(async () => {
+    const { data, error: eventsError } = await supabase
+      .from("events")
+      .select(`
+        id,
+        host_id,
+        title,
+        description,
+        location,
+        country,
+        cover_url,
+        price,
+        capacity,
+        start_date,
+        end_date,
+        is_active,
+        created_at,
+        updated_at,
+        place_id,
+        host:host_id (
+          id,
+          username,
+          full_name,
+          avatar_url,
+          role,
+          account_status
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(300);
+
+    if (eventsError) throw eventsError;
+    setEvents(data || []);
+  }, []);
+
+  const loadPackages = useCallback(async () => {
+    const { data, error: packagesError } = await supabase
+      .from("packages")
+      .select(`
+        id,
+        host_id,
+        title,
+        description,
+        activity,
+        city,
+        country,
+        location_text,
+        price,
+        currency,
+        image_url,
+        cover_url,
+        duration,
+        duration_text,
+        capacity,
+        start_date,
+        end_date,
+        is_active,
+        created_at,
+        updated_at,
+        place_id,
+        host:host_id (
+          id,
+          username,
+          full_name,
+          avatar_url,
+          role,
+          account_status
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(300);
+
+    if (packagesError) throw packagesError;
+    setPackages(data || []);
+  }, []);
+
+  const loadBookings = useCallback(async () => {
+    const { data, error: bookingsError } = await supabase
+      .from("bookings")
+      .select(`
+        id,
+        package_id,
+        user_id,
+        host_id,
+        guests,
+        note,
+        status,
+        payment_status,
+        paid_at,
+        approved_at,
+        rejected_at,
+        cancelled_at,
+        completed_at,
+        host_note,
+        total_amount,
+        currency,
+        first_name,
+        last_name,
+        email,
+        phone,
+        created_at,
+        updated_at,
+        user:user_id (
+          id,
+          username,
+          full_name,
+          avatar_url,
+          role,
+          account_status
+        ),
+        host:host_id (
+          id,
+          username,
+          full_name,
+          avatar_url,
+          role,
+          account_status
+        ),
+        package:package_id (
+          id,
+          title,
+          cover_url,
+          image_url
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    if (bookingsError) throw bookingsError;
+    setBookings(data || []);
+  }, []);
+
+  const loadPhotos = useCallback(async () => {
+    const { data, error: photosError } = await supabase
+      .from("place_photos")
+      .select(`
+        id,
+        place_id,
+        user_id,
+        checkin_id,
+        storage_path,
+        image_url,
+        caption,
+        width,
+        height,
+        file_size,
+        mime_type,
+        moderation_status,
+        is_cover_candidate,
+        created_at,
+        profiles:user_id (
+          id,
+          username,
+          full_name,
+          avatar_url,
+          role,
+          account_status
+        ),
+        places:place_id (
+          id,
+          name,
+          locality,
+          region,
+          is_active
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(400);
+
+    if (photosError) throw photosError;
+    setPhotos(data || []);
+  }, []);
+
+  const loadComments = useCallback(async () => {
+    const [placeResult, eventResult, packageResult] = await Promise.all([
+      supabase
+        .from("place_comments")
+        .select(`
+          id,
+          place_id,
+          user_id,
+          body,
+          parent_id,
+          moderation_status,
+          created_at,
+          updated_at,
+          profiles:user_id (
+            id,
+            username,
+            full_name,
+            avatar_url,
+            role
+          ),
+          places:place_id (
+            id,
+            name
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(250),
+      supabase
+        .from("event_comments")
+        .select(`
+          id,
+          event_id,
+          user_id,
+          body,
+          created_at,
+          profiles:user_id (
+            id,
+            username,
+            full_name,
+            avatar_url,
+            role
+          ),
+          events:event_id (
+            id,
+            title
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(250),
+      supabase
+        .from("package_comments")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(250),
+    ]);
+
+    if (placeResult.error) throw placeResult.error;
+    if (eventResult.error) throw eventResult.error;
+    if (packageResult.error) throw packageResult.error;
+
+    setPlaceComments(placeResult.data || []);
+    setEventComments(eventResult.data || []);
+    setPackageComments(packageResult.data || []);
+  }, []);
+
+  const loadHostDocuments = useCallback(async () => {
+    const { data, error: documentsError } = await supabase
+      .from("host_documents")
+      .select(`
+        id,
+        host_id,
+        document_type,
+        title,
+        file_url,
+        issued_at,
+        expires_at,
+        notes,
+        created_at,
+        updated_at,
+        host:host_id (
+          id,
+          username,
+          full_name,
+          avatar_url,
+          role,
+          account_status,
+          is_verified
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(300);
+
+    if (documentsError) throw documentsError;
+    setHostDocuments(data || []);
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    const { data, error: notificationsError } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(400);
+
+    if (notificationsError) throw notificationsError;
+    setNotifications(data || []);
+  }, []);
 
   const loadPlaces = useCallback(async () => {
     const { data, error: placesError } = await supabase
@@ -473,10 +804,18 @@ export default function AdminExplore() {
 
     try {
       await Promise.all([
+        loadProfiles(),
+        loadEvents(),
+        loadPackages(),
+        loadBookings(),
         loadPlaces(),
         loadCheckins(),
-        loadLogs(),
+        loadPhotos(),
+        loadComments(),
         loadReports(),
+        loadHostDocuments(),
+        loadNotifications(),
+        loadLogs(),
       ]);
     } catch (loadError) {
       console.error(loadError);
@@ -488,9 +827,17 @@ export default function AdminExplore() {
       setLoading(false);
     }
   }, [
+    loadBookings,
     loadCheckins,
+    loadComments,
+    loadEvents,
+    loadHostDocuments,
     loadLogs,
+    loadNotifications,
+    loadPackages,
+    loadPhotos,
     loadPlaces,
+    loadProfiles,
     loadReports,
     profile?.is_admin,
   ]);
@@ -506,29 +853,72 @@ export default function AdminExplore() {
       .channel("admin-explore-live")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "places",
-        },
+        { event: "*", schema: "public", table: "profiles" },
+        loadProfiles
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "events" },
+        loadEvents
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "packages" },
+        loadPackages
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        loadBookings
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "places" },
         loadPlaces
       )
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "place_checkins",
-        },
+        { event: "*", schema: "public", table: "place_checkins" },
         loadCheckins
       )
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "explore_admin_log",
-        },
+        { event: "*", schema: "public", table: "place_photos" },
+        loadPhotos
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "place_comments" },
+        loadComments
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "event_comments" },
+        loadComments
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "package_comments" },
+        loadComments
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "place_reports" },
+        loadReports
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "host_documents" },
+        loadHostDocuments
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications" },
+        loadNotifications
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "explore_admin_log" },
         loadLogs
       )
       .subscribe();
@@ -537,26 +927,32 @@ export default function AdminExplore() {
       supabase.removeChannel(channel);
     };
   }, [
+    loadBookings,
     loadCheckins,
+    loadComments,
+    loadEvents,
+    loadHostDocuments,
     loadLogs,
+    loadNotifications,
+    loadPackages,
+    loadPhotos,
     loadPlaces,
+    loadProfiles,
+    loadReports,
     profile?.is_admin,
   ]);
 
   const stats = useMemo(() => {
     const pendingPlaces = places.filter(
-      (place) =>
-        place.moderation_status === "pending"
+      (place) => place.moderation_status === "pending"
     ).length;
 
     const flaggedPlaces = places.filter(
-      (place) =>
-        place.moderation_status === "flagged"
+      (place) => place.moderation_status === "flagged"
     ).length;
 
     const reviewCheckins = checkins.filter(
-      (checkin) =>
-        checkin.review_status === "review"
+      (checkin) => checkin.review_status === "review"
     ).length;
 
     const offlineReview = checkins.filter(
@@ -571,8 +967,51 @@ export default function AdminExplore() {
       reviewCheckins,
       offlineReview,
       reports: reports.length,
+      openReports: reports.filter(
+        (report) => report.status !== "resolved"
+      ).length,
+      users: profiles.filter((item) => item.role === "user").length,
+      hosts: profiles.filter((item) => item.role === "host").length,
+      banned: profiles.filter(
+        (item) => item.account_status === "banned"
+      ).length,
+      suspended: profiles.filter(
+        (item) => item.account_status === "suspended"
+      ).length,
+      events: events.length,
+      activeEvents: events.filter((item) => item.is_active).length,
+      packages: packages.length,
+      activePackages: packages.filter((item) => item.is_active).length,
+      bookings: bookings.length,
+      pendingBookings: bookings.filter((item) =>
+        ["pending", "requested"].includes(item.status)
+      ).length,
+      photos: photos.length,
+      pendingPhotos: photos.filter(
+        (item) => item.moderation_status === "pending"
+      ).length,
+      comments:
+        placeComments.length +
+        eventComments.length +
+        packageComments.length,
+      documents: hostDocuments.length,
+      notifications: notifications.length,
     };
-  }, [checkins, places, reports.length]);
+  }, [
+    bookings,
+    checkins,
+    eventComments.length,
+    events,
+    hostDocuments.length,
+    notifications.length,
+    packageComments.length,
+    packages,
+    photos,
+    placeComments.length,
+    places,
+    profiles,
+    reports,
+  ]);
 
   const filteredPlaces = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -615,6 +1054,214 @@ export default function AdminExplore() {
         );
     });
   }, [checkins, query]);
+
+  const filteredProfiles = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return profiles;
+
+    return profiles.filter((item) =>
+      [
+        item.full_name,
+        item.username,
+        item.city,
+        item.country,
+        item.role,
+        item.account_status,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [profiles, query]);
+
+  const filteredEvents = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return events;
+
+    return events.filter((item) =>
+      [
+        item.title,
+        item.location,
+        item.country,
+        item.host?.full_name,
+        item.host?.username,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [events, query]);
+
+  const filteredPackages = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return packages;
+
+    return packages.filter((item) =>
+      [
+        item.title,
+        item.activity,
+        item.city,
+        item.country,
+        item.location_text,
+        item.host?.full_name,
+        item.host?.username,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [packages, query]);
+
+  const filteredBookings = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return bookings;
+
+    return bookings.filter((item) =>
+      [
+        item.package?.title,
+        item.user?.full_name,
+        item.user?.username,
+        item.host?.full_name,
+        item.host?.username,
+        item.first_name,
+        item.last_name,
+        item.email,
+        item.phone,
+        item.status,
+        item.payment_status,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [bookings, query]);
+
+  const filteredPhotos = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return photos;
+
+    return photos.filter((item) =>
+      [
+        item.places?.name,
+        item.profiles?.full_name,
+        item.profiles?.username,
+        item.caption,
+        item.moderation_status,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [photos, query]);
+
+  const allComments = useMemo(() => {
+    const placeItems = placeComments.map((item) => ({
+      ...item,
+      source: "place",
+      sourceTitle: item.places?.name || "Explore lokacija",
+      author: item.profiles || null,
+    }));
+
+    const eventItems = eventComments.map((item) => ({
+      ...item,
+      source: "event",
+      sourceTitle: item.events?.title || "Događaj",
+      author: item.profiles || null,
+    }));
+
+    const packageItems = packageComments.map((item) => ({
+      ...item,
+      source: "package",
+      sourceTitle: "Paket",
+      author: null,
+      body:
+        item.body ||
+        item.comment ||
+        item.message ||
+        item.text ||
+        "Komentar bez tekstualnog polja",
+    }));
+
+    return [...placeItems, ...eventItems, ...packageItems].sort(
+      (a, b) =>
+        new Date(b.created_at || 0).getTime() -
+        new Date(a.created_at || 0).getTime()
+    );
+  }, [eventComments, packageComments, placeComments]);
+
+  const filteredComments = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return allComments;
+
+    return allComments.filter((item) =>
+      [
+        item.body,
+        item.source,
+        item.sourceTitle,
+        item.author?.full_name,
+        item.author?.username,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [allComments, query]);
+
+  const filteredReports = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return reports;
+
+    return reports.filter((item) =>
+      [
+        item.entity_type,
+        item.reason,
+        item.details,
+        item.status,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [query, reports]);
+
+  const filteredDocuments = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return hostDocuments;
+
+    return hostDocuments.filter((item) =>
+      [
+        item.title,
+        item.document_type,
+        item.host?.full_name,
+        item.host?.username,
+        item.notes,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [hostDocuments, query]);
+
+  const filteredNotifications = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return notifications;
+
+    return notifications.filter((item) =>
+      [item.type, item.title, item.message, item.user_id]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(needle)
+        )
+    );
+  }, [notifications, query]);
 
   const pendingPlaces = filteredPlaces.filter(
     (place) =>
@@ -662,6 +1309,109 @@ export default function AdminExplore() {
     } finally {
       setWorkingId(null);
     }
+  }
+
+  async function updateRow({
+    id,
+    table,
+    values,
+    successMessage,
+    reload,
+  }) {
+    setWorkingId(id);
+    setError("");
+    setNotice("");
+
+    try {
+      const { error: updateError } = await supabase
+        .from(table)
+        .update(values)
+        .eq("id", id);
+
+      if (updateError) throw updateError;
+
+      setNotice(successMessage);
+      await Promise.all([
+        reload?.(),
+        loadLogs(),
+      ].filter(Boolean));
+    } catch (actionError) {
+      setError(
+        actionError?.message ||
+          "Admin akcija nije uspela. Proveri admin RLS politike."
+      );
+    } finally {
+      setWorkingId(null);
+    }
+  }
+
+  async function deleteRow({
+    id,
+    table,
+    successMessage,
+    reload,
+  }) {
+    const confirmed = window.confirm(
+      "Da li sigurno želiš da ukloniš ovaj sadržaj?"
+    );
+
+    if (!confirmed) return;
+
+    setWorkingId(id);
+    setError("");
+    setNotice("");
+
+    try {
+      const { error: deleteError } = await supabase
+        .from(table)
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) throw deleteError;
+
+      setNotice(successMessage);
+      await reload?.();
+    } catch (actionError) {
+      setError(
+        actionError?.message ||
+          "Sadržaj trenutno nije moguće ukloniti."
+      );
+    } finally {
+      setWorkingId(null);
+    }
+  }
+
+  async function restoreAccount(entity) {
+    await runAction({
+      id: entity.id,
+      rpc: "admin_restore_user",
+      params: {
+        p_user_id: entity.id,
+        p_reason: "Nalog vraćen iz MeetOutdoors admin panela.",
+      },
+      successMessage: "Nalog je ponovo aktivan.",
+    });
+
+    await loadProfiles();
+  }
+
+  async function confirmSuspend({ reason, until }) {
+    const entity = suspendModal.entity;
+    if (!entity) return;
+
+    await runAction({
+      id: entity.id,
+      rpc: "admin_suspend_user",
+      params: {
+        p_user_id: entity.id,
+        p_until: until,
+        p_reason: reason,
+      },
+      successMessage: "Nalog je suspendovan.",
+    });
+
+    await loadProfiles();
+    setSuspendModal({ open: false, entity: null });
   }
 
   function openReason(type, entity) {
@@ -716,6 +1466,20 @@ export default function AdminExplore() {
       });
     }
 
+    if (type === "ban-account") {
+      await runAction({
+        id: entity.id,
+        rpc: "admin_ban_user",
+        params: {
+          p_user_id: entity.id,
+          p_reason: reason,
+        },
+        successMessage: "Nalog je banovan.",
+      });
+
+      await loadProfiles();
+    }
+
     setReasonModal({
       open: false,
       type: null,
@@ -767,31 +1531,132 @@ if (!profile.is_admin) {
       id: "overview",
       label: "Pregled",
       icon: "activity",
+      eyebrow: "OPERATIVNI PREGLED",
+      title: "Cela aplikacija na jednom mestu",
+    },
+    {
+      id: "users",
+      label: "Korisnici",
+      icon: "user",
+      count: stats.users,
+      eyebrow: "COMMUNITY CONTROL",
+      title: `${stats.users} korisnika`,
+    },
+    {
+      id: "hosts",
+      label: "Hostovi",
+      icon: "shield",
+      count: stats.hosts,
+      eyebrow: "HOST NETWORK",
+      title: `${stats.hosts} hostova`,
+    },
+    {
+      id: "events",
+      label: "Događaji",
+      icon: "activity",
+      count: stats.events,
+      eyebrow: "EVENT OPERATIONS",
+      title: `${stats.events} događaja`,
+    },
+    {
+      id: "packages",
+      label: "Paketi",
+      icon: "grid",
+      count: stats.packages,
+      eyebrow: "PACKAGE OPERATIONS",
+      title: `${stats.packages} paketa`,
+    },
+    {
+      id: "bookings",
+      label: "Rezervacije",
+      icon: "clock",
+      count: stats.pendingBookings,
+      eyebrow: "BOOKING CONTROL",
+      title: `${stats.bookings} rezervacija`,
+    },
+    {
+      id: "allplaces",
+      label: "Sve lokacije",
+      icon: "pin",
+      count: places.length,
+      eyebrow: "EXPLORE MAP CONTROL",
+      title: `${places.length} lokacija u sistemu`,
     },
     {
       id: "places",
       label: "Novi pinovi",
       icon: "pin",
       count: stats.pendingPlaces,
+      eyebrow: "NOVI PINOVI",
+      title: `${pendingPlaces.length} novih lokacija`,
     },
     {
       id: "flagged",
-      label: "Flagovane lokacije",
+      label: "Flagovane",
       icon: "flag",
       count: stats.flaggedPlaces,
+      eyebrow: "FLAGOVANE LOKACIJE",
+      title: `${flaggedPlaces.length} flagovanih lokacija`,
     },
     {
       id: "checkins",
       label: "Check-in review",
       icon: "navigation",
       count: stats.reviewCheckins,
+      eyebrow: "GPS CHECK-IN REVIEW",
+      title: `${reviewCheckins.length} check-inova za proveru`,
+    },
+    {
+      id: "photos",
+      label: "Fotografije",
+      icon: "camera",
+      count: stats.pendingPhotos,
+      eyebrow: "MEDIA MODERATION",
+      title: `${stats.photos} fotografija`,
+    },
+    {
+      id: "comments",
+      label: "Komentari",
+      icon: "menu",
+      count: stats.comments,
+      eyebrow: "COMMUNITY CONTENT",
+      title: `${stats.comments} komentara`,
+    },
+    {
+      id: "reports",
+      label: "Prijave",
+      icon: "alert",
+      count: stats.openReports,
+      eyebrow: "REPORT CENTER",
+      title: `${stats.openReports} otvorenih prijava`,
+    },
+    {
+      id: "documents",
+      label: "Host dokumenta",
+      icon: "shield",
+      count: stats.documents,
+      eyebrow: "HOST DOCUMENTS",
+      title: `${stats.documents} dokumenata`,
+    },
+    {
+      id: "notifications",
+      label: "Notifikacije",
+      icon: "menu",
+      count: stats.notifications,
+      eyebrow: "SYSTEM NOTIFICATIONS",
+      title: `${stats.notifications} notifikacija`,
     },
     {
       id: "log",
       label: "Admin log",
       icon: "log",
+      eyebrow: "AUDIT TRAIL",
+      title: `${logs.length} poslednjih admin akcija`,
     },
   ];
+
+  const activeTabInfo =
+    tabs.find((tab) => tab.id === activeTab) || tabs[0];
 
   return (
     <>
@@ -815,7 +1680,7 @@ if (!profile.is_admin) {
                   MEETOUTDOORS
                 </small>
                 <strong>
-                  Explore Control
+                  Control Center
                 </strong>
               </div>
             </div>
@@ -836,7 +1701,7 @@ if (!profile.is_admin) {
           <div className="adminHeroCopy">
             <span className="adminEyebrow">
               <i />
-              LIVE MODERATION SYSTEM
+              LIVE APPLICATION CONTROL
             </span>
 
             <h1>
@@ -846,9 +1711,9 @@ if (!profile.is_admin) {
             </h1>
 
             <p>
-              Novi pinovi, sumnjivi GPS check-inovi,
-              offline anomalije i svaka administratorska
-              odluka — na jednom mestu.
+              Korisnici, hostovi, događaji, paketi, rezervacije,
+              Explore mapa, sadržaj i svaka moderatorska odluka —
+              kompletna MeetOutdoors aplikacija pod jednom kontrolom.
             </p>
           </div>
 
@@ -910,7 +1775,7 @@ if (!profile.is_admin) {
                 CONTROL CENTER
               </span>
               <strong>
-                Moderacija
+                Aplikacija
               </strong>
             </div>
 
@@ -967,29 +1832,9 @@ if (!profile.is_admin) {
           <section className="adminMain">
             <header className="adminMainHeader">
               <div>
-                <span>
-                  {activeTab === "overview"
-                    ? "OPERATIVNI PREGLED"
-                    : activeTab === "places"
-                      ? "NOVI PINOVI"
-                      : activeTab === "flagged"
-                        ? "FLAGOVANE LOKACIJE"
-                        : activeTab === "checkins"
-                          ? "GPS CHECK-IN REVIEW"
-                          : "AUDIT TRAIL"}
-                </span>
+                <span>{activeTabInfo.eyebrow}</span>
 
-                <h2>
-                  {activeTab === "overview"
-                    ? "Šta zahteva tvoju pažnju?"
-                    : activeTab === "places"
-                      ? `${pendingPlaces.length} novih lokacija`
-                      : activeTab === "flagged"
-                        ? `${flaggedPlaces.length} flagovanih lokacija`
-                        : activeTab === "checkins"
-                          ? `${reviewCheckins.length} check-inova za proveru`
-                          : `${logs.length} poslednjih admin akcija`}
-                </h2>
+                <h2>{activeTabInfo.title}</h2>
               </div>
 
               {activeTab !== "log" && (
@@ -1048,6 +1893,62 @@ if (!profile.is_admin) {
 
             {activeTab === "overview" && (
               <div className="adminOverview">
+                <section className="adminGlobalOverview">
+                  <header>
+                    <div>
+                      <span>MEETOUTDOORS PULSE</span>
+                      <h3>Kompletan sistem, uživo.</h3>
+                    </div>
+
+                    <small>
+                      {stats.banned} banovanih · {stats.suspended} suspendovanih
+                    </small>
+                  </header>
+
+                  <div className="adminGlobalGrid">
+                    <button type="button" onClick={() => setActiveTab("users")}>
+                      <span><Icon name="user" size={19} /></span>
+                      <strong>{stats.users}</strong>
+                      <small>Korisnika</small>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab("hosts")}>
+                      <span><Icon name="shield" size={19} /></span>
+                      <strong>{stats.hosts}</strong>
+                      <small>Hostova</small>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab("events")}>
+                      <span><Icon name="activity" size={19} /></span>
+                      <strong>{stats.activeEvents}</strong>
+                      <small>Aktivnih događaja</small>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab("packages")}>
+                      <span><Icon name="grid" size={19} /></span>
+                      <strong>{stats.activePackages}</strong>
+                      <small>Aktivnih paketa</small>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab("bookings")}>
+                      <span><Icon name="clock" size={19} /></span>
+                      <strong>{stats.bookings}</strong>
+                      <small>Rezervacija</small>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab("allplaces")}>
+                      <span><Icon name="pin" size={19} /></span>
+                      <strong>{places.length}</strong>
+                      <small>Lokacija</small>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab("photos")}>
+                      <span><Icon name="camera" size={19} /></span>
+                      <strong>{stats.photos}</strong>
+                      <small>Fotografija</small>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab("reports")}>
+                      <span><Icon name="alert" size={19} /></span>
+                      <strong>{stats.openReports}</strong>
+                      <small>Otvorenih prijava</small>
+                    </button>
+                  </div>
+                </section>
+
                 <section className="adminPriority">
                   <header>
                     <div>
@@ -1370,6 +2271,307 @@ if (!profile.is_admin) {
               </div>
             )}
 
+            {activeTab === "users" && (
+              <div className="adminEntityGrid">
+                {filteredProfiles.filter((item) => item.role === "user").length === 0 ? (
+                  <EmptyState icon="user" title="Nema korisnika." text="Nijedan korisnik ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredProfiles
+                    .filter((item) => item.role === "user")
+                    .map((item) => (
+                      <AccountCard
+                        key={item.id}
+                        account={item}
+                        working={workingId === item.id}
+                        onBan={() => openReason("ban-account", item)}
+                        onSuspend={() => setSuspendModal({ open: true, entity: item })}
+                        onRestore={() => restoreAccount(item)}
+                        onVerify={() =>
+                          updateRow({
+                            id: item.id,
+                            table: "profiles",
+                            values: { is_verified: !item.is_verified },
+                            successMessage: item.is_verified
+                              ? "Verifikacija korisnika je uklonjena."
+                              : "Korisnik je verifikovan.",
+                            reload: loadProfiles,
+                          })
+                        }
+                      />
+                    ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "hosts" && (
+              <div className="adminEntityGrid">
+                {filteredProfiles.filter((item) => item.role === "host").length === 0 ? (
+                  <EmptyState icon="shield" title="Nema hostova." text="Nijedan host ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredProfiles
+                    .filter((item) => item.role === "host")
+                    .map((item) => (
+                      <AccountCard
+                        key={item.id}
+                        account={item}
+                        host
+                        working={workingId === item.id}
+                        onBan={() => openReason("ban-account", item)}
+                        onSuspend={() => setSuspendModal({ open: true, entity: item })}
+                        onRestore={() => restoreAccount(item)}
+                        onVerify={() =>
+                          updateRow({
+                            id: item.id,
+                            table: "profiles",
+                            values: { is_verified: !item.is_verified },
+                            successMessage: item.is_verified
+                              ? "Host više nije verifikovan."
+                              : "Host je verifikovan.",
+                            reload: loadProfiles,
+                          })
+                        }
+                      />
+                    ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "events" && (
+              <div className="adminEntityGrid wide">
+                {filteredEvents.length === 0 ? (
+                  <EmptyState icon="activity" title="Nema događaja." text="Nijedan događaj ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredEvents.map((item) => (
+                    <EventAdminCard
+                      key={item.id}
+                      event={item}
+                      working={workingId === item.id}
+                      onToggle={() =>
+                        updateRow({
+                          id: item.id,
+                          table: "events",
+                          values: { is_active: !item.is_active },
+                          successMessage: item.is_active
+                            ? "Događaj je deaktiviran."
+                            : "Događaj je ponovo aktivan.",
+                          reload: loadEvents,
+                        })
+                      }
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "packages" && (
+              <div className="adminEntityGrid wide">
+                {filteredPackages.length === 0 ? (
+                  <EmptyState icon="grid" title="Nema paketa." text="Nijedan paket ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredPackages.map((item) => (
+                    <PackageAdminCard
+                      key={item.id}
+                      item={item}
+                      working={workingId === item.id}
+                      onToggle={() =>
+                        updateRow({
+                          id: item.id,
+                          table: "packages",
+                          values: { is_active: !item.is_active },
+                          successMessage: item.is_active
+                            ? "Paket je deaktiviran."
+                            : "Paket je ponovo aktivan.",
+                          reload: loadPackages,
+                        })
+                      }
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "bookings" && (
+              <div className="adminEntityGrid wide">
+                {filteredBookings.length === 0 ? (
+                  <EmptyState icon="clock" title="Nema rezervacija." text="Nijedna rezervacija ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredBookings.map((item) => (
+                    <BookingAdminCard
+                      key={item.id}
+                      booking={item}
+                      working={workingId === item.id}
+                      onStatus={(status) =>
+                        updateRow({
+                          id: item.id,
+                          table: "bookings",
+                          values: {
+                            status,
+                            ...(status === "approved" ? { approved_at: new Date().toISOString() } : {}),
+                            ...(status === "rejected" ? { rejected_at: new Date().toISOString() } : {}),
+                            ...(status === "cancelled" ? { cancelled_at: new Date().toISOString() } : {}),
+                            ...(status === "completed" ? { completed_at: new Date().toISOString() } : {}),
+                          },
+                          successMessage: `Rezervacija je postavljena na ${status}.`,
+                          reload: loadBookings,
+                        })
+                      }
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "allplaces" && (
+              <div className="adminEntityGrid wide">
+                {filteredPlaces.length === 0 ? (
+                  <EmptyState icon="pin" title="Nema lokacija." text="Nijedna lokacija ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredPlaces.map((place) => (
+                    <AllPlaceCard
+                      key={place.id}
+                      place={place}
+                      working={workingId === place.id}
+                      onToggle={() =>
+                        updateRow({
+                          id: place.id,
+                          table: "places",
+                          values: { is_active: !place.is_active },
+                          successMessage: place.is_active
+                            ? "Lokacija je sakrivena sa javne mape."
+                            : "Lokacija je vraćena na javnu mapu.",
+                          reload: loadPlaces,
+                        })
+                      }
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "photos" && (
+              <div className="adminPhotoGrid">
+                {filteredPhotos.length === 0 ? (
+                  <EmptyState icon="camera" title="Nema fotografija." text="Nijedna fotografija ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredPhotos.map((photo) => (
+                    <PhotoAdminCard
+                      key={photo.id}
+                      photo={photo}
+                      working={workingId === photo.id}
+                      onModerate={(status) =>
+                        updateRow({
+                          id: photo.id,
+                          table: "place_photos",
+                          values: { moderation_status: status },
+                          successMessage: `Fotografija je označena kao ${status}.`,
+                          reload: loadPhotos,
+                        })
+                      }
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "comments" && (
+              <div className="adminCommentList">
+                {filteredComments.length === 0 ? (
+                  <EmptyState icon="menu" title="Nema komentara." text="Nijedan komentar ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredComments.map((item) => (
+                    <CommentAdminRow
+                      key={`${item.source}-${item.id}`}
+                      item={item}
+                      working={workingId === item.id}
+                      onReject={
+                        item.source === "place"
+                          ? () =>
+                              updateRow({
+                                id: item.id,
+                                table: "place_comments",
+                                values: { moderation_status: "rejected" },
+                                successMessage: "Komentar je uklonjen iz javnog prikaza.",
+                                reload: loadComments,
+                              })
+                          : null
+                      }
+                      onDelete={
+                        item.source === "event"
+                          ? () =>
+                              deleteRow({
+                                id: item.id,
+                                table: "event_comments",
+                                successMessage: "Komentar događaja je uklonjen.",
+                                reload: loadComments,
+                              })
+                          : item.source === "package"
+                            ? () =>
+                                deleteRow({
+                                  id: item.id,
+                                  table: "package_comments",
+                                  successMessage: "Komentar paketa je uklonjen.",
+                                  reload: loadComments,
+                                })
+                            : null
+                      }
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "reports" && (
+              <div className="adminEntityGrid wide">
+                {filteredReports.length === 0 ? (
+                  <EmptyState icon="check" title="Nema prijava." text="Report centar je trenutno čist." />
+                ) : (
+                  filteredReports.map((report) => (
+                    <ReportAdminCard
+                      key={report.id}
+                      report={report}
+                      working={workingId === report.id}
+                      onResolve={() =>
+                        updateRow({
+                          id: report.id,
+                          table: "place_reports",
+                          values: {
+                            status: "resolved",
+                            resolved_at: new Date().toISOString(),
+                          },
+                          successMessage: "Prijava je označena kao rešena.",
+                          reload: loadReports,
+                        })
+                      }
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "documents" && (
+              <div className="adminEntityGrid wide">
+                {filteredDocuments.length === 0 ? (
+                  <EmptyState icon="shield" title="Nema host dokumenata." text="Nijedan dokument ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredDocuments.map((document) => (
+                    <DocumentAdminCard key={document.id} document={document} />
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "notifications" && (
+              <div className="adminNotificationList">
+                {filteredNotifications.length === 0 ? (
+                  <EmptyState icon="menu" title="Nema notifikacija." text="Nijedna notifikacija ne odgovara trenutnoj pretrazi." />
+                ) : (
+                  filteredNotifications.map((item) => (
+                    <NotificationAdminRow key={item.id} item={item} />
+                  ))
+                )}
+              </div>
+            )}
+
             {activeTab === "log" && (
               <div className="adminLogList">
                 {logs.map((log) => (
@@ -1428,37 +2630,36 @@ if (!profile.is_admin) {
         <ReasonModal
           open={reasonModal.open}
           title={
-            reasonModal.type ===
-            "remove-checkin"
+            reasonModal.type === "remove-checkin"
               ? "Ukloni check-in"
-              : reasonModal.type ===
-                  "reject-place"
+              : reasonModal.type === "reject-place"
                 ? "Odbij lokaciju"
-                : "Flaguj lokaciju"
+                : reasonModal.type === "ban-account"
+                  ? "Banuj nalog"
+                  : "Flaguj lokaciju"
           }
           description={
-            reasonModal.type ===
-            "remove-checkin"
+            reasonModal.type === "remove-checkin"
               ? "Check-in neće biti fizički obrisan. Postaće rejected, a razlog i admin koji je izvršio akciju ostaju u audit logu."
-              : reasonModal.type ===
-                  "reject-place"
+              : reasonModal.type === "reject-place"
                 ? "Lokacija će biti odbijena i isključena sa javne mape."
-                : "Lokacija ostaje u sistemu, ali prelazi u flagged status za dodatni pregled."
+                : reasonModal.type === "ban-account"
+                  ? "Nalog će izgubiti pristup MeetOutdoors aplikaciji. Razlog ostaje u audit logu."
+                  : "Lokacija ostaje u sistemu, ali prelazi u flagged status za dodatni pregled."
           }
           actionLabel={
-            reasonModal.type ===
-            "remove-checkin"
+            reasonModal.type === "remove-checkin"
               ? "Ukloni check-in"
-              : reasonModal.type ===
-                  "reject-place"
+              : reasonModal.type === "reject-place"
                 ? "Odbij lokaciju"
-                : "Flaguj"
+                : reasonModal.type === "ban-account"
+                  ? "Banuj nalog"
+                  : "Flaguj"
           }
           destructive={
-            reasonModal.type ===
-              "remove-checkin" ||
-            reasonModal.type ===
-              "reject-place"
+            reasonModal.type === "remove-checkin" ||
+            reasonModal.type === "reject-place" ||
+            reasonModal.type === "ban-account"
           }
           busy={
             workingId ===
@@ -1473,8 +2674,413 @@ if (!profile.is_admin) {
           }
           onConfirm={confirmReason}
         />
+
+        <SuspendModal
+          open={suspendModal.open}
+          account={suspendModal.entity}
+          busy={workingId === suspendModal.entity?.id}
+          onClose={() => setSuspendModal({ open: false, entity: null })}
+          onConfirm={confirmSuspend}
+        />
       </main>
     </>
+  );
+}
+
+function SuspendModal({
+  open,
+  account,
+  busy,
+  onClose,
+  onConfirm,
+}) {
+  const [days, setDays] = useState("7");
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setDays("7");
+      setReason("");
+    }
+  }, [open]);
+
+  if (!open || !account) return null;
+
+  const submit = () => {
+    const until = new Date(
+      Date.now() + Number(days) * 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    onConfirm({
+      reason: reason.trim(),
+      until,
+    });
+  };
+
+  return (
+    <div className="adminModal">
+      <button
+        type="button"
+        className="adminModalBackdrop"
+        onClick={onClose}
+        aria-label="Zatvori"
+      />
+
+      <section>
+        <header>
+          <div>
+            <span>PRIVREMENA SUSPENZIJA</span>
+            <h2>Suspenduj nalog</h2>
+            <p>
+              @{account.username || "unknown"} će privremeno izgubiti
+              pristup aplikaciji.
+            </p>
+          </div>
+
+          <button type="button" onClick={onClose}>
+            <Icon name="close" size={18} />
+          </button>
+        </header>
+
+        <label>
+          <span>Trajanje</span>
+          <select value={days} onChange={(event) => setDays(event.target.value)}>
+            <option value="1">1 dan</option>
+            <option value="3">3 dana</option>
+            <option value="7">7 dana</option>
+            <option value="14">14 dana</option>
+            <option value="30">30 dana</option>
+            <option value="90">90 dana</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Razlog</span>
+          <textarea
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Razlog suspenzije ostaje zabeležen u audit logu."
+          />
+        </label>
+
+        <footer>
+          <button type="button" className="secondary" onClick={onClose}>
+            Otkaži
+          </button>
+          <button
+            type="button"
+            className="danger"
+            disabled={busy || !reason.trim()}
+            onClick={submit}
+          >
+            {busy ? "Čuvamo..." : "Suspenduj"}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function AccountCard({
+  account,
+  host = false,
+  working,
+  onBan,
+  onSuspend,
+  onRestore,
+  onVerify,
+}) {
+  const blocked = ["banned", "suspended"].includes(account.account_status);
+  const profileUrl = host
+    ? `/h/${account.username}`
+    : `/u/${account.username}`;
+
+  return (
+    <article className="adminAccountCard">
+      <div className="adminAccountIdentity">
+        <img src={account.avatar_url || FALLBACK_AVATAR} alt="" />
+        <div>
+          <div className="adminAccountBadges">
+            <span className={`accountState ${account.account_status || "active"}`}>
+              {account.account_status || "active"}
+            </span>
+            {account.is_verified && <span className="verifiedState">VERIFIED</span>}
+            {account.is_admin && <span className="adminState">ADMIN</span>}
+          </div>
+          <h3>{account.full_name || account.username || "Bez imena"}</h3>
+          <p>@{account.username || "unknown"}</p>
+        </div>
+      </div>
+
+      <div className="adminAccountMeta">
+        <article><span>Uloga</span><strong>{host ? "Host" : "User"}</strong></article>
+        <article><span>Lokacija</span><strong>{[account.city, account.country].filter(Boolean).join(" · ") || "—"}</strong></article>
+        <article><span>Kreiran</span><strong>{formatDate(account.created_at)}</strong></article>
+        <article><span>Status</span><strong>{account.account_status || "active"}</strong></article>
+      </div>
+
+      {account.ban_reason && (
+        <div className="adminAccountReason">
+          <Icon name="alert" size={15} />
+          <span>{account.ban_reason}</span>
+        </div>
+      )}
+
+      {account.account_status === "suspended" && account.suspended_until && (
+        <div className="adminAccountReason warning">
+          <Icon name="clock" size={15} />
+          <span>Do {formatDate(account.suspended_until)}</span>
+        </div>
+      )}
+
+      <footer>
+        <Link to={profileUrl}>Otvori profil <Icon name="arrow" size={14} /></Link>
+        <div>
+          <button type="button" className="neutral" disabled={working} onClick={onVerify}>
+            {account.is_verified ? "Ukloni verifikaciju" : "Verifikuj"}
+          </button>
+          {blocked ? (
+            <button type="button" className="approve" disabled={working} onClick={onRestore}>
+              <Icon name="refresh" size={14} /> Vrati nalog
+            </button>
+          ) : (
+            <>
+              <button type="button" className="flag" disabled={working || account.is_admin} onClick={onSuspend}>
+                <Icon name="clock" size={14} /> Suspenduj
+              </button>
+              <button type="button" className="reject" disabled={working || account.is_admin} onClick={onBan}>
+                <Icon name="alert" size={14} /> Banuj
+              </button>
+            </>
+          )}
+        </div>
+      </footer>
+    </article>
+  );
+}
+
+function EventAdminCard({ event, working, onToggle }) {
+  return (
+    <article className="adminContentCard">
+      <img src={event.cover_url || FALLBACK_COVER} alt="" />
+      <div>
+        <header>
+          <div>
+            <span className={`miniStatus ${event.is_active ? "active" : "inactive"}`}>
+              {event.is_active ? "AKTIVAN" : "NEAKTIVAN"}
+            </span>
+            <h3>{event.title}</h3>
+            <p>{[event.location, event.country].filter(Boolean).join(" · ") || "Lokacija nije uneta"}</p>
+          </div>
+          <Link to={`/event/${event.id}`}>Otvori <Icon name="arrow" size={14} /></Link>
+        </header>
+        <UserBadge user={event.host} />
+        <div className="adminContentMeta">
+          <article><span>Početak</span><strong>{formatDate(event.start_date)}</strong></article>
+          <article><span>Kapacitet</span><strong>{event.capacity ?? "—"}</strong></article>
+          <article><span>Cena</span><strong>{event.price != null ? `${event.price}` : "—"}</strong></article>
+        </div>
+        <footer>
+          <button type="button" className={event.is_active ? "reject" : "approve"} disabled={working} onClick={onToggle}>
+            {event.is_active ? "Deaktiviraj" : "Aktiviraj"}
+          </button>
+        </footer>
+      </div>
+    </article>
+  );
+}
+
+function PackageAdminCard({ item, working, onToggle }) {
+  return (
+    <article className="adminContentCard">
+      <img src={item.cover_url || item.image_url || FALLBACK_COVER} alt="" />
+      <div>
+        <header>
+          <div>
+            <span className={`miniStatus ${item.is_active ? "active" : "inactive"}`}>
+              {item.is_active ? "AKTIVAN" : "NEAKTIVAN"}
+            </span>
+            <h3>{item.title}</h3>
+            <p>{[item.city, item.country].filter(Boolean).join(" · ") || item.location_text || "Lokacija nije uneta"}</p>
+          </div>
+          <Link to={`/package/${item.id}`}>Otvori <Icon name="arrow" size={14} /></Link>
+        </header>
+        <UserBadge user={item.host} />
+        <div className="adminContentMeta">
+          <article><span>Aktivnost</span><strong>{String(item.activity || "—")}</strong></article>
+          <article><span>Kapacitet</span><strong>{item.capacity ?? "—"}</strong></article>
+          <article><span>Cena</span><strong>{item.price != null ? `${item.price} ${item.currency || ""}` : "—"}</strong></article>
+        </div>
+        <footer>
+          <button type="button" className={item.is_active ? "reject" : "approve"} disabled={working} onClick={onToggle}>
+            {item.is_active ? "Deaktiviraj" : "Aktiviraj"}
+          </button>
+        </footer>
+      </div>
+    </article>
+  );
+}
+
+function BookingAdminCard({ booking, working, onStatus }) {
+  return (
+    <article className="adminBookingCard">
+      <header>
+        <div>
+          <span className={`bookingStatus ${booking.status || "pending"}`}>{booking.status || "pending"}</span>
+          <h3>{booking.package?.title || "Paket"}</h3>
+          <p>{formatDate(booking.created_at)}</p>
+        </div>
+        <strong>{booking.total_amount != null ? `${booking.total_amount} ${booking.currency || ""}` : "—"}</strong>
+      </header>
+
+      <div className="adminBookingPeople">
+        <div><span>KORISNIK</span><UserBadge user={booking.user} /></div>
+        <div><span>HOST</span><UserBadge user={booking.host} /></div>
+      </div>
+
+      <div className="adminContentMeta four">
+        <article><span>Gosti</span><strong>{booking.guests ?? "—"}</strong></article>
+        <article><span>Plaćanje</span><strong>{booking.payment_status || "—"}</strong></article>
+        <article><span>Email</span><strong>{booking.email || "—"}</strong></article>
+        <article><span>Telefon</span><strong>{booking.phone || "—"}</strong></article>
+      </div>
+
+      <footer>
+        <button type="button" className="approve" disabled={working} onClick={() => onStatus("approved")}>Odobri</button>
+        <button type="button" className="flag" disabled={working} onClick={() => onStatus("completed")}>Završi</button>
+        <button type="button" className="neutral" disabled={working} onClick={() => onStatus("cancelled")}>Otkaži</button>
+        <button type="button" className="reject" disabled={working} onClick={() => onStatus("rejected")}>Odbij</button>
+      </footer>
+    </article>
+  );
+}
+
+function AllPlaceCard({ place, working, onToggle }) {
+  return (
+    <article className="adminCompactPlace">
+      <img src={place.cover_url || FALLBACK_COVER} alt="" />
+      <div>
+        <span>{place.place_categories?.name || "Outdoor"}</span>
+        <h3>{place.name}</h3>
+        <p>{[place.locality, place.region].filter(Boolean).join(" · ") || "Srbija"}</p>
+        <div className="adminCompactStats">
+          <small>{place.checkins_count || 0} check-in</small>
+          <small>{place.photos_count || 0} slika</small>
+          <small>{place.visitors_count || 0} poseta</small>
+        </div>
+      </div>
+      <footer>
+        <Link to={`/explore/${place.id}`}>Otvori</Link>
+        <button type="button" className={place.is_active ? "reject" : "approve"} disabled={working} onClick={onToggle}>
+          {place.is_active ? "Sakrij" : "Aktiviraj"}
+        </button>
+      </footer>
+    </article>
+  );
+}
+
+function PhotoAdminCard({ photo, working, onModerate }) {
+  return (
+    <article className="adminPhotoCard">
+      <div className="adminPhotoVisual">
+        <img src={photo.image_url} alt="" />
+        <span className={`status ${photo.moderation_status}`}>{moderationLabel(photo.moderation_status)}</span>
+      </div>
+      <div>
+        <h3>{photo.places?.name || "Outdoor mesto"}</h3>
+        <p>{photo.caption || "Bez opisa"}</p>
+        <UserBadge user={photo.profiles} />
+        <small>{formatDate(photo.created_at)}</small>
+        <footer>
+          <button type="button" className="approve" disabled={working} onClick={() => onModerate("approved")}>Odobri</button>
+          <button type="button" className="reject" disabled={working} onClick={() => onModerate("rejected")}>Odbij</button>
+        </footer>
+      </div>
+    </article>
+  );
+}
+
+function CommentAdminRow({ item, working, onReject, onDelete }) {
+  return (
+    <article className="adminCommentRow">
+      <span className={`commentSource ${item.source}`}>{item.source}</span>
+      <div>
+        <div className="adminCommentHead">
+          <strong>{item.author?.full_name || item.author?.username || "Korisnik"}</strong>
+          <small>{formatDate(item.created_at)}</small>
+        </div>
+        <p>{item.body}</p>
+        <span>{item.sourceTitle}</span>
+      </div>
+      <div className="adminCommentActions">
+        {onReject && <button type="button" className="reject" disabled={working} onClick={onReject}>Sakrij</button>}
+        {onDelete && <button type="button" className="reject" disabled={working} onClick={onDelete}>Obriši</button>}
+      </div>
+    </article>
+  );
+}
+
+function ReportAdminCard({ report, working, onResolve }) {
+  return (
+    <article className="adminReportCard">
+      <header>
+        <span className={`reportStatus ${report.status}`}>{report.status}</span>
+        <small>{formatDate(report.created_at)}</small>
+      </header>
+      <h3>{report.reason}</h3>
+      <p>{report.details || "Nema dodatnog opisa."}</p>
+      <div className="adminContentMeta">
+        <article><span>Tip</span><strong>{report.entity_type}</strong></article>
+        <article><span>Entity ID</span><strong>{report.entity_id || "—"}</strong></article>
+        <article><span>Place ID</span><strong>{report.place_id || "—"}</strong></article>
+      </div>
+      {report.status !== "resolved" && (
+        <footer><button type="button" className="approve" disabled={working} onClick={onResolve}>Označi rešeno</button></footer>
+      )}
+    </article>
+  );
+}
+
+function DocumentAdminCard({ document }) {
+  const expired = document.expires_at && new Date(document.expires_at).getTime() < Date.now();
+  const expiresSoon = document.expires_at && !expired && new Date(document.expires_at).getTime() - Date.now() < 30 * 24 * 60 * 60 * 1000;
+
+  return (
+    <article className="adminDocumentCard">
+      <div className={`documentIcon ${expired ? "expired" : expiresSoon ? "warning" : "ok"}`}>
+        <Icon name="shield" size={22} />
+      </div>
+      <div>
+        <span>{document.document_type}</span>
+        <h3>{document.title}</h3>
+        <UserBadge user={document.host} />
+        <p>{document.notes || "Bez napomene."}</p>
+        <div className="adminDocumentDates">
+          <small>Izdat: {document.issued_at || "—"}</small>
+          <small>Ističe: {document.expires_at || "—"}</small>
+        </div>
+      </div>
+      {document.file_url && (
+        <a href={document.file_url} target="_blank" rel="noreferrer">Otvori dokument <Icon name="arrow" size={14} /></a>
+      )}
+    </article>
+  );
+}
+
+function NotificationAdminRow({ item }) {
+  return (
+    <article className="adminNotificationRow">
+      <span><Icon name="menu" size={16} /></span>
+      <div>
+        <small>{item.type || "notification"}</small>
+        <strong>{item.title}</strong>
+        <p>{item.message || "Bez poruke."}</p>
+      </div>
+      <div>
+        <small>{item.is_read ? "PROČITANO" : "NOVO"}</small>
+        <span>{formatDate(item.created_at)}</span>
+      </div>
+    </article>
   );
 }
 
@@ -2269,13 +3875,57 @@ function AdminStyles() {
       .adminExplore button{line-height:1.2}
       .adminExplore img{max-width:100%}
 
+
+      /* =========================================================
+         FULL APP CONTROL CENTER
+         ========================================================= */
+      .adminSidebar{max-height:calc(100vh - 116px);overflow:hidden}
+      .adminSidebar nav{max-height:calc(100vh - 310px);overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(186,255,158,.22) transparent}
+      .adminSidebar nav::-webkit-scrollbar{width:5px}.adminSidebar nav::-webkit-scrollbar-thumb{border-radius:999px;background:rgba(186,255,158,.2)}
+      .adminGlobalOverview{padding:18px;border:1px solid rgba(186,255,158,.11);border-radius:20px;background:radial-gradient(circle at 92% 0%,rgba(186,255,158,.1),transparent 25%),linear-gradient(145deg,rgba(13,38,23,.94),rgba(8,23,14,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+      .adminGlobalOverview>header{display:flex;align-items:flex-end;justify-content:space-between;gap:15px}
+      .adminGlobalOverview>header span{color:#baff9e;font-size:6px;font-weight:950;letter-spacing:.12em}.adminGlobalOverview>header h3{margin:5px 0 0;font-size:22px;letter-spacing:-.04em}.adminGlobalOverview>header small{color:rgba(255,255,255,.38);font-size:6px}
+      .adminGlobalGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:15px}
+      .adminGlobalGrid button{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;column-gap:9px;min-height:82px;padding:10px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.035);color:#fff;text-align:left;cursor:pointer;transition:.18s ease}
+      .adminGlobalGrid button:hover{transform:translateY(-2px);border-color:rgba(186,255,158,.2);background:rgba(186,255,158,.06)}
+      .adminGlobalGrid button>span{grid-row:1/3;display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:rgba(186,255,158,.08);color:#baff9e}.adminGlobalGrid button>strong{font-size:20px;line-height:1}.adminGlobalGrid button>small{color:rgba(255,255,255,.38);font-size:6px;text-transform:uppercase}
+
+      .adminEntityGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.adminEntityGrid.wide{grid-template-columns:1fr}
+      .adminAccountCard,.adminBookingCard,.adminReportCard,.adminDocumentCard,.adminCompactPlace,.adminContentCard{border:1px solid rgba(255,255,255,.08);border-radius:18px;background:linear-gradient(145deg,rgba(15,34,22,.96),rgba(9,23,14,.96));box-shadow:0 18px 42px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.025)}
+      .adminAccountCard{padding:15px}.adminAccountIdentity{display:flex;align-items:center;gap:11px}.adminAccountIdentity>img{width:58px;height:58px;border:2px solid rgba(255,255,255,.12);border-radius:17px;object-fit:cover}.adminAccountIdentity h3{margin:5px 0 0;font-size:15px;letter-spacing:-.03em}.adminAccountIdentity p{margin:3px 0 0;color:rgba(255,255,255,.36);font-size:7px}.adminAccountBadges{display:flex;flex-wrap:wrap;gap:5px}.adminAccountBadges span{padding:4px 6px;border-radius:999px;font-size:5px;font-weight:950;letter-spacing:.06em;text-transform:uppercase}.accountState.active{background:rgba(186,255,158,.1);color:#baff9e}.accountState.banned{background:rgba(255,140,128,.12);color:#ff9f95}.accountState.suspended{background:rgba(255,211,116,.11);color:#ffd374}.verifiedState{background:rgba(117,172,255,.12);color:#a9c9ff}.adminState{background:#baff9e;color:#102619}
+      .adminAccountMeta,.adminContentMeta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}.adminAccountMeta{grid-template-columns:repeat(2,minmax(0,1fr))}.adminContentMeta.four{grid-template-columns:repeat(4,minmax(0,1fr))}.adminAccountMeta article,.adminContentMeta article{padding:9px;border:1px solid rgba(255,255,255,.055);border-radius:10px;background:rgba(255,255,255,.025)}.adminAccountMeta span,.adminContentMeta span{display:block;color:rgba(255,255,255,.29);font-size:5px;text-transform:uppercase}.adminAccountMeta strong,.adminContentMeta strong{display:block;margin-top:3px;color:#fff;font-size:7px;line-height:1.35}
+      .adminAccountReason{display:flex;align-items:flex-start;gap:7px;margin-top:10px;padding:9px;border:1px solid rgba(255,140,128,.12);border-radius:10px;background:rgba(255,140,128,.055);color:#ffaaa1;font-size:7px;line-height:1.45}.adminAccountReason.warning{border-color:rgba(255,211,116,.12);background:rgba(255,211,116,.055);color:#ffd374}.adminAccountCard>footer,.adminContentCard footer,.adminBookingCard>footer,.adminReportCard>footer{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}.adminAccountCard>footer>a,.adminContentCard header>a{display:inline-flex;align-items:center;gap:5px;color:#baff9e;font-size:7px;font-weight:850}.adminAccountCard>footer>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+      .adminAccountCard button,.adminContentCard button,.adminBookingCard button,.adminReportCard button,.adminCommentRow button,.adminCompactPlace button,.adminPhotoCard button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:0 9px;border-radius:9px;cursor:pointer;font-size:6px;font-weight:850}.adminAccountCard button:disabled,.adminContentCard button:disabled,.adminBookingCard button:disabled,.adminReportCard button:disabled,.adminCommentRow button:disabled,.adminCompactPlace button:disabled,.adminPhotoCard button:disabled{opacity:.45;cursor:default}.neutral{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);color:#fff}.approve{border:1px solid rgba(186,255,158,.18)!important;background:rgba(186,255,158,.09)!important;color:#cfffbd!important}.flag{border:1px solid rgba(255,211,116,.16)!important;background:rgba(255,211,116,.08)!important;color:#ffd374!important}.reject{border:1px solid rgba(255,140,128,.16)!important;background:rgba(255,140,128,.08)!important;color:#ff9f95!important}
+
+      .adminContentCard{display:grid;grid-template-columns:170px minmax(0,1fr);overflow:hidden}.adminContentCard>img{width:100%;height:100%;min-height:220px;object-fit:cover}.adminContentCard>div{padding:15px}.adminContentCard header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.adminContentCard h3{margin:6px 0 0;font-size:18px;letter-spacing:-.04em}.adminContentCard header p{margin:4px 0 0;color:rgba(255,255,255,.36);font-size:7px}.miniStatus,.bookingStatus,.reportStatus{display:inline-flex;padding:4px 6px;border-radius:999px;font-size:5px;font-weight:950;letter-spacing:.07em;text-transform:uppercase}.miniStatus.active{background:rgba(186,255,158,.1);color:#baff9e}.miniStatus.inactive{background:rgba(255,140,128,.1);color:#ff9f95}
+
+      .adminBookingCard{padding:16px}.adminBookingCard>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.adminBookingCard>header h3{margin:7px 0 0;font-size:17px}.adminBookingCard>header p{margin:3px 0 0;color:rgba(255,255,255,.33);font-size:6px}.adminBookingCard>header>strong{font-size:18px;color:#baff9e}.bookingStatus{background:rgba(255,211,116,.08);color:#ffd374}.bookingStatus.approved,.bookingStatus.completed{background:rgba(186,255,158,.09);color:#baff9e}.bookingStatus.rejected,.bookingStatus.cancelled{background:rgba(255,140,128,.09);color:#ff9f95}.adminBookingPeople{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}.adminBookingPeople>div{padding:9px;border:1px solid rgba(255,255,255,.055);border-radius:11px;background:rgba(255,255,255,.025)}.adminBookingPeople>div>span{display:block;margin-bottom:7px;color:rgba(255,255,255,.28);font-size:5px;font-weight:900}
+
+      .adminCompactPlace{display:grid;grid-template-columns:105px minmax(0,1fr) auto;align-items:center;gap:12px;padding:9px}.adminCompactPlace>img{width:105px;height:90px;border-radius:12px;object-fit:cover}.adminCompactPlace>div>span{color:#baff9e;font-size:5px;font-weight:900;text-transform:uppercase}.adminCompactPlace h3{margin:4px 0 0;font-size:14px}.adminCompactPlace p{margin:3px 0 0;color:rgba(255,255,255,.34);font-size:6px}.adminCompactStats{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.adminCompactStats small{padding:4px 6px;border-radius:999px;background:rgba(255,255,255,.045);color:rgba(255,255,255,.42);font-size:5px}.adminCompactPlace>footer{display:grid;gap:6px}.adminCompactPlace>footer>a{display:grid;place-items:center;min-height:34px;padding:0 9px;border-radius:9px;background:rgba(255,255,255,.05);color:#baff9e;font-size:6px;font-weight:850}
+
+      .adminPhotoGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:16px}.adminPhotoCard{overflow:hidden;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(145deg,rgba(15,34,22,.96),rgba(9,23,14,.96))}.adminPhotoVisual{position:relative;height:220px}.adminPhotoVisual>img{width:100%;height:100%;object-fit:cover}.adminPhotoVisual>.status{position:absolute;top:8px;left:8px}.adminPhotoCard>div:last-child{padding:12px}.adminPhotoCard h3{margin:0;font-size:12px}.adminPhotoCard p{display:-webkit-box;margin:5px 0 9px;overflow:hidden;color:rgba(255,255,255,.38);font-size:7px;line-height:1.45;-webkit-line-clamp:2;-webkit-box-orient:vertical}.adminPhotoCard>div:last-child>small{display:block;margin-top:8px;color:rgba(255,255,255,.25);font-size:5px}.adminPhotoCard footer{display:flex;gap:6px;margin-top:9px}
+
+      .adminCommentList,.adminNotificationList{display:grid;gap:7px;margin-top:16px}.adminCommentRow{display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:11px;padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.025)}.commentSource{display:grid;place-items:center;min-height:32px;border-radius:9px;background:rgba(186,255,158,.07);color:#baff9e;font-size:5px;font-weight:950;text-transform:uppercase}.commentSource.event{background:rgba(117,172,255,.08);color:#a9c9ff}.commentSource.package{background:rgba(255,211,116,.08);color:#ffd374}.adminCommentHead{display:flex;align-items:center;justify-content:space-between;gap:10px}.adminCommentHead strong{font-size:8px}.adminCommentHead small{color:rgba(255,255,255,.28);font-size:5px}.adminCommentRow p{margin:5px 0 0;color:rgba(255,255,255,.55);font-size:8px;line-height:1.5}.adminCommentRow>div>span{display:block;margin-top:5px;color:#baff9e;font-size:5px}.adminCommentActions{display:flex;gap:5px}
+
+      .adminReportCard{padding:15px}.adminReportCard>header{display:flex;align-items:center;justify-content:space-between;gap:10px}.adminReportCard>header>small{color:rgba(255,255,255,.28);font-size:5px}.reportStatus{background:rgba(255,211,116,.08);color:#ffd374}.reportStatus.resolved{background:rgba(186,255,158,.08);color:#baff9e}.adminReportCard h3{margin:10px 0 0;font-size:15px}.adminReportCard>p{margin:6px 0 0;color:rgba(255,255,255,.43);font-size:8px;line-height:1.55}
+
+      .adminDocumentCard{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px}.documentIcon{display:grid;place-items:center;width:52px;height:52px;border-radius:15px}.documentIcon.ok{background:rgba(186,255,158,.09);color:#baff9e}.documentIcon.warning{background:rgba(255,211,116,.09);color:#ffd374}.documentIcon.expired{background:rgba(255,140,128,.09);color:#ff9f95}.adminDocumentCard>div:nth-child(2)>span{color:#baff9e;font-size:5px;font-weight:900;text-transform:uppercase}.adminDocumentCard h3{margin:4px 0 8px;font-size:13px}.adminDocumentCard p{margin:8px 0 0;color:rgba(255,255,255,.36);font-size:7px}.adminDocumentDates{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.adminDocumentDates small{color:rgba(255,255,255,.3);font-size:5px}.adminDocumentCard>a{display:inline-flex;align-items:center;gap:5px;padding:9px;border-radius:9px;background:rgba(186,255,158,.08);color:#baff9e;font-size:6px;font-weight:850}
+
+      .adminNotificationRow{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.025)}.adminNotificationRow>span{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:rgba(186,255,158,.07);color:#baff9e}.adminNotificationRow>div:nth-child(2)>small{color:#baff9e;font-size:5px;font-weight:900;text-transform:uppercase}.adminNotificationRow strong{display:block;margin-top:3px;font-size:8px}.adminNotificationRow p{margin:4px 0 0;color:rgba(255,255,255,.38);font-size:7px}.adminNotificationRow>div:last-child{text-align:right}.adminNotificationRow>div:last-child small,.adminNotificationRow>div:last-child span{display:block}.adminNotificationRow>div:last-child small{color:#baff9e;font-size:5px}.adminNotificationRow>div:last-child span{margin-top:4px;color:rgba(255,255,255,.27);font-size:5px}
+
+      .adminModal select{width:100%;min-height:44px;margin-top:7px;padding:0 11px;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:#102219;color:#fff;outline:0;font-size:9px}
+
       @media(max-width:1180px){
+        .adminGlobalGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .adminPhotoGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
         .adminWorkspace{grid-template-columns:220px minmax(0,1fr)}
         .adminPriorityGrid{grid-template-columns:1fr}
         .adminPlaceMeta{grid-template-columns:repeat(2,minmax(0,1fr))}
       }
 
       @media(max-width:980px){
+        .adminEntityGrid{grid-template-columns:1fr}
+        .adminSidebar nav{max-height:none;overflow-y:visible}
         .adminExplore{padding-inline:14px}
         .adminWorkspace{grid-template-columns:1fr}
         .adminSidebar{position:static;overflow-x:auto;padding:9px}
@@ -2289,6 +3939,13 @@ function AdminStyles() {
       }
 
       @media(max-width:760px){
+        .adminGlobalOverview>header{align-items:flex-start;flex-direction:column}
+        .adminContentCard{grid-template-columns:120px minmax(0,1fr)}
+        .adminPhotoGrid{grid-template-columns:1fr 1fr}
+        .adminCommentRow{grid-template-columns:58px minmax(0,1fr)}
+        .adminCommentActions{grid-column:2}
+        .adminDocumentCard{grid-template-columns:48px minmax(0,1fr)}
+        .adminDocumentCard>a{grid-column:2;justify-self:start}
         .adminExplore{padding:82px 8px 50px}
         .adminHero{min-height:620px;padding:18px;border-radius:0 0 28px 28px}
         .adminHeroCopy{padding-top:74px}
@@ -2309,6 +3966,15 @@ function AdminStyles() {
       }
 
       @media(max-width:520px){
+        .adminGlobalGrid{grid-template-columns:1fr 1fr}
+        .adminGlobalGrid button{grid-template-columns:34px minmax(0,1fr);min-height:72px}
+        .adminGlobalGrid button>span{width:34px;height:34px}
+        .adminContentCard{grid-template-columns:1fr}.adminContentCard>img{height:190px;min-height:190px}
+        .adminBookingPeople,.adminContentMeta.four{grid-template-columns:1fr}
+        .adminCompactPlace{grid-template-columns:82px minmax(0,1fr)}.adminCompactPlace>img{width:82px;height:78px}.adminCompactPlace>footer{grid-column:1/-1;grid-template-columns:1fr 1fr}
+        .adminPhotoGrid{grid-template-columns:1fr}.adminPhotoVisual{height:260px}
+        .adminCommentRow{grid-template-columns:1fr}.adminCommentActions{grid-column:auto}.commentSource{justify-self:start;min-width:70px;padding:0 9px}
+        .adminNotificationRow{grid-template-columns:38px minmax(0,1fr)}.adminNotificationRow>div:last-child{grid-column:2;text-align:left}
         .adminHero{min-height:660px}
         .adminHeroTop{align-items:flex-start}
         .adminBrand strong{font-size:11px}

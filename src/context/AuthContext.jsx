@@ -1,4 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { supabase } from "../supabaseClient";
 
 const AuthContext = createContext(null);
@@ -34,7 +39,29 @@ export function AuthProvider({ children }) {
       console.error("Profile load error:", error);
       setProfile(null);
     } else {
-      setProfile(data);
+      if (
+        data.account_status === "suspended" &&
+        data.suspended_until &&
+        new Date(data.suspended_until).getTime() <= Date.now()
+      ) {
+        const { error: restoreError } = await supabase.rpc(
+          "restore_expired_suspensions"
+        );
+
+        if (!restoreError) {
+          const { data: refreshedProfile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", currentUser.id)
+            .single();
+
+          setProfile(refreshedProfile || data);
+        } else {
+          setProfile(data);
+        }
+      } else {
+        setProfile(data);
+      }
     }
 
     setLoading(false);
@@ -60,20 +87,44 @@ export function AuthProvider({ children }) {
     setProfile(null);
   }
 
+  const accountStatus =
+    profile?.account_status || "active";
+
+  const isBanned =
+    accountStatus === "banned";
+
+  const isSuspended =
+    accountStatus === "suspended";
+
+  const hasAccess =
+    !!user &&
+    !!profile &&
+    accountStatus === "active";
+
   return (
     <AuthContext.Provider
-  value={{
-    user,
-    profile,
-    loading,
-    isLoggedIn: !!user,
-    isHost: profile?.role === "host",
-    isUser: profile?.role === "user",
-    isAdmin: profile?.is_admin === true,
-    logout,
-    reloadAuth: loadAuth,
-  }}
->
+      value={{
+        user,
+        profile,
+        loading,
+        isLoggedIn: !!user,
+        isHost:
+          profile?.role === "host" &&
+          accountStatus === "active",
+        isUser:
+          profile?.role === "user" &&
+          accountStatus === "active",
+        isAdmin:
+          profile?.is_admin === true &&
+          accountStatus === "active",
+        accountStatus,
+        isBanned,
+        isSuspended,
+        hasAccess,
+        logout,
+        reloadAuth: loadAuth,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
