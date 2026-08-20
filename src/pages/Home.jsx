@@ -208,58 +208,43 @@ const categories = [
   { label: "Penjanje", value: "climbing", icon: "climbing" },
 ];
 
-const featuredEvents = [
-  {
-    id: 1,
-    title: "Izlazak sunca iznad oblaka",
-    location: "Kopaonik, Srbija",
-    date: "12. avg",
-    category: "Planinarenje",
-    price: "4.100 RSD",
-    rating: "4.9",
-    spots: "6 mesta",
-    image:
-      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=88",
-  },
-  {
-    id: 2,
-    title: "Divlji rafting kroz kanjon Tare",
-    location: "Kanjon Tare, Crna Gora",
-    date: "18. avg",
-    category: "Rafting",
-    price: "8.800 RSD",
-    rating: "4.8",
-    spots: "4 mesta",
-    image:
-      "https://images.unsplash.com/photo-1530866495561-507c9faab2ed?auto=format&fit=crop&w=1400&q=88",
-  },
-  {
-    id: 3,
-    title: "Kampovanje pod zvezdama",
-    location: "Zlatibor, Srbija",
-    date: "24. avg",
-    category: "Kampovanje",
-    price: "5.700 RSD",
-    rating: "4.9",
-    spots: "8 mesta",
-    image:
-      "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=1400&q=88",
-  },
-];
 
-const upcomingTrips = [
-  {
-    title: "Vikend na Tari",
-    date: "18–20. avgust",
-    status: "Potvrđeno",
-  },
-  {
-    title: "Uspon na Rtanj",
-    date: "27. avgust",
-    status: "Na čekanju",
-  },
-];
 
+
+const HOME_FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=88";
+
+const HOME_FALLBACK_AVATAR =
+  "https://api.dicebear.com/8.x/initials/svg?seed=MeetOutdoors";
+
+function formatHomeDate(value) {
+  if (!value) return "Termin uskoro";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Termin uskoro";
+  }
+
+  return new Intl.DateTimeFormat("sr-Latn-RS", {
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+}
+
+function formatHomePrice(value, currency = "EUR") {
+  const number = Number(value || 0);
+
+  if (!Number.isFinite(number) || number <= 0) {
+    return "Besplatno";
+  }
+
+  return new Intl.NumberFormat("sr-Latn-RS", {
+    style: "currency",
+    currency: currency || "EUR",
+    maximumFractionDigits: 0,
+  }).format(number);
+}
 
 function notificationTarget(notification) {
   if (notification?.event_id) return `/event/${notification.event_id}`;
@@ -392,6 +377,13 @@ function useHomeLiveData(profile) {
     packages: 0,
   });
 
+  const [homeDiscovery, setHomeDiscovery] = useState({
+    hosts: [],
+    events: [],
+    packages: [],
+    places: [],
+  });
+
   useEffect(() => {
     let mounted = true;
 
@@ -444,24 +436,159 @@ function useHomeLiveData(profile) {
       }
     }
 
+    async function loadHomeDiscovery() {
+      try {
+        const now = new Date().toISOString();
+
+        const [
+          hostsRes,
+          eventsRes,
+          packagesRes,
+          placesRes,
+        ] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select(`
+              id,
+              username,
+              full_name,
+              city,
+              country,
+              avatar_url,
+              cover_url,
+              is_verified,
+              created_at
+            `)
+            .eq("role", "host")
+            .eq("account_status", "active")
+            .order("created_at", { ascending: false })
+            .limit(6),
+
+          supabase
+            .from("events")
+            .select(`
+              id,
+              host_id,
+              title,
+              location,
+              country,
+              cover_url,
+              price,
+              capacity,
+              start_date,
+              created_at,
+              is_active
+            `)
+            .eq("is_active", true)
+            .gte("start_date", now)
+            .order("created_at", { ascending: false })
+            .limit(6),
+
+          supabase
+            .from("packages")
+            .select(`
+              id,
+              host_id,
+              title,
+              location,
+              country,
+              cover_url,
+              price,
+              currency,
+              duration,
+              capacity,
+              created_at,
+              is_active
+            `)
+            .eq("is_active", true)
+            .order("created_at", { ascending: false })
+            .limit(6),
+
+          supabase
+            .from("places")
+            .select(`
+              id,
+              name,
+              cover_url,
+              locality,
+              region,
+              country_name,
+              checkins_count,
+              photos_count,
+              created_at,
+              moderation_status,
+              is_active
+            `)
+            .eq("is_active", true)
+            .eq("moderation_status", "approved")
+            .is("deleted_at", null)
+            .order("created_at", { ascending: false })
+            .limit(6),
+        ]);
+
+        const discoveryError =
+          hostsRes.error ||
+          eventsRes.error ||
+          packagesRes.error ||
+          placesRes.error;
+
+        if (discoveryError) {
+          console.error(
+            "Greška pri učitavanju novog sadržaja za Home:",
+            discoveryError
+          );
+          return;
+        }
+
+        if (!mounted) return;
+
+        setHomeDiscovery({
+          hosts: hostsRes.data ?? [],
+          events: eventsRes.data ?? [],
+          packages: packagesRes.data ?? [],
+          places: placesRes.data ?? [],
+        });
+      } catch (error) {
+        console.error(
+          "Greška pri učitavanju novog sadržaja za Home:",
+          error
+        );
+      }
+    }
+
     void loadPlatformStats();
+    void loadHomeDiscovery();
 
     const channel = supabase
       .channel("home-platform-live")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "profiles" },
-        () => void loadPlatformStats()
+        () => {
+          void loadPlatformStats();
+          void loadHomeDiscovery();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "events" },
-        () => void loadPlatformStats()
+        () => {
+          void loadPlatformStats();
+          void loadHomeDiscovery();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "packages" },
-        () => void loadPlatformStats()
+        () => {
+          void loadPlatformStats();
+          void loadHomeDiscovery();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "places" },
+        () => void loadHomeDiscovery()
       )
       .subscribe();
 
@@ -654,6 +781,7 @@ function useHomeLiveData(profile) {
     platformStats,
     notifications,
     hostOwnStats,
+    homeDiscovery,
     markRead,
   };
 }
@@ -754,70 +882,324 @@ function SectionHeader({ kicker, title, description, linkTo, linkLabel }) {
   );
 }
 
-function EventCards() {
+function EventCards({ events = [] }) {
+  if (events.length === 0) {
+    return (
+      <div className="liveHomeEmpty">
+        <span>
+          <Icon name="calendar" size={23} />
+        </span>
+        <div>
+          <strong>Još nema novih aktivnih događaja.</strong>
+          <p>Čim domaćini objave novu avanturu, pojaviće se ovde.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="eventGrid">
-      {featuredEvents.map((event) => (
-        <Link
-          key={event.id}
-          to={`/event/${event.id}`}
-          className="eventCard"
-        >
-          <img src={event.image} alt={event.title} />
-          <div className="eventOverlay" />
+    <div className="eventGrid homeSwipeRow">
+      {events.slice(0, 3).map((event) => {
+        const eventLocation =
+          [event.location, event.country]
+            .filter(Boolean)
+            .join(", ") || "Lokacija nije navedena";
 
-          <div className="eventTop">
-            <span>{event.category}</span>
-            <span>{event.date}</span>
-          </div>
-
-          <button
-            type="button"
-            className="eventHeart"
-            onClick={(e) => e.preventDefault()}
-            aria-label="Sačuvaj događaj"
+        return (
+          <Link
+            key={event.id}
+            to={`/event/${event.id}`}
+            className="eventCard"
           >
-            <Icon name="heart" size={18} />
-          </button>
+            <img
+              src={event.cover_url || HOME_FALLBACK_COVER}
+              alt={event.title || "Outdoor događaj"}
+            />
 
-          <div className="eventBody">
-            <div className="eventLocation">
-              <Icon name="mapPin" size={15} />
-              {event.location}
+            <div className="eventOverlay" />
+
+            <div className="eventTop">
+              <span>Novi događaj</span>
+              <span>{formatHomeDate(event.start_date)}</span>
             </div>
 
-            <h3>{event.title}</h3>
-
-            <div className="eventMetaLine">
-              <span>
-                <Icon name="star" size={14} fill="currentColor" />
-                {event.rating}
-              </span>
-              <span>{event.spots}</span>
-            </div>
-
-            <div className="eventFooter">
-              <div>
-                <small>Od</small>
-                <strong>{event.price}</strong>
+            <div className="eventBody">
+              <div className="eventLocation">
+                <Icon name="mapPin" size={15} />
+                {eventLocation}
               </div>
 
-              <span>
-                <Icon name="arrowRight" />
-              </span>
+              <h3>{event.title || "Outdoor događaj"}</h3>
+
+              <div className="eventMetaLine">
+                <span>
+                  <Icon name="users" size={14} />
+                  {event.capacity || "—"} mesta
+                </span>
+                <span>{formatHomePrice(event.price)}</span>
+              </div>
+
+              <div className="eventFooter">
+                <div>
+                  <small>Početak</small>
+                  <strong>{formatHomeDate(event.start_date)}</strong>
+                </div>
+
+                <span>
+                  <Icon name="arrowRight" />
+                </span>
+              </div>
             </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        );
+      })}
     </div>
   );
 }
+
+function HomeDiscoveryShowcase({ discovery }) {
+  const hosts = discovery?.hosts || [];
+  const packages = discovery?.packages || [];
+  const places = discovery?.places || [];
+
+  return (
+    <section className="homeDiscovery pageContainer">
+      <div className="homeDiscoveryIntro">
+        <span className="dashboardKicker">
+          <span />
+          Novo na MeetOutdoors
+        </span>
+
+        <h2>Zajednica se menja svaki dan.</h2>
+
+        <p>
+          Najnoviji domaćini, ture i lokacije dolaze direktno iz MeetOutdoors
+          zajednice.
+        </p>
+      </div>
+
+      <div className="homeDiscoveryBlock">
+        <SectionHeader
+          kicker="Novi domaćini"
+          title="Upoznaj ljude iza avantura."
+          description="Najnoviji aktivni host profili na MeetOutdoors."
+          linkTo="/hosts"
+          linkLabel="Svi domaćini"
+        />
+
+        {hosts.length > 0 ? (
+          <div className="homeHostGrid homeSwipeRow">
+            {hosts.slice(0, 4).map((host) => {
+              const hostLocation =
+                [host.city, host.country]
+                  .filter(Boolean)
+                  .join(", ") || "Lokacija nije navedena";
+
+              return (
+                <Link
+                  key={host.id}
+                  to={`/h/${host.username}`}
+                  className="homeHostCard"
+                >
+                  <div className="homeHostCover">
+                    <img
+                      src={host.cover_url || HOME_FALLBACK_COVER}
+                      alt=""
+                    />
+                    <div />
+                    <span>
+                      {host.is_verified ? (
+                        <>
+                          <Icon name="shield" size={13} />
+                          Verifikovan domaćin
+                        </>
+                      ) : (
+                        "Novi domaćin"
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="homeHostIdentity">
+                    <img
+                      src={host.avatar_url || HOME_FALLBACK_AVATAR}
+                      alt={host.full_name || host.username || "Host"}
+                    />
+
+                    <div>
+                      <strong>
+                        {host.full_name ||
+                          host.username ||
+                          "MeetOutdoors domaćin"}
+                      </strong>
+
+                      <small>
+                        <Icon name="mapPin" size={12} />
+                        {hostLocation}
+                      </small>
+                    </div>
+
+                    <Icon name="arrowRight" size={17} />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="liveHomeEmpty">
+            <span>
+              <Icon name="users" size={23} />
+            </span>
+            <div>
+              <strong>Još nema novih domaćina za prikaz.</strong>
+              <p>Novi host profili će se automatski pojaviti ovde.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="homeDiscoveryBlock">
+        <SectionHeader
+          kicker="Nove ture i paketi"
+          title="Nova iskustva koja možeš da rezervišeš."
+          description="Najnovije aktivne ture i paketi, direktno od domaćina."
+          linkTo="/packages"
+          linkLabel="Svi paketi"
+        />
+
+        {packages.length > 0 ? (
+          <div className="homePackageGrid homeSwipeRow">
+            {packages.slice(0, 4).map((item) => {
+              const packageLocation =
+                [item.location, item.country]
+                  .filter(Boolean)
+                  .join(", ") || "Lokacija nije navedena";
+
+              return (
+                <Link
+                  key={item.id}
+                  to={`/package/${item.id}`}
+                  className="homePackageCard"
+                >
+                  <div className="homePackageImage">
+                    <img
+                      src={item.cover_url || HOME_FALLBACK_COVER}
+                      alt={item.title || "Outdoor paket"}
+                    />
+                    <div />
+                    <span>
+                      <Icon name="package" size={13} />
+                      Novi paket
+                    </span>
+                  </div>
+
+                  <div className="homePackageBody">
+                    <small>
+                      <Icon name="mapPin" size={13} />
+                      {packageLocation}
+                    </small>
+
+                    <h3>{item.title || "Outdoor paket"}</h3>
+
+                    <div>
+                      <span>
+                        <Icon name="clock" size={13} />
+                        {item.duration || "Trajanje uskoro"}
+                      </span>
+
+                      <strong>
+                        {formatHomePrice(
+                          item.price,
+                          item.currency || "EUR"
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="liveHomeEmpty">
+            <span>
+              <Icon name="package" size={23} />
+            </span>
+            <div>
+              <strong>Još nema novih aktivnih paketa.</strong>
+              <p>Čim domaćin objavi paket, pojaviće se ovde.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="homeDiscoveryBlock placesBlock">
+        <SectionHeader
+          kicker="Novo na mapi"
+          title="Mesta koja zajednica upravo otkriva."
+          description="Najnovije odobrene i aktivne outdoor lokacije na MeetOutdoors mapi."
+          linkTo="/explore"
+          linkLabel="Otvori mapu"
+        />
+
+        {places.length > 0 ? (
+          <div className="homePlaceGrid homeSwipeRow">
+            {places.slice(0, 6).map((place) => {
+              const placeLocation =
+                [place.locality, place.region, place.country_name]
+                  .filter(Boolean)
+                  .join(" · ") || "Srbija";
+
+              return (
+                <Link
+                  key={place.id}
+                  to={`/explore/${place.id}`}
+                  className="homePlaceCard"
+                >
+                  <img
+                    src={place.cover_url || HOME_FALLBACK_COVER}
+                    alt={place.name || "Outdoor lokacija"}
+                  />
+
+                  <div className="homePlaceShade" />
+
+                  <div className="homePlaceCopy">
+                    <small>
+                      <Icon name="mapPin" size={13} />
+                      {placeLocation}
+                    </small>
+
+                    <strong>{place.name}</strong>
+
+                    <span>
+                      {place.checkins_count || 0} check-inova ·{" "}
+                      {place.photos_count || 0} fotografija
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="liveHomeEmpty">
+            <span>
+              <Icon name="mapPin" size={23} />
+            </span>
+            <div>
+              <strong>Još nema novih lokacija za prikaz.</strong>
+              <p>Odobrene lokacije će se automatski pojaviti ovde.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 
 /* =========================================================
    GUEST HOME
 ========================================================= */
 
-function GuestHome({ platformStats }) {
+function GuestHome({ platformStats, discovery }) {
   return (
     <main className="home">
       <section className="guestHero">
@@ -886,15 +1268,17 @@ function GuestHome({ platformStats }) {
 
       <section className="featuredSection pageContainer firstSection">
         <SectionHeader
-          kicker="Odabrano za tebe"
-          title="Avanture koje se pamte."
-          description="Kratka lista događaja koji imaju najbolji odnos atmosfere, lokacije i host iskustva."
+          kicker="Najnoviji događaji"
+          title="Nove avanture na MeetOutdoors."
+          description="Poslednji aktivni događaji koje su domaćini objavili na platformi."
           linkTo="/events"
           linkLabel="Pogledaj sve"
         />
 
-        <EventCards />
+        <EventCards events={discovery.events} />
       </section>
+
+      <HomeDiscoveryShowcase discovery={discovery} />
 
       <section className="trustStrip pageContainer">
         <article>
@@ -1007,7 +1391,7 @@ function GuestHome({ platformStats }) {
    USER HOME
 ========================================================= */
 
-function UserHome({ profile, notifications, onRead }) {
+function UserHome({ profile, notifications, onRead, discovery }) {
   const firstName = useMemo(() => {
     if (!profile?.full_name) return "";
     return profile.full_name.trim().split(" ")[0];
@@ -1101,47 +1485,77 @@ function UserHome({ profile, notifications, onRead }) {
 
       <section className="featuredSection pageContainer">
         <SectionHeader
-          kicker="Preporučeno za tebe"
-          title="Tvoj sledeći vikend počinje ovde."
-          description="Najbolje ocenjeni događaji koji su trenutno otvoreni za rezervaciju."
+          kicker="Najnoviji događaji"
+          title="Tvoj sledeći vikend može početi ovde."
+          description="Najnoviji aktivni događaji koje su domaćini upravo objavili."
           linkTo="/events"
           linkLabel="Svi događaji"
         />
 
-        <EventCards />
+        <EventCards events={discovery.events} />
       </section>
+
+      <HomeDiscoveryShowcase discovery={discovery} />
 
       <section className="userDashboardGrid pageContainer">
         <div className="upcomingCard">
           <div className="miniHeader">
             <div>
-              <span>Sledeće rezervacije</span>
-              <h3>Planovi koji te čekaju.</h3>
+              <span>Novo na platformi</span>
+              <h3>Sveže objavljeno.</h3>
             </div>
 
-            <Link to="/my-bookings">
+            <Link to="/events">
               Sve
               <Icon name="arrowRight" size={16} />
             </Link>
           </div>
 
           <div className="upcomingList">
-            {upcomingTrips.map((trip) => (
-              <article key={trip.title}>
-                <span className="upcomingIcon">
-                  <Icon name="calendar" size={19} />
-                </span>
+            {[
+              ...discovery.events.slice(0, 2).map((event) => ({
+                id: `event-${event.id}`,
+                title: event.title,
+                date: formatHomeDate(event.start_date),
+                status: "Događaj",
+                icon: "calendar",
+                to: `/event/${event.id}`,
+              })),
+              ...discovery.packages.slice(0, 2).map((item) => ({
+                id: `package-${item.id}`,
+                title: item.title,
+                date: [item.location, item.country]
+                  .filter(Boolean)
+                  .join(", ") || "Nova outdoor ponuda",
+                status: "Paket",
+                icon: "package",
+                to: `/package/${item.id}`,
+              })),
+            ]
+              .slice(0, 4)
+              .map((entry) => (
+                <Link to={entry.to} key={entry.id}>
+                  <span className="upcomingIcon">
+                    <Icon name={entry.icon} size={19} />
+                  </span>
 
-                <div>
-                  <strong>{trip.title}</strong>
-                  <small>{trip.date}</small>
+                  <div>
+                    <strong>{entry.title}</strong>
+                    <small>{entry.date}</small>
+                  </div>
+
+                  <span className="tripStatus confirmed">
+                    {entry.status}
+                  </span>
+                </Link>
+              ))}
+
+            {discovery.events.length === 0 &&
+              discovery.packages.length === 0 && (
+                <div className="homeMiniEmpty">
+                  Novi događaji i paketi će se pojaviti ovde.
                 </div>
-
-                <span className={`tripStatus ${trip.status === "Potvrđeno" ? "confirmed" : ""}`}>
-                  {trip.status}
-                </span>
-              </article>
-            ))}
+              )}
           </div>
         </div>
 
@@ -1460,6 +1874,7 @@ export default function Home() {
     platformStats,
     notifications,
     hostOwnStats,
+    homeDiscovery,
     markRead,
   } = useHomeLiveData(profile);
 
@@ -1483,12 +1898,13 @@ export default function Home() {
   return (
     <>
       <HomeStyles />
-      {!profile && <GuestHome platformStats={platformStats} />}
+      {!profile && <GuestHome platformStats={platformStats} discovery={homeDiscovery} />}
       {isUser && (
         <UserHome
           profile={profile}
           notifications={notifications}
           onRead={markRead}
+          discovery={homeDiscovery}
         />
       )}
       {isHost && (
@@ -2354,6 +2770,468 @@ function HomeStyles() {
         margin: 23px auto 30px;
         color: rgba(255,255,255,0.67);
         line-height: 1.7;
+      }
+
+
+      /* LIVE HOME DISCOVERY */
+
+      .homeDiscovery {
+        padding: 15px 0 100px;
+      }
+
+      .homeDiscoveryIntro {
+        max-width: 820px;
+        margin-bottom: 52px;
+      }
+
+      .homeDiscoveryIntro h2 {
+        margin: 14px 0 0;
+        font-size: clamp(42px, 5.5vw, 68px);
+        line-height: 0.98;
+        letter-spacing: -0.065em;
+      }
+
+      .homeDiscoveryIntro > p {
+        max-width: 680px;
+        margin: 17px 0 0;
+        color: #748078;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .homeDiscoveryBlock + .homeDiscoveryBlock {
+        margin-top: 72px;
+      }
+
+      .homeHostGrid,
+      .homePackageGrid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .homeHostCard,
+      .homePackageCard {
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid #dce4d9;
+        border-radius: 23px;
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 16px 42px rgba(27,45,34,0.07);
+        transition: 0.22s ease;
+      }
+
+      .homeHostCard:hover,
+      .homePackageCard:hover,
+      .homePlaceCard:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 24px 56px rgba(27,45,34,0.12);
+      }
+
+      .homeHostCover,
+      .homePackageImage {
+        position: relative;
+        height: 175px;
+        overflow: hidden;
+        background: #dfe8d9;
+      }
+
+      .homeHostCover > img,
+      .homePackageImage > img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        transition: 0.55s ease;
+      }
+
+      .homeHostCard:hover .homeHostCover > img,
+      .homePackageCard:hover .homePackageImage > img {
+        transform: scale(1.05);
+      }
+
+      .homeHostCover > div,
+      .homePackageImage > div {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(4,14,8,.04), rgba(4,14,8,.65));
+      }
+
+      .homeHostCover > span,
+      .homePackageImage > span {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 30px;
+        padding: 0 9px;
+        border: 1px solid rgba(255,255,255,.16);
+        border-radius: 999px;
+        background: rgba(7,24,14,.56);
+        color: #d9ffca;
+        font-size: 7px;
+        font-weight: 900;
+        backdrop-filter: blur(10px);
+      }
+
+      .homeHostIdentity {
+        display: grid;
+        grid-template-columns: 48px minmax(0,1fr) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 13px;
+      }
+
+      .homeHostIdentity > img {
+        width: 48px;
+        height: 48px;
+        border-radius: 15px;
+        object-fit: cover;
+        background: #e5ebdf;
+      }
+
+      .homeHostIdentity > div {
+        min-width: 0;
+      }
+
+      .homeHostIdentity strong,
+      .homeHostIdentity small {
+        display: block;
+      }
+
+      .homeHostIdentity strong {
+        overflow: hidden;
+        color: #2e4336;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .homeHostIdentity small {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 5px;
+        overflow: hidden;
+        color: #849087;
+        font-size: 7px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .homeHostIdentity > svg {
+        color: #729152;
+      }
+
+      .homePackageBody {
+        padding: 15px;
+      }
+
+      .homePackageBody > small {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        overflow: hidden;
+        color: #7e8981;
+        font-size: 7px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .homePackageBody h3 {
+        margin: 9px 0 0;
+        color: #293e31;
+        font-size: 17px;
+        line-height: 1.15;
+        letter-spacing: -0.035em;
+      }
+
+      .homePackageBody > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 15px;
+        padding-top: 13px;
+        border-top: 1px solid #e5eae3;
+      }
+
+      .homePackageBody > div > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: #78847c;
+        font-size: 7px;
+      }
+
+      .homePackageBody > div > strong {
+        color: #24402f;
+        font-size: 10px;
+      }
+
+      .homePlaceGrid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .homePlaceCard {
+        position: relative;
+        min-height: 260px;
+        overflow: hidden;
+        border-radius: 23px;
+        color: white !important;
+        box-shadow: 0 16px 42px rgba(27,45,34,0.1);
+        transition: 0.22s ease;
+      }
+
+      .homePlaceCard > img,
+      .homePlaceShade {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .homePlaceCard > img {
+        object-fit: cover;
+        transition: 0.55s ease;
+      }
+
+      .homePlaceCard:hover > img {
+        transform: scale(1.05);
+      }
+
+      .homePlaceShade {
+        background: linear-gradient(180deg, rgba(4,14,8,.06), rgba(4,14,8,.84));
+      }
+
+      .homePlaceCopy {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        padding: 18px;
+      }
+
+      .homePlaceCopy small,
+      .homePlaceCopy strong,
+      .homePlaceCopy span {
+        display: block;
+      }
+
+      .homePlaceCopy small {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: rgba(255,255,255,.62);
+        font-size: 7px;
+      }
+
+      .homePlaceCopy strong {
+        margin-top: 7px;
+        font-size: 19px;
+        line-height: 1.05;
+        letter-spacing: -0.035em;
+      }
+
+      .homePlaceCopy span {
+        margin-top: 8px;
+        color: rgba(255,255,255,.48);
+        font-size: 7px;
+      }
+
+      .liveHomeEmpty {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-height: 110px;
+        padding: 20px;
+        border: 1px dashed #ced9ca;
+        border-radius: 20px;
+        background: rgba(255,255,255,.66);
+      }
+
+      .liveHomeEmpty > span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 48px;
+        height: 48px;
+        border-radius: 15px;
+        background: #e8f1de;
+        color: #66834b;
+      }
+
+      .liveHomeEmpty strong {
+        display: block;
+        color: #3d5144;
+        font-size: 11px;
+      }
+
+      .liveHomeEmpty p {
+        margin: 5px 0 0;
+        color: #89938c;
+        font-size: 8px;
+      }
+
+      .upcomingList > a {
+        display: grid;
+        grid-template-columns: auto minmax(0,1fr) auto;
+        align-items: center;
+        gap: 12px;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .homeMiniEmpty {
+        padding: 18px;
+        border: 1px dashed #d3ddd0;
+        border-radius: 14px;
+        color: #8b958e;
+        font-size: 9px;
+      }
+
+      @media(max-width: 1000px) {
+        .homeHostGrid,
+        .homePackageGrid {
+          grid-template-columns: repeat(2, minmax(0,1fr));
+        }
+
+        .homePlaceGrid {
+          grid-template-columns: repeat(2, minmax(0,1fr));
+        }
+      }
+
+      @media(max-width: 620px) {
+        .homeDiscovery {
+          padding-bottom: 72px;
+        }
+
+        .homeDiscoveryBlock + .homeDiscoveryBlock {
+          margin-top: 54px;
+        }
+
+        .homeHostGrid,
+        .homePackageGrid,
+        .homePlaceGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .homePlaceCard {
+          min-height: 235px;
+        }
+      }
+
+
+      /* HORIZONTAL SWIPE / SCROLL SNAP */
+
+      .homeSwipeRow {
+        display: grid !important;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(280px, 31%);
+        grid-template-columns: none !important;
+        gap: 14px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 4px 2px 18px;
+        margin-right: -2px;
+        scroll-snap-type: x mandatory;
+        scroll-padding-inline: 2px;
+        overscroll-behavior-inline: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .homeSwipeRow::-webkit-scrollbar {
+        display: none;
+      }
+
+      .homeSwipeRow > * {
+        min-width: 0;
+        scroll-snap-align: start;
+        scroll-snap-stop: normal;
+      }
+
+      .eventGrid.homeSwipeRow {
+        grid-auto-columns: minmax(320px, 35%);
+      }
+
+      .homeHostGrid.homeSwipeRow {
+        grid-auto-columns: minmax(250px, 26%);
+      }
+
+      .homePackageGrid.homeSwipeRow {
+        grid-auto-columns: minmax(280px, 29%);
+      }
+
+      .homePlaceGrid.homeSwipeRow {
+        grid-auto-columns: minmax(300px, 32%);
+      }
+
+      .homeSwipeRow::after {
+        content: "";
+        width: 1px;
+      }
+
+      @media(max-width: 1000px) {
+        .eventGrid.homeSwipeRow {
+          grid-auto-columns: minmax(300px, 48%);
+        }
+
+        .homeHostGrid.homeSwipeRow,
+        .homePackageGrid.homeSwipeRow {
+          grid-auto-columns: minmax(260px, 44%);
+        }
+
+        .homePlaceGrid.homeSwipeRow {
+          grid-auto-columns: minmax(290px, 48%);
+        }
+      }
+
+      @media(max-width: 700px) {
+        .homeSwipeRow {
+          width: calc(100% + 24px);
+          margin-right: -24px;
+          padding-right: 24px;
+          scroll-padding-inline: 0;
+        }
+
+        .eventGrid.homeSwipeRow {
+          grid-auto-columns: minmax(285px, 86%);
+        }
+
+        .homeHostGrid.homeSwipeRow {
+          grid-auto-columns: minmax(245px, 78%);
+        }
+
+        .homePackageGrid.homeSwipeRow {
+          grid-auto-columns: minmax(270px, 82%);
+        }
+
+        .homePlaceGrid.homeSwipeRow {
+          grid-auto-columns: minmax(285px, 86%);
+        }
+      }
+
+      @media(max-width: 430px) {
+        .eventGrid.homeSwipeRow {
+          grid-auto-columns: 88%;
+        }
+
+        .homeHostGrid.homeSwipeRow {
+          grid-auto-columns: 80%;
+        }
+
+        .homePackageGrid.homeSwipeRow {
+          grid-auto-columns: 84%;
+        }
+
+        .homePlaceGrid.homeSwipeRow {
+          grid-auto-columns: 88%;
+        }
       }
 
       /* USER */
