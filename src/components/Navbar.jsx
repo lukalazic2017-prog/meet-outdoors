@@ -301,28 +301,34 @@ export default function Navbar() {
       index: "01",
     },
     {
+      to: "/agent",
+      label: "Agent",
+      icon: "sparkle",
+      index: "02",
+    },
+    {
       to: "/explore",
       label: "Mapa",
       icon: "mapPin",
-      index: "02",
+      index: "03",
     },
     {
       to: "/events",
       label: "Događaji",
       icon: "calendar",
-      index: "03",
+      index: "04",
     },
     {
       to: "/packages",
       label: "Paketi",
       icon: "package",
-      index: "04",
+      index: "05",
     },
     {
       to: "/hosts",
       label: "Domaćini",
       icon: "users",
-      index: "05",
+      index: "06",
     },
   ];
 
