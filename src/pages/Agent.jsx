@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
@@ -114,12 +114,18 @@ function Icon({ name, size = 20 }) {
 
 export default function Agent() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [form, setForm] = useState(initialForm);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login", { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   const canSubmit = useMemo(() => {
     return form.activity.trim() && Number(form.peopleCount) > 0;
@@ -137,8 +143,18 @@ export default function Agent() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!user) {
-      navigate("/login");
+    if (authLoading) {
+      return;
+    }
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.user) {
+      console.error("Agent session error:", sessionError);
+      navigate("/login", { replace: true });
       return;
     }
 
@@ -153,7 +169,7 @@ export default function Agent() {
     }
 
     try {
-      setLoading(true);
+      setSubmitting(true);
       setError("");
       setResult(null);
 
@@ -184,7 +200,7 @@ export default function Agent() {
           "Nismo uspeli da pošaljemo zahtev. Pokušaj ponovo."
       );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
@@ -192,6 +208,33 @@ export default function Agent() {
     setForm(initialForm);
     setResult(null);
     setError("");
+  }
+
+  if (authLoading) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          background: "#fbfcfa",
+          color: "#214f3b",
+          fontFamily:
+            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <Icon name="sparkles" size={28} />
+          <div style={{ marginTop: 12, fontWeight: 800 }}>
+            Učitavamo tvoj MeetOutdoors nalog...
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -850,15 +893,15 @@ export default function Agent() {
                 <button
                   className="mo-agent-submit"
                   type="submit"
-                  disabled={!canSubmit || loading}
+                  disabled={!canSubmit || submitting || authLoading}
                 >
                   <Icon name="sparkles" />
 
-                  {loading
+                  {submitting
                     ? "Tražimo najbolju opciju..."
                     : "Izvedi me napolje"}
 
-                  {!loading && <Icon name="arrow" />}
+                  {!submitting && <Icon name="arrow" />}
                 </button>
               </form>
             )}
