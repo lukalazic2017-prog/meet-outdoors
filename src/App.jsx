@@ -42,6 +42,7 @@ import AddPlace from "./pages/AddPlace";
 import PlaceDetails from "./pages/PlaceDetails";
 import AdminExplore from "./pages/AdminExplore";
 import BlockedAccount from "./pages/BlockedAccount";
+import Agent from "./pages/Agent";
 
 function AppRoutes() {
   const {
@@ -210,6 +211,11 @@ function AppRoutes() {
           path="/explore"
           element={<ExploreMap />}
         />
+
+        <Route
+  path="/agent"
+  element={<Agent />}
+/>
 
         <Route
           path="/explore/add"
