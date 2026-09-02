@@ -43,6 +43,7 @@ import PlaceDetails from "./pages/PlaceDetails";
 import AdminExplore from "./pages/AdminExplore";
 import BlockedAccount from "./pages/BlockedAccount";
 import Agent from "./pages/Agent";
+import HostDemandDetails from "./pages/HostDemandDetails";
 
 function AppRoutes() {
   const {
@@ -170,6 +171,11 @@ function AppRoutes() {
           path="/create-package"
           element={<CreatePackage />}
         />
+
+        <Route
+  path="/host/demand/:id"
+  element={<HostDemandDetails />}
+/>
 
         <Route
           path="/packages"

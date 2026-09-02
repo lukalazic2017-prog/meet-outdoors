@@ -191,6 +191,42 @@ function notificationMeta(notification) {
     .join(" ")
     .toLowerCase();
 
+  if (notification.type === "adventure_demand") {
+    return {
+      icon: "sparkle",
+      label: "Nova potražnja",
+      tone: "adventure",
+      actionLabel: "Otvori potražnju",
+    };
+  }
+
+  if (notification.type === "adventure_offer") {
+    return {
+      icon: "sparkle",
+      label: "Nova ponuda",
+      tone: "offer",
+      actionLabel: "Pogledaj ponudu",
+    };
+  }
+
+  if (notification.type === "adventure_offer_accepted") {
+    return {
+      icon: "check",
+      label: "Ponuda prihvaćena",
+      tone: "success",
+      actionLabel: null,
+    };
+  }
+
+  if (notification.type === "adventure_offer_rejected") {
+    return {
+      icon: "alert",
+      label: "Ponuda odbijena",
+      tone: "neutral",
+      actionLabel: null,
+    };
+  }
+
   if (
     text.includes("booking") ||
     text.includes("rezerv")
@@ -199,6 +235,7 @@ function notificationMeta(notification) {
       icon: "users",
       label: "Rezervacija",
       tone: "purple",
+      actionLabel: "Pogledaj detalje",
     };
   }
 
@@ -210,6 +247,7 @@ function notificationMeta(notification) {
       icon: "message",
       label: "Komentar",
       tone: "blue",
+      actionLabel: "Pogledaj detalje",
     };
   }
 
@@ -221,6 +259,7 @@ function notificationMeta(notification) {
       icon: "star",
       label: "Recenzija",
       tone: "gold",
+      actionLabel: "Pogledaj detalje",
     };
   }
 
@@ -232,6 +271,7 @@ function notificationMeta(notification) {
       icon: "heart",
       label: "Interesovanje",
       tone: "rose",
+      actionLabel: "Pogledaj detalje",
     };
   }
 
@@ -243,6 +283,7 @@ function notificationMeta(notification) {
       icon: "calendar",
       label: "Događaj",
       tone: "green",
+      actionLabel: "Pogledaj detalje",
     };
   }
 
@@ -254,6 +295,7 @@ function notificationMeta(notification) {
       icon: "sparkle",
       label: "MeetOutdoors",
       tone: "lime",
+      actionLabel: null,
     };
   }
 
@@ -261,6 +303,7 @@ function notificationMeta(notification) {
     icon: "bell",
     label: "Obaveštenje",
     tone: "neutral",
+    actionLabel: null,
   };
 }
 
@@ -270,13 +313,22 @@ function NotificationCard({
 }) {
   const meta = notificationMeta(notification);
 
-  const target = notification.event_id
-    ? `/event/${notification.event_id}`
-    : notification.package_id
-      ? `/package/${notification.package_id}`
-      : null;
+  const target =
+  notification.type === "adventure_demand" &&
+  notification.adventure_intent_id
+    ? `/host/demand/${notification.adventure_intent_id}`
+    : notification.event_id
+      ? `/event/${notification.event_id}`
+      : notification.package_id
+        ? `/package/${notification.package_id}`
+        : null;
 
   const unread = notification.is_read !== true;
+  const isAdventure =
+    notification.type === "adventure_demand" ||
+    notification.type === "adventure_offer" ||
+    notification.type === "adventure_offer_accepted" ||
+    notification.type === "adventure_offer_rejected";
 
   const body = (
     <>
@@ -323,9 +375,13 @@ function NotificationCard({
     </>
   );
 
-  const className = unread
-    ? "notificationCard unread"
-    : "notificationCard";
+  const className = [
+    "notificationCard",
+    unread ? "unread" : "",
+    isAdventure ? "adventureCard" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (target) {
     return (
@@ -678,9 +734,9 @@ export default function Notifications() {
             </h1>
 
             <p>
-              Prati rezervacije, komentare,
-              interesovanja i važne aktivnosti
-              povezane sa tvojim MeetOutdoors nalogom.
+              Sve što traži tvoju pažnju na jednom mestu —
+              rezervacije, poruke, outdoor potražnje, ponude
+              i važne aktivnosti na tvom MeetOutdoors nalogu.
             </p>
           </div>
 
@@ -720,8 +776,8 @@ export default function Notifications() {
               <h2>Najnovije promene</h2>
 
               <p>
-                Sve važne aktivnosti prikazane su
-                hronološki.
+                Najvažnije prvo. Sve ostalo uredno,
+                hronološki i bez buke.
               </p>
             </div>
 
@@ -819,9 +875,9 @@ export default function Notifications() {
               </h3>
 
               <p>
-                Kada neko rezerviše paket,
-                komentariše događaj ili pokaže
-                interesovanje, videćeš to ovde.
+                Kada stigne rezervacija, komentar,
+                nova outdoor potražnja ili ponuda,
+                pojaviće se ovde.
               </p>
 
               <Link to="/events">
@@ -888,9 +944,9 @@ export default function Notifications() {
               </h2>
 
               <p>
-                MeetOutdoors obaveštenja pomažu ti
-                da na jednom mestu pratiš interakcije
-                sa događajima, paketima i profilom.
+                MeetOutdoors obaveštenja su komandni centar
+                za ono što zahteva tvoju akciju — od rezervacije
+                do nove potražnje ili ponude.
               </p>
             </div>
 
@@ -938,10 +994,10 @@ export default function Notifications() {
                 </span>
 
                 <div>
-                  <strong>Važne promene</strong>
+                  <strong>Outdoor potražnje</strong>
                   <small>
-                    Ne propusti aktivnosti povezane
-                    sa nalogom.
+                    Hostovi dobijaju realnu tražnju, a korisnici
+                    ponude koje mogu da prihvate ili odbiju.
                   </small>
                 </div>
               </article>
@@ -971,9 +1027,9 @@ function NotificationsStyles() {
       .notificationsPage {
         padding: 118px 28px 28px;
         background:
-          radial-gradient(circle at 8% 0%, rgba(179, 216, 139, .18), transparent 26%),
-          radial-gradient(circle at 92% 22%, rgba(58, 101, 70, .11), transparent 26%),
-          #eef1e9;
+          radial-gradient(circle at 10% -2%, rgba(181, 220, 140, .22), transparent 28%),
+          radial-gradient(circle at 96% 18%, rgba(49, 94, 65, .12), transparent 30%),
+          linear-gradient(180deg, #f7f8f4 0%, #edf1e9 100%);
       }
 
       .notificationsPage a {
@@ -985,14 +1041,14 @@ function NotificationsStyles() {
         position: relative;
         isolation: isolate;
         width: min(1180px, 100%);
-        min-height: 520px;
+        min-height: 440px;
         margin: 0 auto;
-        padding: 34px;
+        padding: 40px;
         overflow: hidden;
         border-radius: 36px;
         background:
           radial-gradient(circle at 80% 20%, rgba(191, 237, 128, .15), transparent 25%),
-          linear-gradient(135deg, #0d2a1a, #173f28 58%, #28563a);
+          linear-gradient(135deg, #0a2417 0%, #123b26 52%, #2b5e3f 100%);
         color: #fff;
         box-shadow: 0 34px 90px rgba(23, 54, 36, .18);
       }
@@ -1024,7 +1080,7 @@ function NotificationsStyles() {
 
       .heroContent {
         max-width: 780px;
-        padding: 82px 0 48px;
+        padding: 56px 0 42px;
       }
 
       .kicker {
@@ -1068,9 +1124,18 @@ function NotificationsStyles() {
       .stats {
         display: grid;
         grid-template-columns: repeat(3, minmax(0,1fr));
-        gap: 14px;
+        gap: 12px;
+        margin-top: 8px;
         padding-top: 22px;
         border-top: 1px solid rgba(255,255,255,.11);
+      }
+
+      .stats article {
+        padding: 14px 16px;
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 18px;
+        background: rgba(255,255,255,.055);
+        backdrop-filter: blur(14px);
       }
 
       .stats strong,
@@ -1249,6 +1314,58 @@ function NotificationsStyles() {
         color: #66776c;
       }
 
+
+      .notificationCard.adventureCard {
+        overflow: hidden;
+        border-color: rgba(97, 128, 71, .28);
+        background:
+          radial-gradient(circle at 100% 0%, rgba(202, 239, 158, .18), transparent 30%),
+          rgba(255,255,255,.92);
+      }
+
+      .notificationCard.adventureCard::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 4px;
+        background: linear-gradient(180deg, #a9d56f, #2d6545);
+      }
+
+      .notificationCard.adventureCard.unread {
+        border-color: rgba(107, 146, 77, .42);
+        box-shadow:
+          0 18px 44px rgba(48, 86, 58, .10),
+          inset 0 1px 0 rgba(255,255,255,.8);
+      }
+
+      .notificationIcon.adventure {
+        background:
+          linear-gradient(145deg, #163f2b, #2d6a49);
+        color: #d9f6ae;
+        box-shadow: 0 10px 24px rgba(28, 73, 47, .22);
+      }
+
+      .notificationIcon.offer {
+        background:
+          linear-gradient(145deg, #f0f6e7, #dcebc9);
+        color: #466c36;
+      }
+
+      .notificationIcon.success {
+        background:
+          linear-gradient(145deg, #e4f4e8, #d4ead9);
+        color: #2f6c47;
+      }
+
+      .adventureHint {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 6px;
+        color: #587148 !important;
+        font-weight: 900 !important;
+        letter-spacing: .02em;
+      }
+
       .notificationIcon.green {
         background: #e8f0de;
         color: #5f7c43;
@@ -1302,7 +1419,7 @@ function NotificationsStyles() {
       .notificationBody h3 {
         margin: 7px 0 0;
         color: #304538;
-        font-size: 16px;
+        font-size: 17px;
         line-height: 1.25;
         letter-spacing: -.025em;
       }
@@ -1310,7 +1427,7 @@ function NotificationsStyles() {
       .notificationBody p {
         margin: 7px 0 0;
         color: #77837b;
-        font-size: 10px;
+        font-size: 12px;
         line-height: 1.65;
       }
 
@@ -1559,7 +1676,7 @@ function NotificationsStyles() {
         }
 
         .hero {
-          min-height: 530px;
+          min-height: 470px;
           padding: 24px;
           border-radius: 0 0 32px 32px;
         }
