@@ -197,7 +197,7 @@ function LoadingState() {
 export default function HostDemandDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [demand, setDemand] = useState(null);
   const [existingOffer, setExistingOffer] = useState(null);
