@@ -317,11 +317,26 @@ function NotificationCard({
   notification.type === "adventure_demand" &&
   notification.adventure_intent_id
     ? `/host/demand/${notification.adventure_intent_id}`
-    : notification.event_id
-      ? `/event/${notification.event_id}`
-      : notification.package_id
-        ? `/package/${notification.package_id}`
-        : null;
+
+    : notification.type === "adventure_offer" &&
+        notification.adventure_intent_id
+      ? `/agent/request/${notification.adventure_intent_id}`
+
+      : notification.type === "adventure_offer_accepted" &&
+          notification.adventure_intent_id
+        ? `/host/demand/${notification.adventure_intent_id}`
+
+        : notification.type === "adventure_offer_rejected" &&
+            notification.adventure_intent_id
+          ? `/host/demand/${notification.adventure_intent_id}`
+
+          : notification.event_id
+            ? `/event/${notification.event_id}`
+
+            : notification.package_id
+              ? `/package/${notification.package_id}`
+
+              : null;
 
   const unread = notification.is_read !== true;
   const isAdventure =
@@ -329,6 +344,13 @@ function NotificationCard({
     notification.type === "adventure_offer" ||
     notification.type === "adventure_offer_accepted" ||
     notification.type === "adventure_offer_rejected";
+
+  const isRecent =
+    notification.created_at &&
+    Date.now() - new Date(notification.created_at).getTime() <
+      1000 * 60 * 60 * 24 * 7;
+
+  const ageClass = isRecent ? "recentNotification" : "olderNotification";
 
   const body = (
     <>
@@ -340,7 +362,10 @@ function NotificationCard({
 
       <div className="notificationBody">
         <div className="notificationMeta">
-          <span>{meta.label}</span>
+          <div className="metaLeft">
+            <span>{meta.label}</span>
+            {unread && <em>Novo</em>}
+          </div>
 
           <small>
             <Icon name="clock" size={13} />
@@ -362,12 +387,18 @@ function NotificationCard({
             {formatDate(notification.created_at)}
           </small>
 
-          {target && (
-            <span>
-              Pogledaj detalje
-              <Icon name="arrowRight" size={15} />
+          <div className="notificationBottomRight">
+            <span className={`readState ${unread ? "isUnread" : "isRead"}`}>
+              {unread ? "Nepročitano" : "Pročitano"}
             </span>
-          )}
+
+            {target && (
+              <span className="detailAction">
+                {meta.actionLabel || "Pogledaj detalje"}
+                <Icon name="arrowRight" size={15} />
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -377,8 +408,9 @@ function NotificationCard({
 
   const className = [
     "notificationCard",
-    unread ? "unread" : "",
+    unread ? "unread" : "read",
     isAdventure ? "adventureCard" : "",
+    ageClass,
   ]
     .filter(Boolean)
     .join(" ");
@@ -438,6 +470,7 @@ export default function Notifications() {
   const [error, setError] = useState("");
   const [markingAll, setMarkingAll] =
     useState(false);
+  const [filter, setFilter] = useState("all");
 
   const loadNotifications = useCallback(async () => {
     if (!profile?.id) {
@@ -683,15 +716,37 @@ export default function Notifications() {
     };
   }, [profile?.id]);
 
+  const filteredNotifications = useMemo(() => {
+    if (filter === "unread") {
+      return notifications.filter(
+        (notification) => notification.is_read !== true
+      );
+    }
+
+    if (filter === "adventure") {
+      return notifications.filter((notification) =>
+        [
+          "adventure_demand",
+          "adventure_offer",
+          "adventure_offer_accepted",
+          "adventure_offer_rejected",
+        ].includes(notification.type)
+      );
+    }
+
+    return notifications;
+  }, [notifications, filter]);
+
   const groupedNotifications = useMemo(() => {
     const groups = {
       Danas: [],
       Juče: [],
       "Ove nedelje": [],
-      Ranije: [],
+      "Ovog meseca": [],
+      Starije: [],
     };
 
-    notifications.forEach((notification) => {
+    filteredNotifications.forEach((notification) => {
       groups[
         dateGroup(notification.created_at)
       ].push(notification);
@@ -700,7 +755,7 @@ export default function Notifications() {
     return Object.entries(groups).filter(
       ([, items]) => items.length
     );
-  }, [notifications]);
+  }, [filteredNotifications]);
 
   const unreadCount = useMemo(
     () =>
@@ -812,6 +867,46 @@ export default function Notifications() {
             </div>
           </header>
 
+          {notifications.length > 0 && (
+            <div className="filterBar" role="tablist" aria-label="Filtriranje obaveštenja">
+              <button
+                type="button"
+                className={filter === "all" ? "active" : ""}
+                onClick={() => setFilter("all")}
+              >
+                Sve
+                <span>{notifications.length}</span>
+              </button>
+
+              <button
+                type="button"
+                className={filter === "unread" ? "active" : ""}
+                onClick={() => setFilter("unread")}
+              >
+                Nepročitano
+                <span>{unreadCount}</span>
+              </button>
+
+              <button
+                type="button"
+                className={filter === "adventure" ? "active" : ""}
+                onClick={() => setFilter("adventure")}
+              >
+                Agent & ponude
+                <span>
+                  {notifications.filter((notification) =>
+                    [
+                      "adventure_demand",
+                      "adventure_offer",
+                      "adventure_offer_accepted",
+                      "adventure_offer_rejected",
+                    ].includes(notification.type)
+                  ).length}
+                </span>
+              </button>
+            </div>
+          )}
+
           {error && (
             <div
               className="errorBox"
@@ -888,6 +983,17 @@ export default function Notifications() {
                 />
               </Link>
             </div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="emptyState compactEmpty">
+              <span>
+                <Icon name="inbox" size={28} />
+              </span>
+              <h3>Nema obaveštenja u ovom prikazu.</h3>
+              <p>Promeni filter da vidiš ostatak aktivnosti.</p>
+              <button type="button" className="resetFilterButton" onClick={() => setFilter("all")}>
+                Prikaži sva obaveštenja
+              </button>
+            </div>
           ) : (
             <div className="groups">
               {groupedNotifications.map(
@@ -907,6 +1013,9 @@ export default function Notifications() {
                         {items.length === 1
                           ? "obaveštenje"
                           : "obaveštenja"}
+                        {items.some((item) => item.is_read !== true)
+                          ? ` · ${items.filter((item) => item.is_read !== true).length} novo`
+                          : ""}
                       </small>
                     </div>
 
@@ -1228,6 +1337,59 @@ function NotificationsStyles() {
         color: #4c6d39;
       }
 
+      .filterBar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0 0 24px;
+        padding: 6px;
+        width: fit-content;
+        max-width: 100%;
+        border: 1px solid #d9e2d6;
+        border-radius: 15px;
+        background: rgba(255,255,255,.62);
+        box-shadow: 0 8px 24px rgba(31,51,38,.035);
+      }
+
+      .filterBar button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: #6f7d74;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 850;
+      }
+
+      .filterBar button span {
+        display: grid;
+        place-items: center;
+        min-width: 21px;
+        height: 21px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: #e8eee5;
+        color: #617068;
+        font-size: 7px;
+      }
+
+      .filterBar button.active {
+        background: #183b29;
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(29,70,47,.14);
+      }
+
+      .filterBar button.active span {
+        background: rgba(255,255,255,.12);
+        color: #dff1cb;
+      }
+
       .groups {
         display: grid;
         gap: 31px;
@@ -1280,9 +1442,27 @@ function NotificationsStyles() {
         padding: 18px;
         border: 1px solid #dbe3d8;
         border-radius: 20px;
-        background: rgba(255,255,255,.78);
-        box-shadow: 0 10px 28px rgba(29,50,37,.04);
+        background: rgba(255,255,255,.82);
+        box-shadow: 0 10px 28px rgba(29,50,37,.035);
         transition: .2s ease;
+      }
+
+      .notificationCard.read {
+        opacity: .76;
+        background: rgba(250,251,249,.68);
+        box-shadow: none;
+      }
+
+      .notificationCard.read:hover {
+        opacity: 1;
+      }
+
+      .notificationCard.olderNotification {
+        border-color: #e2e7e0;
+      }
+
+      .notificationCard.olderNotification.read {
+        filter: saturate(.82);
       }
 
       a.notificationCard:hover {
@@ -1293,15 +1473,24 @@ function NotificationsStyles() {
       }
 
       .notificationCard.unread {
-        border-color: #bfd2ae;
+        border-color: #adc89a;
         background:
           linear-gradient(
             135deg,
-            rgba(241,248,234,.98),
-            rgba(255,255,255,.9)
+            rgba(239,248,230,.99),
+            rgba(255,255,255,.96)
           );
         box-shadow:
-          0 12px 34px rgba(84, 118, 65, .08);
+          0 14px 38px rgba(73, 110, 55, .11);
+      }
+
+      .notificationCard.unread::after {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 4px;
+        border-radius: 20px 0 0 20px;
+        background: linear-gradient(180deg, #91bd61, #2f6947);
       }
 
       .notificationIcon {
@@ -1326,9 +1515,9 @@ function NotificationsStyles() {
       .notificationCard.adventureCard::before {
         content: "";
         position: absolute;
-        inset: 0 auto 0 0;
-        width: 4px;
-        background: linear-gradient(180deg, #a9d56f, #2d6545);
+        inset: 0 0 auto 0;
+        height: 3px;
+        background: linear-gradient(90deg, #b2dc7c, #2d6545);
       }
 
       .notificationCard.adventureCard.unread {
@@ -1400,11 +1589,30 @@ function NotificationsStyles() {
         min-width: 0;
       }
 
-      .notificationMeta > span {
+      .metaLeft {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .metaLeft > span {
         color: #789457;
         font-size: 8px;
         font-weight: 900;
         letter-spacing: .09em;
+        text-transform: uppercase;
+      }
+
+      .metaLeft > em {
+        padding: 4px 6px;
+        border-radius: 999px;
+        background: #dff0d2;
+        color: #527640;
+        font-style: normal;
+        font-size: 6px;
+        font-weight: 950;
+        letter-spacing: .08em;
         text-transform: uppercase;
       }
 
@@ -1442,7 +1650,37 @@ function NotificationsStyles() {
         font-size: 7px;
       }
 
-      .notificationBottom > span {
+      .notificationBottomRight {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .readState {
+        display: inline-flex;
+        align-items: center;
+        min-height: 23px;
+        padding: 0 8px;
+        border-radius: 999px;
+        font-size: 6px;
+        font-weight: 900;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      .readState.isUnread {
+        background: #e1f0d6;
+        color: #53753f;
+      }
+
+      .readState.isRead {
+        background: #edf0ec;
+        color: #89938d;
+      }
+
+      .detailAction {
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -1532,6 +1770,22 @@ function NotificationsStyles() {
         color: #869188;
         font-size: 11px;
         line-height: 1.65;
+      }
+
+      .compactEmpty {
+        padding: 48px 24px;
+      }
+
+      .resetFilterButton {
+        margin-top: 18px;
+        padding: 11px 14px;
+        border: 1px solid #d5dfd1;
+        border-radius: 11px;
+        background: #183a27;
+        color: white;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 850;
       }
 
       .emptyState a {
@@ -1695,6 +1949,15 @@ function NotificationsStyles() {
           justify-content: flex-start;
         }
 
+        .filterBar {
+          width: 100%;
+        }
+
+        .filterBar button {
+          flex: 1;
+          justify-content: center;
+        }
+
         .stats {
           grid-template-columns: 1fr;
         }
@@ -1733,6 +1996,11 @@ function NotificationsStyles() {
         .notificationBottom {
           align-items: flex-start;
           flex-direction: column;
+        }
+
+        .notificationBottomRight {
+          width: 100%;
+          justify-content: space-between;
         }
       }
 

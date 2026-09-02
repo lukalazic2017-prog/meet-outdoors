@@ -44,6 +44,7 @@ import AdminExplore from "./pages/AdminExplore";
 import BlockedAccount from "./pages/BlockedAccount";
 import Agent from "./pages/Agent";
 import HostDemandDetails from "./pages/HostDemandDetails";
+import AdventureRequestDetails from "./pages/AdventureRequestDetails";
 
 function AppRoutes() {
   const {
@@ -175,6 +176,11 @@ function AppRoutes() {
         <Route
   path="/host/demand/:id"
   element={<HostDemandDetails />}
+/>
+
+<Route
+  path="/agent/request/:id"
+  element={<AdventureRequestDetails />}
 />
 
         <Route
