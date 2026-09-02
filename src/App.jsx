@@ -179,6 +179,7 @@ function AppRoutes() {
           path="/package/:id"
           element={<PackageDetails />}
         />
+        <Route path="/paketi/:slug" element={<PackageDetails />} />
 
         <Route
           path="/edit-package/:id"
@@ -214,6 +215,11 @@ function AppRoutes() {
           path="/explore/add"
           element={<AddPlace />}
         />
+
+        <Route
+  path="/mesta/:slug"
+  element={<PlaceDetails />}
+/>
 
         <Route
           path="/explore/:id"

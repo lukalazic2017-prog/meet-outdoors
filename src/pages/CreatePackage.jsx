@@ -122,6 +122,53 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
   );
 }
 
+function createSlug(value = "") {
+  const transliteration = {
+    č: "c",
+    ć: "c",
+    š: "s",
+    ž: "z",
+    đ: "dj",
+    Č: "c",
+    Ć: "c",
+    Š: "s",
+    Ž: "z",
+    Đ: "dj",
+  };
+
+  return value
+    .split("")
+    .map((char) => transliteration[char] ?? char)
+    .join("")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+async function createUniquePackageSlug(title) {
+  const baseSlug = createSlug(title) || `paket-${Date.now()}`;
+  let candidate = baseSlug;
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const { data, error } = await supabase
+      .from("packages")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return candidate;
+
+    candidate = `${baseSlug}-${attempt + 2}`;
+  }
+
+  return `${baseSlug}-${Date.now().toString(36)}`;
+}
+
 export default function CreatePackage() {
   const navigate = useNavigate();
   const { profile, isHost } = useAuth();
@@ -199,11 +246,14 @@ export default function CreatePackage() {
         cover_url = publicUrlData.publicUrl;
       }
 
-      const { error } = await supabase
+      const slug = await createUniquePackageSlug(form.title);
+
+      const { data: createdPackage, error } = await supabase
         .from("packages")
         .insert({
           host_id: profile.id,
           title: form.title,
+          slug,
           description: form.description,
           location: form.location,
           country: form.country,
@@ -215,11 +265,17 @@ export default function CreatePackage() {
           start_date: form.start_date || null,
           end_date: form.end_date || null,
           cover_url,
-        });
+        })
+        .select("id, slug")
+        .single();
 
       if (error) throw error;
 
-      navigate("/packages");
+      navigate(
+        createdPackage?.slug
+          ? `/paketi/${createdPackage.slug}`
+          : `/package/${createdPackage.id}`
+      );
     } catch (err) {
       alert(err.message);
     } finally {

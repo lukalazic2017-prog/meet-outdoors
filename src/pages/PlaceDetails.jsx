@@ -15,6 +15,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import SeoHead from "../seo/SeoHead";
 import {
   getPendingCheckins,
   queueOfflineCheckin,
@@ -169,7 +170,7 @@ function formatDate(value) {
 }
 
 export default function PlaceDetails() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
   const navigate = useNavigate();
   const { profile } = useAuth();
   const fileRef = useRef(null);
@@ -199,7 +200,7 @@ export default function PlaceDetails() {
   const [loading, setLoading] = useState(true);
 
   const loadPlace = useCallback(async () => {
-    const { data, error: placeError } = await supabase
+    let query = supabase
       .from("places")
       .select(`
         *,
@@ -208,15 +209,25 @@ export default function PlaceDetails() {
           name,
           code
         )
-      `)
-      .eq("id", id)
-      .single();
+      `);
+
+    if (slug) {
+      query = query.eq("slug", slug);
+    } else {
+      query = query.eq("id", id);
+    }
+
+    const { data, error: placeError } = await query.single();
 
     if (placeError) throw placeError;
-    setPlace(data);
-  }, [id]);
 
-  const loadCommunity = useCallback(async () => {
+    setPlace(data);
+    return data;
+  }, [id, slug]);
+
+  const loadCommunity = useCallback(async (targetPlaceId) => {
+    if (!targetPlaceId) return;
+
     const [
       checkinsResult,
       photosResult,
@@ -238,7 +249,7 @@ export default function PlaceDetails() {
             role
           )
         `)
-        .eq("place_id", id)
+        .eq("place_id", targetPlaceId)
         .eq("visibility", "public")
         .order("created_at", { ascending: false })
         .limit(50),
@@ -259,7 +270,7 @@ export default function PlaceDetails() {
             role
           )
         `)
-        .eq("place_id", id)
+        .eq("place_id", targetPlaceId)
         .eq("moderation_status", "approved")
         .order("created_at", { ascending: false })
         .limit(50),
@@ -279,7 +290,7 @@ export default function PlaceDetails() {
             role
           )
         `)
-        .eq("place_id", id)
+        .eq("place_id", targetPlaceId)
         .eq("moderation_status", "approved")
         .order("created_at", { ascending: false })
         .limit(100),
@@ -288,10 +299,10 @@ export default function PlaceDetails() {
     if (!checkinsResult.error) setCheckins(checkinsResult.data || []);
     if (!photosResult.error) setPhotos(photosResult.data || []);
     if (!commentsResult.error) setComments(commentsResult.data || []);
-  }, [id]);
+  }, []);
 
-  const loadMine = useCallback(async () => {
-    if (!profile?.id) {
+  const loadMine = useCallback(async (targetPlaceId) => {
+    if (!profile?.id || !targetPlaceId) {
       setSaved(false);
       setMyCheckin(null);
       return;
@@ -301,14 +312,14 @@ export default function PlaceDetails() {
       supabase
         .from("place_saves")
         .select("id")
-        .eq("place_id", id)
+        .eq("place_id", targetPlaceId)
         .eq("user_id", profile.id)
         .maybeSingle(),
 
       supabase
         .from("place_checkins")
         .select("id, created_at")
-        .eq("place_id", id)
+        .eq("place_id", targetPlaceId)
         .eq("user_id", profile.id)
         .eq("is_gps_verified", true)
         .order("created_at", { ascending: false })
@@ -318,10 +329,10 @@ export default function PlaceDetails() {
 
     if (!saveResult.error) setSaved(Boolean(saveResult.data));
     if (!checkinResult.error) setMyCheckin(checkinResult.data || null);
-  }, [id, profile?.id]);
+  }, [profile?.id]);
 
-  const refreshPending = useCallback(async () => {
-    if (!profile?.id) {
+  const refreshPending = useCallback(async (targetPlaceId) => {
+    if (!profile?.id || !targetPlaceId) {
       setPendingHere(null);
       setPendingTotal(0);
       return;
@@ -331,24 +342,28 @@ export default function PlaceDetails() {
       const items = await getPendingCheckins(profile.id);
       setPendingTotal(items.length);
       setPendingHere(
-        items.find((item) => item.place_id === id) || null
+        items.find((item) => item.place_id === targetPlaceId) || null
       );
     } catch (pendingError) {
       console.warn("Offline queue:", pendingError);
     }
-  }, [id, profile?.id]);
+  }, [profile?.id]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
+    setError("");
 
     try {
+      const loadedPlace = await loadPlace();
+      const targetPlaceId = loadedPlace?.id;
+
       await Promise.all([
-        loadPlace(),
-        loadCommunity(),
-        loadMine(),
-        refreshPending(),
+        loadCommunity(targetPlaceId),
+        loadMine(targetPlaceId),
+        refreshPending(targetPlaceId),
       ]);
     } catch (loadError) {
+      setPlace(null);
       setError(
         loadError?.message ||
           "Mesto trenutno nije moguće učitati."
@@ -369,8 +384,11 @@ export default function PlaceDetails() {
 
   const syncOffline = useCallback(
     async ({ silent = false } = {}) => {
+      const targetPlaceId = place?.id;
+
       if (
         !profile?.id ||
+        !targetPlaceId ||
         !navigator.onLine ||
         syncInFlightRef.current
       ) {
@@ -383,13 +401,13 @@ export default function PlaceDetails() {
       try {
         const result = await syncPendingCheckins(profile.id);
 
-        await refreshPending();
+        await refreshPending(targetPlaceId);
 
         if (result.synced > 0) {
           await Promise.all([
             loadPlace(),
-            loadCommunity(),
-            loadMine(),
+            loadCommunity(targetPlaceId),
+            loadMine(targetPlaceId),
           ]);
 
           setNotice(
@@ -418,6 +436,7 @@ export default function PlaceDetails() {
       loadCommunity,
       loadMine,
       loadPlace,
+      place?.id,
       profile?.id,
       refreshPending,
     ]
@@ -501,7 +520,7 @@ export default function PlaceDetails() {
       const { error: removeError } = await supabase
         .from("place_saves")
         .delete()
-        .eq("place_id", id)
+        .eq("place_id", place.id)
         .eq("user_id", profile.id);
 
       if (!removeError) setSaved(false);
@@ -511,7 +530,7 @@ export default function PlaceDetails() {
     const { error: saveError } = await supabase
       .from("place_saves")
       .insert({
-        place_id: id,
+        place_id: place.id,
         user_id: profile.id,
       });
 
@@ -546,7 +565,7 @@ export default function PlaceDetails() {
 
         const payload = {
           userId: profile.id,
-          placeId: id,
+          placeId: place.id,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
@@ -560,7 +579,7 @@ export default function PlaceDetails() {
             const queued = await queueOfflineCheckin(payload);
 
             setPendingHere(queued);
-            await refreshPending();
+            await refreshPending(place.id);
 
             setNotice(
               "Nema signala — GPS check-in je sačuvan na telefonu i biće poslat automatski čim se internet vrati."
@@ -581,7 +600,7 @@ export default function PlaceDetails() {
           const { data, error: rpcError } = await supabase.rpc(
             "create_verified_checkin",
             {
-              p_place_id: id,
+              p_place_id: place.id,
               p_latitude: payload.latitude,
               p_longitude: payload.longitude,
               p_accuracy_m: payload.accuracy,
@@ -602,7 +621,7 @@ export default function PlaceDetails() {
               const queued = await queueOfflineCheckin(payload);
 
               setPendingHere(queued);
-              await refreshPending();
+              await refreshPending(place.id);
 
               setNotice(
                 "Veza je nestala — check-in smo sačuvali offline. Poslaćemo ga automatski kada se internet vrati."
@@ -629,7 +648,7 @@ export default function PlaceDetails() {
 
           await Promise.all([
             loadPlace(),
-            loadCommunity(),
+            loadCommunity(place.id),
           ]);
         } catch (checkinError) {
           setError(
@@ -733,7 +752,7 @@ export default function PlaceDetails() {
       setNotice("Fotografija je dodata.");
 
       await Promise.all([
-        loadCommunity(),
+        loadCommunity(place.id),
         loadPlace(),
       ]);
     } catch (uploadPhotoError) {
@@ -764,7 +783,7 @@ export default function PlaceDetails() {
       await supabase
         .from("place_comments")
         .insert({
-          place_id: id,
+          place_id: place.id,
           user_id: profile.id,
           body,
         });
@@ -777,7 +796,7 @@ export default function PlaceDetails() {
     }
 
     setComment("");
-    await loadCommunity();
+    await loadCommunity(place.id);
   }
 
   const visitors = useMemo(() => {
@@ -798,6 +817,51 @@ export default function PlaceDetails() {
   if (loading) {
     return (
       <>
+      <SeoHead
+  title={`${place.name}${place.region ? ` – ${place.region}` : ""}`}
+  description={
+    place.short_description ||
+    place.description?.slice(0, 155) ||
+    `Istraži ${place.name} na MeetOutdoors. Pogledaj lokaciju, pristup, fotografije, savete i informacije za posetu.`
+  }
+  canonicalPath={`/mesta/${place.slug}`}
+  image={photos[0]?.image_url || place.cover_url || FALLBACK_COVER}
+  type="article"
+  structuredData={{
+    "@context": "https://schema.org",
+    "@type": "TouristAttraction",
+    name: place.name,
+    description:
+      place.short_description ||
+      place.description ||
+      undefined,
+    image:
+      photos[0]?.image_url ||
+      place.cover_url ||
+      undefined,
+    url: `https://www.meetoutdoors.app/mesta/${place.slug}`,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality:
+        place.locality || place.municipality || undefined,
+      addressRegion: place.region || undefined,
+      addressCountry: place.country_code || "RS",
+    },
+    geo:
+      place.location_precision === "exact" &&
+      place.latitude &&
+      place.longitude
+        ? {
+            "@type": "GeoCoordinates",
+            latitude: Number(place.latitude),
+            longitude: Number(place.longitude),
+          }
+        : undefined,
+  }}
+/>
+
+<DetailsStyles />
+
         <DetailsStyles />
 
         <main className="detailState">

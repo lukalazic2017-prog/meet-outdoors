@@ -18,6 +18,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "../supabaseClient";
 import ShareSheet from "../components/ShareSheet";
+import SeoHead from "../seo/SeoHead";
 
 const FALLBACK_AVATAR =
   "https://api.dicebear.com/8.x/initials/svg?seed=Host";
@@ -261,6 +262,56 @@ function ContactItem({
 function LoadingState() {
   return (
     <>
+      <SeoHead
+        title={`${displayName}${profile.city ? ` – ${profile.city}` : ""}`}
+        description={
+          profile.bio?.replace(/\s+/g, " ").trim().slice(0, 155) ||
+          `${displayName} je outdoor domaćin na MeetOutdoors. Pogledaj događaje, ture, pakete, aktivnosti, lokacije i utiske učesnika.`
+        }
+        canonicalPath={`/h/${profile.username}`}
+        image={profile.cover_url || profile.avatar_url || FALLBACK_COVER}
+        type="profile"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          url: `https://www.meetoutdoors.app/h/${profile.username}`,
+          mainEntity: {
+            "@type": "Person",
+            name: displayName,
+            alternateName: profile.username
+              ? `@${profile.username}`
+              : undefined,
+            description: profile.bio || undefined,
+            image:
+              profile.avatar_url ||
+              profile.cover_url ||
+              undefined,
+            url: `https://www.meetoutdoors.app/h/${profile.username}`,
+            homeLocation:
+              profile.city || profile.country
+                ? {
+                    "@type": "Place",
+                    name: [profile.city, profile.country]
+                      .filter(Boolean)
+                      .join(", "),
+                  }
+                : undefined,
+            knowsAbout:
+              activities.length > 0
+                ? activities
+                : undefined,
+            sameAs: [
+              profile.instagram_url
+                ? normalizeExternalUrl(profile.instagram_url)
+                : null,
+              profile.website_url
+                ? normalizeExternalUrl(profile.website_url)
+                : null,
+            ].filter(Boolean),
+          },
+        }}
+      />
+
       <HostProfileStyles />
 
       <main className="hostProfilePage">
@@ -398,7 +449,7 @@ function PackageCard({ item, reviewSummary }) {
 
   return (
     <Link
-      to={`/package/${item.id}`}
+      to={item.slug ? `/paketi/${item.slug}` : `/package/${item.id}`}
       className="hostListingCard packageListingCard"
     >
       <div className="hostListingImage">
@@ -1419,7 +1470,7 @@ export default function HostProfile() {
                   FALLBACK_AVATAR
                 }
                 location={location}
-                url={`${window.location.origin}/h/${profile.username}`}
+                url={`https://www.meetoutdoors.app/h/${profile.username}`}
                 triggerClassName="hostAction hostShareAction"
                 triggerEyebrow="PODELI"
                 triggerLabel="Profil"

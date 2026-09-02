@@ -8,6 +8,7 @@ import { Link, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import ShareSheet from "../components/ShareSheet";
+import SeoHead from "../seo/SeoHead";
 
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600";
@@ -193,7 +194,7 @@ function LoadingState() {
 }
 
 export default function PackageDetails() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
   const { profile } = useAuth();
 
   const [item, setItem] = useState(null);
@@ -301,11 +302,16 @@ export default function PackageDetails() {
     setError("");
 
     try {
-      const { data, error: packageError } = await supabase
+      let packageQuery = supabase
         .from("packages")
-        .select("*")
-        .eq("id", id)
-        .single();
+        .select("*");
+
+      packageQuery = slug
+        ? packageQuery.eq("slug", slug)
+        : packageQuery.eq("id", id);
+
+      const { data, error: packageError } =
+        await packageQuery.single();
 
       if (packageError || !data) {
         throw packageError || new Error("Package not found.");
@@ -436,6 +442,7 @@ export default function PackageDetails() {
     }
   }, [
     id,
+    slug,
     profile?.id,
     loadComments,
     loadReviews,
@@ -876,6 +883,72 @@ export default function PackageDetails() {
 
   return (
     <>
+      <SeoHead
+        title={`${item.title}${location !== "Lokacija nije navedena" ? ` – ${location}` : ""}`}
+        description={
+          item.description?.replace(/\s+/g, " ").trim().slice(0, 155) ||
+          `Rezerviši ${item.title} na MeetOutdoors. Pogledaj cenu, termin, lokaciju, organizatora i sve detalje outdoor avanture.`
+        }
+        canonicalPath={
+          item.slug
+            ? `/paketi/${item.slug}`
+            : `/package/${item.id}`
+        }
+        image={gallery[0]?.image_url || item.cover_url || FALLBACK_COVER}
+        type="website"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: item.title,
+          description: item.description || undefined,
+          image:
+            gallery[0]?.image_url ||
+            item.cover_url ||
+            undefined,
+          url: item.slug
+            ? `https://www.meetoutdoors.app/paketi/${item.slug}`
+            : `https://www.meetoutdoors.app/package/${item.id}`,
+          category: item.activity || "Outdoor adventure",
+          brand: {
+            "@type": "Brand",
+            name: "MeetOutdoors",
+          },
+          offers: {
+            "@type": "Offer",
+            price: Number(item.price || 0),
+            priceCurrency: item.currency || "EUR",
+            availability:
+              remainingCapacity > 0
+                ? "https://schema.org/InStock"
+                : "https://schema.org/SoldOut",
+            url: item.slug
+              ? `https://www.meetoutdoors.app/paketi/${item.slug}`
+              : `https://www.meetoutdoors.app/package/${item.id}`,
+            seller: host
+              ? {
+                  "@type": "Organization",
+                  name:
+                    host.full_name ||
+                    host.username,
+                  url: host.username
+                    ? `https://www.meetoutdoors.app/h/${host.username}`
+                    : undefined,
+                }
+              : undefined,
+          },
+          aggregateRating:
+            reviews.length > 0 && Number(averageRating) > 0
+              ? {
+                  "@type": "AggregateRating",
+                  ratingValue: Number(averageRating),
+                  reviewCount: reviews.length,
+                  bestRating: 5,
+                  worstRating: 1,
+                }
+              : undefined,
+        }}
+      />
+
       <PackageDetailsStyles />
 
       <main className="packagePage">

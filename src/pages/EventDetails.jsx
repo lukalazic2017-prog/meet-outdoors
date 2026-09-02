@@ -8,6 +8,7 @@ import { Link, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import ShareSheet from "../components/ShareSheet";
+import SeoHead from "../seo/SeoHead";
 
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&auto=format&fit=crop";
@@ -706,6 +707,58 @@ export default function EventDetails() {
 
   return (
     <>
+      <SeoHead
+        title={`${event.title}${event.location ? ` – ${event.location}` : ""}`}
+        description={
+          event.description?.slice(0, 155) ||
+          `Pridruži se događaju ${event.title} na MeetOutdoors. Pogledaj datum, lokaciju, organizatora, cenu i detalje prijave.`
+        }
+        canonicalPath={`/event/${event.id}`}
+        image={event.cover_url || FALLBACK_COVER}
+        type="article"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Event",
+          name: event.title,
+          description: event.description || undefined,
+          image: event.cover_url ? [event.cover_url] : undefined,
+          startDate: event.start_date || undefined,
+          endDate: event.end_date || undefined,
+          eventStatus: event.is_active === false
+            ? "https://schema.org/EventCancelled"
+            : "https://schema.org/EventScheduled",
+          eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+          location: {
+            "@type": "Place",
+            name: event.location || event.title,
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: event.location || undefined,
+              addressCountry: event.country || "Serbia",
+            },
+          },
+          organizer: host
+            ? {
+                "@type": "Organization",
+                name: host.full_name || host.username || "MeetOutdoors host",
+                url: host.username
+                  ? `https://www.meetoutdoors.app/h/${host.username}`
+                  : undefined,
+              }
+            : undefined,
+          offers: {
+            "@type": "Offer",
+            url: `https://www.meetoutdoors.app/event/${event.id}`,
+            price: Number(event.price || 0),
+            priceCurrency: "EUR",
+            availability: isFull
+              ? "https://schema.org/SoldOut"
+              : "https://schema.org/InStock",
+          },
+          url: `https://www.meetoutdoors.app/event/${event.id}`,
+        }}
+      />
+
       <EventDetailsStyles />
 
       <main className="eventPage">
@@ -820,7 +873,7 @@ export default function EventDetails() {
                 image={event.cover_url || FALLBACK_COVER}
                 location={location}
                 subtitle={`${formatDate(event.start_date)} · €${event.price || 0}`}
-                url={`https://meetoutdoors.app/event/${event.id}`}
+                url={`https://www.meetoutdoors.app/event/${event.id}`}
                 triggerClassName="eventShareButton"
                 triggerEyebrow="PODELI"
                 triggerLabel="Događaj"
