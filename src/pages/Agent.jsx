@@ -278,7 +278,27 @@ export default function Agent() {
   }
 );
 
-      if (aiError) throw aiError;
+     if (aiError) {
+  console.error("Agent Edge Function error:", aiError);
+
+  let realMessage = aiError.message || "AI Agent greška";
+
+  try {
+    if (aiError.context) {
+      const errorBody = await aiError.context.json();
+
+      console.error("Edge Function response:", errorBody);
+
+      if (errorBody?.error) {
+        realMessage = errorBody.error;
+      }
+    }
+  } catch (parseError) {
+    console.error("Could not parse Edge Function error:", parseError);
+  }
+
+  throw new Error(realMessage);
+}
       if (!aiData?.success || !aiData?.intent) {
         throw new Error(aiData?.error || "Agent nije uspeo da razume zahtev.");
       }
