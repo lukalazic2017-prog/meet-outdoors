@@ -99,6 +99,13 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M22 2 11 13" />
       </>
     ),
+    phone: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2.1Z" />,
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
     x: (
       <>
         <path d="m6 6 12 12M18 6 6 18" />
@@ -212,6 +219,7 @@ export default function HostDemandDetails() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [acceptedUser, setAcceptedUser] = useState(null);
 
   const loadPage = useCallback(async () => {
     if (!id || !user?.id) return;
@@ -231,7 +239,7 @@ export default function HostDemandDetails() {
         supabase
           .from("adventure_intent_responses")
           .select(
-            "id, intent_id, host_id, message, proposed_price, currency, package_id, status, created_at, updated_at"
+            "id, intent_id, host_id, message, proposed_price, currency, package_id, status, accepted_contact_phone, accepted_at, created_at, updated_at"
           )
           .eq("intent_id", id)
           .eq("host_id", user.id)
@@ -251,6 +259,38 @@ export default function HostDemandDetails() {
       setDemand(demandResult.data || null);
       setExistingOffer(offerResult.data || null);
       setPackages(packagesResult.data || []);
+      setAcceptedUser(null);
+
+      if (
+        offerResult.data?.status === "accepted" &&
+        offerResult.data?.accepted_contact_phone
+      ) {
+        const { data: acceptedNotification, error: acceptedNotificationError } =
+          await supabase
+            .from("notifications")
+            .select("from_user_id")
+            .eq("user_id", user.id)
+            .eq("type", "adventure_offer_accepted")
+            .eq("adventure_intent_id", id)
+            .not("from_user_id", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (acceptedNotificationError) throw acceptedNotificationError;
+
+        if (acceptedNotification?.from_user_id) {
+          const { data: acceptedProfile, error: acceptedProfileError } =
+            await supabase
+              .from("profiles")
+              .select("id, full_name, username, avatar_url, city, country")
+              .eq("id", acceptedNotification.from_user_id)
+              .maybeSingle();
+
+          if (acceptedProfileError) throw acceptedProfileError;
+          setAcceptedUser(acceptedProfile || null);
+        }
+      }
 
       if (offerResult.data) {
         setMessage(offerResult.data.message || "");
@@ -599,15 +639,27 @@ export default function HostDemandDetails() {
                         </span>
 
                         <span className="sectionKicker">
-                          Ponuda poslata
+                          {existingOffer?.status === "accepted"
+                            ? "Dogovor potvrđen"
+                            : existingOffer?.status === "rejected"
+                              ? "Ponuda završena"
+                              : "Ponuda poslata"}
                         </span>
 
-                        <h2>Sada je red na korisnika.</h2>
+                        <h2>
+                          {existingOffer?.status === "accepted"
+                            ? "Korisnik je izabrao tvoju ponudu."
+                            : existingOffer?.status === "rejected"
+                              ? "Korisnik je izabrao drugu opciju."
+                              : "Sada je red na korisnika."}
+                        </h2>
 
                         <p>
-                          Tvoja ponuda je poslata. Korisnik može da je
-                          prihvati ili odbije, a ti ćeš dobiti novo
-                          obaveštenje kada odluči.
+                          {existingOffer?.status === "accepted"
+                            ? "Kontakt je otključan samo za tebe. Javi se korisniku i završite detalje avanture."
+                            : existingOffer?.status === "rejected"
+                              ? "Ova ponuda više nije aktivna. Kontakt korisnika nije dostupan."
+                              : "Tvoja ponuda je poslata. Korisnik može da je prihvati ili odbije, a ti ćeš dobiti novo obaveštenje kada odluči."}
                         </p>
 
                         <div className="offerSummary">
@@ -645,6 +697,72 @@ export default function HostDemandDetails() {
                             </strong>
                           </div>
                         </div>
+
+                        {existingOffer?.status === "accepted" &&
+                          existingOffer?.accepted_contact_phone && (
+                            <div className="acceptedContactCard">
+                              <div className="acceptedContactTop">
+                                <span className="acceptedContactIcon">
+                                  <Icon name="user" size={21} />
+                                </span>
+                                <div>
+                                  <small>Korisnik koji je prihvatio</small>
+                                  <strong>
+                                    {acceptedUser?.full_name ||
+                                      acceptedUser?.username ||
+                                      "MeetOutdoors korisnik"}
+                                  </strong>
+                                  {(acceptedUser?.city || acceptedUser?.country) && (
+                                    <span>
+                                      {[acceptedUser?.city, acceptedUser?.country]
+                                        .filter(Boolean)
+                                        .join(", ")}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="acceptedPhone">
+                                <span>
+                                  <Icon name="phone" size={18} />
+                                </span>
+                                <div>
+                                  <small>Broj za dogovor</small>
+                                  <strong>
+                                    {existingOffer.accepted_contact_phone}
+                                  </strong>
+                                </div>
+                              </div>
+
+                              <div className="acceptedContactActions">
+                                <a
+                                  href={`tel:${existingOffer.accepted_contact_phone}`}
+                                  className="callAction"
+                                >
+                                  <Icon name="phone" size={16} />
+                                  Pozovi korisnika
+                                </a>
+
+                                {acceptedUser?.username && (
+                                  <Link
+                                    to={`/u/${acceptedUser.username}`}
+                                    className="userProfileAction"
+                                  >
+                                    Profil
+                                    <Icon name="arrowRight" size={15} />
+                                  </Link>
+                                )}
+                              </div>
+
+                              <div className="acceptedPrivacy">
+                                <Icon name="shield" size={15} />
+                                <span>
+                                  Ovaj kontakt je korisnik podelio tek nakon
+                                  prihvatanja tvoje ponude.
+                                </span>
+                              </div>
+                            </div>
+                          )}
 
                         <Link
                           to="/notifications"
@@ -1482,6 +1600,136 @@ function Styles() {
         color: #6c874f !important;
       }
 
+      .acceptedContactCard {
+        margin-top: 14px;
+        padding: 15px;
+        border: 1px solid #bfd6b3;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #f3faee, #eaf5e4);
+        text-align: left;
+        box-shadow: 0 12px 28px rgba(64, 104, 52, .08);
+      }
+
+      .acceptedContactTop {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+
+      .acceptedContactIcon {
+        display: grid;
+        place-items: center;
+        width: 45px;
+        height: 45px;
+        flex: 0 0 45px;
+        border-radius: 14px;
+        background: #dcecd3;
+        color: #4e7440;
+      }
+
+      .acceptedContactTop small,
+      .acceptedContactTop strong,
+      .acceptedContactTop span,
+      .acceptedPhone small,
+      .acceptedPhone strong {
+        display: block;
+      }
+
+      .acceptedContactTop small,
+      .acceptedPhone small {
+        color: #80907f;
+        font-size: 7px;
+        font-weight: 900;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      .acceptedContactTop strong {
+        margin-top: 4px;
+        color: #31513a;
+        font-size: 12px;
+      }
+
+      .acceptedContactTop > div > span {
+        margin-top: 3px;
+        color: #87948a;
+        font-size: 8px;
+      }
+
+      .acceptedPhone {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 13px;
+        padding: 12px;
+        border: 1px solid #d4e2cd;
+        border-radius: 14px;
+        background: rgba(255,255,255,.78);
+      }
+
+      .acceptedPhone > span {
+        display: grid;
+        place-items: center;
+        width: 35px;
+        height: 35px;
+        flex: 0 0 35px;
+        border-radius: 11px;
+        background: #e6f1df;
+        color: #527943;
+      }
+
+      .acceptedPhone strong {
+        margin-top: 4px;
+        color: #294a33;
+        font-size: 14px;
+        letter-spacing: -.02em;
+      }
+
+      .acceptedContactActions {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 7px;
+        margin-top: 9px;
+      }
+
+      .acceptedContactActions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 12px;
+        font-size: 8px;
+        font-weight: 900;
+      }
+
+      .callAction {
+        background: linear-gradient(135deg, #143b28, #306747);
+        color: white !important;
+        box-shadow: 0 10px 22px rgba(38,85,56,.14);
+      }
+
+      .userProfileAction {
+        border: 1px solid #cedcc8;
+        background: white;
+        color: #526a56 !important;
+      }
+
+      .acceptedPrivacy {
+        display: flex;
+        align-items: flex-start;
+        gap: 7px;
+        margin-top: 10px;
+        color: #70836e;
+        font-size: 7px;
+        line-height: 1.5;
+      }
+
+      .acceptedPrivacy svg {
+        flex: 0 0 auto;
+      }
+
       .secondaryAction {
         border: 1px solid #d9e2d6;
         background: #f8faf6;
@@ -1684,6 +1932,10 @@ function Styles() {
 
         .priceInput {
           grid-template-columns: 1fr 78px;
+        }
+
+        .acceptedContactActions {
+          grid-template-columns: 1fr;
         }
       }
 

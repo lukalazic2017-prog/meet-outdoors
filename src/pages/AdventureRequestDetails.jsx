@@ -84,6 +84,9 @@ export default function AdventureRequestDetails() {
   const [actingId, setActingId] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [acceptingOffer, setAcceptingOffer] = useState(null);
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactConsent, setContactConsent] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id || !user?.id) return;
@@ -102,7 +105,7 @@ export default function AdventureRequestDetails() {
 
       const { data: responseRows, error: responseError } = await supabase
         .from("adventure_intent_responses")
-        .select("id,intent_id,host_id,message,proposed_price,currency,package_id,status,created_at,updated_at")
+        .select("id,intent_id,host_id,message,proposed_price,currency,package_id,status,accepted_contact_phone,accepted_at,created_at,updated_at")
         .eq("intent_id", id)
         .order("created_at", { ascending: true });
 
@@ -168,15 +171,38 @@ export default function AdventureRequestDetails() {
     [offers]
   );
 
-  async function decide(responseId, action) {
+  function openAcceptModal(offer) {
+    if (!offer || actingId) return;
+    setError("");
+    setNotice("");
+    setAcceptingOffer(offer);
+    setContactPhone("");
+    setContactConsent(false);
+  }
+
+  function closeAcceptModal() {
+    if (actingId) return;
+    setAcceptingOffer(null);
+    setContactPhone("");
+    setContactConsent(false);
+  }
+
+  async function decide(responseId, action, phone = null) {
     if (!responseId || actingId) return;
 
     const isAccept = action === "accept";
+    const cleanPhone = isAccept ? String(phone || "").trim() : null;
+
     if (isAccept) {
-      const ok = window.confirm(
-        "Prihvataš ovu ponudu? Ostale ponude za ovu potražnju biće automatski odbijene."
-      );
-      if (!ok) return;
+      if (cleanPhone.length < 6 || cleanPhone.length > 30) {
+        setError("Unesi ispravan broj telefona.");
+        return;
+      }
+
+      if (!contactConsent) {
+        setError("Potvrdi da želiš da podeliš broj telefona sa domaćinom.");
+        return;
+      }
     }
 
     setActingId(responseId);
@@ -184,35 +210,63 @@ export default function AdventureRequestDetails() {
     setNotice("");
 
     try {
-      const { error: rpcError } = await supabase.rpc("respond_to_adventure_offer", {
+      const params = {
         p_response_id: responseId,
         p_action: action,
-      });
+      };
+
+      if (isAccept) {
+        params.p_contact_phone = cleanPhone;
+      }
+
+      const { error: rpcError } = await supabase.rpc(
+        "respond_to_adventure_offer",
+        params
+      );
+
       if (rpcError) throw rpcError;
 
       if (isAccept) {
         setOffers((current) =>
           current.map((offer) =>
             offer.id === responseId
-              ? { ...offer, status: "accepted" }
+              ? {
+                  ...offer,
+                  status: "accepted",
+                  accepted_contact_phone: cleanPhone,
+                  accepted_at: new Date().toISOString(),
+                }
               : offer.status === "pending"
                 ? { ...offer, status: "rejected" }
                 : offer
           )
         );
-        setRequest((current) => current ? { ...current, status: "matched" } : current);
-        setNotice("Ponuda je prihvaćena. Sada možeš da nastaviš dogovor sa domaćinom.");
+
+        setRequest((current) =>
+          current ? { ...current, status: "matched" } : current
+        );
+
+        setAcceptingOffer(null);
+        setContactPhone("");
+        setContactConsent(false);
+        setNotice(
+          "Ponuda je prihvaćena. Domaćinu je prosleđen broj telefona koji si uneo."
+        );
       } else {
         setOffers((current) =>
           current.map((offer) =>
-            offer.id === responseId ? { ...offer, status: "rejected" } : offer
+            offer.id === responseId
+              ? { ...offer, status: "rejected" }
+              : offer
           )
         );
         setNotice("Ponuda je odbijena.");
       }
     } catch (e) {
       console.error("Adventure offer decision error:", e);
-      setError(e.message || "Akcija trenutno nije mogla da bude izvršena.");
+      setError(
+        e.message || "Akcija trenutno nije mogla da bude izvršena."
+      );
     } finally {
       setActingId(null);
     }
@@ -390,7 +444,7 @@ export default function AdventureRequestDetails() {
                                 {actingId === offer.id ? "Obrađujem..." : "Odbij"}
                               </button>
                               <button className="acceptBtn" type="button" disabled={Boolean(actingId)}
-                                onClick={() => decide(offer.id, "accept")}>
+                                onClick={() => openAcceptModal(offer)}>
                                 <Icon name="check" size={17}/>
                                 {actingId === offer.id ? "Obrađujem..." : "Prihvati ponudu"}
                               </button>
@@ -440,6 +494,139 @@ export default function AdventureRequestDetails() {
           </section>
         </div>
       </main>
+
+      {acceptingOffer && (
+        <div className="acceptModalBackdrop" onMouseDown={closeAcceptModal}>
+          <section
+            className="acceptModal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="accept-offer-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="modalClose"
+              onClick={closeAcceptModal}
+              disabled={Boolean(actingId)}
+              aria-label="Zatvori"
+            >
+              <Icon name="x" size={18} />
+            </button>
+
+            <span className="modalIcon">
+              <Icon name="check" size={24} />
+            </span>
+
+            <span className="kicker">Potvrda ponude</span>
+            <h2 id="accept-offer-title">Još samo kontakt.</h2>
+            <p className="modalLead">
+              Prihvataš ponudu domaćina{" "}
+              <strong>
+                {hosts[acceptingOffer.host_id]?.full_name ||
+                  hosts[acceptingOffer.host_id]?.username ||
+                  "MeetOutdoors domaćina"}
+              </strong>
+              . Unesi broj na koji domaćin može da te kontaktira radi
+              završnog dogovora.
+            </p>
+
+            <div className="modalOfferSummary">
+              <div>
+                <small>Ponuda</small>
+                <strong>
+                  {money(
+                    acceptingOffer.proposed_price,
+                    acceptingOffer.currency
+                  )}
+                </strong>
+              </div>
+              <span>
+                <Icon name="shield" size={16} />
+                Broj se deli tek nakon potvrde
+              </span>
+            </div>
+
+            <label className="phoneField">
+              <span>Broj telefona</span>
+              <div>
+                <Icon name="phone" size={18} />
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="+381 6x xxx xxxx"
+                  value={contactPhone}
+                  maxLength={30}
+                  autoFocus
+                  onChange={(event) => setContactPhone(event.target.value)}
+                />
+              </div>
+              <small>
+                Unesi broj koji želiš da podeliš baš sa ovim domaćinom.
+              </small>
+            </label>
+
+            <label className="consentRow">
+              <input
+                type="checkbox"
+                checked={contactConsent}
+                onChange={(event) =>
+                  setContactConsent(event.target.checked)
+                }
+              />
+              <span className="consentCheck">
+                {contactConsent && <Icon name="check" size={13} />}
+              </span>
+              <span>
+                Saglasan sam da MeetOutdoors prosledi ovaj broj
+                izabranom domaćinu radi dogovora oko aktivnosti.
+              </span>
+            </label>
+
+            <div className="modalPrivacy">
+              <Icon name="shield" size={17} />
+              <p>
+                Ostali domaćini ne dobijaju ovaj kontakt. Prihvatanjem
+                ove ponude ostale aktivne ponude se zatvaraju.
+              </p>
+            </div>
+
+            <div className="modalActions">
+              <button
+                type="button"
+                className="modalCancel"
+                onClick={closeAcceptModal}
+                disabled={Boolean(actingId)}
+              >
+                Odustani
+              </button>
+
+              <button
+                type="button"
+                className="modalConfirm"
+                disabled={
+                  Boolean(actingId) ||
+                  contactPhone.trim().length < 6 ||
+                  !contactConsent
+                }
+                onClick={() =>
+                  decide(
+                    acceptingOffer.id,
+                    "accept",
+                    contactPhone
+                  )
+                }
+              >
+                <Icon name="check" size={17} />
+                {actingId === acceptingOffer.id
+                  ? "Prihvatam..."
+                  : "Potvrdi i prihvati"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }
@@ -484,9 +671,25 @@ function Styles() {
     .safeCard{display:flex;gap:11px;background:#eef5e9}.safeCard>span{color:#5f7e49}.safeCard strong{display:block;color:#50684f;font-size:9px}.safeCard p{margin:5px 0 0;color:#7b897c;font-size:8px;line-height:1.5}
     .noOffers,.emptyFatal,.loadingCard{padding:42px 28px;border:1px solid #dce4d9;border-radius:24px;background:rgba(255,255,255,.84);text-align:center}.noOffers{margin-top:18px}.noOffers>span,.emptyFatal>span{display:grid;place-items:center;width:56px;height:56px;margin:0 auto;border-radius:17px;background:#eaf0e6;color:#657b58}.noOffers h3,.emptyFatal h1,.loadingCard h1{margin:15px 0 0;color:#30463a;letter-spacing:-.04em}.noOffers p,.emptyFatal p,.loadingCard p{max-width:500px;margin:8px auto 0;color:#818d85;font-size:9px;line-height:1.6}.emptyFatal{width:min(570px,100%);margin:60px auto}.emptyFatal small{display:block;margin-top:16px;color:#956d66;font-size:8px;font-weight:900;text-transform:uppercase}.emptyFatal a{display:inline-flex;align-items:center;gap:6px;margin-top:18px;padding:11px 14px;border-radius:11px;background:#173c28;color:#fff;font-size:8px;font-weight:900}
     .loadingPage{display:grid;place-items:center}.loadingCard{width:min(520px,100%)}.spinner{display:block;width:38px;height:38px;margin:0 auto;border:3px solid #dbe4d7;border-top-color:#53793d;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .acceptModalBackdrop{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;background:rgba(8,25,16,.58);backdrop-filter:blur(10px)}
+    .acceptModal{position:relative;width:min(520px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:28px;border:1px solid rgba(255,255,255,.8);border-radius:28px;background:#fbfcf9;box-shadow:0 35px 100px rgba(5,28,15,.3)}
+    .modalClose{position:absolute;top:17px;right:17px;display:grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid #dde5da;border-radius:12px;background:#f4f7f1;color:#647269;cursor:pointer}
+    .modalIcon{display:grid;place-items:center;width:54px;height:54px;margin-bottom:20px;border-radius:17px;background:linear-gradient(135deg,#173e2a,#397451);color:#e2f6c7;box-shadow:0 12px 26px rgba(31,78,50,.16)}
+    .acceptModal h2{margin:9px 0 0;color:#203a2a;font-size:34px;line-height:1;letter-spacing:-.055em}
+    .modalLead{margin:13px 0 0;color:#738078;font-size:10px;line-height:1.7}.modalLead strong{color:#405848}
+    .modalOfferSummary{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:20px;padding:14px;border:1px solid #dce5d8;border-radius:16px;background:#f2f7ee}
+    .modalOfferSummary small,.modalOfferSummary strong{display:block}.modalOfferSummary small{color:#89968d;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}.modalOfferSummary strong{margin-top:4px;color:#2f5138;font-size:18px}
+    .modalOfferSummary>span{display:inline-flex;align-items:center;gap:6px;color:#61775f;font-size:7px;font-weight:850}
+    .phoneField{display:block;margin-top:20px}.phoneField>span{display:block;margin-bottom:7px;color:#405448;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}
+    .phoneField>div{display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;border:1px solid #ccd9c7;border-radius:14px;background:#fff;color:#668158;transition:.18s ease}.phoneField>div:focus-within{border-color:#7fa364;box-shadow:0 0 0 4px rgba(119,157,89,.10)}
+    .phoneField input{width:100%;height:100%;padding:0;border:0;outline:0;background:transparent;color:#294233;font-size:14px;font-weight:750}.phoneField input::placeholder{color:#a5aea8;font-weight:500}
+    .phoneField>small{display:block;margin-top:7px;color:#939d96;font-size:7px}
+    .consentRow{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;align-items:start;margin-top:15px;padding:13px;border:1px solid #dde5da;border-radius:14px;background:#fff;cursor:pointer}.consentRow>input{position:absolute;opacity:0;pointer-events:none}.consentCheck{display:grid;place-items:center;width:20px;height:20px;border:1px solid #bccbb6;border-radius:6px;background:#f7f9f5;color:#fff}.consentRow>input:checked+.consentCheck{border-color:#326546;background:#326546}.consentRow>span:last-child{color:#68766d;font-size:8px;line-height:1.55}
+    .modalPrivacy{display:flex;gap:9px;margin-top:10px;padding:11px 12px;border-radius:13px;background:#edf4e8;color:#5c7656}.modalPrivacy svg{flex:0 0 auto}.modalPrivacy p{margin:0;font-size:7px;line-height:1.55}
+    .modalActions{display:grid;grid-template-columns:.8fr 1.2fr;gap:8px;margin-top:20px}.modalActions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:0 14px;border-radius:13px;font-size:9px;font-weight:900;cursor:pointer}.modalCancel{border:1px solid #d9e1d6;background:#fff;color:#67756c}.modalConfirm{border:0;background:linear-gradient(135deg,#123a26,#326b49);color:#fff;box-shadow:0 11px 24px rgba(32,79,50,.17)}.modalActions button:disabled{opacity:.48;cursor:not-allowed}
     @media(max-width:980px){.summaryPanel{grid-template-columns:repeat(2,minmax(0,1fr))}.contentGrid{grid-template-columns:1fr}.sideColumn{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:700px){.requestPage{padding:82px 0 55px}.backBtn{margin-left:16px}.hero{padding:21px;border-radius:0 0 30px 30px}.heroTop,.heroContent,.sectionHead,.contactArea{align-items:flex-start;flex-direction:column}.heroContent{margin-top:45px}.hero h1{font-size:52px}.offerCount{width:100%;flex:auto}.summaryPanel{margin:12px 12px 0;grid-template-columns:1fr 1fr}.contentGrid{padding:0 12px}.sideColumn{grid-template-columns:1fr}.privacy{margin-top:2px}.offerHeader{align-items:flex-start;gap:10px}.offerActions{justify-content:stretch}.offerActions a,.offerActions button{flex:1}.profileBtn{margin-right:0}.contactActions{width:100%}.contactActions a{flex:1;justify-content:center}}
-    @media(max-width:450px){.hero h1{font-size:45px}.summaryPanel{grid-template-columns:1fr}.offerCard{padding:17px}.chosenRibbon{margin:-17px -17px 16px}.offerHeader{flex-direction:column}.offerStatus{align-self:flex-start}.offerActions{display:grid;grid-template-columns:1fr 1fr}.profileBtn{grid-column:1/-1}.contactActions{flex-direction:column}.contactActions a{width:100%;justify-content:center}}
+    @media(max-width:450px){.acceptModalBackdrop{padding:10px;align-items:end}.acceptModal{padding:23px 18px 18px;border-radius:25px 25px 18px 18px}.acceptModal h2{font-size:30px}.modalOfferSummary{align-items:flex-start;flex-direction:column}.modalActions{grid-template-columns:1fr}.modalConfirm{grid-row:1}.modalCancel{grid-row:2}.hero h1{font-size:45px}.summaryPanel{grid-template-columns:1fr}.offerCard{padding:17px}.chosenRibbon{margin:-17px -17px 16px}.offerHeader{flex-direction:column}.offerStatus{align-self:flex-start}.offerActions{display:grid;grid-template-columns:1fr 1fr}.profileBtn{grid-column:1/-1}.contactActions{flex-direction:column}.contactActions a{width:100%;justify-content:center}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
   `}</style>;
 }
