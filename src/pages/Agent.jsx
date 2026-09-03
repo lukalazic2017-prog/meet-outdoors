@@ -269,11 +269,14 @@ export default function Agent() {
       }
 
       const { data: aiData, error: aiError } = await supabase.functions.invoke(
-        "meetoutdoors-agent",
-        {
-          body: { message: prompt.trim() },
-        }
-      );
+  "meetoutdoors-agent",
+  {
+    body: { message: prompt.trim() },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  }
+);
 
       if (aiError) throw aiError;
       if (!aiData?.success || !aiData?.intent) {
