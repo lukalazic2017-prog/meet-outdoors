@@ -4,18 +4,53 @@ import { supabase } from "../supabaseClient";
 import { uploadProfileFile } from "../utils/profileUpload";
 
 const ACTIVITIES = [
-  "Hiking",
-  "Camping",
-  "Rafting",
-  "Cycling",
-  "Running",
-  "Basketball",
-  "Tennis",
-  "Fishing",
-  "Quad",
-  "Paragliding",
-  "Skiing",
-  "Boat rides",
+  { value: "Hiking", label: "Planinarenje" },
+  { value: "Camping", label: "Kampovanje" },
+  { value: "Rafting", label: "Rafting" },
+  { value: "Cycling", label: "Biciklizam" },
+  { value: "Mountain biking", label: "Brdski biciklizam" },
+  { value: "Running", label: "Trčanje" },
+  { value: "Trail running", label: "Trejl trčanje" },
+  { value: "Walking", label: "Šetnja" },
+  { value: "Trekking", label: "Treking" },
+  { value: "Mountaineering", label: "Visokogorstvo" },
+  { value: "Rock climbing", label: "Penjanje na stene" },
+  { value: "Via ferrata", label: "Via ferrata" },
+  { value: "Canyoning", label: "Kanjoning" },
+  { value: "Caving", label: "Speleologija" },
+  { value: "Orienteering", label: "Orijentiring" },
+  { value: "Survival", label: "Boravak i preživljavanje u prirodi" },
+  { value: "Basketball", label: "Košarka" },
+  { value: "Tennis", label: "Tenis" },
+  { value: "Football", label: "Fudbal" },
+  { value: "Volleyball", label: "Odbojka" },
+  { value: "Fishing", label: "Ribolov" },
+  { value: "Horse riding", label: "Jahanje" },
+  { value: "Quad", label: "Vožnja kvadovima" },
+  { value: "Off-road", label: "Terenska vožnja" },
+  { value: "Motocross", label: "Motokros" },
+  { value: "Paragliding", label: "Paraglajding" },
+  { value: "Zip line", label: "Zip-lajn" },
+  { value: "Skiing", label: "Skijanje" },
+  { value: "Snowboarding", label: "Snoubording" },
+  { value: "Snowshoeing", label: "Hodanje na krpljama" },
+  { value: "Sledding", label: "Sankanje" },
+  { value: "Boat rides", label: "Vožnja čamcem" },
+  { value: "Kayaking", label: "Kajak" },
+  { value: "Canoeing", label: "Kanu" },
+  { value: "SUP", label: "SUP daska" },
+  { value: "Sailing", label: "Jedrenje" },
+  { value: "Swimming", label: "Plivanje" },
+  { value: "Diving", label: "Ronjenje" },
+  { value: "Snorkeling", label: "Ronjenje sa maskom" },
+  { value: "Surfing", label: "Surfovanje" },
+  { value: "Windsurfing", label: "Jedrenje na dasci" },
+  { value: "Kitesurfing", label: "Kajtsurfing" },
+  { value: "Nature photography", label: "Fotografisanje prirode" },
+  { value: "Birdwatching", label: "Posmatranje ptica" },
+  { value: "Wildlife watching", label: "Posmatranje divljih životinja" },
+  { value: "Picnic", label: "Piknik" },
+  { value: "Yoga outdoors", label: "Joga u prirodi" },
 ];
 
 function Icon({
@@ -245,6 +280,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [legalConsent, setLegalConsent] = useState(false);
 
   const [form, setForm] = useState({
     email: "",
@@ -302,6 +338,15 @@ export default function Signup() {
     return;
   }
 
+  if (!legalConsent) {
+    setError(
+      role === "host"
+        ? "Za kreiranje naloga moraš prihvatiti Uslove korišćenja, Politiku privatnosti, Uslove za domaćine i Bezbednosna pravila."
+        : "Za kreiranje naloga moraš prihvatiti Uslove korišćenja i Politiku privatnosti."
+    );
+    return;
+  }
+
   setLoading(true);
   setError("");
 
@@ -349,6 +394,13 @@ export default function Signup() {
                 ? form.promo_video_url.trim()
                 : "",
             activities: form.activities,
+            legal_consent: true,
+            legal_consent_version: "2026-09-05",
+            legal_consent_at: new Date().toISOString(),
+            terms_accepted: true,
+            privacy_accepted: true,
+            host_terms_accepted: role === "host",
+            safety_rules_accepted: role === "host",
           },
         },
       });
@@ -498,9 +550,9 @@ export default function Signup() {
   const roleContent =
     role === "host"
       ? {
-          kicker: "Host nalog",
+          kicker: "Nalog domaćina",
           title: "Pretvori svoju strast u iskustvo.",
-          text: "Kreiraj outdoor događaje, prihvataj rezervacije i izgradi zajednicu ljudi koji žele da istražuju.",
+          text: "Kreiraj događaje u prirodi, prihvataj rezervacije i izgradi zajednicu ljudi koji žele da istražuju.",
           image:
             "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1800&q=90",
         }
@@ -831,7 +883,7 @@ export default function Signup() {
                   />
 
                   <FileUpload
-                    label="Dodaj cover fotografiju"
+                    label="Dodaj naslovnu fotografiju"
                     description="Preporučeno 1600 × 600 px"
                     accept="image/*"
                     file={coverFile}
@@ -961,17 +1013,17 @@ export default function Signup() {
                 <div className="activityChips">
                   {ACTIVITIES.map((activity) => {
                     const selected =
-                      form.activities.includes(activity);
+                      form.activities.includes(activity.value);
 
                     return (
                       <button
-                        key={activity}
+                        key={activity.value}
                         type="button"
                         className={selected ? "selected" : ""}
-                        onClick={() => toggleActivity(activity)}
+                        onClick={() => toggleActivity(activity.value)}
                       >
                         {selected && <Icon name="check" size={14} />}
-                        {activity}
+                        {activity.label}
                       </button>
                     );
                   })}
@@ -1006,7 +1058,7 @@ export default function Signup() {
                 ) : (
                   <>
                     {role === "host"
-                      ? "Kreiraj host nalog"
+                      ? "Kreiraj nalog domaćina"
                       : "Kreiraj korisnički nalog"}
 
                     <Icon name="arrowRight" size={19} />
@@ -1014,10 +1066,45 @@ export default function Signup() {
                 )}
               </button>
 
-              <p className="termsText">
-                Kreiranjem naloga prihvataš uslove korišćenja i politiku
-                privatnosti MeetOutdoors platforme.
-              </p>
+              <label className="legalConsent">
+                <input
+                  type="checkbox"
+                  checked={legalConsent}
+                  onChange={(event) => {
+                    setLegalConsent(event.target.checked);
+                    if (error) setError("");
+                  }}
+                  disabled={loading}
+                />
+
+                <span className="legalConsentBox" aria-hidden="true">
+                  {legalConsent && <Icon name="check" size={14} />}
+                </span>
+
+                <span className="legalConsentText">
+                  Prihvatam{" "}
+                  <Link to="/terms" target="_blank" rel="noreferrer">
+                    Uslove korišćenja
+                  </Link>{" "}
+                  i{" "}
+                  <Link to="/privacy" target="_blank" rel="noreferrer">
+                    Politiku privatnosti
+                  </Link>
+                  {role === "host" && (
+                    <>
+                      , kao i{" "}
+                      <Link to="/host-terms" target="_blank" rel="noreferrer">
+                        Uslove za domaćine
+                      </Link>{" "}
+                      i{" "}
+                      <Link to="/safety" target="_blank" rel="noreferrer">
+                        Bezbednosna pravila
+                      </Link>
+                    </>
+                  )}
+                  .
+                </span>
+              </label>
             </form>
 
             <p className="loginPrompt">
@@ -1756,6 +1843,68 @@ function SignupStyles() {
         to {
           transform: rotate(360deg);
         }
+      }
+
+      .legalConsent {
+        display: flex;
+        align-items: flex-start;
+        gap: 11px;
+        max-width: 650px;
+        margin: -3px auto 0;
+        padding: 14px 16px;
+        border: 1px solid #dce2da;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.62);
+        color: #748077;
+        cursor: pointer;
+      }
+
+      .legalConsent > input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .legalConsentBox {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 21px;
+        height: 21px;
+        margin-top: 1px;
+        border: 1px solid #b9c4b6;
+        border-radius: 7px;
+        background: #fbfcf9;
+        color: transparent;
+        transition: 0.18s ease;
+      }
+
+      .legalConsent > input:checked + .legalConsentBox {
+        border-color: #183a27;
+        background: #183a27;
+        color: #c9f28c;
+      }
+
+      .legalConsent > input:focus-visible + .legalConsentBox {
+        box-shadow: 0 0 0 4px rgba(119, 150, 86, 0.15);
+      }
+
+      .legalConsentText {
+        font-size: 10.5px;
+        line-height: 1.65;
+      }
+
+      .legalConsentText a {
+        color: #385640;
+        font-weight: 900;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .legalConsentText a:hover {
+        color: #183a27;
       }
 
       .termsText {

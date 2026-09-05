@@ -41,10 +41,18 @@ import ExploreMap from "./pages/ExploreMap";
 import AddPlace from "./pages/AddPlace";
 import PlaceDetails from "./pages/PlaceDetails";
 import AdminExplore from "./pages/AdminExplore";
+import AdminLogin from "./pages/AdminLogin";
 import BlockedAccount from "./pages/BlockedAccount";
 import Agent from "./pages/Agent";
 import HostDemandDetails from "./pages/HostDemandDetails";
 import AdventureRequestDetails from "./pages/AdventureRequestDetails";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import CookiePolicy from "./pages/CookiePolicy";
+import TermsOfUse from "./pages/TermsOfUse";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import HostTerms from "./pages/HostTerms";
+import Safety from "./pages/Safety";
 
 function AppRoutes() {
   const {
@@ -55,10 +63,15 @@ function AppRoutes() {
 
   const location = useLocation();
 
+  const isAdminLogin = location.pathname === "/admin-login";
+  const isAdminArea = location.pathname.startsWith("/admin/");
+  const hideNavbar = isAdminLogin || isAdminArea;
+
   if (
     !loading &&
     (isBanned || isSuspended) &&
-    location.pathname !== "/blocked"
+    location.pathname !== "/blocked" &&
+    !isAdminLogin
   ) {
     return (
       <Navigate
@@ -70,7 +83,7 @@ function AppRoutes() {
 
   return (
     <>
-      <Navbar />
+      {!hideNavbar && <Navbar />}
 
       <Routes>
         <Route
@@ -97,6 +110,23 @@ function AppRoutes() {
           path="/login"
           element={<Login />}
         />
+
+        <Route
+          path="/admin-login"
+          element={<AdminLogin />}
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <Navigate
+              to="/admin/explore"
+              replace
+            />
+          }
+        />
+
+        <Route path="/cookies" element={<CookiePolicy />} />
 
         <Route
           path="/blocked"
@@ -128,14 +158,32 @@ function AppRoutes() {
           element={<Activities />}
         />
 
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+
+        <Route path="/host-terms" element={<HostTerms />} />
+
+        <Route path="/safety" element={<Safety />} />
+
         <Route
           path="/create-event"
           element={<CreateEvent />}
         />
 
+        <Route path="/terms" element={<TermsOfUse />} />
+
         <Route
           path="/events"
           element={<Events />}
+        />
+
+        <Route
+          path="/forgot-password"
+          element={<ForgotPassword />}
+        />
+
+        <Route
+          path="/reset-password"
+          element={<ResetPassword />}
         />
 
         <Route
@@ -174,14 +222,14 @@ function AppRoutes() {
         />
 
         <Route
-  path="/host/demand/:id"
-  element={<HostDemandDetails />}
-/>
+          path="/host/demand/:id"
+          element={<HostDemandDetails />}
+        />
 
-<Route
-  path="/agent/request/:id"
-  element={<AdventureRequestDetails />}
-/>
+        <Route
+          path="/agent/request/:id"
+          element={<AdventureRequestDetails />}
+        />
 
         <Route
           path="/packages"
@@ -192,7 +240,11 @@ function AppRoutes() {
           path="/package/:id"
           element={<PackageDetails />}
         />
-        <Route path="/paketi/:slug" element={<PackageDetails />} />
+
+        <Route
+          path="/paketi/:slug"
+          element={<PackageDetails />}
+        />
 
         <Route
           path="/edit-package/:id"
@@ -225,9 +277,9 @@ function AppRoutes() {
         />
 
         <Route
-  path="/agent"
-  element={<Agent />}
-/>
+          path="/agent"
+          element={<Agent />}
+        />
 
         <Route
           path="/explore/add"
@@ -235,9 +287,9 @@ function AppRoutes() {
         />
 
         <Route
-  path="/mesta/:slug"
-  element={<PlaceDetails />}
-/>
+          path="/mesta/:slug"
+          element={<PlaceDetails />}
+        />
 
         <Route
           path="/explore/:id"

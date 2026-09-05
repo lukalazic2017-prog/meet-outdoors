@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
@@ -171,24 +171,28 @@ async function createUniquePackageSlug(title) {
 
 export default function CreatePackage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { profile, isHost } = useAuth();
 
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [coverFile, setCoverFile] = useState(null);
 
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    location: "",
-    country: "",
-    price: "",
-    capacity: "",
-    duration: "",
+  const isAgentPrefill = searchParams.get("source") === "agent";
+
+  const [form, setForm] = useState(() => ({
+    title: searchParams.get("title") || "",
+    description: searchParams.get("description") || "",
+    location: searchParams.get("location") || "",
+    country: searchParams.get("country") || "",
+    price: searchParams.get("price") || "",
+    capacity: searchParams.get("capacity") || "",
+    duration: searchParams.get("duration") || "",
     includes: "",
     not_included: "",
-    start_date: "",
-    end_date: "",
-  });
+    start_date: searchParams.get("start") || "",
+    end_date: searchParams.get("end") || "",
+  }));
 
   const coverPreview = useMemo(() => {
     if (coverFile) {
@@ -211,12 +215,60 @@ export default function CreatePackage() {
       ...prev,
       [name]: value,
     }));
+    if (error) setError("");
   }
+
+  const completion = useMemo(() => {
+    const checks = [
+      form.title.trim(),
+      form.description.trim(),
+      form.location.trim(),
+      form.country.trim(),
+      form.capacity,
+      form.duration.trim(),
+      form.start_date,
+      coverFile,
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }, [form, coverFile]);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
 
-    if (!profile?.id) return;
+    if (!profile?.id || saving) return;
+
+    const cleanTitle = form.title.trim();
+    const cleanDescription = form.description.trim();
+    const cleanLocation = form.location.trim();
+    const cleanCountry = form.country.trim();
+    const numericPrice = Number(form.price || 0);
+    const numericCapacity = Number(form.capacity || 1);
+
+    if (!cleanTitle) {
+      setError("Naziv paketa je obavezan.");
+      return;
+    }
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      setError("Cena mora biti 0 ili pozitivan broj.");
+      return;
+    }
+    if (!Number.isFinite(numericCapacity) || numericCapacity < 1) {
+      setError("Kapacitet mora biti najmanje 1.");
+      return;
+    }
+    if (form.start_date && form.end_date && new Date(form.end_date).getTime() <= new Date(form.start_date).getTime()) {
+      setError("Datum završetka mora biti posle datuma početka.");
+      return;
+    }
+    if (coverFile && !coverFile.type.startsWith("image/")) {
+      setError("Naslovna fotografija mora biti slika.");
+      return;
+    }
+    if (coverFile && coverFile.size > 8 * 1024 * 1024) {
+      setError("Fotografija je prevelika. Maksimalna veličina je 8 MB.");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -246,19 +298,19 @@ export default function CreatePackage() {
         cover_url = publicUrlData.publicUrl;
       }
 
-      const slug = await createUniquePackageSlug(form.title);
+      const slug = await createUniquePackageSlug(cleanTitle);
 
       const { data: createdPackage, error } = await supabase
         .from("packages")
         .insert({
           host_id: profile.id,
-          title: form.title,
+          title: cleanTitle,
           slug,
-          description: form.description,
-          location: form.location,
-          country: form.country,
-          price: Number(form.price || 0),
-          capacity: Number(form.capacity || 1),
+          description: cleanDescription,
+          location: cleanLocation,
+          country: cleanCountry,
+          price: numericPrice,
+          capacity: numericCapacity,
           duration: form.duration,
           includes: form.includes,
           not_included: form.not_included,
@@ -277,7 +329,8 @@ export default function CreatePackage() {
           : `/package/${createdPackage.id}`
       );
     } catch (err) {
-      alert(err.message);
+      console.error("Greška pri kreiranju paketa:", err);
+      setError(err?.message || "Paket trenutno nije moguće kreirati.");
     } finally {
       setSaving(false);
     }
@@ -379,6 +432,27 @@ export default function CreatePackage() {
         </section>
 
         <section className="createPackageContent">
+          {isAgentPrefill && (
+            <section className="agentPrefillBanner" aria-label="MeetOutdoors Agent predlog">
+              <span className="agentPrefillIcon"><Icon name="sparkle" size={20} /></span>
+              <div className="agentPrefillCopy">
+                <small>MeetOutdoors Intelligence</small>
+                <strong>Agent je pripremio početni nacrt iz realne potražnje.</strong>
+                <p>Naslov, lokacija, kapacitet i cena su samo predlog. Pregledaj ih i prilagodi svom iskustvu pre objave.</p>
+              </div>
+              <span className="agentPrefillBadge"><Icon name="check" size={14} /> Sve možeš da izmeniš</span>
+            </section>
+          )}
+
+          <div className="packageProgressCard">
+            <div>
+              <span>Spremnost paketa</span>
+              <strong>{completion}%</strong>
+            </div>
+            <div className="packageProgressTrack"><span style={{ width: `${completion}%` }} /></div>
+            <p>{completion >= 75 ? "Odlično — još samo finalna provera detalja." : "Dodaj ključne detalje da paket izgleda kompletno i pouzdano."}</p>
+          </div>
+
           <div className="createPackageToolbar">
             <div>
               <span className="createPackageSectionLabel">
@@ -421,7 +495,8 @@ export default function CreatePackage() {
                     <span>Naziv paketa</span>
 
                     <input
-                      placeholder="Na primer: Vikend u planinama"
+                      placeholder="Na primer: Vikend na Staroj planini"
+                      maxLength="110"
                       value={form.title}
                       onChange={(e) =>
                         updateField("title", e.target.value)
@@ -434,7 +509,9 @@ export default function CreatePackage() {
                     <span>Opis</span>
 
                     <textarea
-                      placeholder="Opiši doživljaj, atmosferu i ono što paket čini posebnim..."
+                      placeholder="Opiši doživljaj, tok avanture, kome je namenjena i šta je čini posebnom..."
+                      rows="7"
+                      maxLength="3000"
                       value={form.description}
                       onChange={(e) =>
                         updateField(
@@ -491,13 +568,16 @@ export default function CreatePackage() {
                   </label>
 
                   <label className="createPackageField">
-                    <span>Cena</span>
+                    <span>Cena po osobi</span>
 
                     <div className="createPackageInputIcon">
                       <Icon name="euro" size={17} />
 
                       <input
                         type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
                         placeholder="0"
                         value={form.price}
                         onChange={(e) =>
@@ -518,6 +598,9 @@ export default function CreatePackage() {
 
                       <input
                         type="number"
+                        min="1"
+                        step="1"
+                        inputMode="numeric"
                         placeholder="1"
                         value={form.capacity}
                         onChange={(e) =>
@@ -629,6 +712,7 @@ export default function CreatePackage() {
 
                     <input
                       type="datetime-local"
+                      min={form.start_date || undefined}
                       value={form.end_date}
                       onChange={(e) =>
                         updateField(
@@ -704,6 +788,14 @@ export default function CreatePackage() {
                 </div>
               </section>
 
+              {error && (
+                <div className="packageFormError" role="alert">
+                  <Icon name="shield" size={18} />
+                  <p>{error}</p>
+                  <button type="button" onClick={() => setError("")} aria-label="Zatvori grešku">×</button>
+                </div>
+              )}
+
               <div className="createPackageSubmitBar">
                 <div>
                   <span>Spremno za objavu</span>
@@ -713,7 +805,7 @@ export default function CreatePackage() {
                   </p>
                 </div>
 
-                <button type="submit" disabled={saving}>
+                <button type="submit" disabled={saving || !form.title.trim()}>
                   <Icon name="plus" size={17} />
                   {saving
                     ? "Kreiranje..."

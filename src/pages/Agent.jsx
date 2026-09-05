@@ -195,6 +195,22 @@ function DetailPill({ icon, label, value }) {
   );
 }
 
+async function getFunctionErrorMessage(error, fallback = "AI Agent greška") {
+  if (!error) return fallback;
+  let message = error?.message || fallback;
+
+  try {
+    if (error?.context) {
+      const body = await error.context.json();
+      if (body?.error) message = body.error;
+    }
+  } catch (parseError) {
+    console.error("Could not parse Edge Function error:", parseError);
+  }
+
+  return message;
+}
+
 export default function Agent() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -203,6 +219,8 @@ export default function Agent() {
   const [prompt, setPrompt] = useState("");
   const [intent, setIntent] = useState(null);
   const [inventory, setInventory] = useState(null);
+  const [ranking, setRanking] = useState(null);
+  const [rankingError, setRankingError] = useState("");
 
   const [thinking, setThinking] = useState(false);
   const [sendingDemand, setSendingDemand] = useState(false);
@@ -236,6 +254,21 @@ export default function Agent() {
   const packages = inventory?.packages || [];
   const events = inventory?.events || [];
   const hasInventory = packages.length > 0 || events.length > 0;
+  const recommendations = ranking?.recommendations || [];
+  const hasGoodMatch = Boolean(ranking?.has_good_match);
+
+  const rankedItems = useMemo(() => {
+    return recommendations
+      .map((rec) => {
+        const source =
+          rec.type === "package"
+            ? packages.find((item) => String(item.package_id) === String(rec.id))
+            : events.find((item) => String(item.event_id) === String(rec.id));
+
+        return source ? { ...rec, source } : null;
+      })
+      .filter(Boolean);
+  }, [recommendations, packages, events]);
 
   const canSearch = prompt.trim().length >= 4 && !thinking;
 
@@ -245,6 +278,72 @@ export default function Agent() {
       [field]: value,
     }));
     setError("");
+    setRanking(null);
+    setRankingError("");
+  }
+
+  async function rankInventoryWithAI(currentIntent, currentInventory, session) {
+    const candidateCount =
+      (currentInventory?.packages?.length || 0) +
+      (currentInventory?.events?.length || 0);
+
+    if (!candidateCount) {
+      setRanking({
+        recommendations: [],
+        has_good_match: false,
+        best_score: 0,
+        assistant_message:
+          "Trenutno nema gotove ponude koja dovoljno dobro odgovara tvojoj želji.",
+      });
+      setRankingError("");
+      return;
+    }
+
+    try {
+      const { data: rankingData, error: rankError } =
+        await supabase.functions.invoke("meetoutdoors-agent", {
+          body: {
+            mode: "rank",
+            intent: currentIntent,
+            inventory: {
+              packages: currentInventory?.packages || [],
+              events: currentInventory?.events || [],
+            },
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+      if (rankError) {
+        const message = await getFunctionErrorMessage(
+          rankError,
+          "AI rangiranje trenutno nije dostupno."
+        );
+        throw new Error(message);
+      }
+
+      if (!rankingData?.success) {
+        throw new Error(
+          rankingData?.error || "Agent nije uspeo da rangira rezultate."
+        );
+      }
+
+      setRanking({
+        recommendations: rankingData.recommendations || [],
+        has_good_match: Boolean(rankingData.has_good_match),
+        best_score: Number(rankingData.best_score) || 0,
+        assistant_message: rankingData.assistant_message || "",
+      });
+      setRankingError("");
+    } catch (rankErr) {
+      console.error("AI ranking error:", rankErr);
+      setRanking(null);
+      setRankingError(
+        rankErr?.message ||
+          "Reality Engine je pronašao opcije, ali AI rangiranje trenutno nije dostupno."
+      );
+    }
   }
 
   async function searchWithAI(event) {
@@ -256,6 +355,8 @@ export default function Agent() {
     setSentResult(null);
     setIntent(null);
     setInventory(null);
+    setRanking(null);
+    setRankingError("");
 
     try {
       const {
@@ -268,37 +369,55 @@ export default function Agent() {
         return;
       }
 
-      const { data: aiData, error: aiError } = await supabase.functions.invoke(
-  "meetoutdoors-agent",
-  {
-    body: { message: prompt.trim() },
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  }
-);
+      let outdoorDNA = null;
 
-     if (aiError) {
-  console.error("Agent Edge Function error:", aiError);
+      try {
+        const { data: dnaData, error: dnaReadError } = await supabase
+          .from("outdoor_preferences")
+          .select(`
+            preferred_activities,
+            preferred_difficulty,
+            typical_budget_per_person,
+            currency,
+            has_car,
+            preferred_people_count,
+            preferred_location,
+            max_travel_minutes,
+            adventures_requested,
+            adventures_completed,
+            last_activity
+          `)
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-  let realMessage = aiError.message || "AI Agent greška";
-
-  try {
-    if (aiError.context) {
-      const errorBody = await aiError.context.json();
-
-      console.error("Edge Function response:", errorBody);
-
-      if (errorBody?.error) {
-        realMessage = errorBody.error;
+        if (dnaReadError) {
+          console.error("Outdoor DNA read error:", dnaReadError);
+        } else {
+          outdoorDNA = dnaData || null;
+        }
+      } catch (dnaReadError) {
+        console.error("Outdoor DNA read error:", dnaReadError);
       }
-    }
-  } catch (parseError) {
-    console.error("Could not parse Edge Function error:", parseError);
-  }
 
-  throw new Error(realMessage);
-}
+      const { data: aiData, error: aiError } = await supabase.functions.invoke(
+        "meetoutdoors-agent",
+        {
+          body: {
+            mode: "parse",
+            message: prompt.trim(),
+            outdoor_dna: outdoorDNA,
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (aiError) {
+        console.error("Agent Edge Function error:", aiError);
+        const realMessage = await getFunctionErrorMessage(aiError);
+        throw new Error(realMessage);
+      }
       if (!aiData?.success || !aiData?.intent) {
         throw new Error(aiData?.error || "Agent nije uspeo da razume zahtev.");
       }
@@ -306,12 +425,52 @@ export default function Agent() {
       const parsed = aiData.intent;
       setIntent(parsed);
 
+      /*
+        Outdoor DNA learning is intentionally non-blocking.
+        If this RPC ever fails, the Agent search still continues normally.
+      */
+      try {
+        const { error: dnaError } = await supabase.rpc(
+          "update_outdoor_dna_from_intent",
+          {
+            p_activity: parsed.activity || null,
+            p_difficulty: parsed.difficulty || null,
+            p_budget_per_person:
+              parsed.budget_per_person === null ||
+              parsed.budget_per_person === undefined
+                ? null
+                : Number(parsed.budget_per_person),
+            p_currency: parsed.currency || null,
+            p_has_car:
+              typeof parsed.has_car === "boolean" ? parsed.has_car : null,
+            p_people_count:
+              parsed.people_count === null ||
+              parsed.people_count === undefined
+                ? null
+                : Number(parsed.people_count),
+            p_location_text: parsed.location_text || null,
+          }
+        );
+
+        if (dnaError) {
+          console.error("Outdoor DNA learning error:", dnaError);
+        }
+      } catch (dnaError) {
+        console.error("Outdoor DNA learning error:", dnaError);
+      }
+
       if (!parsed.activity) {
         setInventory({
           packages: [],
           events: [],
           counts: { packages: 0, events: 0 },
           has_existing_inventory: false,
+        });
+        setRanking({
+          recommendations: [],
+          has_good_match: false,
+          best_score: 0,
+          assistant_message: "Treba mi još malo informacija da pronađem pravu opciju.",
         });
         return;
       }
@@ -336,14 +495,16 @@ export default function Agent() {
 
       if (inventoryError) throw inventoryError;
 
-      setInventory(
+      const normalizedInventory =
         inventoryData || {
           packages: [],
           events: [],
           counts: { packages: 0, events: 0 },
           has_existing_inventory: false,
-        }
-      );
+        };
+
+      setInventory(normalizedInventory);
+      await rankInventoryWithAI(parsed, normalizedInventory, session);
     } catch (err) {
       console.error("MeetOutdoors Agent error:", err);
       setError(
@@ -365,6 +526,16 @@ export default function Agent() {
     setError("");
 
     try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.user) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
       const { data, error: rpcError } = await supabase.rpc(
         "search_adventure_inventory",
         {
@@ -385,7 +556,9 @@ export default function Agent() {
       );
 
       if (rpcError) throw rpcError;
-      setInventory(data);
+      const normalizedInventory = data || { packages: [], events: [] };
+      setInventory(normalizedInventory);
+      await rankInventoryWithAI(intent, normalizedInventory, session);
       setShowEdit(false);
     } catch (err) {
       console.error("Inventory refresh error:", err);
@@ -441,6 +614,8 @@ export default function Agent() {
     setPrompt("");
     setIntent(null);
     setInventory(null);
+    setRanking(null);
+    setRankingError("");
     setSentResult(null);
     setError("");
     setShowEdit(false);
@@ -814,30 +989,124 @@ export default function Agent() {
                         REALITY ENGINE
                       </span>
                       <h2>
-                        {hasInventory
-                          ? "Ovo već postoji."
-                          : "Nema dovoljno dobre gotove opcije."}
+                        {hasGoodMatch
+                          ? "Agent je izdvojio najbolje."
+                          : hasInventory
+                            ? "Postoje opcije — ali bez forsiranja."
+                            : "Nema dovoljno dobre gotove opcije."}
                       </h2>
                       <p>
-                        {hasInventory
-                          ? "Pronašao sam stvarne MeetOutdoors opcije koje odgovaraju tvom zahtevu."
-                          : "Neću ti izmišljati preporuke. Trenutno nema odgovarajuće aktivne ponude u bazi."}
+                        {ranking?.assistant_message ||
+                          (hasInventory
+                            ? "Reality Engine je našao stvarne opcije, a Agent ih proverava prema tvojoj želji."
+                            : "Neću ti izmišljati preporuke. Trenutno nema odgovarajuće aktivne ponude u bazi.")}
                       </p>
                     </div>
 
                     <div className={`ai-engine-status ${hasInventory ? "found" : ""}`}>
                       <span />
-                      {hasInventory
-                        ? `${packages.length + events.length} opcija`
-                        : "Custom match"}
+                      {hasGoodMatch
+                        ? `${ranking?.best_score || 0}% najbolji match`
+                        : hasInventory
+                          ? `${packages.length + events.length} kandidata`
+                          : "Custom match"}
                     </div>
                   </div>
+
+                  {rankingError && hasInventory && (
+                    <div className="ai-ranking-note">
+                      <Icon name="sparkles" size={15} />
+                      <span>
+                        <strong>Reality Engine radi normalno.</strong>
+                        {rankingError}
+                      </span>
+                    </div>
+                  )}
+
+                  {rankedItems.length > 0 && (
+                    <div className="ai-curated-section">
+                      <div className="ai-curated-heading">
+                        <div>
+                          <span className="ai-section-label">
+                            <Icon name="sparkles" size={14} />
+                            AI CURATED
+                          </span>
+                          <h3>Najbolji izbor za tvoj zahtev</h3>
+                        </div>
+                        <span className={`ai-confidence ${hasGoodMatch ? "strong" : "soft"}`}>
+                          {hasGoodMatch ? "Jak match" : "Mogući match"}
+                        </span>
+                      </div>
+
+                      <div className="ai-curated-grid">
+                        {rankedItems.map((rec, index) => {
+                          const item = rec.source;
+                          const isPackage = rec.type === "package";
+                          const href = isPackage
+                            ? item.slug
+                              ? `/paketi/${item.slug}`
+                              : `/package/${item.package_id}`
+                            : `/event/${item.event_id}`;
+                          const image = isPackage ? item.cover_url : item.cover_url;
+                          const location = isPackage
+                            ? item.city || item.location_text || item.country
+                            : item.location || item.country;
+                          const price = formatMoney(item.price, item.currency || "RSD");
+
+                          return (
+                            <Link
+                              to={href}
+                              key={`${rec.type}-${rec.id}`}
+                              className={`ai-curated-card ${index === 0 ? "is-top" : ""}`}
+                              style={{ "--rank-delay": `${index * 80}ms` }}
+                            >
+                              <div
+                                className="ai-curated-cover"
+                                style={
+                                  image
+                                    ? {
+                                        backgroundImage: `linear-gradient(180deg, rgba(4,18,11,.02), rgba(4,18,11,.78)), url("${image}")`,
+                                      }
+                                    : undefined
+                                }
+                              >
+                                {!image && <Icon name={isPackage ? "mountain" : "calendar"} size={34} />}
+                                <span className="ai-rank-number">0{index + 1}</span>
+                                <div
+                                  className="ai-score-orb"
+                                  style={{ "--score": `${Math.max(0, Math.min(100, Number(rec.score) || 0)) * 3.6}deg` }}
+                                >
+                                  <span>{rec.score}</span>
+                                  <small>match</small>
+                                </div>
+                              </div>
+
+                              <div className="ai-curated-body">
+                                <div className="ai-curated-meta">
+                                  <span>{isPackage ? "Paket" : "Događaj"}</span>
+                                  {location && <span>{location}</span>}
+                                </div>
+                                <h4>{item.title}</h4>
+                                <p>{rec.reason}</p>
+                                <div className="ai-curated-bottom">
+                                  <strong>{price || "Cena na upit"}</strong>
+                                  <span>
+                                    Pogledaj opciju <Icon name="arrow" size={14} />
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {packages.length > 0 && (
                     <div className="ai-result-section">
                       <div className="ai-result-title">
                         <Icon name="package" size={16} />
-                        Paketi
+                        {rankedItems.length > 0 ? "Sve pronađene paket opcije" : "Paketi"}
                       </div>
 
                       <div className="ai-cards">
@@ -903,7 +1172,7 @@ export default function Agent() {
                     <div className="ai-result-section">
                       <div className="ai-result-title">
                         <Icon name="event" size={16} />
-                        Događaji
+                        {rankedItems.length > 0 ? "Svi pronađeni događaji" : "Događaji"}
                       </div>
 
                       <div className="ai-event-list">
@@ -970,15 +1239,19 @@ export default function Agent() {
                   </span>
 
                   <h2>
-                    {hasInventory
-                      ? "Želiš još bolju opciju?"
-                      : "Da aktiviram domaćine?"}
+                    {hasGoodMatch
+                      ? "Nešto je baš dobro. Hoćeš custom?"
+                      : hasInventory
+                        ? "Nijedna nije dovoljno jaka?"
+                        : "Da aktiviram domaćine?"}
                   </h2>
 
                   <p>
-                    {hasInventory
-                      ? "Možeš odmah otvoriti postojeću ponudu ili pustiti Agent da traži konkretnu ponudu baš za tvoj zahtev."
-                      : "Relevantni outdoor domaćini dobiće anonimnu potražnju i moći će da ti pošalju konkretnu ponudu."}
+                    {hasGoodMatch
+                      ? "Imaš dobar postojeći izbor. Ako želiš nešto još preciznije, Agent može da otvori privatnu potražnju prema relevantnim domaćinima."
+                      : hasInventory
+                        ? "Našao sam kandidate, ali ne želim da ih proglasim idealnim. Možemo odmah tražiti ponudu skrojenu baš za tebe."
+                        : "Relevantni outdoor domaćini dobiće anonimnu potražnju i moći će da ti pošalju konkretnu ponudu."}
                   </p>
 
                   <div className="ai-privacy-box">
@@ -1005,9 +1278,11 @@ export default function Agent() {
                     ) : (
                       <>
                         <span>
-                          {hasInventory
-                            ? "Traži custom ponude"
-                            : "Pošalji potražnju hostovima"}
+                          {hasGoodMatch
+                            ? "Ipak traži custom ponude"
+                            : hasInventory
+                              ? "Traži bolju custom opciju"
+                              : "Pošalji potražnju hostovima"}
                         </span>
                         <Icon name="send" size={17} />
                       </>
@@ -1035,7 +1310,7 @@ export default function Agent() {
                     <i />
                     <div>
                       <span>03</span>
-                      <p>Hostovi stvaraju</p>
+                      <p>AI rangira ili hostovi stvaraju</p>
                     </div>
                   </div>
                 </div>
@@ -1895,6 +2170,223 @@ function Styles() {
         box-shadow: 0 18px 36px rgba(0,0,0,.16);
       }
 
+
+      .ai-ranking-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: 18px;
+        padding: 12px 14px;
+        border: 1px solid rgba(236, 199, 108, .14);
+        border-radius: 14px;
+        background: rgba(204, 155, 66, .055);
+        color: rgba(244, 220, 160, .72);
+        font-size: 8px;
+        line-height: 1.55;
+      }
+
+      .ai-ranking-note svg { flex: 0 0 auto; margin-top: 1px; }
+      .ai-ranking-note strong { display: block; color: #f0d99d; margin-bottom: 2px; }
+
+      .ai-curated-section {
+        position: relative;
+        margin-top: 26px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(222, 240, 217, .08);
+      }
+
+      .ai-curated-heading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .ai-curated-heading h3 {
+        margin: 7px 0 0;
+        color: #f3f8f1;
+        font-size: clamp(20px, 3vw, 30px);
+        letter-spacing: -.045em;
+        line-height: 1.05;
+      }
+
+      .ai-confidence {
+        flex: 0 0 auto;
+        padding: 7px 9px;
+        border-radius: 999px;
+        font-size: 6px;
+        font-weight: 950;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .ai-confidence.strong {
+        border: 1px solid rgba(190, 240, 140, .20);
+        background: rgba(184, 240, 123, .08);
+        color: #c7f39b;
+        box-shadow: 0 0 24px rgba(167, 230, 104, .06);
+      }
+
+      .ai-confidence.soft {
+        border: 1px solid rgba(235, 201, 122, .15);
+        background: rgba(220, 172, 84, .06);
+        color: #e7cc91;
+      }
+
+      .ai-curated-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .ai-curated-card {
+        position: relative;
+        overflow: hidden;
+        min-width: 0;
+        border: 1px solid rgba(211, 239, 205, .11);
+        border-radius: 21px;
+        background: rgba(255,255,255,.032);
+        color: inherit;
+        text-decoration: none;
+        box-shadow: 0 18px 45px rgba(0,0,0,.16);
+        transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+        animation: curatedIn .52s cubic-bezier(.2,.75,.22,1) both;
+        animation-delay: var(--rank-delay);
+      }
+
+      .ai-curated-card.is-top {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: minmax(240px, .92fr) minmax(0, 1.08fr);
+        min-height: 250px;
+        border-color: rgba(190, 240, 140, .18);
+        background:
+          linear-gradient(135deg, rgba(180, 239, 120, .055), transparent 48%),
+          rgba(255,255,255,.034);
+        box-shadow: 0 26px 70px rgba(0,0,0,.20);
+      }
+
+      .ai-curated-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(195, 240, 151, .24);
+        box-shadow: 0 28px 70px rgba(0,0,0,.24);
+      }
+
+      .ai-curated-cover {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 150px;
+        background:
+          radial-gradient(circle at 30% 20%, rgba(174, 235, 112, .12), transparent 34%),
+          linear-gradient(145deg, rgba(55, 101, 63, .28), rgba(14, 39, 23, .60));
+        background-size: cover;
+        background-position: center;
+        color: rgba(220, 240, 214, .34);
+      }
+
+      .ai-curated-card.is-top .ai-curated-cover { min-height: 250px; }
+
+      .ai-rank-number {
+        position: absolute;
+        left: 13px;
+        top: 12px;
+        color: rgba(244, 250, 242, .72);
+        font-size: 9px;
+        font-weight: 950;
+        letter-spacing: .12em;
+      }
+
+      .ai-score-orb {
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle, rgba(6, 24, 14, .96) 60%, transparent 62%),
+          conic-gradient(#bff18a var(--score), rgba(255,255,255,.09) 0);
+        box-shadow: 0 10px 28px rgba(0,0,0,.28), 0 0 24px rgba(177, 235, 118, .08);
+        backdrop-filter: blur(10px);
+      }
+
+      .ai-score-orb span {
+        margin-top: 8px;
+        color: #d6f7b3;
+        font-size: 14px;
+        font-weight: 950;
+        letter-spacing: -.04em;
+      }
+
+      .ai-score-orb small {
+        margin-top: -9px;
+        color: rgba(216, 240, 194, .48);
+        font-size: 5px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .ai-curated-body { padding: 17px; }
+      .ai-curated-card.is-top .ai-curated-body { display: flex; flex-direction: column; justify-content: center; padding: 25px; }
+
+      .ai-curated-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+      .ai-curated-meta span {
+        padding: 5px 7px;
+        border-radius: 999px;
+        background: rgba(184, 236, 130, .06);
+        color: rgba(197, 235, 162, .62);
+        font-size: 6px;
+        font-weight: 900;
+      }
+
+      .ai-curated-body h4 {
+        margin: 10px 0 0;
+        color: #f4f9f2;
+        font-size: 18px;
+        line-height: 1.08;
+        letter-spacing: -.035em;
+      }
+
+      .ai-curated-card.is-top .ai-curated-body h4 { font-size: clamp(24px, 4vw, 36px); }
+
+      .ai-curated-body p {
+        margin: 9px 0 0;
+        color: rgba(227, 239, 223, .52);
+        font-size: 8px;
+        line-height: 1.65;
+      }
+
+      .ai-curated-card.is-top .ai-curated-body p { max-width: 520px; font-size: 9px; }
+
+      .ai-curated-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(223, 240, 219, .07);
+      }
+
+      .ai-curated-bottom strong { color: #bced8f; font-size: 11px; }
+      .ai-curated-bottom span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: rgba(235, 244, 232, .52);
+        font-size: 7px;
+        font-weight: 900;
+      }
+
+      @keyframes curatedIn {
+        from { opacity: 0; transform: translateY(16px) scale(.985); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
       .ai-match-cover {
         position: relative;
         display: grid;
@@ -2532,6 +3024,19 @@ function Styles() {
         .ai-cards {
           grid-template-columns: 1fr;
         }
+
+        .ai-curated-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .ai-curated-card.is-top {
+          grid-column: auto;
+          grid-template-columns: 1fr;
+        }
+
+        .ai-curated-card.is-top .ai-curated-cover {
+          min-height: 210px;
+        }
       }
 
       @media (max-width: 620px) {
@@ -2617,8 +3122,10 @@ function Styles() {
         }
 
         .ai-understood-head,
-        .ai-inventory-head {
+        .ai-inventory-head,
+        .ai-curated-heading {
           flex-direction: column;
+          align-items: flex-start;
         }
 
         .ai-pills {
@@ -2632,6 +3139,16 @@ function Styles() {
         .ai-empty-visual {
           grid-template-columns: 1fr;
           text-align: center;
+        }
+
+        .ai-curated-body,
+        .ai-curated-card.is-top .ai-curated-body {
+          padding: 17px;
+        }
+
+        .ai-score-orb {
+          width: 54px;
+          height: 54px;
         }
 
         .ai-sent {

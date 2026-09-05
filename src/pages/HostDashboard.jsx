@@ -14,6 +14,24 @@ const FALLBACK_EVENT_IMAGE =
 const FALLBACK_PACKAGE_IMAGE =
   "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=85";
 
+const EMPTY_DEMAND_INTELLIGENCE = {
+  total_open_demands: 0,
+  new_demands_7d: 0,
+  pending_demands: 0,
+  demands: [],
+};
+
+const EMPTY_HOST_ANALYTICS = {
+  period_days: 30,
+  overview: { demands_30d: 0, people_30d: 0, open_demands: 0, new_demands_7d: 0 },
+  response_performance: { received_demands: 0, responded_demands: 0, unanswered_demands: 0, response_rate: 0, average_response_hours: 0 },
+  offer_performance: { total_offers: 0, accepted_offers: 0, pending_offers: 0, rejected_offers: 0, withdrawn_offers: 0, conversion_rate: 0 },
+  demand_series: [],
+  top_activities: [],
+  top_locations: [],
+  budget_by_activity: [],
+};
+
 const EMPTY_SUMMARY = {
   total_packages: 0,
   total_events: 0,
@@ -196,6 +214,27 @@ function Icon({
         <path d="M18.4 9A7 7 0 0 0 6 6.5L4 9M5.6 15A7 7 0 0 0 18 17.5l2-2.5" />
       </>
     ),
+    inbox: (
+      <>
+        <path d="M4 4h16l2 10v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5L4 4Z" />
+        <path d="M2 14h5l2 3h6l2-3h5" />
+      </>
+    ),
+    sparkles: (
+      <>
+        <path d="m12 3 1.1 3.4L16.5 7.5l-3.4 1.1L12 12l-1.1-3.4-3.4-1.1 3.4-1.1L12 3Z" />
+        <path d="m18 13 .7 2.3L21 16l-2.3.7L18 19l-.7-2.3L15 16l2.3-.7L18 13Z" />
+        <path d="m5 13 .6 1.9 1.9.6-1.9.6L5 18l-.6-1.9-1.9-.6 1.9-.6L5 13Z" />
+      </>
+    ),
+    car: (
+      <>
+        <path d="M5 17h14l-1-6-2-4H8l-2 4-1 6Z" />
+        <path d="M7 17v2M17 17v2M6 12h12" />
+        <circle cx="8" cy="15" r="1" />
+        <circle cx="16" cy="15" r="1" />
+      </>
+    ),
     dashboard: (
       <>
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -259,6 +298,58 @@ function formatMoney(value, currency = "EUR") {
 function numberValue(value) {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatDemandDate(startDate, endDate) {
+  if (!startDate) return "Termin nije naveden";
+
+  const start = formatDate(startDate);
+  if (!endDate || endDate === startDate) return start;
+
+  return `${start} – ${formatDate(endDate)}`;
+}
+
+function humanizeActivity(value) {
+  if (!value) return "Outdoor aktivnost";
+
+  return String(value)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/(^|\s)\S/g, (character) => character.toUpperCase());
+}
+
+function demandAgeHours(value) {
+  const createdAt = new Date(value || 0).getTime();
+  if (!Number.isFinite(createdAt) || createdAt <= 0) return Number.POSITIVE_INFINITY;
+  return Math.max((Date.now() - createdAt) / 36e5, 0);
+}
+
+function demandPriority(demand) {
+  if (demand?.responded) {
+    return { label: "Obrađeno", tone: "done", rank: 99 };
+  }
+
+  const ageHours = demandAgeHours(demand?.created_at);
+  const people = Math.max(numberValue(demand?.people_count), 1);
+  const hasBudget = demand?.budget_per_person !== null && demand?.budget_per_person !== undefined;
+
+  if (ageHours <= 24 || people >= 4 || hasBudget) {
+    return { label: "Odgovori prvo", tone: "high", rank: 0 };
+  }
+
+  if (ageHours <= 72) {
+    return { label: "Sveža prilika", tone: "medium", rank: 1 };
+  }
+
+  return { label: "Čeka odgovor", tone: "normal", rank: 2 };
+}
+
+function demandGroupBudget(demand) {
+  if (demand?.budget_per_person === null || demand?.budget_per_person === undefined) return null;
+  const budget = numberValue(demand.budget_per_person);
+  const people = Math.max(numberValue(demand.people_count), 1);
+  return budget * people;
 }
 
 function DashboardLoading() {
@@ -570,6 +661,701 @@ function BookingRow({ booking }) {
   );
 }
 
+function DemandMetric({ icon, label, value, description, tone = "default" }) {
+  return (
+    <article className={`demandMetric ${tone}`}>
+      <span className="demandMetricIcon">
+        <Icon name={icon} size={19} />
+      </span>
+
+      <div className="demandMetricCopy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>{description}</small>
+      </div>
+    </article>
+  );
+}
+
+function DemandCard({ demand, featured = false }) {
+  const responded = Boolean(demand.responded);
+  const peopleCount = Math.max(numberValue(demand.people_count), 1);
+  const hasBudget = demand.budget_per_person !== null && demand.budget_per_person !== undefined;
+  const groupBudget = demandGroupBudget(demand);
+  const priority = demandPriority(demand);
+
+  return (
+    <article className={`demandCard ${responded ? "responded" : "waiting"} ${featured ? "featured" : ""}`}>
+      <div className="demandCardTop">
+        <div className="demandActivityIdentity">
+          <span className="demandActivityIcon">
+            <Icon name="trend" size={18} />
+          </span>
+
+          <div>
+            <div className="demandEyebrowRow">
+              <span className="demandEyebrow">Traži se</span>
+              {!responded && (
+                <span className={`priorityPill ${priority.tone}`}>{priority.label}</span>
+              )}
+            </div>
+            <h3>{humanizeActivity(demand.activity)}</h3>
+          </div>
+        </div>
+
+        <span className={`demandStatus ${responded ? "done" : "new"}`}>
+          <span />
+          {responded ? "Odgovoreno" : "Čeka odgovor"}
+        </span>
+      </div>
+
+      <div className="demandLocation">
+        <Icon name="mapPin" size={16} />
+        <strong>{demand.location_text || "Lokacija nije precizirana"}</strong>
+      </div>
+
+      <div className="demandFacts">
+        <div>
+          <span className="demandFactIcon"><Icon name="calendar" size={15} /></span>
+          <p><small>Termin</small><strong>{formatDemandDate(demand.start_date, demand.end_date)}</strong></p>
+        </div>
+        <div>
+          <span className="demandFactIcon"><Icon name="users" size={15} /></span>
+          <p><small>Grupa</small><strong>{peopleCount} osoba</strong></p>
+        </div>
+        <div>
+          <span className="demandFactIcon"><Icon name="money" size={15} /></span>
+          <p><small>Budžet / osoba</small><strong>{hasBudget ? formatMoney(demand.budget_per_person, demand.currency || "EUR") : "Nije naveden"}</strong></p>
+        </div>
+        <div>
+          <span className="demandFactIcon"><Icon name="car" size={15} /></span>
+          <p><small>Prevoz</small><strong>{demand.has_car === true ? "Ima auto" : demand.has_car === false ? "Bez auta" : "Nije navedeno"}</strong></p>
+        </div>
+      </div>
+
+      {groupBudget !== null && (
+        <div className="groupBudgetSignal">
+          <span>
+            <Icon name="wallet" size={16} />
+          </span>
+          <div>
+            <small>Signal budžeta cele grupe</small>
+            <strong>{formatMoney(groupBudget, demand.currency || "EUR")}</strong>
+          </div>
+          <em>Nije garantovan prihod</em>
+        </div>
+      )}
+
+      <div className="demandCardFooter">
+        <span>
+          <Icon name="clock" size={14} />
+          Zahtev stigao {formatDate(demand.created_at, true)}
+        </span>
+
+        {demand.difficulty && (
+          <span className="difficultyTag">{humanizeActivity(demand.difficulty)}</span>
+        )}
+      </div>
+
+      <Link
+        to={`/host/demand/${demand.id}`}
+        className={`demandPrimaryAction ${responded ? "secondary" : ""}`}
+      >
+        <span>
+          <Icon name={responded ? "eye" : "sparkles"} size={17} />
+          {responded ? "Pogledaj ponudu" : "Otvori i odgovori"}
+        </span>
+        <Icon name="arrowRight" size={17} />
+      </Link>
+    </article>
+  );
+}
+
+function AnalyticsKpi({ label, value, hint }) {
+  return (
+    <article className="analyticsKpi">
+      <small>{label}</small>
+      <strong>{value}</strong>
+      <span>{hint}</span>
+    </article>
+  );
+}
+
+function DemandTrendChart({ series }) {
+  const rows = Array.isArray(series) ? series : [];
+  const maxValue = Math.max(...rows.map((item) => numberValue(item?.demand_count)), 1);
+  const visibleLabels = new Set([0, 6, 13, 20, 29]);
+
+  return (
+    <div className="trendChart" aria-label="Potražnja u poslednjih 30 dana">
+      <div className="trendBars">
+        {rows.map((item, index) => {
+          const count = numberValue(item?.demand_count);
+          const height = Math.max((count / maxValue) * 100, count > 0 ? 8 : 2);
+          return (
+            <div className="trendBarColumn" key={`${item?.date || index}-${index}`}>
+              <div className="trendBarTrack" title={`${item?.date || ""}: ${count} zahteva`}>
+                <span className={count > 0 ? "active" : ""} style={{ height: `${height}%` }} />
+              </div>
+              <small>{visibleLabels.has(index) ? String(item?.date || "").slice(5) : ""}</small>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RankedList({ items, type }) {
+  const rows = Array.isArray(items) ? items : [];
+  const max = Math.max(...rows.map((item) => numberValue(item?.demand_count)), 1);
+  if (!rows.length) return <div className="analyticsEmpty">Još nema dovoljno podataka za rangiranje.</div>;
+
+  return (
+    <div className="rankedList">
+      {rows.slice(0, 6).map((item, index) => {
+        const label = type === "activity" ? humanizeActivity(item?.activity) : item?.location || "Nepoznata lokacija";
+        const count = numberValue(item?.demand_count);
+        const people = numberValue(item?.people_count);
+        return (
+          <div className="rankedRow" key={`${label}-${index}`}>
+            <span className="rankNumber">{String(index + 1).padStart(2, "0")}</span>
+            <div className="rankMain">
+              <div className="rankTopline"><strong>{label}</strong><span>{count} zahteva</span></div>
+              <div className="rankBar"><span style={{ width: `${Math.max((count / max) * 100, 5)}%` }} /></div>
+              <small>{people} potencijalnih učesnika</small>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BudgetSignals({ rows }) {
+  const items = Array.isArray(rows) ? rows : [];
+  if (!items.length) return <div className="analyticsEmpty">Budžetski signali će se pojaviti kada korisnici unesu budžet.</div>;
+
+  return (
+    <div className="budgetSignalList">
+      {items.slice(0, 6).map((item, index) => (
+        <article className="budgetSignalRow" key={`${item?.activity}-${item?.currency}-${index}`}>
+          <div><strong>{humanizeActivity(item?.activity)}</strong><small>{numberValue(item?.demand_count)} zahteva · {item?.currency || "RSD"}</small></div>
+          <div className="budgetSignalValue"><small>Prosek / osoba</small><strong>{formatMoney(item?.average_budget_per_person, item?.currency || "RSD")}</strong></div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+
+function buildAgentInsights(analytics) {
+  const overview = { ...EMPTY_HOST_ANALYTICS.overview, ...(analytics?.overview || {}) };
+  const response = { ...EMPTY_HOST_ANALYTICS.response_performance, ...(analytics?.response_performance || {}) };
+  const offers = { ...EMPTY_HOST_ANALYTICS.offer_performance, ...(analytics?.offer_performance || {}) };
+  const activities = Array.isArray(analytics?.top_activities) ? analytics.top_activities : [];
+  const locations = Array.isArray(analytics?.top_locations) ? analytics.top_locations : [];
+
+  const demandCount = numberValue(overview.demands_30d);
+  const unanswered = numberValue(response.unanswered_demands);
+  const responseRate = numberValue(response.response_rate);
+  const responseHours = numberValue(response.average_response_hours);
+  const totalOffers = numberValue(offers.total_offers);
+  const acceptedOffers = numberValue(offers.accepted_offers);
+  const conversion = numberValue(offers.conversion_rate);
+  const topActivity = activities[0];
+  const topLocation = locations[0];
+  const insights = [];
+
+  if (unanswered > 0) {
+    insights.push({
+      tone: "priority",
+      icon: "alert",
+      eyebrow: "Prioritet sada",
+      title: `${unanswered} ${unanswered === 1 ? "potražnja čeka" : "potražnje čekaju"} tvoj odgovor`,
+      text: "Odgovori prvo na sveže zahteve dok je namera korisnika još jaka.",
+      metric: `${responseRate.toFixed(1)}% response rate`,
+      to: "/host-dashboard#demand-inbox",
+      action: "Otvori Demand Inbox",
+    });
+  } else if (demandCount > 0) {
+    insights.push({
+      tone: "positive",
+      icon: "check",
+      eyebrow: "Inbox pod kontrolom",
+      title: "Nema neodgovorenih potražnji",
+      text: "Sve trenutno relevantne prilike imaju tvoj odgovor. Nastavi da reaguješ brzo na nove zahteve.",
+      metric: `${responseRate.toFixed(1)}% response rate`,
+    });
+  }
+
+  if (topActivity && numberValue(topActivity.demand_count) > 0) {
+    const count = numberValue(topActivity.demand_count);
+    const people = numberValue(topActivity.people_count);
+    insights.push({
+      tone: "market",
+      icon: "sparkles",
+      eyebrow: "Signal potražnje",
+      title: `${humanizeActivity(topActivity.activity)} je trenutno tvoja #1 aktivnost`,
+      text: `${count} ${count === 1 ? "zahtev" : "zahteva"} u poslednjih 30 dana${people > 0 ? ` predstavljaju ${people} potencijalnih učesnika` : ""}.`,
+      metric: `${count} / 30d`,
+    });
+  }
+
+  if (topLocation && numberValue(topLocation.demand_count) > 0) {
+    const count = numberValue(topLocation.demand_count);
+    insights.push({
+      tone: "location",
+      icon: "mapPin",
+      eyebrow: "Lokacijski signal",
+      title: `${topLocation.location || "Lokacija"} privlači najviše interesa`,
+      text: `Najviše relevantnih zahteva koje si dobio u ovom periodu vezano je za ovu lokaciju.`,
+      metric: `${count} ${count === 1 ? "zahtev" : "zahteva"}`,
+    });
+  }
+
+  if (demandCount > 0 && responseHours > 0) {
+    if (responseHours <= 6) {
+      insights.push({
+        tone: "positive",
+        icon: "clock",
+        eyebrow: "Brzina odgovora",
+        title: `Prosečno odgovaraš za ${responseHours.toFixed(1)} h`,
+        text: "To je jak operativni signal. Zadrži brzinu, posebno kod novih potražnji.",
+        metric: "Brza reakcija",
+      });
+    } else if (responseHours >= 24) {
+      insights.push({
+        tone: "priority",
+        icon: "clock",
+        eyebrow: "Prostor za napredak",
+        title: `Prosečan odgovor je ${responseHours.toFixed(1)} h`,
+        text: "Kraće vreme do prve ponude može ti pomoći da stigneš do korisnika dok još aktivno bira opciju.",
+        metric: "Cilj: brže",
+      });
+    }
+  }
+
+  if (totalOffers >= 3) {
+    insights.push({
+      tone: conversion >= 30 ? "positive" : "market",
+      icon: conversion >= 30 ? "check" : "sparkles",
+      eyebrow: "Učinak ponuda",
+      title: `${conversion.toFixed(1)}% ponuda završava prihvatanjem`,
+      text: `${acceptedOffers} od ${totalOffers} ponuda u poslednjih 30 dana je prihvaćeno. Ovo je tvoj stvarni conversion, ne procena.`,
+      metric: `${acceptedOffers}/${totalOffers} prihvaćeno`,
+    });
+  }
+
+  if (!insights.length) {
+    insights.push({
+      tone: "neutral",
+      icon: "sparkles",
+      eyebrow: "Agent Insights",
+      title: "Čekamo dovoljno realnih signala",
+      text: "Čim stignu potražnje i odgovori, ovde će se automatski pojaviti konkretni zaključci za tvoj host profil.",
+      metric: "Live podaci",
+    });
+  }
+
+  return insights.slice(0, 4);
+}
+
+function AgentInsights({ analytics }) {
+  const insights = buildAgentInsights(analytics);
+
+  return (
+    <section className="agentInsightsPanel">
+      <div className="agentInsightsHeader">
+        <div className="agentInsightsTitle">
+          <span className="agentInsightsIcon"><Icon name="sparkles" size={20} /></span>
+          <div>
+            <span className="sectionKicker">MeetOutdoors Agent</span>
+            <h3>Šta bih uradio sledeće.</h3>
+            <p>Automatski zaključci iz tvojih stvarnih potražnji i ponuda u poslednjih 30 dana.</p>
+          </div>
+        </div>
+        <span className="agentDataBadge"><Icon name="shield" size={14} /> Bez demo podataka</span>
+      </div>
+
+      <div className="agentInsightsGrid">
+        {insights.map((insight, index) => (
+          <article className={`agentInsightCard ${insight.tone || "neutral"}`} key={`${insight.title}-${index}`}>
+            <div className="agentInsightTop">
+              <span className="agentInsightCardIcon"><Icon name={insight.icon || "sparkles"} size={17} /></span>
+              <span className="agentInsightMetric">{insight.metric}</span>
+            </div>
+            <small>{insight.eyebrow}</small>
+            <strong>{insight.title}</strong>
+            <p>{insight.text}</p>
+            {insight.to && (
+              <a href="#demand-inbox" className="agentInsightAction">
+                {insight.action || "Pogledaj"}
+                <Icon name="arrowRight" size={15} />
+              </a>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
+function buildAgentRecommendation(analytics) {
+  const activities = Array.isArray(analytics?.top_activities) ? analytics.top_activities : [];
+  const locations = Array.isArray(analytics?.top_locations) ? analytics.top_locations : [];
+  const budgets = Array.isArray(analytics?.budget_by_activity) ? analytics.budget_by_activity : [];
+  const topActivity = activities[0];
+  const topLocation = locations[0];
+
+  if (!topActivity || numberValue(topActivity?.demand_count) <= 0) return null;
+
+  const activity = humanizeActivity(topActivity.activity);
+  const location = topLocation?.location || "";
+  const people = Math.max(numberValue(topActivity.people_count), 1);
+  const budget = budgets.find((row) => row?.activity === topActivity.activity && String(row?.currency || "").toUpperCase() === "EUR") || null;
+  const suggestedPrice = budget ? Math.round(numberValue(budget.average_budget_per_person)) : null;
+  const baseTitle = location ? `${activity} · ${location}` : activity;
+  const description = location
+    ? `Predlog kreiran iz realne MeetOutdoors potražnje za ${activity.toLowerCase()} na lokaciji ${location}. Prilagodi detalje svom iskustvu i usluzi.`
+    : `Predlog kreiran iz realne MeetOutdoors potražnje za ${activity.toLowerCase()}. Prilagodi detalje svom iskustvu i usluzi.`;
+
+  const params = new URLSearchParams();
+  params.set("source", "agent");
+  params.set("title", baseTitle);
+  params.set("description", description);
+  if (location) params.set("location", location);
+  if (people > 0) params.set("capacity", String(people));
+  if (suggestedPrice && suggestedPrice > 0) params.set("price", String(suggestedPrice));
+
+  return {
+    activity,
+    location,
+    demandCount: numberValue(topActivity.demand_count),
+    people,
+    suggestedPrice,
+    packageUrl: `/create-package?${params.toString()}`,
+    eventUrl: `/create-event?${params.toString()}`,
+  };
+}
+
+function AgentRecommendation({ analytics }) {
+  const recommendation = buildAgentRecommendation(analytics);
+  if (!recommendation) return null;
+
+  return (
+    <section className="agentRecommendation">
+      <div className="agentRecommendationCopy">
+        <span className="sectionKicker">Agent Recommendation</span>
+        <h3>Pretvori potražnju u novu ponudu.</h3>
+        <p>
+          Najjači signal trenutno je <strong>{recommendation.activity}</strong>
+          {recommendation.location ? <> na lokaciji <strong>{recommendation.location}</strong></> : null}.
+          Imaš {recommendation.demandCount} relevantnih zahteva i {recommendation.people} potencijalnih učesnika u poslednjih 30 dana.
+        </p>
+        <div className="agentRecommendationSignals">
+          <span><Icon name="trend" size={15} /> {recommendation.demandCount} zahteva</span>
+          <span><Icon name="users" size={15} /> {recommendation.people} ljudi</span>
+          {recommendation.suggestedPrice ? <span><Icon name="wallet" size={15} /> oko {formatMoney(recommendation.suggestedPrice, "EUR")} / osoba</span> : null}
+        </div>
+      </div>
+      <div className="agentRecommendationActions">
+        <Link to={recommendation.packageUrl} className="agentRecommendationPrimary">
+          <Icon name="package" size={17} /> Kreiraj paket
+        </Link>
+        <Link to={recommendation.eventUrl} className="agentRecommendationSecondary">
+          <Icon name="calendar" size={17} /> Kreiraj event
+        </Link>
+        <small>Forma će dobiti predlog naziva, lokacije, kapaciteta i cenu kada postoji EUR budžetski signal.</small>
+      </div>
+    </section>
+  );
+}
+
+
+function IntelligenceCommandCenter({ analytics, intelligence }) {
+  const overview = { ...EMPTY_HOST_ANALYTICS.overview, ...(analytics?.overview || {}) };
+  const response = { ...EMPTY_HOST_ANALYTICS.response_performance, ...(analytics?.response_performance || {}) };
+  const offers = { ...EMPTY_HOST_ANALYTICS.offer_performance, ...(analytics?.offer_performance || {}) };
+  const demands = Array.isArray(intelligence?.demands)
+    ? [...intelligence.demands].sort((a, b) => {
+        const priorityDifference = demandPriority(a).rank - demandPriority(b).rank;
+        if (priorityDifference !== 0) return priorityDifference;
+        return new Date(b?.created_at || 0) - new Date(a?.created_at || 0);
+      })
+    : [];
+
+  const nextDemand = demands.find((item) => !item?.responded) || null;
+  const topActivity = Array.isArray(analytics?.top_activities) ? analytics.top_activities[0] : null;
+  const topLocation = Array.isArray(analytics?.top_locations) ? analytics.top_locations[0] : null;
+  const demandCount = numberValue(overview.demands_30d);
+  const peopleCount = numberValue(overview.people_30d);
+  const responseRate = numberValue(response.response_rate);
+  const responseHours = numberValue(response.average_response_hours);
+  const conversion = numberValue(offers.conversion_rate);
+  const unanswered = numberValue(response.unanswered_demands);
+
+  return (
+    <section className="intelligenceCommandCenter">
+      <div className="commandCenterTop">
+        <div>
+          <span className="sectionKicker">Intelligence Command Center</span>
+          <h3>Jedan pogled. Jedna odluka. Sledeći potez.</h3>
+          <p>Najvažniji signal iz potražnje, tržišta i tvog učinka — bez procena i bez demo brojeva.</p>
+        </div>
+        <span className="commandCenterStatus"><span /> 30d operativni pregled</span>
+      </div>
+
+      <div className="commandCenterGrid">
+        <article className={`commandDecisionCard ${nextDemand ? "urgent" : "clear"}`}>
+          <div className="commandCardTop">
+            <span className="commandCardIcon"><Icon name={nextDemand ? "bolt" : "check"} size={18} /></span>
+            <small>Sledeća akcija</small>
+          </div>
+          {nextDemand ? (
+            <>
+              <strong>Odgovori na {humanizeActivity(nextDemand.activity)}</strong>
+              <p>
+                {nextDemand.location_text || "Lokacija nije navedena"}
+                {numberValue(nextDemand.people_count) > 0 ? ` · ${numberValue(nextDemand.people_count)} ljudi` : ""}
+              </p>
+              <Link to={`/host/demand/${nextDemand.id}`} className="commandPrimaryAction">
+                Otvori zahtev <Icon name="arrowRight" size={16} />
+              </Link>
+            </>
+          ) : (
+            <>
+              <strong>Inbox je pod kontrolom</strong>
+              <p>Trenutno nema prosleđene potražnje koja čeka tvoj odgovor.</p>
+              <a href="#demand-inbox" className="commandSecondaryAction">
+                Pogledaj Demand Inbox <Icon name="arrowRight" size={16} />
+              </a>
+            </>
+          )}
+        </article>
+
+        <article className="commandMarketCard">
+          <div className="commandCardTop">
+            <span className="commandCardIcon market"><Icon name="trend" size={18} /></span>
+            <small>Najjači tržišni signal</small>
+          </div>
+          <strong>{topActivity ? humanizeActivity(topActivity.activity) : "Čekamo tržišne signale"}</strong>
+          <p>
+            {topLocation?.location
+              ? `${topLocation.location} · ${numberValue(topActivity?.demand_count)} zahteva`
+              : demandCount > 0
+                ? `${demandCount} zahteva u poslednjih 30 dana`
+                : "Još nema dovoljno podataka za rangiranje."}
+          </p>
+          <div className="commandMiniStats">
+            <span><b>{demandCount}</b><small>zahteva</small></span>
+            <span><b>{peopleCount}</b><small>ljudi</small></span>
+          </div>
+        </article>
+
+        <article className="commandPerformanceCard">
+          <div className="commandCardTop">
+            <span className="commandCardIcon performance"><Icon name="pulse" size={18} /></span>
+            <small>Operativni puls</small>
+          </div>
+          <div className="commandPerformanceRows">
+            <div><span>Response rate</span><strong>{responseRate.toFixed(1)}%</strong></div>
+            <div><span>Vreme odgovora</span><strong>{responseHours.toFixed(1)} h</strong></div>
+            <div><span>Offer conversion</span><strong>{conversion.toFixed(1)}%</strong></div>
+          </div>
+          <p className={unanswered > 0 ? "commandAttention" : "commandGood"}>
+            {unanswered > 0
+              ? `${unanswered} ${unanswered === 1 ? "zahtev čeka" : "zahteva čekaju"} odgovor.`
+              : demandCount > 0
+                ? "Sve evidentirane potražnje imaju odgovor."
+                : "Performance će se pojaviti sa prvim potražnjama."}
+          </p>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function HostAnalyticsSection({ analytics, intelligence, error }) {
+  const overview = { ...EMPTY_HOST_ANALYTICS.overview, ...(analytics?.overview || {}) };
+  const response = { ...EMPTY_HOST_ANALYTICS.response_performance, ...(analytics?.response_performance || {}) };
+  const offers = { ...EMPTY_HOST_ANALYTICS.offer_performance, ...(analytics?.offer_performance || {}) };
+  const rate = numberValue(response.response_rate);
+  const conversion = numberValue(offers.conversion_rate);
+  const responseHours = numberValue(response.average_response_hours);
+
+  return (
+    <section className="analyticsShell">
+      <div className="analyticsHeader">
+        <div>
+          <span className="sectionKicker">Intelligence · poslednjih 30 dana</span>
+          <h2>Šta tržište traži i kako ti odgovaraš.</h2>
+          <p>Istorija relevantnih potražnji, brzina reakcije i učinak ponuda — samo iz stvarnih MeetOutdoors podataka.</p>
+        </div>
+        <span className="analyticsLiveBadge"><span /> Live podaci</span>
+      </div>
+
+      {error ? (
+        <div className="analyticsError"><Icon name="alert" size={18} /><span>{error}</span></div>
+      ) : (
+        <>
+          <IntelligenceCommandCenter analytics={analytics} intelligence={intelligence} />
+          <AgentInsights analytics={analytics} />
+          <AgentRecommendation analytics={analytics} />
+
+          <div className="analyticsKpiGrid">
+            <AnalyticsKpi label="Potražnje · 30d" value={numberValue(overview.demands_30d)} hint={`${numberValue(overview.people_30d)} potencijalnih učesnika`} />
+            <AnalyticsKpi label="Stopa odgovora" value={`${rate.toFixed(1)}%`} hint={`${numberValue(response.unanswered_demands)} neodgovorenih`} />
+            <AnalyticsKpi label="Prosečno vreme odgovora" value={`${responseHours.toFixed(1)} h`} hint="Od zahteva do prve ponude" />
+            <AnalyticsKpi label="Offer conversion" value={`${conversion.toFixed(1)}%`} hint={`${numberValue(offers.accepted_offers)} prihvaćenih od ${numberValue(offers.total_offers)}`} />
+          </div>
+
+          <div className="analyticsMainGrid">
+            <article className="analyticsPanel analyticsTrendPanel">
+              <div className="analyticsPanelHeader"><div><span className="sectionKicker">Demand trend</span><h3>Potražnja kroz vreme</h3></div><div className="trendSummary"><strong>{numberValue(overview.demands_30d)}</strong><small>zahteva / 30d</small></div></div>
+              <DemandTrendChart series={analytics?.demand_series} />
+            </article>
+            <article className="analyticsPanel performancePanel">
+              <div className="analyticsPanelHeader"><div><span className="sectionKicker">Performance</span><h3>Ponude i odgovori</h3></div></div>
+              <div className="performanceRows">
+                <div><span>Odgovoreno</span><strong>{numberValue(response.responded_demands)}</strong></div>
+                <div><span>Čeka odgovor</span><strong>{numberValue(response.unanswered_demands)}</strong></div>
+                <div><span>Prihvaćene ponude</span><strong>{numberValue(offers.accepted_offers)}</strong></div>
+                <div><span>Na čekanju</span><strong>{numberValue(offers.pending_offers)}</strong></div>
+                <div><span>Odbijene</span><strong>{numberValue(offers.rejected_offers)}</strong></div>
+              </div>
+            </article>
+          </div>
+
+          <div className="analyticsInsightGrid">
+            <article className="analyticsPanel"><div className="analyticsPanelHeader"><div><span className="sectionKicker">Top aktivnosti</span><h3>Šta se najviše traži</h3></div></div><RankedList items={analytics?.top_activities} type="activity" /></article>
+            <article className="analyticsPanel"><div className="analyticsPanelHeader"><div><span className="sectionKicker">Top lokacije</span><h3>Gde postoji tražnja</h3></div></div><RankedList items={analytics?.top_locations} type="location" /></article>
+            <article className="analyticsPanel budgetPanel"><div className="analyticsPanelHeader"><div><span className="sectionKicker">Budget intelligence</span><h3>Koliko korisnici planiraju</h3></div></div><BudgetSignals rows={analytics?.budget_by_activity} /><small className="budgetDisclaimer">Valute se ne mešaju. Budžet je signal korisnika, ne garantovan prihod.</small></article>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function DemandIntelligenceSection({ intelligence, error }) {
+  const demands = Array.isArray(intelligence?.demands)
+    ? [...intelligence.demands].sort((a, b) => {
+        const priorityDifference = demandPriority(a).rank - demandPriority(b).rank;
+        if (priorityDifference !== 0) return priorityDifference;
+        return new Date(b?.created_at || 0) - new Date(a?.created_at || 0);
+      })
+    : [];
+
+  const total = numberValue(intelligence?.total_open_demands);
+  const fresh = numberValue(intelligence?.new_demands_7d);
+  const pending = numberValue(intelligence?.pending_demands);
+  const answered = Math.max(total - pending, 0);
+  const responseRate = total > 0 ? Math.round((answered / total) * 100) : 0;
+  const nextDemand = demands.find((item) => !item?.responded) || null;
+
+  return (
+    <section className="intelligenceShell">
+      <div className="intelligenceHeader">
+        <div className="intelligenceTitleWrap">
+          <span className="intelligenceLogo"><Icon name="sparkles" size={21} /></span>
+          <div>
+            <span className="sectionKicker">MeetOutdoors Intelligence</span>
+            <h2>Potražnja pretvorena u sledeći potez.</h2>
+            <p>
+              Relevantni zahtevi koje je MeetOutdoors prosledio tvom host profilu, poređani tako da prvo vidiš ono što traži reakciju.
+            </p>
+          </div>
+        </div>
+
+        <div className="intelligenceSignal">
+          <span className="signalDot" />
+          <div>
+            <strong>{pending > 0 ? `${pending} zahteva traži odgovor` : "Inbox je obrađen"}</strong>
+            <small>{fresh} novih u poslednjih 7 dana</small>
+          </div>
+        </div>
+      </div>
+
+      <div className="demandMetricsGrid">
+        <DemandMetric icon="inbox" label="Otvorene potražnje" value={total} description="Relevantni aktivni zahtevi." tone="dark" />
+        <DemandMetric icon="sparkles" label="Novo u 7 dana" value={fresh} description="Sveže prilike za tvoju ponudu." tone="fresh" />
+        <DemandMetric icon="clock" label="Čeka tvoj odgovor" value={pending} description="Zahtevi na koje još nisi odgovorio." tone={pending > 0 ? "attention" : "default"} />
+        <DemandMetric icon="check" label="Stopa odgovora" value={`${responseRate}%`} description={`${answered} od ${total} otvorenih je obrađeno.`} tone="default" />
+      </div>
+
+      {!error && nextDemand && (
+        <div className="nextActionPanel">
+          <div className="nextActionCopy">
+            <span className="nextActionBadge">
+              <Icon name="sparkles" size={14} />
+              Sledeći najbolji potez
+            </span>
+            <h3>{humanizeActivity(nextDemand.activity)}</h3>
+            <p>
+              {nextDemand.location_text || "Lokacija nije precizirana"} · {Math.max(numberValue(nextDemand.people_count), 1)} osoba · {formatDemandDate(nextDemand.start_date, nextDemand.end_date)}
+            </p>
+          </div>
+
+          <div className="nextActionValue">
+            <small>{demandGroupBudget(nextDemand) !== null ? "Signal budžeta grupe" : "Status"}</small>
+            <strong>
+              {demandGroupBudget(nextDemand) !== null
+                ? formatMoney(demandGroupBudget(nextDemand), nextDemand.currency || "EUR")
+                : demandPriority(nextDemand).label}
+            </strong>
+          </div>
+
+          <Link to={`/host/demand/${nextDemand.id}`} className="nextActionButton">
+            Odgovori sada
+            <Icon name="arrowRight" size={17} />
+          </Link>
+        </div>
+      )}
+
+      <div className="demandInboxPanel">
+        <div className="demandInboxHeader">
+          <div>
+            <span className="sectionKicker">Demand Inbox</span>
+            <h3>Potražnje po prioritetu</h3>
+            <small>Neodgovoreni zahtevi su prvi; unutar prioriteta najnoviji su iznad.</small>
+          </div>
+
+          <span className="privacyBadge">
+            <Icon name="shield" size={14} />
+            Privatnost uključena
+          </span>
+        </div>
+
+        {error ? (
+          <div className="demandInlineState error">
+            <span><Icon name="alert" size={21} /></span>
+            <div>
+              <strong>Potražnje trenutno nisu dostupne.</strong>
+              <small>{error}</small>
+            </div>
+          </div>
+        ) : demands.length === 0 ? (
+          <div className="demandInlineState">
+            <span><Icon name="inbox" size={23} /></span>
+            <div>
+              <strong>Još nema relevantnih potražnji.</strong>
+              <small>Kada MeetOutdoors pronađe odgovarajući zahtev, pojaviće se ovde.</small>
+            </div>
+          </div>
+        ) : (
+          <div className="demandCardsGrid">
+            {demands.slice(0, 6).map((demand, index) => (
+              <DemandCard key={demand.id} demand={demand} featured={index === 0 && !demand.responded} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function HostDashboard() {
   const { profile, isHost, loading } = useAuth();
 
@@ -577,6 +1363,10 @@ export default function HostDashboard() {
   const [packages, setPackages] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [demandIntelligence, setDemandIntelligence] = useState(EMPTY_DEMAND_INTELLIGENCE);
+  const [demandError, setDemandError] = useState("");
+  const [hostAnalytics, setHostAnalytics] = useState(EMPTY_HOST_ANALYTICS);
+  const [analyticsError, setAnalyticsError] = useState("");
   const [eventCounts, setEventCounts] = useState({});
   const [packageCounts, setPackageCounts] = useState({});
   const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -591,6 +1381,10 @@ export default function HostDashboard() {
         setPackages([]);
         setBookings([]);
         setSummary(EMPTY_SUMMARY);
+        setDemandIntelligence(EMPTY_DEMAND_INTELLIGENCE);
+        setDemandError("");
+        setHostAnalytics(EMPTY_HOST_ANALYTICS);
+        setAnalyticsError("");
         setEventCounts({});
         setPackageCounts({});
         setDashboardLoading(false);
@@ -611,6 +1405,8 @@ export default function HostDashboard() {
           packagesResult,
           bookingsResult,
           summaryResult,
+          demandResult,
+          analyticsResult,
         ] = await Promise.all([
           supabase
             .from("events")
@@ -660,6 +1456,9 @@ export default function HostDashboard() {
             .select("*")
             .eq("host_id", profile.id)
             .maybeSingle(),
+
+          supabase.rpc("get_host_demand_intelligence"),
+          supabase.rpc("get_host_intelligence_analytics"),
         ]);
 
         if (eventsResult.error) {
@@ -692,6 +1491,44 @@ export default function HostDashboard() {
           ...EMPTY_SUMMARY,
           ...(summaryResult.data || {}),
         });
+
+        if (demandResult.error) {
+          console.error("Demand intelligence error:", demandResult.error);
+          setDemandIntelligence(EMPTY_DEMAND_INTELLIGENCE);
+          setDemandError(
+            demandResult.error?.message ||
+              "MeetOutdoors Intelligence trenutno nije moguće učitati."
+          );
+        } else {
+          setDemandIntelligence({
+            ...EMPTY_DEMAND_INTELLIGENCE,
+            ...(demandResult.data || {}),
+            demands: Array.isArray(demandResult.data?.demands)
+              ? demandResult.data.demands
+              : [],
+          });
+          setDemandError("");
+        }
+
+        if (analyticsResult.error) {
+          console.error("Host analytics error:", analyticsResult.error);
+          setHostAnalytics(EMPTY_HOST_ANALYTICS);
+          setAnalyticsError(analyticsResult.error?.message || "Intelligence analitiku trenutno nije moguće učitati.");
+        } else {
+          const payload = analyticsResult.data || {};
+          setHostAnalytics({
+            ...EMPTY_HOST_ANALYTICS,
+            ...payload,
+            overview: { ...EMPTY_HOST_ANALYTICS.overview, ...(payload.overview || {}) },
+            response_performance: { ...EMPTY_HOST_ANALYTICS.response_performance, ...(payload.response_performance || {}) },
+            offer_performance: { ...EMPTY_HOST_ANALYTICS.offer_performance, ...(payload.offer_performance || {}) },
+            demand_series: Array.isArray(payload.demand_series) ? payload.demand_series : [],
+            top_activities: Array.isArray(payload.top_activities) ? payload.top_activities : [],
+            top_locations: Array.isArray(payload.top_locations) ? payload.top_locations : [],
+            budget_by_activity: Array.isArray(payload.budget_by_activity) ? payload.budget_by_activity : [],
+          });
+          setAnalyticsError("");
+        }
 
         const eventIds = loadedEvents.map((item) => item.id);
         const packageIds = loadedPackages.map((item) => item.id);
@@ -1071,6 +1908,17 @@ export default function HostDashboard() {
               </button>
             </div>
           )}
+
+          <HostAnalyticsSection
+            analytics={hostAnalytics}
+            intelligence={demandIntelligence}
+            error={analyticsError}
+          />
+
+          <DemandIntelligenceSection
+            intelligence={demandIntelligence}
+            error={demandError}
+          />
 
           <section className="statsGrid">
             <StatCard
@@ -1463,6 +2311,131 @@ function DashboardStyles() {
       .dashboardMessage>span{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#f7d7d3}
       .dashboardMessage p{margin:0;font-size:11px;line-height:1.5}
       .dashboardMessage button{display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:9px;background:transparent;color:inherit;cursor:pointer}
+      .intelligenceShell{position:relative;margin-top:24px;padding:28px;border:1px solid rgba(48,78,58,.14);border-radius:30px;background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(244,248,239,.88));box-shadow:0 20px 52px rgba(31,52,39,.07);overflow:hidden}
+      .intelligenceShell:before{position:absolute;top:-120px;right:-80px;width:360px;height:360px;border-radius:50%;content:"";background:radial-gradient(circle,rgba(201,242,140,.2),transparent 68%);pointer-events:none}
+      .intelligenceHeader{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:26px}
+      .intelligenceTitleWrap{display:flex;align-items:flex-start;gap:15px;min-width:0}
+      .intelligenceLogo{display:grid;place-items:center;flex:0 0 auto;width:49px;height:49px;border-radius:16px;background:#173625;color:#c9f28c;box-shadow:0 13px 28px rgba(23,54,37,.16)}
+      .intelligenceHeader h2{max-width:760px;margin:7px 0 0;color:#1d3326;font-size:clamp(28px,4vw,43px);line-height:1;letter-spacing:-.055em}
+      .intelligenceHeader p{max-width:720px;margin:12px 0 0;color:#77857b;font-size:11px;line-height:1.65}
+      .intelligenceSignal{display:flex;align-items:center;gap:11px;flex:0 0 auto;min-width:220px;padding:13px 15px;border:1px solid #dbe5d6;border-radius:17px;background:rgba(255,255,255,.78)}
+      .signalDot{width:9px;height:9px;border-radius:50%;background:#7cad4c;box-shadow:0 0 0 6px rgba(124,173,76,.12)}
+      .intelligenceSignal strong,.intelligenceSignal small{display:block}
+      .intelligenceSignal strong{color:#31473a;font-size:10px}
+      .intelligenceSignal small{margin-top:3px;color:#8a958d;font-size:8px}
+      .demandMetricsGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:24px}
+      .demandMetric{display:flex;align-items:flex-start;gap:12px;min-width:0;padding:16px;border:1px solid #dee6db;border-radius:19px;background:rgba(255,255,255,.78)}
+      .demandMetric.dark{border-color:#193a28;background:#193a28;color:#fff}
+      .demandMetric.fresh{background:#f3f9e9;border-color:#dbe9c7}
+      .demandMetric.attention{background:#fff8eb;border-color:#f0dfbd}
+      .demandMetricIcon{display:grid;place-items:center;flex:0 0 auto;width:39px;height:39px;border-radius:12px;background:#e9f1e2;color:#5a7745}
+      .demandMetric.dark .demandMetricIcon{background:rgba(255,255,255,.1);color:#c9f28c}
+      .demandMetric.attention .demandMetricIcon{background:#fff0d7;color:#a26a24}
+      .demandMetricCopy{min-width:0}
+      .demandMetricCopy>span,.demandMetricCopy>strong,.demandMetricCopy>small{display:block}
+      .demandMetricCopy>span{color:#7e8b82;font-size:8px;font-weight:850;text-transform:uppercase;letter-spacing:.06em}
+      .demandMetric.dark .demandMetricCopy>span{color:rgba(255,255,255,.52)}
+      .demandMetricCopy>strong{margin-top:6px;color:#263c2f;font-size:25px;line-height:1;letter-spacing:-.04em}
+      .demandMetric.dark .demandMetricCopy>strong{color:#fff}
+      .demandMetricCopy>small{margin-top:5px;color:#929c95;font-size:7.5px;line-height:1.4}
+      .demandMetric.dark .demandMetricCopy>small{color:rgba(255,255,255,.42)}
+      .nextActionPanel{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:18px;margin-top:16px;padding:18px;border:1px solid #bfd2b4;border-radius:22px;background:linear-gradient(135deg,#f7fbf2,#edf6e5);box-shadow:0 14px 34px rgba(42,75,48,.06)}
+      .nextActionBadge{display:inline-flex;align-items:center;gap:6px;color:#63814c;font-size:7px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+      .nextActionCopy h3{margin:7px 0 0;color:#294332;font-size:22px;line-height:1;letter-spacing:-.045em}
+      .nextActionCopy p{margin:7px 0 0;color:#7e8d82;font-size:8px;line-height:1.5}
+      .nextActionValue{min-width:150px;padding:11px 13px;border-left:1px solid #d8e4d2}
+      .nextActionValue small,.nextActionValue strong{display:block}
+      .nextActionValue small{color:#8b998e;font-size:7px;font-weight:850;text-transform:uppercase;letter-spacing:.05em}
+      .nextActionValue strong{margin-top:5px;color:#31533a;font-size:18px;letter-spacing:-.035em}
+      .nextActionButton{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:45px;padding:0 16px;border-radius:14px;background:#173c28;color:#fff!important;font-size:9px;font-weight:900;box-shadow:0 12px 26px rgba(25,63,42,.16);transition:.18s}
+      .nextActionButton:hover{transform:translateY(-2px);background:#204b34}
+      .demandInboxPanel{position:relative;margin-top:16px;padding:20px;border:1px solid #dce5d9;border-radius:23px;background:rgba(250,252,248,.84)}
+      .demandInboxHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:14px}
+      .demandInboxHeader h3{margin:6px 0 0;color:#253a2d;font-size:24px;line-height:1;letter-spacing:-.045em}
+      .demandInboxHeader>div>small{display:block;margin-top:7px;color:#8b978f;font-size:7px;line-height:1.45}
+      .privacyBadge{display:inline-flex;align-items:center;gap:6px;min-height:31px;padding:0 10px;border-radius:999px;background:#eaf2e3;color:#587540;font-size:8px;font-weight:850}
+      .demandCardsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+      .demandCard{min-width:0;padding:17px;border:1px solid #dfe7dc;border-radius:19px;background:#fff;box-shadow:0 8px 24px rgba(33,53,40,.035);transition:.18s}
+      .demandCard:hover{border-color:#b8c9af;transform:translateY(-2px);box-shadow:0 13px 31px rgba(33,53,40,.07)}
+      .demandCard.waiting{border-left:4px solid #9bbf67}
+      .demandCard.responded{opacity:.78}
+      .demandCard.featured{border-color:#a9c394;box-shadow:0 15px 34px rgba(64,95,56,.09)}
+      .demandCardTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+      .demandActivityIdentity{display:flex;align-items:center;gap:10px;min-width:0}
+      .demandActivityIcon{display:grid;place-items:center;flex:0 0 auto;width:39px;height:39px;border-radius:12px;background:#edf4e5;color:#5c7b42}
+      .demandEyebrow{display:block;color:#8b978f;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.09em}
+      .demandEyebrowRow{display:flex;align-items:center;gap:7px;min-width:0}
+      .priorityPill{display:inline-flex;align-items:center;min-height:20px;padding:0 7px;border-radius:999px;font-size:6px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+      .priorityPill.high{background:#173d29;color:#d8f5ad}
+      .priorityPill.medium{background:#eef6df;color:#638240}
+      .priorityPill.normal{background:#f3f4f1;color:#7d877f}
+      .demandActivityIdentity h3{overflow:hidden;margin:4px 0 0;color:#2e4436;font-size:15px;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}
+      .demandStatus{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;min-height:27px;padding:0 9px;border-radius:999px;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+      .demandStatus>span{width:6px;height:6px;border-radius:50%;background:currentColor}
+      .demandStatus.new{background:#eef7df;color:#60843d}
+      .demandStatus.done{background:#edf0ed;color:#78827b}
+      .demandLocation{display:flex;align-items:center;gap:7px;margin-top:14px;padding:10px 11px;border-radius:12px;background:#f6f8f4;color:#53665a}
+      .demandLocation svg{flex:0 0 auto;color:#79955a}
+      .demandLocation strong{overflow:hidden;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+      .demandFacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:9px}
+      .demandFacts>div{display:flex;align-items:center;gap:8px;min-width:0;padding:9px;border:1px solid #e5eae3;border-radius:12px}
+      .demandFactIcon{display:grid;place-items:center;flex:0 0 auto;width:29px;height:29px;border-radius:9px;background:#edf3e8;color:#607a4c}
+      .demandFacts p{min-width:0;margin:0}
+      .demandFacts small,.demandFacts strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .demandFacts small{color:#929b94;font-size:6.5px}
+      .demandFacts strong{margin-top:3px;color:#405448;font-size:8.5px}
+      .groupBudgetSignal{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;margin-top:9px;padding:10px 11px;border:1px solid #dce7d6;border-radius:13px;background:#f3f8ef}
+      .groupBudgetSignal>span{display:grid;place-items:center;width:31px;height:31px;border-radius:10px;background:#e5efdd;color:#587946}
+      .groupBudgetSignal small,.groupBudgetSignal strong{display:block}
+      .groupBudgetSignal small{color:#879488;font-size:6.5px;text-transform:uppercase;letter-spacing:.04em}
+      .groupBudgetSignal strong{margin-top:3px;color:#315239;font-size:11px}
+      .groupBudgetSignal em{color:#9aa39c;font-size:6px;font-style:normal;text-align:right}
+      .demandCardFooter{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;padding-top:10px;border-top:1px solid #edf0ec;color:#919b94;font-size:7px}
+      .demandCardFooter>span:first-child{display:flex;align-items:center;gap:5px;min-width:0}
+      .demandPrimaryAction{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:43px;margin-top:11px;padding:0 12px;border-radius:13px;background:#173d29;color:#fff!important;font-size:8px;font-weight:900;transition:.18s}
+      .demandPrimaryAction>span{display:inline-flex;align-items:center;gap:7px}
+      .demandPrimaryAction:hover{transform:translateY(-1px);background:#214c35}
+      .demandPrimaryAction.secondary{border:1px solid #dce4da;background:#f6f8f5;color:#52665a!important}
+      .demandPrimaryAction.secondary:hover{background:#eef2ec}
+      .difficultyTag{flex:0 0 auto;padding:5px 7px;border-radius:8px;background:#f1f4ef;color:#6d796f;font-weight:800}
+      .demandInlineState{display:flex;align-items:center;gap:12px;padding:25px;border:1px dashed #cfd9cc;border-radius:17px;background:#fff}
+      .demandInlineState>span{display:grid;place-items:center;width:45px;height:45px;border-radius:14px;background:#eaf2e3;color:#5b7842}
+      .demandInlineState strong,.demandInlineState small{display:block}
+      .demandInlineState strong{color:#34483b;font-size:10px}
+      .demandInlineState small{margin-top:4px;color:#8d9790;font-size:8px;line-height:1.5}
+      .demandInlineState.error{border-color:#efcfc9;background:#fff9f8}
+      .demandInlineState.error>span{background:#fbe6e2;color:#a24b3f}
+      .agentInsightsPanel{margin-bottom:18px;padding:22px;border:1px solid #d7e3d1;border-radius:24px;background:linear-gradient(135deg,#102f20,#1d4a31 58%,#315f43);color:#fff;box-shadow:0 20px 45px rgba(23,58,39,.12)}
+      .agentInsightsHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+      .agentInsightsTitle{display:flex;align-items:flex-start;gap:13px;min-width:0}
+      .agentInsightsIcon{display:grid;place-items:center;flex:0 0 auto;width:44px;height:44px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.08);color:#d7f2ac}
+      .agentInsightsTitle .sectionKicker{color:#c5e994}
+      .agentInsightsTitle h3{margin:5px 0 0;color:#fff;font-size:25px;line-height:1;letter-spacing:-.045em}
+      .agentInsightsTitle p{max-width:650px;margin:8px 0 0;color:rgba(255,255,255,.52);font-size:9px;line-height:1.55}
+      .agentDataBadge{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;padding:8px 10px;border:1px solid rgba(255,255,255,.11);border-radius:999px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.65);font-size:8px;font-weight:850}
+      .agentInsightsGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:18px}
+      .agentInsightCard{display:flex;flex-direction:column;min-width:0;min-height:190px;padding:15px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:rgba(255,255,255,.06)}
+      .agentInsightCard.priority{background:linear-gradient(180deg,rgba(234,196,111,.12),rgba(255,255,255,.055));border-color:rgba(234,206,139,.18)}
+      .agentInsightCard.positive{background:linear-gradient(180deg,rgba(186,232,142,.10),rgba(255,255,255,.055))}
+      .agentInsightCard.market,.agentInsightCard.location{background:linear-gradient(180deg,rgba(166,206,219,.08),rgba(255,255,255,.055))}
+      .agentInsightTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+      .agentInsightCardIcon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.08);color:#d6efac}
+      .agentInsightMetric{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.52);font-size:7.5px;font-weight:850}
+      .agentInsightCard>small{display:block;margin-top:18px;color:#b9da8d;font-size:7px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+      .agentInsightCard>strong{display:block;margin-top:6px;color:#fff;font-size:13px;line-height:1.25;letter-spacing:-.02em}
+      .agentInsightCard>p{margin:7px 0 0;color:rgba(255,255,255,.50);font-size:8px;line-height:1.55}
+      .agentInsightAction{display:inline-flex;align-items:center;gap:6px;margin-top:auto;padding-top:13px;color:#d9f3b3!important;font-size:8px;font-weight:900}
+      .agentInsightAction:hover{gap:9px}
+
+      .agentRecommendation{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(270px,.65fr);gap:18px;margin-top:12px;padding:20px;border:1px solid #dce6d8;border-radius:22px;background:linear-gradient(135deg,#f5faef,#eef5e8)}
+      .agentRecommendationCopy h3{margin:6px 0 0;color:#24422f;font-size:24px;line-height:1;letter-spacing:-.04em}.agentRecommendationCopy p{max-width:720px;margin:10px 0 0;color:#6f7f74;font-size:10px;line-height:1.65}.agentRecommendationCopy p strong{color:#36573e}.agentRecommendationSignals{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.agentRecommendationSignals span{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #d9e5d3;border-radius:999px;background:rgba(255,255,255,.72);color:#58705d;font-size:8px;font-weight:850}.agentRecommendationActions{display:flex;flex-direction:column;justify-content:center;gap:8px}.agentRecommendationActions a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:45px;border-radius:13px;font-size:9px;font-weight:900}.agentRecommendationPrimary{background:linear-gradient(135deg,#163b28,#2f6846);color:#fff!important;box-shadow:0 12px 25px rgba(31,75,50,.14)}.agentRecommendationSecondary{border:1px solid #cfddc8;background:#fff;color:#476052!important}.agentRecommendationActions small{color:#8b978f;font-size:7px;line-height:1.45;text-align:center}
+      .analyticsShell{margin-top:18px;padding:28px;border:1px solid #d9e2d6;border-radius:30px;background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(248,250,246,.88));box-shadow:0 22px 58px rgba(27,51,35,.065)}
+      .analyticsHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}.analyticsHeader h2{margin:8px 0 0;color:#1f3829;font-size:clamp(32px,4vw,48px);line-height:.96;letter-spacing:-.055em}.analyticsHeader p{max-width:760px;margin:12px 0 0;color:#7b8a80;font-size:11px;line-height:1.7}.analyticsLiveBadge{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;padding:9px 12px;border:1px solid #d8e6d2;border-radius:999px;background:#eef6e9;color:#5d7652;font-size:8px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.analyticsLiveBadge>span{width:7px;height:7px;border-radius:50%;background:#7ba85c;box-shadow:0 0 0 5px rgba(123,168,92,.1)}
+      .analyticsError{display:flex;align-items:center;gap:10px;margin-top:20px;padding:14px 16px;border:1px solid #efc9c3;border-radius:15px;background:#fff1ee;color:#944a3f;font-size:10px;font-weight:750}.analyticsKpiGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:22px}.analyticsKpi{min-width:0;padding:18px;border:1px solid #e0e7dd;border-radius:19px;background:#fbfcfa}.analyticsKpi small,.analyticsKpi span{display:block}.analyticsKpi small{color:#8b978f;font-size:8px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.analyticsKpi strong{display:block;margin-top:8px;color:#244430;font-size:30px;letter-spacing:-.05em}.analyticsKpi span{margin-top:5px;color:#8b978f;font-size:8px;line-height:1.45}
+      .analyticsMainGrid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(270px,.65fr);gap:12px;margin-top:12px}.analyticsInsightGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.analyticsPanel{min-width:0;padding:20px;border:1px solid #e0e7dd;border-radius:21px;background:#fbfcfa}.analyticsPanelHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.analyticsPanelHeader h3{margin:6px 0 0;color:#2b4935;font-size:20px;line-height:1;letter-spacing:-.04em}.trendSummary{text-align:right}.trendSummary strong,.trendSummary small{display:block}.trendSummary strong{color:#31543d;font-size:22px}.trendSummary small{margin-top:2px;color:#96a099;font-size:7px;text-transform:uppercase}
+      .trendChart{margin-top:22px;padding-top:4px}.trendBars{display:grid;grid-template-columns:repeat(30,minmax(3px,1fr));align-items:end;gap:4px;height:155px}.trendBarColumn{display:grid;grid-template-rows:130px 16px;gap:5px;align-items:end;min-width:0}.trendBarTrack{position:relative;height:130px;border-radius:5px;background:#edf2ea;overflow:hidden}.trendBarTrack>span{position:absolute;left:0;right:0;bottom:0;border-radius:5px 5px 3px 3px;background:#b8c8ae;transition:.2s ease}.trendBarTrack>span.active{background:linear-gradient(180deg,#83a66d,#456f4e)}.trendBarColumn small{overflow:visible;color:#9ca59f;font-size:6px;text-align:center;white-space:nowrap}
+      .performanceRows{display:grid;gap:8px;margin-top:16px}.performanceRows>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid #e5eae2;border-radius:13px;background:white}.performanceRows span{color:#718077;font-size:9px}.performanceRows strong{color:#2e5039;font-size:14px}.rankedList{display:grid;gap:12px;margin-top:17px}.rankedRow{display:flex;align-items:flex-start;gap:10px}.rankNumber{flex:0 0 24px;color:#9eaa9f;font-size:8px;font-weight:900}.rankMain{min-width:0;flex:1}.rankTopline{display:flex;align-items:center;justify-content:space-between;gap:10px}.rankTopline strong{overflow:hidden;color:#40564a;font-size:10px;text-overflow:ellipsis;white-space:nowrap}.rankTopline span{flex:0 0 auto;color:#829087;font-size:8px}.rankBar{height:5px;margin-top:7px;border-radius:999px;background:#edf1eb;overflow:hidden}.rankBar>span{display:block;height:100%;border-radius:inherit;background:#789568}.rankMain>small{display:block;margin-top:5px;color:#98a19b;font-size:7px}
+      .budgetSignalList{display:grid;gap:8px;margin-top:16px}.budgetSignalRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid #e5eae2;border-radius:13px;background:white}.budgetSignalRow strong,.budgetSignalRow small{display:block}.budgetSignalRow>div:first-child strong{color:#40564a;font-size:10px}.budgetSignalRow>div:first-child small{margin-top:4px;color:#98a29b;font-size:7px}.budgetSignalValue{text-align:right}.budgetSignalValue small{color:#98a29b;font-size:7px;text-transform:uppercase}.budgetSignalValue strong{margin-top:4px;color:#355940;font-size:11px}.budgetDisclaimer{display:block;margin-top:12px;color:#96a099;font-size:7px;line-height:1.5}.analyticsEmpty{margin-top:16px;padding:18px;border:1px dashed #dfe6dc;border-radius:14px;color:#8a978e;font-size:9px;text-align:center}
       .statsGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:22px}
       .statCard{min-width:0;padding:21px;border:1px solid #d9e1d6;border-radius:23px;background:rgba(255,255,255,.8);box-shadow:0 14px 36px rgba(34,53,41,.05)}
       .statCard.dark{background:#173625;color:#fff;border-color:#173625}
@@ -1580,13 +2553,45 @@ function DashboardStyles() {
       .dashboardStateCard h1{margin:19px 0 0;color:#24372c;font-size:29px;letter-spacing:-.045em}
       .dashboardStateCard p{max-width:390px;margin:10px auto 0;color:#7e8981;font-size:11px;line-height:1.6}
       .stateLink{display:inline-flex;align-items:center;gap:7px;margin-top:21px;padding:12px 15px;border-radius:13px;background:#183a27;color:#fff!important;font-size:10px;font-weight:850}
+
+      .intelligenceCommandCenter{margin:22px 0 0;padding:20px;border:1px solid rgba(47,78,57,.12);border-radius:24px;background:radial-gradient(circle at 90% 0%,rgba(199,235,153,.16),transparent 30%),linear-gradient(145deg,#102c1d,#183d29 62%,#214a33);color:#fff;box-shadow:0 18px 45px rgba(18,48,31,.14)}
+      .commandCenterTop{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+      .commandCenterTop h3{max-width:720px;margin:7px 0 0;font-size:clamp(26px,3vw,38px);line-height:1;letter-spacing:-.055em}
+      .commandCenterTop p{max-width:650px;margin:11px 0 0;color:rgba(255,255,255,.62);font-size:10px;line-height:1.65}
+      .commandCenterStatus{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;padding:9px 11px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.76);font-size:9px;font-weight:850}
+      .commandCenterStatus>span{width:7px;height:7px;border-radius:50%;background:#cef39a;box-shadow:0 0 0 5px rgba(206,243,154,.1)}
+      .commandCenterGrid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin-top:18px}
+      .commandCenterGrid>article{min-width:0;padding:18px;border:1px solid rgba(255,255,255,.11);border-radius:19px;background:rgba(255,255,255,.065);backdrop-filter:blur(16px)}
+      .commandDecisionCard.urgent{background:linear-gradient(145deg,rgba(206,243,154,.14),rgba(255,255,255,.055));border-color:rgba(206,243,154,.24)}
+      .commandCardTop{display:flex;align-items:center;gap:9px;margin-bottom:16px}
+      .commandCardTop small{color:rgba(255,255,255,.58);font-size:8px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}
+      .commandCardIcon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(206,243,154,.13);color:#cef39a}
+      .commandCardIcon.market{background:rgba(142,196,255,.11);color:#b8d9ff}.commandCardIcon.performance{background:rgba(255,210,125,.11);color:#ffe0a1}
+      .commandCenterGrid article>strong{display:block;overflow-wrap:anywhere;font-size:17px;line-height:1.18;letter-spacing:-.035em}
+      .commandCenterGrid article>p{margin:8px 0 0;color:rgba(255,255,255,.6);font-size:9px;line-height:1.55}
+      .commandPrimaryAction,.commandSecondaryAction{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:39px;margin-top:15px;padding:0 13px;border-radius:11px;font-size:9px;font-weight:900;text-decoration:none!important;transition:.18s ease}
+      .commandPrimaryAction{background:#cef39a;color:#17331f!important}.commandSecondaryAction{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff!important}
+      .commandPrimaryAction:hover,.commandSecondaryAction:hover{transform:translateY(-1px)}
+      .commandMiniStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:15px}.commandMiniStats>span{padding:10px;border-radius:12px;background:rgba(0,0,0,.13)}
+      .commandMiniStats b{display:block;font-size:18px;letter-spacing:-.04em}.commandMiniStats small{display:block;margin-top:2px;color:rgba(255,255,255,.5);font-size:8px}
+      .commandPerformanceRows{display:grid;gap:8px}.commandPerformanceRows>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+      .commandPerformanceRows span{color:rgba(255,255,255,.58);font-size:9px}.commandPerformanceRows strong{font-size:13px;white-space:nowrap}
+      .commandAttention,.commandGood{margin-top:12px!important;padding:9px 10px;border-radius:10px}.commandAttention{background:rgba(255,190,96,.09);color:#ffe0a1!important}.commandGood{background:rgba(206,243,154,.08);color:#dfffb7!important}
+
+      @media(max-width:1100px){.commandCenterGrid{grid-template-columns:1fr 1fr}.commandPerformanceCard{grid-column:1/-1}.agentInsightsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.analyticsKpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.analyticsInsightGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.budgetPanel{grid-column:1/-1}}
       @media(max-width:1080px){
         .heroMain{grid-template-columns:minmax(0,1fr) 340px}
+        .demandMetricsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .demandCardsGrid{grid-template-columns:1fr}
+        .nextActionPanel{grid-template-columns:minmax(0,1fr) auto}
+        .nextActionButton{grid-column:1/-1}
         .statsGrid,.quickActionGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
         .operationsGrid{grid-template-columns:1fr}
         .dashboardItemsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
       }
       @media(max-width:760px){
+        .commandCenterTop{flex-direction:column}.commandCenterStatus{align-self:flex-start}.commandCenterGrid{grid-template-columns:1fr}.commandPerformanceCard{grid-column:auto}.intelligenceCommandCenter{padding:17px;border-radius:20px}
+        .analyticsShell{margin-right:18px;margin-left:18px;padding:20px;border-radius:24px}.agentInsightsHeader{flex-direction:column}.agentDataBadge{align-self:flex-start}.analyticsHeader{flex-direction:column}.analyticsMainGrid,.analyticsInsightGrid{grid-template-columns:1fr}.budgetPanel{grid-column:auto}.analyticsKpiGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.trendBars{gap:2px}
         .hostDashboardPage{padding:92px 0 72px}
         .dashboardStatePage{padding-top:92px}
         .dashboardHero{min-height:auto;padding:24px;border-radius:0 0 32px 32px}
@@ -1594,15 +2599,27 @@ function DashboardStyles() {
         .heroCopy h1{font-size:clamp(49px,11vw,72px)}
         .heroBottom{grid-template-columns:repeat(2,minmax(0,1fr))}
         .heroBottomLinks{grid-column:1/-1;justify-content:flex-start}
-        .statsGrid,.operationsGrid,.dashboardQuickActions,.inventoryHeader,.dashboardSection,.dashboardMessage{margin-right:18px;margin-left:18px}
+        .intelligenceShell,.statsGrid,.operationsGrid,.dashboardQuickActions,.inventoryHeader,.dashboardSection,.dashboardMessage{margin-right:18px;margin-left:18px}
+        .intelligenceShell{padding:22px}
+        .intelligenceHeader{flex-direction:column}
+        .intelligenceSignal{width:100%}
         .dashboardSectionHeader,.inventoryHeader{align-items:flex-start;flex-direction:column}
         .inventorySummary{width:100%;justify-content:center}
       }
       @media(max-width:590px){
+        .agentRecommendationActions{grid-template-columns:1fr}
+        .agentInsightsGrid{grid-template-columns:1fr}.agentInsightCard{min-height:0}.analyticsKpiGrid{grid-template-columns:1fr}.analyticsPanel{padding:17px}.analyticsHeader h2{font-size:32px}.trendBars{height:135px}.trendBarColumn{grid-template-rows:110px 16px}.trendBarTrack{height:110px}
         .heroTopbarBadge{display:none}
         .heroMain{margin-top:62px}
         .heroCopy h1{font-size:46px}
-        .heroActionPair,.statsGrid,.quickActionGrid,.dashboardItemsGrid{grid-template-columns:1fr}
+        .heroActionPair,.demandMetricsGrid,.statsGrid,.quickActionGrid,.dashboardItemsGrid{grid-template-columns:1fr}
+        .demandInboxHeader{align-items:flex-start;flex-direction:column}
+        .demandFacts{grid-template-columns:1fr}
+        .nextActionPanel{grid-template-columns:1fr}
+        .nextActionValue{padding:10px 0;border-left:0;border-top:1px solid #d8e4d2}
+        .nextActionButton{grid-column:auto;width:100%}
+        .groupBudgetSignal{grid-template-columns:auto minmax(0,1fr)}
+        .groupBudgetSignal em{grid-column:1/-1;text-align:left}
         .heroBottom{gap:20px}
         .financeBreakdown{grid-template-columns:1fr}
         .bookingRow{grid-template-columns:minmax(0,1fr) auto}
@@ -1616,7 +2633,12 @@ function DashboardStyles() {
         .heroPulse{width:100%}
         .heroBottom{grid-template-columns:1fr}
         .heroBottomLinks{grid-column:auto;flex-direction:column}
-        .statsGrid,.operationsGrid,.dashboardQuickActions,.inventoryHeader,.dashboardSection,.dashboardMessage{margin-right:13px;margin-left:13px}
+        .intelligenceShell,.statsGrid,.operationsGrid,.dashboardQuickActions,.inventoryHeader,.dashboardSection,.dashboardMessage{margin-right:13px;margin-left:13px}
+        .intelligenceShell{padding:17px;border-radius:23px}
+        .intelligenceTitleWrap{gap:11px}
+        .intelligenceLogo{width:43px;height:43px;border-radius:14px}
+        .intelligenceHeader h2{font-size:31px}
+        .demandCardTop{align-items:flex-start;flex-direction:column}
         .quickActionsHeading h2,.dashboardSectionHeader h2,.inventoryHeader h2{font-size:31px}
         .itemActions{grid-template-columns:1fr}
         .financeHero strong{font-size:31px}

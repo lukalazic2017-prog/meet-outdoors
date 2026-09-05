@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
@@ -265,19 +265,21 @@ function LoadingState() {
 
 export default function CreateEvent() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, profile, loading, isHost } = useAuth();
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const isAgentPrefill = searchParams.get("source") === "agent";
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [country, setCountry] = useState("");
-  const [price, setPrice] = useState("");
-  const [capacity, setCapacity] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [title, setTitle] = useState(() => searchParams.get("title") || "");
+  const [description, setDescription] = useState(() => searchParams.get("description") || "");
+  const [location, setLocation] = useState(() => searchParams.get("location") || "");
+  const [country, setCountry] = useState(() => searchParams.get("country") || "");
+  const [price, setPrice] = useState(() => searchParams.get("price") || "");
+  const [capacity, setCapacity] = useState(() => searchParams.get("capacity") || "");
+  const [startDate, setStartDate] = useState(() => searchParams.get("start") || "");
+  const [endDate, setEndDate] = useState(() => searchParams.get("end") || "");
   const [coverFile, setCoverFile] = useState(null);
 
   const coverPreview = useMemo(() => {
@@ -295,6 +297,14 @@ export default function CreateEvent() {
       }
     };
   }, [coverFile, coverPreview]);
+
+  const completion = useMemo(() => {
+    const checks = [
+      title.trim(), description.trim(), location.trim(), country.trim(),
+      startDate, endDate, capacity, coverFile,
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }, [title, description, location, country, startDate, endDate, capacity, coverFile]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -336,6 +346,21 @@ export default function CreateEvent() {
       setError(
         "Datum završetka mora biti posle datuma početka."
       );
+      return;
+    }
+
+    if (!Number.isFinite(Number(price || 0)) || Number(price || 0) < 0) {
+      setError("Cena mora biti 0 ili pozitivan broj.");
+      return;
+    }
+
+    if (coverFile && !coverFile.type.startsWith("image/")) {
+      setError("Naslovna fotografija mora biti slika.");
+      return;
+    }
+
+    if (coverFile && coverFile.size > 8 * 1024 * 1024) {
+      setError("Fotografija je prevelika. Maksimalna veličina je 8 MB.");
       return;
     }
 
@@ -585,10 +610,28 @@ export default function CreateEvent() {
               </div>
 
               <span className="draftBadge">
-                <Icon name="edit" size={16} />
-                Novi nacrt
+                <Icon name={isAgentPrefill ? "sparkle" : "edit"} size={16} />
+                {isAgentPrefill ? "Agent nacrt" : "Novi nacrt"}
               </span>
             </header>
+
+            {isAgentPrefill && (
+              <section className="eventAgentBanner" aria-label="MeetOutdoors Agent predlog">
+                <span className="eventAgentIcon"><Icon name="sparkle" size={19} /></span>
+                <div>
+                  <small>MeetOutdoors Intelligence</small>
+                  <strong>Agent je pripremio nacrt iz realne potražnje.</strong>
+                  <p>Predloženi naslov, lokacija, kapacitet i cena služe kao polazna tačka. Ti imaš potpunu kontrolu pre objave.</p>
+                </div>
+                <span className="eventAgentBadge"><Icon name="check" size={14} /> Predlog, ne automatika</span>
+              </section>
+            )}
+
+            <section className="eventCompletion">
+              <div className="eventCompletionTop"><span>Spremnost događaja</span><strong>{completion}%</strong></div>
+              <div className="eventCompletionTrack"><span style={{ width: `${completion}%` }} /></div>
+              <p>{completion >= 75 ? "Događaj je skoro spreman — proveri detalje i objavi." : "Dodaj lokaciju, vreme i vizuelni identitet da korisnik odmah razume ponudu."}</p>
+            </section>
 
             <form
               onSubmit={handleSubmit}
@@ -614,9 +657,10 @@ export default function CreateEvent() {
                   label="Naziv događaja"
                   icon="mountain"
                   value={title}
-                  onChange={(event) =>
-                    setTitle(event.target.value)
-                  }
+                  onChange={(event) => {
+                    setTitle(event.target.value);
+                    if (error) setError("");
+                  }}
                   placeholder="Na primer: Planinarenje uz zalazak sunca"
                   required
                   hint="Koristi jasan naziv koji opisuje aktivnost."
@@ -883,7 +927,7 @@ export default function CreateEvent() {
                 <button
                   type="submit"
                   className="publishEventButton"
-                  disabled={saving}
+                  disabled={saving || !title.trim()}
                 >
                   {saving ? (
                     <>

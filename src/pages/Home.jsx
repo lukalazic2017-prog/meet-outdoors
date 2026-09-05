@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../supabaseClient";
+import CookieSettingsButton from "../components/CookieSettingsButton";
 
 /* =========================================================
    ICONS
@@ -1864,6 +1865,32 @@ function HostHome({ profile, notifications, onRead, hostOwnStats }) {
   );
 }
 
+function HomeLegalFooter() {
+  return (
+    <footer className="homeLegalFooter">
+      <div className="pageContainer homeLegalFooterInner">
+        <div className="homeLegalBrand">
+          <strong>MeetOutdoors</strong>
+          <span>Prave avanture. Pravi ljudi.</span>
+        </div>
+
+        <nav className="homeLegalLinks" aria-label="Pravne informacije">
+          <Link to="/terms">Uslovi korišćenja</Link>
+          <Link to="/privacy">Politika privatnosti</Link>
+          <Link to="/cookies">Politika kolačića</Link>
+          <CookieSettingsButton className="homeCookieSettings">
+            Podešavanja kolačića
+          </CookieSettingsButton>
+        </nav>
+
+        <span className="homeLegalCopyright">
+          © {new Date().getFullYear()} MeetOutdoors. Sva prava zadržana.
+        </span>
+      </div>
+    </footer>
+  );
+}
+
 /* =========================================================
    MAIN
 ========================================================= */
@@ -1915,6 +1942,7 @@ export default function Home() {
           hostOwnStats={hostOwnStats}
         />
       )}
+      <HomeLegalFooter />
     </>
   );
 }
@@ -4701,6 +4729,104 @@ function HomeStyles() {
         }
       }
 
+
+      /* =========================================================
+         LEGAL FOOTER
+      ========================================================= */
+
+      .homeLegalFooter {
+        width: 100%;
+        padding: 26px 0;
+        border-top: 1px solid rgba(28, 54, 38, 0.09);
+        background: #eef0e9;
+      }
+
+      .homeLegalFooterInner {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 28px;
+      }
+
+      .homeLegalBrand {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .homeLegalBrand strong {
+        color: #20382a;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+      }
+
+      .homeLegalBrand span,
+      .homeLegalCopyright {
+        color: #7c887f;
+        font-size: 9px;
+        font-weight: 650;
+      }
+
+      .homeLegalLinks {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px 18px;
+      }
+
+      .homeLegalLinks a,
+      .homeCookieSettings {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #53665a;
+        font: inherit;
+        font-size: 10px;
+        font-weight: 800;
+        text-decoration: none;
+        cursor: pointer;
+        transition: color 0.18s ease;
+      }
+
+      .homeLegalLinks a:hover,
+      .homeCookieSettings:hover {
+        color: #1e4b31;
+      }
+
+      .homeLegalCopyright {
+        white-space: nowrap;
+        text-align: right;
+      }
+
+      @media (max-width: 900px) {
+        .homeLegalFooterInner {
+          grid-template-columns: 1fr;
+          justify-items: center;
+          gap: 14px;
+          text-align: center;
+        }
+
+        .homeLegalBrand {
+          align-items: center;
+        }
+
+        .homeLegalCopyright {
+          white-space: normal;
+          text-align: center;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .homeLegalFooter {
+          padding: 23px 0 25px;
+        }
+
+        .homeLegalLinks {
+          gap: 10px 16px;
+        }
+      }
 
       /* =========================================================
          FINAL RESPONSIVE UX HARDENING

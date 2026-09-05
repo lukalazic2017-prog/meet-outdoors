@@ -299,7 +299,7 @@ function ReasonModal({
 }
 
 export default function AdminExplore() {
-  const { profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
 
   const [activeTab, setActiveTab] = useState("overview");
   const [places, setPlaces] = useState([]);
@@ -1487,29 +1487,38 @@ export default function AdminExplore() {
     });
   }
 
-  if (authLoading || !profile) {
-  return (
-    <>
-      <AdminStyles />
+  if (authLoading) {
+    return (
+      <>
+        <AdminStyles />
 
-      <main className="adminLoading">
-        <span />
-        <strong>
-          Proveravamo admin pristup...
-        </strong>
-      </main>
-    </>
-  );
-}
+        <main className="adminLoading">
+          <span />
+          <strong>
+            Proveravamo admin pristup...
+          </strong>
+        </main>
+      </>
+    );
+  }
 
-if (!profile.is_admin) {
-  return (
-    <Navigate
-      to="/"
-      replace
-    />
-  );
-}
+  if (!user || !profile) {
+    return (
+      <Navigate
+        to="/admin-login"
+        replace
+      />
+    );
+  }
+
+  if (!profile.is_admin) {
+    return (
+      <Navigate
+        to="/admin-login"
+        replace
+      />
+    );
+  }
 
   if (loading) {
     return (
