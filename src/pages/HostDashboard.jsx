@@ -661,22 +661,6 @@ function BookingRow({ booking }) {
   );
 }
 
-function DemandMetric({ icon, label, value, description, tone = "default" }) {
-  return (
-    <article className={`demandMetric ${tone}`}>
-      <span className="demandMetricIcon">
-        <Icon name={icon} size={19} />
-      </span>
-
-      <div className="demandMetricCopy">
-        <span>{label}</span>
-        <strong>{value}</strong>
-        <small>{description}</small>
-      </div>
-    </article>
-  );
-}
-
 function DemandCard({ demand, featured = false, rejecting = false, onReject }) {
   const responded = Boolean(demand.responded);
   const peopleCount = Math.max(numberValue(demand.people_count), 1);
@@ -2196,6 +2180,12 @@ export default function HostDashboard() {
             error={demandError}
             rejectingDemandId={rejectingDemandId}
             onRejectDemand={rejectDemand}
+          />
+
+          <HostAnalyticsSection
+            analytics={hostAnalytics}
+            intelligence={demandIntelligence}
+            error={analyticsError}
           />
 
           <section className="inventoryHeader">
