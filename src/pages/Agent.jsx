@@ -32,6 +32,73 @@ const ACTIVITY_LABELS = {
   other: "Outdoor avantura",
 };
 
+
+const ACTIVITY_ALIASES = {
+  hiking: "hiking",
+  planinarenje: "hiking",
+  trekking: "hiking",
+  trek: "hiking",
+  camping: "camping",
+  kampovanje: "camping",
+  cycling: "cycling",
+  biciklizam: "cycling",
+  biking: "cycling",
+  mtb: "cycling",
+  climbing: "climbing",
+  penjanje: "climbing",
+  "rock climbing": "climbing",
+  "via ferrata": "via ferrata",
+  "via-ferrata": "via ferrata",
+  rafting: "rafting",
+  kayaking: "kayaking",
+  kayak: "kayaking",
+  kajak: "kayaking",
+  paragliding: "paragliding",
+  paraglajding: "paragliding",
+  skydiving: "skydiving",
+  "sky diving": "skydiving",
+  padobranstvo: "skydiving",
+  skiing: "skiing",
+  skijanje: "skiing",
+  snowboarding: "snowboarding",
+  snoubording: "snowboarding",
+  "horse riding": "horse riding",
+  "horseback riding": "horse riding",
+  jahanje: "horse riding",
+  fishing: "fishing",
+  ribolov: "fishing",
+  pecanje: "fishing",
+  "nature trip": "nature trip",
+  "outdoor trip": "nature trip",
+  "izlet u prirodi": "nature trip",
+  "trail running": "trail running",
+  "trail trcanje": "trail running",
+  "trail trčanje": "trail running",
+  canyoning: "canyoning",
+  kanjoning: "canyoning",
+  surfing: "surfing",
+  surfovanje: "surfing",
+  sailing: "sailing",
+  jedrenje: "sailing",
+  diving: "diving",
+  "scuba diving": "diving",
+  ronjenje: "diving",
+  other: "other",
+  ostalo: "other",
+};
+
+function normalizeActivity(value) {
+  if (!value) return null;
+
+  const normalized = String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[_]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  return ACTIVITY_ALIASES[normalized] || normalized;
+}
+
 const DIFFICULTY_LABELS = {
   easy: "Lagano",
   medium: "Umereno",
@@ -432,7 +499,10 @@ export default function Agent() {
         throw new Error(aiData?.error || "Agent nije uspeo da razume zahtev.");
       }
 
-      const parsed = aiData.intent;
+      const parsed = {
+        ...aiData.intent,
+        activity: normalizeActivity(aiData.intent?.activity),
+      };
       setIntent(parsed);
 
       /*
@@ -488,7 +558,7 @@ export default function Agent() {
       const { data: inventoryData, error: inventoryError } = await supabase.rpc(
         "search_adventure_inventory",
         {
-          p_activity: parsed.activity,
+          p_activity: normalizeActivity(parsed.activity),
           p_location_text: parsed.location_text || null,
           p_start_date: parsed.start_date || null,
           p_end_date: parsed.end_date || null,
@@ -549,7 +619,7 @@ export default function Agent() {
       const { data, error: rpcError } = await supabase.rpc(
         "search_adventure_inventory",
         {
-          p_activity: intent.activity,
+          p_activity: normalizeActivity(intent.activity),
           p_location_text: intent.location_text || null,
           p_start_date: intent.start_date || null,
           p_end_date: intent.end_date || null,
@@ -588,7 +658,7 @@ export default function Agent() {
       const { data, error: rpcError } = await supabase.rpc(
         "create_adventure_intent_and_notify_hosts",
         {
-          p_activity: intent.activity,
+          p_activity: normalizeActivity(intent.activity),
           p_location_text: intent.location_text || null,
           p_start_date: intent.start_date || null,
           p_end_date: intent.end_date || null,
@@ -889,7 +959,7 @@ export default function Agent() {
                           <select
                             value={intent.activity || ""}
                             onChange={(e) =>
-                              updateIntent("activity", e.target.value || null)
+                              updateIntent("activity", normalizeActivity(e.target.value || null))
                             }
                           >
                             <option value="">Izaberi</option>
