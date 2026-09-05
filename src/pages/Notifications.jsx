@@ -694,7 +694,7 @@ export default function Notifications() {
       if (width <= 480) {
         setPageSize(4);
       } else if (width <= 760) {
-        setPageSize(5);
+        setPageSize(4);
       } else {
         setPageSize(8);
       }
@@ -2009,9 +2009,8 @@ function NotificationsStyles() {
 
 
       /* =========================================================
-         NOTIFICATIONS — PREMIUM COMPACT INBOX V4
-         Natural card heights. No giant empty cards.
-         Page itself stays locked; pagination handles overflow.
+         NOTIFICATIONS — PREMIUM READABLE INBOX V5
+         Bigger typography, natural cards, zero page scroll.
          ========================================================= */
 
       html,
@@ -2023,14 +2022,14 @@ function NotificationsStyles() {
         height: 100svh;
         min-height: 100svh;
         overflow: hidden;
-        padding: 64px 10px 10px;
+        padding: 64px 12px 12px;
         display: grid;
         grid-template-rows: auto minmax(0, 1fr);
-        gap: 8px;
+        gap: 10px;
         background:
-          radial-gradient(circle at 8% -3%, rgba(174, 211, 137, .14), transparent 24%),
-          radial-gradient(circle at 96% 16%, rgba(31, 77, 51, .055), transparent 28%),
-          linear-gradient(180deg, #f7f9f4 0%, #eef2eb 100%);
+          radial-gradient(circle at 10% -4%, rgba(176, 214, 139, .14), transparent 25%),
+          radial-gradient(circle at 96% 16%, rgba(33, 79, 53, .06), transparent 30%),
+          linear-gradient(180deg, #f8faf6 0%, #eef2eb 100%);
       }
 
       .hero {
@@ -2038,20 +2037,20 @@ function NotificationsStyles() {
         min-height: 0;
         height: auto;
         margin: 0 auto;
-        padding: 16px 18px;
+        padding: 18px 20px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        gap: 18px;
+        gap: 20px;
         overflow: hidden;
-        border: 1px solid rgba(255,255,255,.08);
-        border-radius: 20px;
+        border-radius: 22px;
         background:
-          radial-gradient(circle at 88% 4%, rgba(202, 239, 158, .11), transparent 25%),
+          radial-gradient(circle at 86% 5%, rgba(204, 239, 165, .12), transparent 26%),
           linear-gradient(135deg, #0b2518 0%, #123a27 55%, #28583e 100%);
+        color: #fff;
         box-shadow:
-          0 16px 38px rgba(24, 55, 37, .14),
-          inset 0 1px 0 rgba(255,255,255,.035);
+          0 18px 42px rgba(24, 55, 37, .15),
+          inset 0 1px 0 rgba(255,255,255,.04);
       }
 
       .hero::before {
@@ -2060,30 +2059,30 @@ function NotificationsStyles() {
 
       .heroContent {
         min-width: 0;
-        max-width: 680px;
+        max-width: 700px;
         padding: 0;
       }
 
       .kicker {
-        gap: 6px;
-        padding: 5px 8px;
-        border-color: rgba(255,255,255,.12);
-        background: rgba(255,255,255,.055);
-        font-size: 6px;
+        gap: 7px;
+        padding: 6px 9px;
+        border-color: rgba(255,255,255,.13);
+        background: rgba(255,255,255,.06);
+        font-size: 8px;
         letter-spacing: .11em;
       }
 
       .kicker > span {
-        width: 5px;
-        height: 5px;
-        box-shadow: 0 0 0 3px rgba(206,243,154,.09);
+        width: 6px;
+        height: 6px;
+        box-shadow: 0 0 0 4px rgba(206,243,154,.09);
       }
 
       .hero h1 {
-        margin: 7px 0 0;
-        font-size: clamp(32px, 4.4vw, 48px);
-        line-height: .93;
-        letter-spacing: -.06em;
+        margin: 8px 0 0;
+        font-size: clamp(34px, 4.8vw, 52px);
+        line-height: .94;
+        letter-spacing: -.055em;
       }
 
       .hero h1 br {
@@ -2091,17 +2090,17 @@ function NotificationsStyles() {
       }
 
       .heroContent p {
-        max-width: 590px;
-        margin: 7px 0 0;
-        color: rgba(255,255,255,.56);
-        font-size: 8px;
+        max-width: 610px;
+        margin: 8px 0 0;
+        color: rgba(255,255,255,.60);
+        font-size: 10px;
         line-height: 1.45;
       }
 
       .stats {
         display: grid;
-        grid-template-columns: repeat(3, 94px);
-        gap: 6px;
+        grid-template-columns: repeat(3, 104px);
+        gap: 7px;
         margin: 0;
         padding: 0;
         border: 0;
@@ -2109,26 +2108,26 @@ function NotificationsStyles() {
 
       .stats article {
         min-width: 0;
-        padding: 9px 10px;
-        border: 1px solid rgba(255,255,255,.09);
-        border-radius: 12px;
-        background: rgba(255,255,255,.052);
+        padding: 10px 11px;
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 13px;
+        background: rgba(255,255,255,.055);
         backdrop-filter: blur(12px);
       }
 
       .stats strong {
         overflow: hidden;
         color: #fff;
-        font-size: 17px;
+        font-size: 19px;
         line-height: 1;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
       .stats span {
-        margin-top: 4px;
-        color: rgba(255,255,255,.40);
-        font-size: 5px;
+        margin-top: 5px;
+        color: rgba(255,255,255,.44);
+        font-size: 6px;
         letter-spacing: .05em;
       }
 
@@ -2140,29 +2139,29 @@ function NotificationsStyles() {
         margin: 0 auto;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 7px;
         overflow: hidden;
       }
 
       .toolbar {
         flex: 0 0 auto;
-        min-height: 44px;
+        min-height: 48px;
         margin: 0;
-        padding: 6px 8px;
+        padding: 7px 9px;
         align-items: center;
         border: 1px solid #dbe4d7;
-        border-radius: 13px;
-        background: rgba(255,255,255,.72);
-        box-shadow: 0 6px 18px rgba(31,51,38,.035);
+        border-radius: 14px;
+        background: rgba(255,255,255,.75);
+        box-shadow: 0 7px 20px rgba(31,51,38,.035);
       }
 
       .sectionKicker {
-        font-size: 5.5px;
+        font-size: 7px;
       }
 
       .toolbar h2 {
         margin-top: 2px;
-        font-size: 17px;
+        font-size: 19px;
         letter-spacing: -.04em;
       }
 
@@ -2171,57 +2170,57 @@ function NotificationsStyles() {
       }
 
       .toolbarActions {
-        gap: 5px;
+        gap: 6px;
       }
 
       .toolbarActions > button {
-        min-height: 30px;
-        padding: 0 9px;
-        border-radius: 9px;
-        font-size: 6px;
+        min-height: 34px;
+        padding: 0 11px;
+        border-radius: 10px;
+        font-size: 8px;
       }
 
       .toolbarActions > button svg {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
       }
 
       .filterBar {
         flex: 0 0 auto;
         width: 100%;
         max-width: none;
-        min-height: 38px;
+        min-height: 43px;
         margin: 0;
         padding: 4px;
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 4px;
+        gap: 5px;
         border: 1px solid #dce4d9;
-        border-radius: 12px;
-        background: rgba(255,255,255,.66);
+        border-radius: 13px;
+        background: rgba(255,255,255,.70);
         box-shadow: 0 6px 18px rgba(31,51,38,.025);
       }
 
       .filterBar button {
         justify-content: center;
         min-width: 0;
-        min-height: 30px;
-        padding: 0 9px;
-        gap: 6px;
-        border-radius: 9px;
-        font-size: 6px;
+        min-height: 34px;
+        padding: 0 10px;
+        gap: 7px;
+        border-radius: 10px;
+        font-size: 8px;
       }
 
       .filterBar button span {
-        min-width: 17px;
-        height: 17px;
-        padding: 0 4px;
-        font-size: 5px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        font-size: 7px;
       }
 
       .filterBar button.active {
         background: linear-gradient(135deg, #123824, #1d5135);
-        box-shadow: 0 5px 12px rgba(29,70,47,.10);
+        box-shadow: 0 6px 14px rgba(29,70,47,.11);
       }
 
       .notificationViewport {
@@ -2229,7 +2228,7 @@ function NotificationsStyles() {
         min-height: 0;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 7px;
         overflow: hidden;
       }
 
@@ -2238,25 +2237,25 @@ function NotificationsStyles() {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         align-content: start;
-        gap: 7px;
+        gap: 8px;
       }
 
       .notificationCard {
         position: relative;
         min-width: 0;
         height: auto;
-        min-height: 92px;
-        max-height: 104px;
+        min-height: 108px;
+        max-height: 118px;
         overflow: hidden;
         display: grid;
-        grid-template-columns: 38px minmax(0,1fr);
+        grid-template-columns: 44px minmax(0,1fr);
         align-items: start;
-        gap: 10px;
-        padding: 10px 11px;
+        gap: 11px;
+        padding: 12px 13px;
         border: 1px solid #dce5d9;
-        border-radius: 14px;
-        background: rgba(255,255,255,.88);
-        box-shadow: 0 7px 18px rgba(29,50,37,.035);
+        border-radius: 16px;
+        background: rgba(255,255,255,.90);
+        box-shadow: 0 8px 22px rgba(29,50,37,.04);
         transition:
           transform .18s ease,
           border-color .18s ease,
@@ -2265,35 +2264,35 @@ function NotificationsStyles() {
       }
 
       .notificationCard.read {
-        opacity: .92;
-        background: rgba(255,255,255,.74);
+        opacity: .94;
+        background: rgba(255,255,255,.78);
       }
 
       a.notificationCard:hover {
         transform: translateY(-1px);
         border-color: #bdcdb8;
         background: #fff;
-        box-shadow: 0 10px 22px rgba(29,50,37,.055);
+        box-shadow: 0 12px 28px rgba(29,50,37,.06);
       }
 
       .notificationCard.unread {
-        border-color: #b7cdab;
+        border-color: #b6ccaa;
         background:
-          linear-gradient(135deg, rgba(244,250,238,.98), rgba(255,255,255,.96));
-        box-shadow: 0 8px 22px rgba(70,104,54,.07);
+          linear-gradient(135deg, rgba(244,250,238,.99), rgba(255,255,255,.98));
+        box-shadow: 0 9px 24px rgba(70,104,54,.08);
       }
 
       .notificationCard.unread::after {
         width: 3px;
-        border-radius: 14px 0 0 14px;
+        border-radius: 16px 0 0 16px;
         background: linear-gradient(180deg, #9ac768, #376f4b);
       }
 
       .notificationCard.adventureCard {
-        border-color: rgba(95,130,72,.24);
+        border-color: rgba(95,130,72,.25);
         background:
-          radial-gradient(circle at 100% 0%, rgba(206,239,165,.10), transparent 33%),
-          rgba(255,255,255,.90);
+          radial-gradient(circle at 100% 0%, rgba(206,239,165,.11), transparent 33%),
+          rgba(255,255,255,.92);
       }
 
       .notificationCard.adventureCard::before {
@@ -2302,18 +2301,18 @@ function NotificationsStyles() {
       }
 
       .notificationIcon {
-        width: 38px;
-        height: 38px;
-        border-radius: 11px;
+        width: 44px;
+        height: 44px;
+        border-radius: 13px;
       }
 
       .notificationIcon svg {
-        width: 17px;
-        height: 17px;
+        width: 19px;
+        height: 19px;
       }
 
       .notificationIcon.adventure {
-        box-shadow: 0 7px 16px rgba(28,73,47,.15);
+        box-shadow: 0 8px 18px rgba(28,73,47,.15);
       }
 
       .notificationBody {
@@ -2321,47 +2320,47 @@ function NotificationsStyles() {
       }
 
       .notificationMeta {
-        gap: 6px;
+        gap: 7px;
       }
 
       .metaLeft {
         min-width: 0;
-        gap: 4px;
+        gap: 5px;
       }
 
       .metaLeft > span {
         overflow: hidden;
-        max-width: 180px;
+        max-width: 220px;
         color: #6f8e51;
-        font-size: 5.5px;
+        font-size: 7px;
         letter-spacing: .08em;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
       .metaLeft > em {
-        padding: 2px 5px;
-        font-size: 4.5px;
+        padding: 3px 6px;
+        font-size: 6px;
       }
 
       .notificationMeta small {
         flex: 0 0 auto;
-        gap: 3px;
-        color: #98a099;
-        font-size: 5.5px;
+        gap: 4px;
+        color: #919b94;
+        font-size: 7px;
       }
 
       .notificationMeta small svg {
-        width: 10px;
-        height: 10px;
+        width: 11px;
+        height: 11px;
       }
 
       .notificationBody h3 {
-        margin: 4px 0 0;
+        margin: 5px 0 0;
         overflow: hidden;
-        color: #304538;
-        font-size: 12px;
-        line-height: 1.15;
+        color: #2f4337;
+        font-size: 14px;
+        line-height: 1.16;
         letter-spacing: -.02em;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -2369,19 +2368,19 @@ function NotificationsStyles() {
 
       .notificationBody p {
         display: -webkit-box;
-        margin: 4px 0 0;
+        margin: 5px 0 0;
         overflow: hidden;
         -webkit-line-clamp: 1;
         -webkit-box-orient: vertical;
-        color: #7c877f;
-        font-size: 7px;
+        color: #737f77;
+        font-size: 9px;
         line-height: 1.35;
       }
 
       .notificationBottom {
-        margin-top: 6px;
-        padding-top: 6px;
-        gap: 5px;
+        margin-top: 7px;
+        padding-top: 7px;
+        gap: 6px;
         border-top-color: #e8ece6;
       }
 
@@ -2392,32 +2391,32 @@ function NotificationsStyles() {
       .notificationBottomRight {
         width: 100%;
         justify-content: flex-start;
-        gap: 5px;
+        gap: 6px;
       }
 
       .readState {
-        min-height: 18px;
-        padding: 0 6px;
-        font-size: 4.5px;
+        min-height: 21px;
+        padding: 0 7px;
+        font-size: 6px;
       }
 
       .detailAction {
         margin-left: auto;
-        gap: 4px;
-        color: #48604f;
-        font-size: 5.5px;
+        gap: 5px;
+        color: #425b4a;
+        font-size: 7px;
       }
 
       .detailAction svg {
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
       }
 
       .unreadDot {
-        top: 8px;
-        right: 8px;
-        width: 6px;
-        height: 6px;
+        top: 9px;
+        right: 9px;
+        width: 7px;
+        height: 7px;
         border-width: 1px;
         box-shadow: 0 0 0 3px rgba(121,162,80,.07);
       }
@@ -2427,20 +2426,20 @@ function NotificationsStyles() {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        min-height: 31px;
+        gap: 8px;
+        min-height: 34px;
         padding: 1px 0;
       }
 
       .paginationBar button {
-        min-height: 26px;
-        padding: 0 9px;
+        min-height: 29px;
+        padding: 0 11px;
         border: 1px solid #d5ded2;
-        border-radius: 8px;
-        background: rgba(255,255,255,.82);
-        color: #526359;
+        border-radius: 9px;
+        background: rgba(255,255,255,.84);
+        color: #4d6054;
         cursor: pointer;
-        font-size: 5.5px;
+        font-size: 7px;
         font-weight: 850;
       }
 
@@ -2450,10 +2449,10 @@ function NotificationsStyles() {
       }
 
       .paginationBar span {
-        min-width: 42px;
-        color: #768078;
+        min-width: 48px;
+        color: #758078;
         text-align: center;
-        font-size: 5.5px;
+        font-size: 7px;
         font-weight: 850;
       }
 
@@ -2464,31 +2463,31 @@ function NotificationsStyles() {
       .emptyState {
         flex: 1 1 auto;
         min-height: 0;
-        padding: 24px 18px;
-        border-radius: 16px;
+        padding: 30px 20px;
+        border-radius: 18px;
       }
 
       .emptyState > span {
-        width: 46px;
-        height: 46px;
-        border-radius: 14px;
+        width: 52px;
+        height: 52px;
+        border-radius: 15px;
       }
 
       .emptyState h3 {
-        margin-top: 9px;
-        font-size: 16px;
+        margin-top: 10px;
+        font-size: 18px;
       }
 
       .emptyState p {
-        margin-top: 5px;
-        font-size: 8px;
+        margin-top: 6px;
+        font-size: 10px;
       }
 
       .emptyState a,
       .resetFilterButton {
-        margin-top: 10px;
-        padding: 8px 11px;
-        font-size: 7px;
+        margin-top: 11px;
+        padding: 9px 12px;
+        font-size: 8px;
       }
 
       .errorBox {
@@ -2496,10 +2495,10 @@ function NotificationsStyles() {
         z-index: 8;
         top: 0;
         right: 0;
-        max-width: 420px;
+        max-width: 430px;
         margin: 0;
-        padding: 9px;
-        border-radius: 11px;
+        padding: 10px;
+        border-radius: 12px;
         box-shadow: 0 8px 22px rgba(81,35,31,.08);
       }
 
@@ -2507,25 +2506,25 @@ function NotificationsStyles() {
         height: 100svh;
         min-height: 100svh;
         overflow: hidden;
-        padding: 64px 10px 10px;
+        padding: 64px 12px 12px;
       }
 
       .stateCard {
-        width: min(430px,100%);
-        padding: 28px 20px;
+        width: min(440px,100%);
+        padding: 30px 22px;
         border-radius: 20px;
       }
 
       @media (max-width: 760px) {
         .notificationsPage {
-          padding: 58px 7px 7px;
-          gap: 6px;
+          padding: 58px 8px 8px;
+          gap: 7px;
         }
 
         .hero {
-          padding: 11px 12px;
-          gap: 8px;
-          border-radius: 15px;
+          padding: 13px 14px;
+          gap: 10px;
+          border-radius: 17px;
         }
 
         .heroContent {
@@ -2533,13 +2532,13 @@ function NotificationsStyles() {
         }
 
         .kicker {
-          padding: 4px 6px;
-          font-size: 5px;
+          padding: 5px 7px;
+          font-size: 7px;
         }
 
         .hero h1 {
-          margin-top: 5px;
-          font-size: clamp(25px, 7vw, 31px);
+          margin-top: 6px;
+          font-size: clamp(28px, 7.8vw, 34px);
         }
 
         .heroContent p {
@@ -2547,32 +2546,28 @@ function NotificationsStyles() {
         }
 
         .stats {
-          grid-template-columns: repeat(3, 62px);
-          gap: 4px;
+          grid-template-columns: repeat(3, 68px);
+          gap: 5px;
         }
 
         .stats article {
-          padding: 7px 6px;
-          border-radius: 9px;
+          padding: 8px 7px;
+          border-radius: 10px;
         }
 
         .stats strong {
-          font-size: 13px;
+          font-size: 15px;
         }
 
         .stats span {
           margin-top: 3px;
-          font-size: 4px;
+          font-size: 5px;
         }
 
         .toolbar {
-          min-height: 38px;
-          padding: 4px 5px;
-          border-radius: 10px;
-        }
-
-        .toolbar > div:first-child {
-          display: block;
+          min-height: 44px;
+          padding: 5px 6px;
+          border-radius: 11px;
         }
 
         .toolbar .sectionKicker {
@@ -2581,180 +2576,215 @@ function NotificationsStyles() {
 
         .toolbar h2 {
           margin: 0;
-          font-size: 12px;
+          font-size: 15px;
         }
 
         .toolbarActions > button {
-          min-height: 27px;
-          padding: 0 7px;
-          font-size: 5.5px;
+          min-height: 31px;
+          padding: 0 9px;
+          font-size: 7px;
         }
 
         .filterBar {
-          min-height: 34px;
-          padding: 3px;
+          min-height: 40px;
+          padding: 4px;
         }
 
         .filterBar button {
-          min-height: 27px;
-          padding: 0 5px;
-          font-size: 5.5px;
+          min-height: 31px;
+          padding: 0 6px;
+          font-size: 7px;
+        }
+
+        .filterBar button span {
+          min-width: 18px;
+          height: 18px;
+          font-size: 6px;
         }
 
         .notificationGrid {
           grid-template-columns: 1fr;
-          gap: 5px;
+          gap: 6px;
         }
 
         .notificationCard {
-          min-height: 82px;
-          max-height: 88px;
-          grid-template-columns: 36px minmax(0,1fr);
-          gap: 8px;
-          padding: 8px 9px;
-          border-radius: 12px;
+          min-height: 104px;
+          max-height: 112px;
+          grid-template-columns: 42px minmax(0,1fr);
+          gap: 10px;
+          padding: 10px 11px;
+          border-radius: 14px;
         }
 
         .notificationIcon {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
         }
 
         .notificationIcon svg {
-          width: 16px;
-          height: 16px;
+          width: 18px;
+          height: 18px;
+        }
+
+        .metaLeft > span {
+          max-width: 170px;
+          font-size: 8px;
+        }
+
+        .metaLeft > em {
+          padding: 3px 5px;
+          font-size: 6px;
+        }
+
+        .notificationMeta small {
+          font-size: 8px;
         }
 
         .notificationBody h3 {
-          font-size: 11px;
+          margin-top: 5px;
+          font-size: 15px;
         }
 
         .notificationBody p {
-          font-size: 6.5px;
+          margin-top: 4px;
+          font-size: 10px;
         }
 
         .notificationBottom {
-          margin-top: 5px;
-          padding-top: 5px;
+          margin-top: 6px;
+          padding-top: 6px;
+        }
+
+        .readState {
+          min-height: 21px;
+          font-size: 7px;
+        }
+
+        .detailAction {
+          font-size: 8px;
         }
 
         .paginationBar {
-          min-height: 28px;
+          min-height: 32px;
         }
 
         .paginationBar button {
-          min-height: 24px;
-          padding: 0 8px;
-          font-size: 5px;
+          min-height: 27px;
+          padding: 0 10px;
+          font-size: 7px;
+        }
+
+        .paginationBar span {
+          font-size: 7px;
         }
       }
 
       @media (max-width: 480px) {
         .notificationsPage {
-          padding: 58px 6px 6px;
+          padding: 58px 7px 7px;
         }
 
         .hero {
-          padding: 10px;
+          padding: 12px;
           grid-template-columns: minmax(0,1fr) auto;
         }
 
         .kicker {
-          font-size: 4.5px;
+          font-size: 6.5px;
         }
 
         .hero h1 {
-          font-size: 24px;
+          font-size: 29px;
         }
 
         .stats {
-          grid-template-columns: repeat(3, 55px);
+          grid-template-columns: repeat(3, 60px);
         }
 
         .stats article {
-          padding: 6px 5px;
+          padding: 7px 6px;
         }
 
         .stats strong {
-          font-size: 11px;
+          font-size: 14px;
         }
 
         .stats span {
-          font-size: 3.6px;
+          font-size: 4.5px;
         }
 
         .toolbar {
-          min-height: 35px;
+          min-height: 42px;
         }
 
         .toolbar h2 {
-          font-size: 10px;
+          font-size: 14px;
         }
 
         .toolbarActions {
-          gap: 3px;
+          gap: 4px;
         }
 
         .toolbarActions > button {
-          min-height: 25px;
-          padding: 0 6px;
-          font-size: 5px;
+          min-height: 29px;
+          padding: 0 8px;
+          font-size: 6.5px;
         }
 
         .filterBar {
-          min-height: 32px;
+          min-height: 38px;
         }
 
         .filterBar button {
-          min-height: 25px;
-          padding: 0 4px;
-          gap: 4px;
-          font-size: 5px;
+          min-height: 29px;
+          padding: 0 5px;
+          gap: 5px;
+          font-size: 6.5px;
         }
 
         .filterBar button span {
-          min-width: 15px;
-          height: 15px;
-          font-size: 4px;
+          min-width: 17px;
+          height: 17px;
+          font-size: 5.5px;
         }
 
         .notificationCard {
-          min-height: 78px;
-          max-height: 84px;
-          grid-template-columns: 34px minmax(0,1fr);
-          padding: 7px 8px;
+          min-height: 102px;
+          max-height: 110px;
+          grid-template-columns: 41px minmax(0,1fr);
+          padding: 10px;
         }
 
         .notificationIcon {
-          width: 34px;
-          height: 34px;
+          width: 41px;
+          height: 41px;
         }
 
         .metaLeft > span {
-          max-width: 130px;
-          font-size: 5px;
+          max-width: 145px;
+          font-size: 7.5px;
         }
 
         .notificationMeta small {
-          font-size: 5px;
+          font-size: 7.5px;
         }
 
         .notificationBody h3 {
-          font-size: 10.5px;
+          font-size: 14.5px;
         }
 
         .notificationBody p {
-          font-size: 6px;
+          font-size: 9.5px;
         }
 
         .readState {
-          min-height: 17px;
-          font-size: 4px;
+          min-height: 20px;
+          font-size: 6.5px;
         }
 
         .detailAction {
-          font-size: 5px;
+          font-size: 7.5px;
         }
       }
 
