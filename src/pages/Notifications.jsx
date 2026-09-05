@@ -780,25 +780,6 @@ export default function Notifications() {
     }
   }, [page, pageCount]);
 
-  const groupedNotifications = useMemo(() => {
-    const groups = {
-      Danas: [],
-      Juče: [],
-      "Ove nedelje": [],
-      "Ovog meseca": [],
-      Starije: [],
-    };
-
-    filteredNotifications.forEach((notification) => {
-      groups[
-        dateGroup(notification.created_at)
-      ].push(notification);
-    });
-
-    return Object.entries(groups).filter(
-      ([, items]) => items.length
-    );
-  }, [filteredNotifications]);
 
   const unreadCount = useMemo(
     () =>
