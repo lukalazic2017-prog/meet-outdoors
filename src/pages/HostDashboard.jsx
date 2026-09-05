@@ -1909,17 +1909,6 @@ export default function HostDashboard() {
             </div>
           )}
 
-          <HostAnalyticsSection
-            analytics={hostAnalytics}
-            intelligence={demandIntelligence}
-            error={analyticsError}
-          />
-
-          <DemandIntelligenceSection
-            intelligence={demandIntelligence}
-            error={demandError}
-          />
-
           <section className="statsGrid">
             <StatCard
               icon="money"
@@ -2130,6 +2119,17 @@ export default function HostDashboard() {
               )}
             </div>
           </section>
+
+          <DemandIntelligenceSection
+            intelligence={demandIntelligence}
+            error={demandError}
+          />
+
+          <HostAnalyticsSection
+            analytics={hostAnalytics}
+            intelligence={demandIntelligence}
+            error={analyticsError}
+          />
 
           <section className="inventoryHeader">
             <div>
@@ -2645,6 +2645,972 @@ function DashboardStyles() {
         .bookingRow{grid-template-columns:1fr}
         .statusBadge{justify-self:start}
       }
+
+      /* =========================================================
+         HOST DASHBOARD — PREMIUM MOBILE UX OVERRIDE
+         ========================================================= */
+
+      .dashboardContainer,
+      .dashboardHero,
+      .analyticsShell,
+      .intelligenceShell,
+      .dashboardSection,
+      .financePanel,
+      .bookingPanel,
+      .statCard,
+      .quickActionCard,
+      .dashboardItemCard,
+      .demandCard,
+      .analyticsPanel,
+      .agentInsightCard {
+        min-width: 0;
+      }
+
+      .dashboardItemCard *,
+      .demandCard *,
+      .analyticsPanel *,
+      .agentInsightCard *,
+      .quickActionCard *,
+      .statCard * {
+        min-width: 0;
+      }
+
+      .dashboardItemCard h3,
+      .demandCard h3,
+      .agentInsightCard strong,
+      .analyticsPanel h3,
+      .quickActionCard strong,
+      .bookingIdentity strong {
+        overflow-wrap: anywhere;
+        word-break: normal;
+      }
+
+      @media(max-width:760px){
+        .hostDashboardPage{
+          padding:74px 0 56px;
+          overflow-x:hidden;
+          background:
+            radial-gradient(circle at 12% 0%,rgba(173,211,132,.16),transparent 22%),
+            #edf1e9;
+        }
+
+        .dashboardContainer{
+          width:100%;
+          overflow:visible;
+        }
+
+        .dashboardHero{
+          min-height:0;
+          padding:22px 16px 18px;
+          border-radius:0 0 26px 26px;
+          box-shadow:0 18px 48px rgba(19,49,31,.17);
+        }
+
+        .heroTopbar{gap:10px}
+        .heroTopbarBadge{
+          display:inline-flex;
+          min-height:32px;
+          padding:0 10px;
+          font-size:8px;
+        }
+
+        .refreshButton{
+          min-height:34px;
+          padding:0 11px;
+          font-size:8px;
+        }
+
+        .heroMain{
+          grid-template-columns:1fr;
+          gap:20px;
+          margin-top:36px;
+        }
+
+        .heroCopy h1{
+          max-width:100%;
+          margin-top:10px;
+          font-size:clamp(38px,11vw,54px);
+          line-height:.95;
+          letter-spacing:-.062em;
+        }
+
+        .heroCopy p{
+          max-width:100%;
+          margin-top:14px;
+          font-size:11px;
+          line-height:1.58;
+        }
+
+        .heroPulse{
+          width:100%;
+          margin-top:16px;
+          padding:10px 12px;
+          border-radius:14px;
+        }
+
+        .heroActions{gap:9px}
+
+        .heroPrimaryAction{
+          min-height:68px;
+          padding:11px;
+          border-radius:16px;
+        }
+
+        .heroPrimaryAction>span{
+          width:42px;
+          height:42px;
+          border-radius:13px;
+        }
+
+        .heroPrimaryAction strong{font-size:11px}
+        .heroPrimaryAction small{font-size:8px}
+
+        .heroActionPair{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:8px;
+        }
+
+        .heroMiniAction{
+          min-height:44px;
+          padding:0 10px;
+          border-radius:13px;
+          font-size:9px;
+          white-space:normal;
+          text-align:center;
+        }
+
+        .heroBottom{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:8px;
+          margin-top:17px;
+          padding-top:15px;
+        }
+
+        .heroBottomMetric{
+          min-width:0;
+          padding:10px 11px;
+          border-radius:13px;
+          background:rgba(255,255,255,.055);
+        }
+
+        .heroBottomMetric span{font-size:7px}
+        .heroBottomMetric strong{
+          margin-top:4px;
+          font-size:15px;
+          overflow-wrap:anywhere;
+        }
+
+        .heroBottomLinks{
+          grid-column:1/-1;
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          width:100%;
+          gap:8px;
+        }
+
+        .heroBottomLinks a{
+          justify-content:center;
+          min-height:39px;
+          padding:0 9px;
+          border:1px solid rgba(255,255,255,.10);
+          border-radius:12px;
+          background:rgba(255,255,255,.055);
+          font-size:8px;
+        }
+
+        .dashboardMessage,
+        .statsGrid,
+        .operationsGrid,
+        .dashboardQuickActions,
+        .intelligenceShell,
+        .analyticsShell,
+        .inventoryHeader,
+        .dashboardSection{
+          margin-right:12px;
+          margin-left:12px;
+        }
+
+        .statsGrid{
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:8px;
+          margin-top:14px;
+        }
+
+        .statCard{
+          min-height:126px;
+          padding:13px;
+          border-radius:17px;
+        }
+
+        .statCardTop{margin-bottom:12px}
+
+        .statIcon{
+          width:36px;
+          height:36px;
+          border-radius:11px;
+        }
+
+        .statTrend{display:none}
+
+        .statCard>strong{
+          font-size:23px;
+          line-height:1;
+          letter-spacing:-.045em;
+          overflow-wrap:anywhere;
+        }
+
+        .statLabel{
+          margin-top:6px;
+          font-size:8px;
+        }
+
+        .statCard>small{
+          margin-top:5px;
+          font-size:7px;
+          line-height:1.35;
+        }
+
+        .dashboardQuickActions{margin-top:20px}
+        .quickActionsHeading{margin-bottom:10px}
+
+        .quickActionsHeading h2,
+        .dashboardSectionHeader h2,
+        .inventoryHeader h2{
+          margin-top:5px;
+          font-size:27px;
+          line-height:1.02;
+        }
+
+        .quickActionGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:8px;
+        }
+
+        .quickActionCard{
+          display:flex;
+          flex-direction:column;
+          align-items:flex-start;
+          gap:8px;
+          min-height:124px;
+          padding:12px;
+          border-radius:17px;
+        }
+
+        .quickActionCard>span{
+          width:38px;
+          height:38px;
+          border-radius:12px;
+        }
+
+        .quickActionCard>div{width:100%}
+
+        .quickActionCard strong{
+          font-size:10px;
+          line-height:1.2;
+        }
+
+        .quickActionCard small{
+          margin-top:4px;
+          font-size:7px;
+          line-height:1.35;
+        }
+
+        .quickActionCard>svg{display:none}
+
+        .intelligenceShell{
+          margin-top:20px;
+          padding:15px;
+          border-radius:20px;
+        }
+
+        .intelligenceHeader{gap:13px}
+
+        .intelligenceTitleWrap{
+          align-items:flex-start;
+          gap:10px;
+        }
+
+        .intelligenceLogo{
+          flex:0 0 auto;
+          width:40px;
+          height:40px;
+          border-radius:12px;
+        }
+
+        .intelligenceHeader h2{
+          margin-top:5px;
+          font-size:27px;
+          line-height:1.02;
+        }
+
+        .intelligenceHeader p{
+          margin-top:7px;
+          font-size:9px;
+          line-height:1.45;
+        }
+
+        .intelligenceSignal{
+          width:100%;
+          padding:10px 11px;
+          border-radius:13px;
+        }
+
+        .demandMetricsGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:7px;
+          margin-top:12px;
+        }
+
+        .demandMetric{
+          min-height:108px;
+          padding:11px;
+          border-radius:15px;
+        }
+
+        .demandMetricIcon{
+          width:34px;
+          height:34px;
+          border-radius:10px;
+        }
+
+        .demandMetricCopy strong{
+          margin-top:3px;
+          font-size:20px;
+        }
+
+        .demandMetricCopy span,
+        .demandMetricCopy small{font-size:7px}
+
+        .nextActionPanel{
+          grid-template-columns:1fr;
+          gap:10px;
+          padding:13px;
+          border-radius:16px;
+        }
+
+        .nextActionCopy h3{
+          margin-top:7px;
+          font-size:20px;
+          overflow-wrap:anywhere;
+        }
+
+        .nextActionCopy p{
+          font-size:8px;
+          line-height:1.45;
+        }
+
+        .nextActionValue{
+          padding:10px 0;
+          border-top:1px solid #d8e4d2;
+          border-left:0;
+        }
+
+        .nextActionButton{
+          width:100%;
+          min-height:41px;
+          justify-content:center;
+        }
+
+        .demandInboxPanel{
+          padding:13px;
+          border-radius:17px;
+        }
+
+        .demandInboxHeader{
+          align-items:flex-start;
+          flex-direction:column;
+          gap:10px;
+        }
+
+        .privacyBadge{
+          align-self:flex-start;
+          max-width:100%;
+        }
+
+        .demandCardsGrid{
+          grid-template-columns:1fr;
+          gap:9px;
+        }
+
+        .demandCard{
+          padding:13px;
+          border-radius:17px;
+        }
+
+        .demandCardTop{
+          align-items:flex-start;
+          gap:10px;
+        }
+
+        .demandActivityIdentity{min-width:0}
+
+        .demandActivityIdentity h3{
+          font-size:18px;
+          line-height:1.08;
+        }
+
+        .demandStatus{
+          flex:0 0 auto;
+          white-space:nowrap;
+          font-size:7px;
+        }
+
+        .demandFacts{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:7px;
+        }
+
+        .demandFacts>div{
+          min-width:0;
+          padding:9px;
+          border-radius:12px;
+        }
+
+        .demandFacts strong{
+          overflow-wrap:anywhere;
+          font-size:8px;
+          line-height:1.3;
+        }
+
+        .groupBudgetSignal{
+          grid-template-columns:auto minmax(0,1fr);
+          gap:9px;
+          padding:10px;
+        }
+
+        .groupBudgetSignal em{
+          grid-column:1/-1;
+          text-align:left;
+        }
+
+        .demandCardFooter{
+          align-items:flex-start;
+          flex-direction:column;
+          gap:7px;
+        }
+
+        .demandPrimaryAction{
+          min-height:41px;
+          padding:0 12px;
+          border-radius:12px;
+        }
+
+        .operationsGrid{
+          gap:10px;
+          margin-top:20px;
+        }
+
+        .financePanel,
+        .bookingPanel{
+          padding:15px;
+          border-radius:19px;
+        }
+
+        .panelHeader{gap:12px}
+        .panelHeader h2{font-size:24px}
+
+        .financeHero{
+          margin-top:15px;
+          padding:15px;
+          border-radius:16px;
+        }
+
+        .financeHero strong{
+          margin-top:7px;
+          font-size:29px;
+          overflow-wrap:anywhere;
+        }
+
+        .financeBreakdown{
+          grid-template-columns:repeat(3,minmax(0,1fr));
+          gap:6px;
+          margin-top:8px;
+        }
+
+        .financeBreakdown div{
+          min-width:0;
+          padding:9px;
+          border-radius:12px;
+        }
+
+        .financeBreakdown span{font-size:7px}
+
+        .financeBreakdown strong{
+          font-size:9px;
+          overflow-wrap:anywhere;
+        }
+
+        .bookingList{
+          gap:7px;
+          margin-top:13px;
+        }
+
+        .bookingRow{
+          grid-template-columns:minmax(0,1fr) auto;
+          gap:9px;
+          padding:10px;
+          border-radius:13px;
+        }
+
+        .bookingIdentity{gap:8px}
+
+        .bookingIcon{
+          width:34px;
+          height:34px;
+          border-radius:10px;
+        }
+
+        .bookingIdentity strong{
+          font-size:9px;
+          line-height:1.25;
+          white-space:normal;
+        }
+
+        .bookingIdentity small{
+          font-size:7px;
+          line-height:1.35;
+        }
+
+        .bookingAmount{display:none}
+
+        .statusBadge{
+          min-height:25px;
+          padding:0 7px;
+          font-size:6.5px;
+          white-space:nowrap;
+        }
+
+        .analyticsShell{
+          margin-top:20px;
+          padding:15px;
+          border-radius:20px;
+        }
+
+        .analyticsHeader{gap:10px}
+
+        .analyticsHeader h2{
+          margin-top:6px;
+          font-size:27px;
+          line-height:1.03;
+        }
+
+        .analyticsHeader p{
+          margin-top:7px;
+          font-size:9px;
+          line-height:1.45;
+        }
+
+        .analyticsLiveBadge{align-self:flex-start}
+
+        .intelligenceCommandCenter{
+          margin-top:13px;
+          padding:13px;
+          border-radius:17px;
+        }
+
+        .commandCenterTop{gap:10px}
+
+        .commandCenterTop h3{
+          font-size:22px;
+          line-height:1.03;
+        }
+
+        .commandCenterTop p{
+          font-size:8px;
+          line-height:1.45;
+        }
+
+        .commandCenterGrid{
+          grid-template-columns:1fr;
+          gap:8px;
+          margin-top:12px;
+        }
+
+        .commandCenterGrid>article{
+          padding:12px;
+          border-radius:14px;
+          backdrop-filter:none;
+        }
+
+        .commandPerformanceCard{grid-column:auto}
+
+        .agentInsightsPanel{
+          padding:13px;
+          border-radius:17px;
+        }
+
+        .agentInsightsHeader{gap:10px}
+        .agentInsightsTitle{gap:9px}
+        .agentInsightsTitle h3{font-size:22px}
+
+        .agentInsightsTitle p{
+          font-size:8px;
+          line-height:1.45;
+        }
+
+        .agentInsightsGrid{
+          display:grid;
+          grid-template-columns:1fr;
+          gap:8px;
+        }
+
+        .agentInsightCard{
+          min-height:0;
+          padding:12px;
+          border-radius:14px;
+        }
+
+        .agentInsightCard>strong{
+          font-size:14px;
+          line-height:1.18;
+        }
+
+        .agentInsightCard p{
+          font-size:8px;
+          line-height:1.45;
+        }
+
+        .agentRecommendation{
+          grid-template-columns:1fr;
+          gap:12px;
+          padding:14px;
+          border-radius:17px;
+        }
+
+        .agentRecommendationCopy h3{font-size:22px}
+
+        .agentRecommendationCopy p{
+          font-size:8px;
+          line-height:1.5;
+        }
+
+        .agentRecommendationSignals{
+          display:flex;
+          flex-wrap:wrap;
+          gap:6px;
+        }
+
+        .agentRecommendationSignals span{
+          min-width:0;
+          max-width:100%;
+          white-space:normal;
+        }
+
+        .agentRecommendationActions{
+          grid-template-columns:1fr 1fr;
+          gap:7px;
+        }
+
+        .agentRecommendationActions small{grid-column:1/-1}
+
+        .analyticsKpiGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:7px;
+        }
+
+        .analyticsKpi{
+          min-height:105px;
+          padding:11px;
+          border-radius:14px;
+        }
+
+        .analyticsKpi strong{
+          font-size:21px;
+          overflow-wrap:anywhere;
+        }
+
+        .analyticsKpi small,
+        .analyticsKpi span{font-size:7px}
+
+        .analyticsMainGrid,
+        .analyticsInsightGrid{
+          grid-template-columns:1fr;
+          gap:8px;
+        }
+
+        .analyticsPanel{
+          padding:13px;
+          border-radius:16px;
+          overflow:hidden;
+        }
+
+        .analyticsPanelHeader{
+          align-items:flex-start;
+          gap:10px;
+        }
+
+        .analyticsPanelHeader h3{
+          font-size:18px;
+          line-height:1.08;
+        }
+
+        .trendChart{
+          overflow-x:auto;
+          overscroll-behavior-x:contain;
+        }
+
+        .trendBars{
+          min-width:520px;
+          height:130px;
+        }
+
+        .rankedRow{min-width:0}
+
+        .rankTopline{
+          min-width:0;
+          gap:8px;
+        }
+
+        .rankTopline strong{overflow-wrap:anywhere}
+
+        .budgetSignalRow{
+          grid-template-columns:minmax(0,1fr) auto;
+          gap:10px;
+        }
+
+        .budgetSignalRow>div:first-child{min-width:0}
+        .budgetSignalRow strong{overflow-wrap:anywhere}
+
+        .inventoryHeader{
+          margin-top:22px;
+          align-items:flex-start;
+          flex-direction:column;
+          gap:10px;
+        }
+
+        .inventoryHeader p{
+          margin-top:7px;
+          font-size:9px;
+          line-height:1.45;
+        }
+
+        .inventorySummary{
+          width:100%;
+          justify-content:space-between;
+          padding:10px 12px;
+          border-radius:13px;
+        }
+
+        .inventorySummary span{font-size:21px}
+
+        .inventorySummary small{
+          max-width:none;
+          text-align:right;
+        }
+
+        .dashboardSection{
+          margin-top:12px;
+          padding:14px;
+          border-radius:19px;
+        }
+
+        .dashboardSectionHeader{
+          align-items:flex-start;
+          flex-direction:column;
+          gap:10px;
+          margin-bottom:12px;
+        }
+
+        .dashboardSectionHeader p{
+          margin-top:6px;
+          font-size:9px;
+          line-height:1.45;
+        }
+
+        .sectionButton{
+          width:100%;
+          min-height:40px;
+          justify-content:center;
+        }
+
+        .dashboardItemsGrid{
+          grid-template-columns:1fr;
+          gap:10px;
+        }
+
+        .dashboardItemCard{
+          display:grid;
+          grid-template-columns:112px minmax(0,1fr);
+          overflow:hidden;
+          border-radius:16px;
+        }
+
+        .itemImageWrapper{
+          height:100%;
+          min-height:180px;
+        }
+
+        .itemTypeBadge{
+          top:8px;
+          left:8px;
+          min-height:24px;
+          padding:0 7px;
+          font-size:7px;
+        }
+
+        .interestBadge{
+          top:auto;
+          right:auto;
+          bottom:8px;
+          left:8px;
+          min-height:24px;
+          padding:0 7px;
+          font-size:7px;
+        }
+
+        .itemBody{
+          min-width:0;
+          padding:12px;
+        }
+
+        .itemHeading h3{
+          margin-top:4px;
+          font-size:16px;
+          line-height:1.08;
+        }
+
+        .itemKicker{font-size:7px}
+
+        .itemMeta{
+          gap:5px;
+          margin-top:9px;
+        }
+
+        .itemMeta>span{
+          min-width:0;
+          align-items:flex-start;
+          font-size:7.5px;
+          line-height:1.3;
+          overflow-wrap:anywhere;
+        }
+
+        .interestSummary{
+          gap:7px;
+          margin-top:9px;
+          padding:8px;
+          border-radius:11px;
+        }
+
+        .interestSummary>span{
+          width:28px;
+          height:28px;
+          border-radius:9px;
+        }
+
+        .interestSummary strong{font-size:11px}
+        .interestSummary small{font-size:7px}
+
+        .itemActions{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:6px;
+          margin-top:9px;
+        }
+
+        .itemAction,
+        .deleteAction{
+          min-width:0;
+          min-height:34px;
+          padding:0 6px;
+          border-radius:9px;
+          font-size:7.5px;
+          white-space:normal;
+          text-align:center;
+        }
+
+        .emptySection{
+          padding:34px 15px;
+          border-radius:16px;
+        }
+      }
+
+      @media(max-width:430px){
+        .heroTopbarBadge{display:none}
+
+        .dashboardHero{
+          padding:18px 12px 16px;
+        }
+
+        .heroMain{margin-top:28px}
+        .heroCopy h1{font-size:38px}
+
+        .dashboardMessage,
+        .statsGrid,
+        .operationsGrid,
+        .dashboardQuickActions,
+        .intelligenceShell,
+        .analyticsShell,
+        .inventoryHeader,
+        .dashboardSection{
+          margin-right:9px;
+          margin-left:9px;
+        }
+
+        .statsGrid,
+        .quickActionGrid,
+        .demandMetricsGrid,
+        .analyticsKpiGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+        }
+
+        .statCard{
+          min-height:118px;
+          padding:11px;
+        }
+
+        .quickActionCard{
+          min-height:116px;
+          padding:10px;
+        }
+
+        .demandCardTop{flex-direction:column}
+        .demandStatus{align-self:flex-start}
+
+        .demandFacts{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+        }
+
+        .financeBreakdown{
+          grid-template-columns:repeat(3,minmax(0,1fr));
+        }
+
+        .dashboardItemCard{
+          grid-template-columns:96px minmax(0,1fr);
+        }
+
+        .itemImageWrapper{min-height:190px}
+
+        .itemActions{
+          grid-template-columns:1fr 1fr;
+        }
+
+        .agentRecommendationActions{
+          grid-template-columns:1fr;
+        }
+      }
+
+      @media(max-width:355px){
+        .statsGrid,
+        .quickActionGrid,
+        .demandMetricsGrid,
+        .analyticsKpiGrid{
+          grid-template-columns:1fr;
+        }
+
+        .financeBreakdown{
+          grid-template-columns:1fr;
+        }
+
+        .dashboardItemCard{
+          grid-template-columns:1fr;
+        }
+
+        .itemImageWrapper{
+          min-height:150px;
+          height:150px;
+        }
+      }
+
       @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
     `}</style>
   );
