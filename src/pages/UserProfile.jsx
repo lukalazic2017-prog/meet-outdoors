@@ -1819,6 +1819,432 @@ function UserProfileStyles() {
       }
 
 
+
+      /* =========================================================
+         USER PROFILE — UX REBUILD / CLEAN COMPACT
+         Readable, no overlap, calmer hierarchy, mobile-first.
+         ========================================================= */
+      .userPassportPage{
+        overflow-x:hidden;
+      }
+
+      .userPassportContent,
+      .userPassportIdentityCard,
+      .userPassportIdentity,
+      .userPassportIdentityCopy,
+      .userPassportGrid,
+      .userPassportPanel,
+      .timelineSection,
+      .communityCard{
+        min-width:0;
+      }
+
+      .userPassportIdentityCopy h2,
+      .userPassportUsername,
+      .userPassportLocation,
+      .panelHeader h3,
+      .communityCard h3,
+      .timelineIntro h3{
+        overflow-wrap:anywhere;
+      }
+
+      .userPassportHeroCopy p{font-size:12px;line-height:1.55}
+      .userPassportUsername{font-size:11px}
+      .userPassportLocation{font-size:10px}
+      .memberBadge,.levelBadge{font-size:8px}
+      .userPassportStats article>div>span{font-size:8px;line-height:1.2}
+      .userPassportSectionLabel{font-size:8px}
+      .panelHeader p{font-size:9px;line-height:1.4}
+      .userPassportBio{font-size:11px;line-height:1.55}
+      .userPassportActivities>span{font-size:8px}
+      .activityChips span{font-size:8px}
+      .achievementsGrid strong{font-size:10px}
+      .achievementsGrid small{font-size:8px;line-height:1.25}
+      .timelineIntro p,.communityCard p{font-size:9px;line-height:1.45}
+
+      @media(max-width:760px){
+        .userPassportPage{
+          padding:64px 0 42px;
+        }
+
+        .userPassportHero{
+          min-height:350px;
+          padding:14px 14px 58px;
+          border-radius:0 0 24px 24px;
+        }
+
+        .userPassportHeroTop{
+          align-items:center;
+          gap:8px;
+        }
+
+        .userPassportBrand{
+          min-width:0;
+          font-size:10px;
+        }
+
+        .userPassportBrand>span{
+          width:30px;
+          height:30px;
+          flex:0 0 30px;
+        }
+
+        .userPassportExploreLink{
+          min-height:30px;
+          padding:0 9px;
+          font-size:8px;
+        }
+
+        .userPassportHeroCopy{
+          max-width:82%;
+          padding-top:38px;
+        }
+
+        .userPassportHeroCopy h1{
+          margin-top:10px;
+          font-size:clamp(34px,11vw,48px);
+          line-height:.9;
+        }
+
+        .userPassportHeroCopy p{
+          max-width:420px;
+          margin-top:10px;
+          font-size:10px;
+          line-height:1.45;
+        }
+
+        .userPassportLevelStamp{
+          right:14px;
+          bottom:14px;
+          left:auto;
+          max-width:150px;
+          padding:7px 9px;
+          border-radius:11px;
+        }
+
+        .userPassportLevelStamp small{font-size:6px}
+        .userPassportLevelStamp strong{font-size:11px}
+
+        .userPassportContent{
+          width:100%;
+          margin:-42px auto 0;
+          padding:0 8px;
+        }
+
+        .userPassportIdentityCard{
+          display:grid;
+          grid-template-columns:minmax(0,1fr) auto;
+          align-items:center;
+          gap:8px;
+          padding:10px;
+          border-radius:17px;
+        }
+
+        .userPassportIdentity{
+          display:grid;
+          grid-template-columns:68px minmax(0,1fr);
+          align-items:center;
+          gap:9px;
+          min-width:0;
+        }
+
+        .userPassportAvatarWrap{
+          width:68px;
+          min-width:68px;
+        }
+
+        .userPassportAvatar{
+          width:68px;
+          height:68px;
+          border-width:3px;
+          border-radius:18px;
+        }
+
+        .userPassportAvatarBadge{
+          width:25px;
+          height:25px;
+          border-width:2px;
+        }
+
+        .userPassportIdentityCopy{
+          min-width:0;
+        }
+
+        .userPassportBadges{
+          display:flex;
+          flex-wrap:wrap;
+          gap:4px;
+        }
+
+        .memberBadge,.levelBadge{
+          min-height:19px;
+          padding:0 6px;
+          font-size:6.5px;
+          white-space:nowrap;
+        }
+
+        .userPassportIdentityCopy h2{
+          margin-top:5px;
+          max-width:100%;
+          font-size:clamp(20px,6.4vw,28px);
+          line-height:1;
+        }
+
+        .userPassportUsername{
+          margin-top:3px;
+          font-size:8px;
+        }
+
+        .userPassportLocation{
+          display:flex;
+          min-width:0;
+          margin-top:5px;
+          font-size:7.5px;
+          line-height:1.2;
+        }
+
+        .userPassportLocation svg{
+          flex:0 0 auto;
+          width:12px;
+          height:12px;
+        }
+
+        .userPassportEdit{
+          width:34px;
+          min-width:34px;
+          height:34px;
+          min-height:34px;
+          padding:0;
+          border-radius:10px;
+          font-size:0;
+        }
+
+        .userPassportStats{
+          grid-template-columns:repeat(4,minmax(0,1fr));
+          gap:4px;
+          margin-top:6px;
+        }
+
+        .userPassportStats article{
+          display:flex;
+          min-width:0;
+          min-height:54px;
+          padding:7px 3px;
+          border-radius:11px;
+        }
+
+        .userPassportStats strong{
+          font-size:15px;
+          line-height:1;
+        }
+
+        .userPassportStats article>div>span{
+          display:block;
+          margin-top:4px;
+          font-size:6px;
+          line-height:1.1;
+        }
+
+        .statIcon{display:none}
+
+        .userPassportLevel{
+          display:grid;
+          grid-template-columns:auto minmax(0,1fr);
+          align-items:center;
+          gap:10px;
+          margin-top:6px;
+          padding:9px 10px;
+          border-radius:13px;
+        }
+
+        .userPassportLevel h3{
+          margin-top:2px;
+          font-size:15px;
+        }
+
+        .userPassportLevel p{display:none}
+        .levelProgress footer{font-size:7px}
+
+        .userPassportGrid{
+          grid-template-columns:1fr;
+          gap:6px;
+          margin-top:6px;
+        }
+
+        .userPassportPanel,
+        .timelineSection,
+        .communityCard{
+          padding:10px;
+          border-radius:14px;
+        }
+
+        .panelHeader{
+          align-items:flex-start;
+          gap:8px;
+        }
+
+        .panelHeader h3,.communityCard h3,.timelineIntro h3{
+          margin-top:3px;
+          font-size:15px;
+          line-height:1.1;
+        }
+
+        .panelHeader p{
+          margin-top:3px;
+          font-size:7.5px;
+        }
+
+        .panelIcon{
+          width:29px;
+          height:29px;
+          flex:0 0 29px;
+        }
+
+        .aboutPanel{
+          display:block;
+        }
+
+        .userPassportBio{
+          margin-top:8px;
+          font-size:9px;
+          line-height:1.45;
+        }
+
+        .userPassportActivities{
+          margin-top:8px;
+          padding-top:7px;
+          border-top:1px solid #e4e9e1;
+        }
+
+        .userPassportActivities>span{font-size:7px}
+        .activityChips{gap:4px}
+        .activityChips span{padding:5px 7px;font-size:7px}
+
+        .userPassportMap{
+          height:205px;
+          margin-top:7px;
+          border-radius:11px;
+        }
+
+        .collectionsPanel,.badgesPanel,.galleryPanel,.savedPanel{
+          margin-top:6px;
+        }
+
+        .collectionsGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:4px;
+          margin-top:7px;
+        }
+
+        .collectionsGrid article{
+          min-width:0;
+          padding:6px;
+        }
+
+        .achievementsGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:4px;
+          margin-top:7px;
+        }
+
+        .achievementsGrid article{
+          min-width:0;
+          padding:7px;
+        }
+
+        .achievementsGrid strong{font-size:8px}
+        .achievementsGrid small{font-size:6.5px}
+
+        .userPassportGallery{
+          display:flex;
+          gap:5px;
+          overflow-x:auto;
+          padding:0 0 4px;
+          scroll-snap-type:x proximity;
+          scrollbar-width:none;
+        }
+
+        .userPassportGallery::-webkit-scrollbar{display:none}
+
+        .userPassportGallery button,
+        .userPassportGallery button.featured{
+          flex:0 0 132px;
+          width:132px;
+          height:94px;
+          grid-column:auto;
+          grid-row:auto;
+          border-radius:10px;
+          scroll-snap-align:start;
+        }
+
+        .savedGrid{
+          display:flex;
+          gap:5px;
+          max-height:none;
+          overflow-x:auto;
+          overflow-y:hidden;
+          margin-top:7px;
+          padding-bottom:4px;
+          scrollbar-width:none;
+          scroll-snap-type:x proximity;
+        }
+
+        .savedGrid::-webkit-scrollbar{display:none}
+
+        .savedGrid a{
+          flex:0 0 145px;
+          min-width:145px;
+          scroll-snap-align:start;
+        }
+
+        .savedGrid img{height:88px}
+
+        .timelineSection{
+          grid-template-columns:1fr;
+          gap:7px;
+          margin-top:6px;
+        }
+
+        .timelineIntro p{display:none}
+
+        .timelineList{
+          max-height:245px;
+          gap:3px;
+          overflow-y:auto;
+        }
+
+        .timelineList>a{
+          grid-template-columns:27px 1px minmax(0,1fr) auto;
+          gap:6px;
+          padding:6px;
+        }
+
+        .timelineIndex{
+          width:27px;
+          height:27px;
+        }
+
+        .communityCard{
+          margin-top:6px;
+          gap:8px;
+        }
+
+        .communityCard p{display:none}
+      }
+
+      @media(max-width:380px){
+        .userPassportHero{min-height:330px}
+        .userPassportHeroCopy{max-width:88%;padding-top:30px}
+        .userPassportHeroCopy h1{font-size:32px}
+        .userPassportIdentity{grid-template-columns:60px minmax(0,1fr)}
+        .userPassportAvatarWrap{width:60px;min-width:60px}
+        .userPassportAvatar{width:60px;height:60px}
+        .userPassportIdentityCopy h2{font-size:19px}
+        .userPassportStats article>div>span{font-size:5.5px}
+        .userPassportLevel{grid-template-columns:1fr}
+        .levelProgress{width:100%}
+      }
+
       @media(prefers-reduced-motion:reduce){
         *,*::before,*::after{
           animation:none!important;

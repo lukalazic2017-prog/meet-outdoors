@@ -2181,6 +2181,243 @@ function NavbarStyles() {
       }
 
 
+
+      /* =========================================================
+         NAVBAR — PREMIUM COMPACT V2
+         Smaller account CTAs, cleaner mobile drawer, tighter bar.
+         ========================================================= */
+      @media (max-width: 640px) {
+        .brutalNav,
+        .brutalNav.scrolled,
+        .brutalNav.menuOpen{
+          top:calc(5px + env(safe-area-inset-top,0px));
+          left:7px;
+          right:7px;
+          max-width:calc(100vw - 14px);
+          height:46px;
+          min-height:46px;
+          padding:4px 5px;
+          gap:4px;
+          border-radius:15px;
+          background:
+            radial-gradient(circle at 8% 0%,rgba(190,255,164,.12),transparent 31%),
+            linear-gradient(135deg,rgba(4,15,9,.975),rgba(8,25,15,.955));
+          box-shadow:0 8px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07);
+        }
+
+        .brutalNavLogoMark{
+          width:34px;
+          height:34px;
+          flex:0 0 34px;
+          border-radius:10px;
+        }
+
+        .brutalNavLogoMark svg{width:19px;height:19px}
+
+        .brutalNavBell,
+        .brutalNavProfile,
+        .brutalMenuButton{
+          width:32px;
+          min-width:32px;
+          height:32px;
+          border-radius:9px;
+          border-color:rgba(255,255,255,.09);
+          background:rgba(255,255,255,.045);
+        }
+
+        .brutalNavRight{gap:3px}
+        .brutalNavBell svg{width:15px;height:15px}
+        .brutalMenuButtonIcon svg{width:17px;height:17px}
+
+        .brutalNavBellBadge{
+          top:-3px;
+          right:-3px;
+          min-width:15px;
+          height:15px;
+          padding:0 3px;
+          font-size:5.5px;
+        }
+
+        .brutalDrawerInner{
+          padding:
+            calc(57px + env(safe-area-inset-top,0px))
+            7px
+            calc(7px + env(safe-area-inset-bottom,0px));
+        }
+
+        .brutalDrawerNavigation{
+          gap:6px;
+        }
+
+        .brutalDrawerMainLinks{
+          gap:4px;
+        }
+
+        .brutalDrawerMainLinks>a,
+        .brutalDrawerMainLinks>a:first-child{
+          min-height:51px;
+          gap:3px;
+          padding:5px 2px;
+          border-radius:10px;
+          background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.025));
+        }
+
+        .brutalDrawerLinkIcon{
+          width:24px;
+          height:24px;
+          border-radius:7px;
+        }
+
+        .brutalDrawerLinkIcon svg{width:13px;height:13px}
+        .brutalDrawerMainLinks strong{font-size:7px}
+
+        .brutalDrawerAccount{
+          gap:5px;
+          padding:6px;
+          border-radius:11px;
+          background:
+            linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.022)),
+            rgba(3,12,7,.34);
+        }
+
+        .brutalDrawerAccountLabel{font-size:5.5px}
+        .drawerNotificationPill{min-height:21px;padding:0 6px;font-size:5.5px}
+
+        .brutalDrawerAuthGrid{
+          display:flex;
+          align-items:center;
+          gap:4px;
+        }
+
+        .brutalDrawerAuthGrid .brutalDrawerSecondary,
+        .brutalDrawerAuthGrid .brutalDrawerPrimary{
+          flex:0 1 auto;
+          width:auto;
+          min-width:0;
+          min-height:29px;
+          height:29px;
+          padding:0 9px;
+          border-radius:8px;
+          font-size:6.5px;
+          white-space:nowrap;
+        }
+
+        .brutalDrawerAuthGrid .brutalDrawerSecondary svg,
+        .brutalDrawerAuthGrid .brutalDrawerPrimary svg{
+          width:13px;
+          height:13px;
+        }
+
+        .brutalDrawerShortcutGrid{
+          gap:4px;
+        }
+
+        .brutalDrawerShortcutGrid a{
+          min-height:31px;
+          padding:0 7px;
+          border-radius:8px;
+          font-size:6.5px;
+        }
+
+        .brutalDrawerShortcutGrid a svg{
+          width:13px;
+          height:13px;
+        }
+
+        .brutalDrawerHostPanel{
+          gap:5px;
+          padding:6px;
+          border-radius:9px;
+        }
+
+        .hostPanelCopy span{font-size:5.5px}
+        .hostPanelCopy strong{margin-top:2px;font-size:7.5px}
+
+        .brutalDrawerHostActions{
+          gap:4px;
+        }
+
+        .brutalDrawerHostActions a{
+          min-height:30px;
+          padding:0 5px;
+          border-radius:8px;
+          font-size:6px;
+        }
+
+        .brutalDrawerHostActions a svg{
+          width:12px;
+          height:12px;
+        }
+
+        .brutalDrawerLogout{
+          align-self:flex-start;
+          width:auto;
+          min-width:0;
+          min-height:28px;
+          height:28px;
+          padding:0 9px;
+          border-radius:8px;
+          font-size:6.5px;
+          background:rgba(255,255,255,.035);
+        }
+
+        .brutalDrawerLogout svg{
+          width:13px;
+          height:13px;
+        }
+      }
+
+      @media (max-width: 390px) {
+        .brutalNav,
+        .brutalNav.scrolled,
+        .brutalNav.menuOpen{
+          left:5px;
+          right:5px;
+          max-width:calc(100vw - 10px);
+          height:44px;
+          min-height:44px;
+          border-radius:14px;
+        }
+
+        .brutalNavLogoMark{
+          width:32px;
+          height:32px;
+          flex-basis:32px;
+        }
+
+        .brutalNavBell,
+        .brutalNavProfile,
+        .brutalMenuButton{
+          width:30px;
+          min-width:30px;
+          height:30px;
+        }
+
+        .brutalDrawerInner{
+          padding-top:calc(54px + env(safe-area-inset-top,0px));
+          padding-left:5px;
+          padding-right:5px;
+        }
+
+        .brutalDrawerMainLinks>a,
+        .brutalDrawerMainLinks>a:first-child{
+          min-height:48px;
+        }
+
+        .brutalDrawerAuthGrid .brutalDrawerSecondary,
+        .brutalDrawerAuthGrid .brutalDrawerPrimary{
+          min-height:27px;
+          height:27px;
+          padding:0 7px;
+          font-size:6px;
+        }
+
+        .brutalDrawerLogout{
+          min-height:27px;
+          height:27px;
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
