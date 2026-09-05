@@ -677,7 +677,7 @@ function DemandMetric({ icon, label, value, description, tone = "default" }) {
   );
 }
 
-function DemandCard({ demand, featured = false }) {
+function DemandCard({ demand, featured = false, rejecting = false, onReject }) {
   const responded = Boolean(demand.responded);
   const peopleCount = Math.max(numberValue(demand.people_count), 1);
   const hasBudget = demand.budget_per_person !== null && demand.budget_per_person !== undefined;
@@ -757,16 +757,34 @@ function DemandCard({ demand, featured = false }) {
         )}
       </div>
 
-      <Link
-        to={`/host/demand/${demand.id}`}
-        className={`demandPrimaryAction ${responded ? "secondary" : ""}`}
-      >
-        <span>
-          <Icon name={responded ? "eye" : "sparkles"} size={17} />
-          {responded ? "Pogledaj ponudu" : "Otvori i odgovori"}
-        </span>
-        <Icon name="arrowRight" size={17} />
-      </Link>
+      <div className="demandCardActions">
+        <Link
+          to={`/host/demand/${demand.id}`}
+          className={`demandPrimaryAction ${responded ? "secondary" : ""}`}
+        >
+          <span>
+            <Icon name={responded ? "eye" : "sparkles"} size={17} />
+            {responded ? "Pogledaj" : "Otvori zahtev"}
+          </span>
+          <Icon name="arrowRight" size={17} />
+        </Link>
+
+        {!responded && onReject && (
+          <button
+            type="button"
+            className="demandRejectAction"
+            onClick={() => onReject(demand)}
+            disabled={rejecting}
+          >
+            {rejecting ? (
+              <span className="smallLoader" />
+            ) : (
+              <Icon name="x" size={16} />
+            )}
+            {rejecting ? "Odbijam..." : "Odbij"}
+          </button>
+        )}
+      </div>
     </article>
   );
 }
@@ -1239,32 +1257,46 @@ function HostAnalyticsSection({ analytics, intelligence, error }) {
   );
 }
 
-function DemandIntelligenceSection({ intelligence, error }) {
+function DemandIntelligenceSection({
+  intelligence,
+  error,
+  rejectingDemandId,
+  onRejectDemand,
+}) {
   const demands = Array.isArray(intelligence?.demands)
-    ? [...intelligence.demands].sort((a, b) => {
-        const priorityDifference = demandPriority(a).rank - demandPriority(b).rank;
-        if (priorityDifference !== 0) return priorityDifference;
-        return new Date(b?.created_at || 0) - new Date(a?.created_at || 0);
-      })
+    ? [...intelligence.demands]
+        .filter((item) => !item?.responded)
+        .sort((a, b) => {
+          const priorityDifference =
+            demandPriority(a).rank - demandPriority(b).rank;
+
+          if (priorityDifference !== 0) {
+            return priorityDifference;
+          }
+
+          return (
+            new Date(b?.created_at || 0) -
+            new Date(a?.created_at || 0)
+          );
+        })
     : [];
 
-  const total = numberValue(intelligence?.total_open_demands);
   const fresh = numberValue(intelligence?.new_demands_7d);
-  const pending = numberValue(intelligence?.pending_demands);
-  const answered = Math.max(total - pending, 0);
-  const responseRate = total > 0 ? Math.round((answered / total) * 100) : 0;
-  const nextDemand = demands.find((item) => !item?.responded) || null;
 
   return (
-    <section className="intelligenceShell">
+    <section className="intelligenceShell compactDemandInbox">
       <div className="intelligenceHeader">
         <div className="intelligenceTitleWrap">
-          <span className="intelligenceLogo"><Icon name="sparkles" size={21} /></span>
+          <span className="intelligenceLogo">
+            <Icon name="inbox" size={21} />
+          </span>
+
           <div>
-            <span className="sectionKicker">MeetOutdoors Intelligence</span>
-            <h2>Potražnja pretvorena u sledeći potez.</h2>
+            <span className="sectionKicker">Potražnje</span>
+            <h2>Zahtevi koji čekaju tvoju odluku.</h2>
             <p>
-              Relevantni zahtevi koje je MeetOutdoors prosledio tvom host profilu, poređani tako da prvo vidiš ono što traži reakciju.
+              Ovde su samo aktivne prilike. Odgovori na zahtev ili ga
+              odbij — odbijeni zahtevi odmah nestaju sa dashboarda.
             </p>
           </div>
         </div>
@@ -1272,65 +1304,24 @@ function DemandIntelligenceSection({ intelligence, error }) {
         <div className="intelligenceSignal">
           <span className="signalDot" />
           <div>
-            <strong>{pending > 0 ? `${pending} zahteva traži odgovor` : "Inbox je obrađen"}</strong>
+            <strong>
+              {demands.length > 0
+                ? `${demands.length} ${
+                    demands.length === 1 ? "zahtev čeka" : "zahteva čekaju"
+                  }`
+                : "Sve je obrađeno"}
+            </strong>
             <small>{fresh} novih u poslednjih 7 dana</small>
           </div>
         </div>
       </div>
 
-      <div className="demandMetricsGrid">
-        <DemandMetric icon="inbox" label="Otvorene potražnje" value={total} description="Relevantni aktivni zahtevi." tone="dark" />
-        <DemandMetric icon="sparkles" label="Novo u 7 dana" value={fresh} description="Sveže prilike za tvoju ponudu." tone="fresh" />
-        <DemandMetric icon="clock" label="Čeka tvoj odgovor" value={pending} description="Zahtevi na koje još nisi odgovorio." tone={pending > 0 ? "attention" : "default"} />
-        <DemandMetric icon="check" label="Stopa odgovora" value={`${responseRate}%`} description={`${answered} od ${total} otvorenih je obrađeno.`} tone="default" />
-      </div>
-
-      {!error && nextDemand && (
-        <div className="nextActionPanel">
-          <div className="nextActionCopy">
-            <span className="nextActionBadge">
-              <Icon name="sparkles" size={14} />
-              Sledeći najbolji potez
-            </span>
-            <h3>{humanizeActivity(nextDemand.activity)}</h3>
-            <p>
-              {nextDemand.location_text || "Lokacija nije precizirana"} · {Math.max(numberValue(nextDemand.people_count), 1)} osoba · {formatDemandDate(nextDemand.start_date, nextDemand.end_date)}
-            </p>
-          </div>
-
-          <div className="nextActionValue">
-            <small>{demandGroupBudget(nextDemand) !== null ? "Signal budžeta grupe" : "Status"}</small>
-            <strong>
-              {demandGroupBudget(nextDemand) !== null
-                ? formatMoney(demandGroupBudget(nextDemand), nextDemand.currency || "EUR")
-                : demandPriority(nextDemand).label}
-            </strong>
-          </div>
-
-          <Link to={`/host/demand/${nextDemand.id}`} className="nextActionButton">
-            Odgovori sada
-            <Icon name="arrowRight" size={17} />
-          </Link>
-        </div>
-      )}
-
-      <div className="demandInboxPanel">
-        <div className="demandInboxHeader">
-          <div>
-            <span className="sectionKicker">Demand Inbox</span>
-            <h3>Potražnje po prioritetu</h3>
-            <small>Neodgovoreni zahtevi su prvi; unutar prioriteta najnoviji su iznad.</small>
-          </div>
-
-          <span className="privacyBadge">
-            <Icon name="shield" size={14} />
-            Privatnost uključena
-          </span>
-        </div>
-
+      <div className="demandInboxPanel compactInboxPanel">
         {error ? (
           <div className="demandInlineState error">
-            <span><Icon name="alert" size={21} /></span>
+            <span>
+              <Icon name="alert" size={21} />
+            </span>
             <div>
               <strong>Potražnje trenutno nisu dostupne.</strong>
               <small>{error}</small>
@@ -1338,16 +1329,26 @@ function DemandIntelligenceSection({ intelligence, error }) {
           </div>
         ) : demands.length === 0 ? (
           <div className="demandInlineState">
-            <span><Icon name="inbox" size={23} /></span>
+            <span>
+              <Icon name="check" size={23} />
+            </span>
             <div>
-              <strong>Još nema relevantnih potražnji.</strong>
-              <small>Kada MeetOutdoors pronađe odgovarajući zahtev, pojaviće se ovde.</small>
+              <strong>Nema zahteva koji čekaju tvoju odluku.</strong>
+              <small>
+                Kada stigne nova relevantna potražnja, pojaviće se ovde.
+              </small>
             </div>
           </div>
         ) : (
           <div className="demandCardsGrid">
             {demands.slice(0, 6).map((demand, index) => (
-              <DemandCard key={demand.id} demand={demand} featured={index === 0 && !demand.responded} />
+              <DemandCard
+                key={demand.id}
+                demand={demand}
+                featured={index === 0}
+                rejecting={rejectingDemandId === demand.id}
+                onReject={onRejectDemand}
+              />
             ))}
           </div>
         )}
@@ -1373,6 +1374,7 @@ export default function HostDashboard() {
   const [message, setMessage] = useState("");
   const [deletingItem, setDeletingItem] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [rejectingDemandId, setRejectingDemandId] = useState("");
 
   const loadDashboard = useCallback(
     async ({ silent = false } = {}) => {
@@ -1615,6 +1617,75 @@ export default function HostDashboard() {
 
     loadDashboard();
   }, [loading, loadDashboard]);
+
+  const rejectDemand = useCallback(
+    async (demand) => {
+      if (!demand?.id || rejectingDemandId) return;
+
+      const confirmed = window.confirm(
+        `Odbiti zahtev za ${humanizeActivity(demand.activity)}? Ovaj zahtev će nestati sa tvog dashboarda.`
+      );
+
+      if (!confirmed) return;
+
+      setRejectingDemandId(demand.id);
+      setMessage("");
+
+      try {
+        const { error } = await supabase.rpc(
+          "reject_adventure_demand",
+          {
+            p_intent_id: demand.id,
+          }
+        );
+
+        if (error) throw error;
+
+        setDemandIntelligence((current) => {
+          const currentDemands = Array.isArray(current?.demands)
+            ? current.demands
+            : [];
+
+          return {
+            ...current,
+            pending_demands: Math.max(
+              numberValue(current?.pending_demands) - 1,
+              0
+            ),
+            demands: currentDemands.filter(
+              (item) => item?.id !== demand.id
+            ),
+          };
+        });
+
+        setHostAnalytics((current) => ({
+          ...current,
+          response_performance: {
+            ...current.response_performance,
+            responded_demands:
+              numberValue(
+                current.response_performance?.responded_demands
+              ) + 1,
+            unanswered_demands: Math.max(
+              numberValue(
+                current.response_performance?.unanswered_demands
+              ) - 1,
+              0
+            ),
+          },
+        }));
+      } catch (rejectError) {
+        console.error("Reject adventure demand error:", rejectError);
+        setMessage(
+          rejectError?.message ||
+            "Zahtev trenutno nije moguće odbiti."
+        );
+      } finally {
+        setRejectingDemandId("");
+      }
+    },
+    [rejectingDemandId]
+  );
 
   const deleteEvent = useCallback(async (id) => {
     const confirmed = window.confirm(
@@ -2123,12 +2194,8 @@ export default function HostDashboard() {
           <DemandIntelligenceSection
             intelligence={demandIntelligence}
             error={demandError}
-          />
-
-          <HostAnalyticsSection
-            analytics={hostAnalytics}
-            intelligence={demandIntelligence}
-            error={analyticsError}
+            rejectingDemandId={rejectingDemandId}
+            onRejectDemand={rejectDemand}
           />
 
           <section className="inventoryHeader">
@@ -2626,6 +2693,18 @@ function DashboardStyles() {
         .bookingAmount{display:none}
         .dashboardSection{padding:19px;border-radius:22px}
       }
+
+      @media(max-width:520px){
+        .demandCardActions{
+          grid-template-columns:1fr;
+        }
+
+        .demandRejectAction{
+          width:100%;
+          min-height:40px;
+        }
+      }
+
       @media(max-width:430px){
         .dashboardHero{padding:20px 17px 25px}
         .heroCopy h1{font-size:41px}
@@ -2644,6 +2723,57 @@ function DashboardStyles() {
         .financeHero strong{font-size:31px}
         .bookingRow{grid-template-columns:1fr}
         .statusBadge{justify-self:start}
+      }
+
+
+      /* Demand inbox — one clear job: answer or dismiss */
+      .compactDemandInbox{
+        padding-bottom:18px;
+      }
+
+      .compactInboxPanel{
+        margin-top:16px;
+      }
+
+      .demandCardActions{
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto;
+        gap:8px;
+        margin-top:13px;
+      }
+
+      .demandCardActions .demandPrimaryAction{
+        margin-top:0;
+      }
+
+      .demandRejectAction{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:7px;
+        min-width:104px;
+        min-height:43px;
+        padding:0 13px;
+        border:1px solid #e5d4cf;
+        border-radius:13px;
+        background:#fff8f6;
+        color:#9b4c40;
+        font-size:9px;
+        font-weight:900;
+        cursor:pointer;
+        transition:.18s ease;
+      }
+
+      .demandRejectAction:hover{
+        border-color:#d8aaa1;
+        background:#fff0ed;
+        transform:translateY(-1px);
+      }
+
+      .demandRejectAction:disabled{
+        opacity:.58;
+        cursor:not-allowed;
+        transform:none;
       }
 
       /* =========================================================

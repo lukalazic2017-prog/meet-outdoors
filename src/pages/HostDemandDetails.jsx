@@ -217,6 +217,7 @@ export default function HostDemandDetails() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [acceptedUser, setAcceptedUser] = useState(null);
@@ -411,6 +412,52 @@ export default function HostDemandDetails() {
       );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleReject() {
+    if (!id || !user?.id || existingOffer || rejecting) return;
+
+    const confirmed = window.confirm(
+      "Odbiti ovu potražnju? Nestaće sa tvog aktivnog Host Dashboarda."
+    );
+
+    if (!confirmed) return;
+
+    setRejecting(true);
+    setError("");
+
+    try {
+      const { data, error: rpcError } = await supabase.rpc(
+        "reject_adventure_demand",
+        {
+          p_intent_id: id,
+        }
+      );
+
+      if (rpcError) throw rpcError;
+
+      setExistingOffer({
+        id: data?.response_id || null,
+        intent_id: id,
+        host_id: user.id,
+        message: null,
+        proposed_price: null,
+        currency: demand?.currency || "RSD",
+        package_id: null,
+        status: "rejected",
+        created_at: new Date().toISOString(),
+      });
+
+      navigate("/host-dashboard", { replace: true });
+    } catch (rejectError) {
+      console.error("Adventure demand reject error:", rejectError);
+      setError(
+        rejectError?.message ||
+          "Potražnju trenutno nije moguće odbiti."
+      );
+    } finally {
+      setRejecting(false);
     }
   }
 
@@ -925,6 +972,34 @@ export default function HostDemandDetails() {
                             ponuda bila konkretna.
                           </small>
                         )}
+
+                        <div className="offerDecisionDivider">
+                          <span>ili</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="rejectDemandButton"
+                          onClick={handleReject}
+                          disabled={submitting || rejecting}
+                        >
+                          {rejecting ? (
+                            <>
+                              <span className="buttonLoader dark" />
+                              Odbijam zahtev...
+                            </>
+                          ) : (
+                            <>
+                              <Icon name="x" size={17} />
+                              Odbij ovu potražnju
+                            </>
+                          )}
+                        </button>
+
+                        <small className="rejectDemandHint">
+                          Ako ovo nije za tebe, odbij zahtev i više se
+                          neće prikazivati u aktivnom dashboardu.
+                        </small>
                       </form>
                     )}
                   </div>
@@ -1522,6 +1597,65 @@ function Styles() {
       }
 
       .submitHint {
+
+      .offerDecisionDivider{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        margin:16px 0 12px;
+        color:#9aa49d;
+        font-size:8px;
+        font-weight:900;
+        text-transform:uppercase;
+        letter-spacing:.12em;
+      }
+
+      .offerDecisionDivider::before,
+      .offerDecisionDivider::after{
+        content:"";
+        flex:1;
+        height:1px;
+        background:#e1e6df;
+      }
+
+      .rejectDemandButton{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        width:100%;
+        min-height:46px;
+        border:1px solid #e5d2cd;
+        border-radius:14px;
+        background:#fff8f6;
+        color:#97483d;
+        font-size:10px;
+        font-weight:900;
+        cursor:pointer;
+        transition:.18s ease;
+      }
+
+      .rejectDemandButton:hover{
+        border-color:#d5a69d;
+        background:#fff0ed;
+        transform:translateY(-1px);
+      }
+
+      .rejectDemandButton:disabled{
+        opacity:.58;
+        cursor:not-allowed;
+        transform:none;
+      }
+
+      .rejectDemandHint{
+        display:block;
+        margin-top:8px;
+        color:#929c95;
+        font-size:8px;
+        line-height:1.5;
+        text-align:center;
+      }
+
         display: block;
         margin-top: 7px;
         color: #9aa49d;
