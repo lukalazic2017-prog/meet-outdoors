@@ -2009,8 +2009,9 @@ function NotificationsStyles() {
 
 
       /* =========================================================
-         NOTIFICATIONS — FINAL ZERO-SCROLL INBOX
-         Compact, readable, viewport-contained.
+         NOTIFICATIONS — PREMIUM COMPACT INBOX V4
+         Natural card heights. No giant empty cards.
+         Page itself stays locked; pagination handles overflow.
          ========================================================= */
 
       html,
@@ -2022,30 +2023,35 @@ function NotificationsStyles() {
         height: 100svh;
         min-height: 100svh;
         overflow: hidden;
-        padding: 62px 10px 10px;
+        padding: 64px 10px 10px;
         display: grid;
-        grid-template-rows: 106px minmax(0, 1fr);
-        gap: 6px;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 8px;
         background:
-          radial-gradient(circle at 10% -4%, rgba(183, 215, 148, .11), transparent 24%),
-          linear-gradient(180deg, #f5f7f2 0%, #edf1e9 100%);
+          radial-gradient(circle at 8% -3%, rgba(174, 211, 137, .14), transparent 24%),
+          radial-gradient(circle at 96% 16%, rgba(31, 77, 51, .055), transparent 28%),
+          linear-gradient(180deg, #f7f9f4 0%, #eef2eb 100%);
       }
 
       .hero {
         width: min(1180px, 100%);
-        height: 106px;
         min-height: 0;
+        height: auto;
         margin: 0 auto;
-        padding: 11px 13px;
+        padding: 16px 18px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        gap: 12px;
-        border-radius: 17px;
+        gap: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 20px;
         background:
-          radial-gradient(circle at 82% 6%, rgba(198, 236, 154, .10), transparent 24%),
-          linear-gradient(135deg, #0d261a 0%, #173b29 58%, #28543b 100%);
-        box-shadow: 0 12px 28px rgba(23, 54, 36, .12);
+          radial-gradient(circle at 88% 4%, rgba(202, 239, 158, .11), transparent 25%),
+          linear-gradient(135deg, #0b2518 0%, #123a27 55%, #28583e 100%);
+        box-shadow:
+          0 16px 38px rgba(24, 55, 37, .14),
+          inset 0 1px 0 rgba(255,255,255,.035);
       }
 
       .hero::before {
@@ -2053,28 +2059,31 @@ function NotificationsStyles() {
       }
 
       .heroContent {
-        max-width: 650px;
         min-width: 0;
+        max-width: 680px;
         padding: 0;
       }
 
       .kicker {
-        gap: 5px;
-        padding: 4px 6px;
-        font-size: 5.5px;
+        gap: 6px;
+        padding: 5px 8px;
+        border-color: rgba(255,255,255,.12);
+        background: rgba(255,255,255,.055);
+        font-size: 6px;
+        letter-spacing: .11em;
       }
 
       .kicker > span {
         width: 5px;
         height: 5px;
-        box-shadow: none;
+        box-shadow: 0 0 0 3px rgba(206,243,154,.09);
       }
 
       .hero h1 {
-        margin: 4px 0 0;
-        font-size: clamp(26px, 3.8vw, 40px);
-        line-height: .92;
-        letter-spacing: -.055em;
+        margin: 7px 0 0;
+        font-size: clamp(32px, 4.4vw, 48px);
+        line-height: .93;
+        letter-spacing: -.06em;
       }
 
       .hero h1 br {
@@ -2082,34 +2091,45 @@ function NotificationsStyles() {
       }
 
       .heroContent p {
-        max-width: 560px;
-        margin: 4px 0 0;
-        font-size: 6.5px;
-        line-height: 1.32;
+        max-width: 590px;
+        margin: 7px 0 0;
+        color: rgba(255,255,255,.56);
+        font-size: 8px;
+        line-height: 1.45;
       }
 
       .stats {
         display: grid;
-        grid-template-columns: repeat(3, 88px);
-        gap: 4px;
+        grid-template-columns: repeat(3, 94px);
+        gap: 6px;
         margin: 0;
         padding: 0;
         border: 0;
       }
 
       .stats article {
-        padding: 6px 7px;
-        border-radius: 9px;
+        min-width: 0;
+        padding: 9px 10px;
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 12px;
+        background: rgba(255,255,255,.052);
+        backdrop-filter: blur(12px);
       }
 
       .stats strong {
-        font-size: 15px;
+        overflow: hidden;
+        color: #fff;
+        font-size: 17px;
+        line-height: 1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .stats span {
-        margin-top: 2px;
-        font-size: 4.5px;
-        letter-spacing: .04em;
+        margin-top: 4px;
+        color: rgba(255,255,255,.40);
+        font-size: 5px;
+        letter-spacing: .05em;
       }
 
       .content {
@@ -2118,29 +2138,32 @@ function NotificationsStyles() {
         min-height: 0;
         height: 100%;
         margin: 0 auto;
-        display: grid;
-        grid-template-rows: auto auto minmax(0, 1fr);
-        align-content: stretch;
-        gap: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow: hidden;
       }
 
       .toolbar {
-        min-height: 39px;
+        flex: 0 0 auto;
+        min-height: 44px;
         margin: 0;
-        padding: 4px 6px;
+        padding: 6px 8px;
         align-items: center;
-        border: 1px solid #dbe3d8;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, .67);
+        border: 1px solid #dbe4d7;
+        border-radius: 13px;
+        background: rgba(255,255,255,.72);
+        box-shadow: 0 6px 18px rgba(31,51,38,.035);
       }
 
       .sectionKicker {
-        font-size: 5px;
+        font-size: 5.5px;
       }
 
       .toolbar h2 {
-        margin-top: 1px;
-        font-size: 15px;
+        margin-top: 2px;
+        font-size: 17px;
+        letter-spacing: -.04em;
       }
 
       .toolbar p {
@@ -2148,157 +2171,218 @@ function NotificationsStyles() {
       }
 
       .toolbarActions {
-        gap: 3px;
+        gap: 5px;
       }
 
       .toolbarActions > button {
-        min-height: 26px;
-        padding: 0 7px;
-        border-radius: 7px;
-        font-size: 5.5px;
+        min-height: 30px;
+        padding: 0 9px;
+        border-radius: 9px;
+        font-size: 6px;
       }
 
       .toolbarActions > button svg {
-        width: 11px;
-        height: 11px;
+        width: 12px;
+        height: 12px;
       }
 
       .filterBar {
+        flex: 0 0 auto;
         width: 100%;
-        min-height: 31px;
+        max-width: none;
+        min-height: 38px;
         margin: 0;
-        padding: 2px;
-        gap: 2px;
-        border-radius: 9px;
+        padding: 4px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        border: 1px solid #dce4d9;
+        border-radius: 12px;
+        background: rgba(255,255,255,.66);
+        box-shadow: 0 6px 18px rgba(31,51,38,.025);
       }
 
       .filterBar button {
-        min-height: 25px;
-        padding: 0 7px;
-        gap: 5px;
-        border-radius: 7px;
-        font-size: 5.5px;
+        justify-content: center;
+        min-width: 0;
+        min-height: 30px;
+        padding: 0 9px;
+        gap: 6px;
+        border-radius: 9px;
+        font-size: 6px;
       }
 
       .filterBar button span {
-        min-width: 15px;
-        height: 15px;
+        min-width: 17px;
+        height: 17px;
         padding: 0 4px;
-        font-size: 4.5px;
+        font-size: 5px;
+      }
+
+      .filterBar button.active {
+        background: linear-gradient(135deg, #123824, #1d5135);
+        box-shadow: 0 5px 12px rgba(29,70,47,.10);
       }
 
       .notificationViewport {
+        flex: 1 1 auto;
         min-height: 0;
-        height: 100%;
-        display: grid;
-        grid-template-rows: minmax(0, 1fr) auto;
-        gap: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow: hidden;
       }
 
       .notificationGrid {
-        min-height: 0;
-        height: 100%;
+        flex: 0 0 auto;
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-rows: repeat(4, minmax(0, 1fr));
-        gap: 4px;
+        align-content: start;
+        gap: 7px;
       }
 
       .notificationCard {
         position: relative;
         min-width: 0;
-        min-height: 0;
-        height: 100%;
+        height: auto;
+        min-height: 92px;
+        max-height: 104px;
         overflow: hidden;
-        grid-template-columns: 31px minmax(0, 1fr);
-        gap: 6px;
-        padding: 6px 7px;
-        border-radius: 9px;
-        box-shadow: none;
+        display: grid;
+        grid-template-columns: 38px minmax(0,1fr);
+        align-items: start;
+        gap: 10px;
+        padding: 10px 11px;
+        border: 1px solid #dce5d9;
+        border-radius: 14px;
+        background: rgba(255,255,255,.88);
+        box-shadow: 0 7px 18px rgba(29,50,37,.035);
+        transition:
+          transform .18s ease,
+          border-color .18s ease,
+          box-shadow .18s ease,
+          background .18s ease;
+      }
+
+      .notificationCard.read {
+        opacity: .92;
+        background: rgba(255,255,255,.74);
+      }
+
+      a.notificationCard:hover {
+        transform: translateY(-1px);
+        border-color: #bdcdb8;
+        background: #fff;
+        box-shadow: 0 10px 22px rgba(29,50,37,.055);
+      }
+
+      .notificationCard.unread {
+        border-color: #b7cdab;
+        background:
+          linear-gradient(135deg, rgba(244,250,238,.98), rgba(255,255,255,.96));
+        box-shadow: 0 8px 22px rgba(70,104,54,.07);
       }
 
       .notificationCard.unread::after {
-        width: 2px;
-        border-radius: 9px 0 0 9px;
+        width: 3px;
+        border-radius: 14px 0 0 14px;
+        background: linear-gradient(180deg, #9ac768, #376f4b);
+      }
+
+      .notificationCard.adventureCard {
+        border-color: rgba(95,130,72,.24);
+        background:
+          radial-gradient(circle at 100% 0%, rgba(206,239,165,.10), transparent 33%),
+          rgba(255,255,255,.90);
       }
 
       .notificationCard.adventureCard::before {
         height: 2px;
-      }
-
-      a.notificationCard:hover {
-        transform: none;
-        box-shadow: 0 6px 14px rgba(29, 50, 37, .05);
+        background: linear-gradient(90deg, #b4dc80, #326b49, transparent 76%);
       }
 
       .notificationIcon {
-        width: 31px;
-        height: 31px;
-        border-radius: 8px;
+        width: 38px;
+        height: 38px;
+        border-radius: 11px;
       }
 
       .notificationIcon svg {
-        width: 14px;
-        height: 14px;
+        width: 17px;
+        height: 17px;
+      }
+
+      .notificationIcon.adventure {
+        box-shadow: 0 7px 16px rgba(28,73,47,.15);
       }
 
       .notificationBody {
         min-width: 0;
-        overflow: hidden;
       }
 
       .notificationMeta {
-        gap: 4px;
+        gap: 6px;
       }
 
       .metaLeft {
         min-width: 0;
-        gap: 3px;
+        gap: 4px;
       }
 
       .metaLeft > span {
-        font-size: 4.5px;
+        overflow: hidden;
+        max-width: 180px;
+        color: #6f8e51;
+        font-size: 5.5px;
+        letter-spacing: .08em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .metaLeft > em {
-        padding: 2px 3px;
-        font-size: 3.8px;
+        padding: 2px 5px;
+        font-size: 4.5px;
       }
 
       .notificationMeta small {
         flex: 0 0 auto;
-        gap: 2px;
-        font-size: 4.5px;
+        gap: 3px;
+        color: #98a099;
+        font-size: 5.5px;
       }
 
       .notificationMeta small svg {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
       }
 
       .notificationBody h3 {
-        margin-top: 2px;
+        margin: 4px 0 0;
         overflow: hidden;
+        color: #304538;
+        font-size: 12px;
+        line-height: 1.15;
+        letter-spacing: -.02em;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-size: 9px;
-        line-height: 1.12;
       }
 
       .notificationBody p {
         display: -webkit-box;
-        margin-top: 2px;
+        margin: 4px 0 0;
         overflow: hidden;
         -webkit-line-clamp: 1;
         -webkit-box-orient: vertical;
-        font-size: 5.5px;
-        line-height: 1.2;
+        color: #7c877f;
+        font-size: 7px;
+        line-height: 1.35;
       }
 
       .notificationBottom {
-        margin-top: 3px;
-        padding-top: 3px;
-        gap: 4px;
+        margin-top: 6px;
+        padding-top: 6px;
+        gap: 5px;
+        border-top-color: #e8ece6;
       }
 
       .notificationBottom > small {
@@ -2308,51 +2392,53 @@ function NotificationsStyles() {
       .notificationBottomRight {
         width: 100%;
         justify-content: flex-start;
-        gap: 4px;
+        gap: 5px;
       }
 
       .readState {
-        min-height: 15px;
-        padding: 0 4px;
-        font-size: 4px;
+        min-height: 18px;
+        padding: 0 6px;
+        font-size: 4.5px;
       }
 
       .detailAction {
         margin-left: auto;
-        gap: 2px;
-        font-size: 4.5px;
+        gap: 4px;
+        color: #48604f;
+        font-size: 5.5px;
       }
 
       .detailAction svg {
-        width: 9px;
-        height: 9px;
+        width: 10px;
+        height: 10px;
       }
 
       .unreadDot {
-        top: 5px;
-        right: 5px;
-        width: 5px;
-        height: 5px;
+        top: 8px;
+        right: 8px;
+        width: 6px;
+        height: 6px;
         border-width: 1px;
-        box-shadow: none;
+        box-shadow: 0 0 0 3px rgba(121,162,80,.07);
       }
 
       .paginationBar {
+        flex: 0 0 auto;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 5px;
-        min-height: 27px;
-        padding: 1px;
+        gap: 6px;
+        min-height: 31px;
+        padding: 1px 0;
       }
 
       .paginationBar button {
-        min-height: 23px;
-        padding: 0 8px;
-        border: 1px solid #d4ddd1;
-        border-radius: 7px;
-        background: rgba(255, 255, 255, .75);
-        color: #506156;
+        min-height: 26px;
+        padding: 0 9px;
+        border: 1px solid #d5ded2;
+        border-radius: 8px;
+        background: rgba(255,255,255,.82);
+        color: #526359;
         cursor: pointer;
         font-size: 5.5px;
         font-weight: 850;
@@ -2364,8 +2450,8 @@ function NotificationsStyles() {
       }
 
       .paginationBar span {
-        min-width: 38px;
-        color: #778079;
+        min-width: 42px;
+        color: #768078;
         text-align: center;
         font-size: 5.5px;
         font-weight: 850;
@@ -2376,33 +2462,33 @@ function NotificationsStyles() {
       }
 
       .emptyState {
-        height: 100%;
+        flex: 1 1 auto;
         min-height: 0;
-        padding: 14px;
-        border-radius: 12px;
+        padding: 24px 18px;
+        border-radius: 16px;
       }
 
       .emptyState > span {
-        width: 38px;
-        height: 38px;
-        border-radius: 11px;
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
       }
 
       .emptyState h3 {
-        margin-top: 7px;
-        font-size: 14px;
+        margin-top: 9px;
+        font-size: 16px;
       }
 
       .emptyState p {
-        margin-top: 4px;
-        font-size: 6.5px;
+        margin-top: 5px;
+        font-size: 8px;
       }
 
       .emptyState a,
       .resetFilterButton {
-        margin-top: 7px;
-        padding: 7px 9px;
-        font-size: 6px;
+        margin-top: 10px;
+        padding: 8px 11px;
+        font-size: 7px;
       }
 
       .errorBox {
@@ -2410,47 +2496,50 @@ function NotificationsStyles() {
         z-index: 8;
         top: 0;
         right: 0;
-        max-width: 380px;
+        max-width: 420px;
         margin: 0;
-        padding: 7px;
-        border-radius: 9px;
+        padding: 9px;
+        border-radius: 11px;
+        box-shadow: 0 8px 22px rgba(81,35,31,.08);
       }
 
       .statePage {
         height: 100svh;
         min-height: 100svh;
         overflow: hidden;
-        padding: 62px 10px 10px;
+        padding: 64px 10px 10px;
       }
 
       .stateCard {
-        width: min(420px, 100%);
-        padding: 24px 18px;
-        border-radius: 18px;
+        width: min(430px,100%);
+        padding: 28px 20px;
+        border-radius: 20px;
       }
 
       @media (max-width: 760px) {
         .notificationsPage {
-          padding: 56px 5px 5px;
-          grid-template-rows: 80px minmax(0, 1fr);
-          gap: 3px;
+          padding: 58px 7px 7px;
+          gap: 6px;
         }
 
         .hero {
-          height: 80px;
-          padding: 7px;
-          gap: 5px;
-          border-radius: 11px;
+          padding: 11px 12px;
+          gap: 8px;
+          border-radius: 15px;
+        }
+
+        .heroContent {
+          max-width: none;
         }
 
         .kicker {
-          padding: 3px 4px;
-          font-size: 4.5px;
+          padding: 4px 6px;
+          font-size: 5px;
         }
 
         .hero h1 {
-          margin-top: 2px;
-          font-size: 21px;
+          margin-top: 5px;
+          font-size: clamp(25px, 7vw, 31px);
         }
 
         .heroContent p {
@@ -2458,159 +2547,214 @@ function NotificationsStyles() {
         }
 
         .stats {
-          grid-template-columns: repeat(3, 51px);
-          gap: 2px;
+          grid-template-columns: repeat(3, 62px);
+          gap: 4px;
         }
 
         .stats article {
-          padding: 4px 3px;
-          border-radius: 6px;
+          padding: 7px 6px;
+          border-radius: 9px;
         }
 
         .stats strong {
-          font-size: 10px;
+          font-size: 13px;
         }
 
         .stats span {
-          font-size: 3.5px;
-          letter-spacing: 0;
-        }
-
-        .content {
-          gap: 2px;
+          margin-top: 3px;
+          font-size: 4px;
         }
 
         .toolbar {
-          min-height: 31px;
-          padding: 2px 4px;
-          border-radius: 8px;
+          min-height: 38px;
+          padding: 4px 5px;
+          border-radius: 10px;
         }
 
         .toolbar > div:first-child {
+          display: block;
+        }
+
+        .toolbar .sectionKicker {
           display: none;
         }
 
-        .toolbarActions {
-          width: 100%;
-          justify-content: flex-end;
+        .toolbar h2 {
+          margin: 0;
+          font-size: 12px;
         }
 
         .toolbarActions > button {
-          min-height: 23px;
-          padding: 0 5px;
-          font-size: 5px;
+          min-height: 27px;
+          padding: 0 7px;
+          font-size: 5.5px;
         }
 
         .filterBar {
-          min-height: 27px;
-          padding: 2px;
+          min-height: 34px;
+          padding: 3px;
         }
 
         .filterBar button {
-          flex: 1;
-          justify-content: center;
-          min-height: 22px;
-          padding: 0 3px;
-          font-size: 4.5px;
+          min-height: 27px;
+          padding: 0 5px;
+          font-size: 5.5px;
         }
 
         .notificationGrid {
           grid-template-columns: 1fr;
-          grid-template-rows: repeat(5, minmax(0, 1fr));
-          gap: 2px;
+          gap: 5px;
         }
 
         .notificationCard {
-          grid-template-columns: 27px minmax(0, 1fr);
-          gap: 5px;
-          padding: 4px 5px;
-          border-radius: 8px;
+          min-height: 82px;
+          max-height: 88px;
+          grid-template-columns: 36px minmax(0,1fr);
+          gap: 8px;
+          padding: 8px 9px;
+          border-radius: 12px;
         }
 
         .notificationIcon {
-          width: 27px;
-          height: 27px;
-          border-radius: 7px;
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
         }
 
         .notificationIcon svg {
-          width: 12px;
-          height: 12px;
+          width: 16px;
+          height: 16px;
         }
 
         .notificationBody h3 {
-          font-size: 8px;
+          font-size: 11px;
         }
 
         .notificationBody p {
-          font-size: 5px;
+          font-size: 6.5px;
+        }
+
+        .notificationBottom {
+          margin-top: 5px;
+          padding-top: 5px;
         }
 
         .paginationBar {
-          min-height: 24px;
-          gap: 3px;
+          min-height: 28px;
         }
 
         .paginationBar button {
-          min-height: 20px;
-          padding: 0 6px;
-          font-size: 4.5px;
-        }
-
-        .paginationBar span {
-          font-size: 4.5px;
+          min-height: 24px;
+          padding: 0 8px;
+          font-size: 5px;
         }
       }
 
       @media (max-width: 480px) {
         .notificationsPage {
-          grid-template-rows: 68px minmax(0, 1fr);
+          padding: 58px 6px 6px;
         }
 
         .hero {
-          height: 68px;
+          padding: 10px;
+          grid-template-columns: minmax(0,1fr) auto;
+        }
+
+        .kicker {
+          font-size: 4.5px;
         }
 
         .hero h1 {
-          font-size: 18px;
+          font-size: 24px;
         }
 
         .stats {
-          grid-template-columns: repeat(3, 41px);
+          grid-template-columns: repeat(3, 55px);
         }
 
         .stats article {
-          padding: 3px 2px;
+          padding: 6px 5px;
         }
 
         .stats strong {
-          font-size: 8px;
+          font-size: 11px;
         }
 
         .stats span {
-          font-size: 3px;
+          font-size: 3.6px;
         }
 
-        .notificationGrid {
-          grid-template-rows: repeat(4, minmax(0, 1fr));
+        .toolbar {
+          min-height: 35px;
+        }
+
+        .toolbar h2 {
+          font-size: 10px;
+        }
+
+        .toolbarActions {
+          gap: 3px;
+        }
+
+        .toolbarActions > button {
+          min-height: 25px;
+          padding: 0 6px;
+          font-size: 5px;
+        }
+
+        .filterBar {
+          min-height: 32px;
+        }
+
+        .filterBar button {
+          min-height: 25px;
+          padding: 0 4px;
+          gap: 4px;
+          font-size: 5px;
+        }
+
+        .filterBar button span {
+          min-width: 15px;
+          height: 15px;
+          font-size: 4px;
         }
 
         .notificationCard {
-          grid-template-columns: 25px minmax(0, 1fr);
-          padding: 4px;
+          min-height: 78px;
+          max-height: 84px;
+          grid-template-columns: 34px minmax(0,1fr);
+          padding: 7px 8px;
         }
 
         .notificationIcon {
-          width: 25px;
-          height: 25px;
+          width: 34px;
+          height: 34px;
+        }
+
+        .metaLeft > span {
+          max-width: 130px;
+          font-size: 5px;
+        }
+
+        .notificationMeta small {
+          font-size: 5px;
+        }
+
+        .notificationBody h3 {
+          font-size: 10.5px;
+        }
+
+        .notificationBody p {
+          font-size: 6px;
         }
 
         .readState {
-          min-height: 14px;
+          min-height: 17px;
+          font-size: 4px;
         }
 
         .detailAction {
-          font-size: 4px;
+          font-size: 5px;
         }
       }
 
