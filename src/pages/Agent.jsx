@@ -18,10 +18,17 @@ const ACTIVITY_LABELS = {
   rafting: "Rafting",
   kayaking: "Kajak",
   paragliding: "Paraglajding",
+  skydiving: "Padobranstvo",
   skiing: "Skijanje",
+  snowboarding: "Snowboarding",
   "horse riding": "Jahanje",
   fishing: "Ribolov",
   "nature trip": "Izlet u prirodi",
+  "trail running": "Trail running",
+  canyoning: "Kanjoning",
+  surfing: "Surfing",
+  sailing: "Jedrenje",
+  diving: "Ronjenje",
   other: "Outdoor avantura",
 };
 
@@ -3587,6 +3594,686 @@ function Styles() {
         .ai-inventory-head h2 {
           font-size: 30px;
         }
+      }
+
+
+      /* =========================================================
+         MEETOUTDOORS AGENT — MINT AURORA PREMIUM UI
+         Compact, practical, premium. No backend logic changes.
+         ========================================================= */
+
+      .ai-page,
+      .ai-loading-page {
+        --bg: #061613;
+        --bg2: #0a201c;
+        --ink: #f4fffb;
+        --muted: rgba(224, 244, 239, .62);
+        --green: #8ff0c7;
+        --green-2: #5fd6a9;
+        --mint: #8ff0c7;
+        --mint-strong: #5fd6a9;
+        --mint-blue: #81dff0;
+        --mint-blue-2: #62c9e1;
+        --aqua: #9ff6e6;
+        --panel: rgba(10, 34, 29, .78);
+        --panel-2: rgba(255,255,255,.06);
+        --line: rgba(161, 236, 219, .14);
+        --shadow: 0 24px 70px rgba(0,0,0,.28);
+      }
+
+      body { background: #061613; }
+
+      .ai-page {
+        padding: 88px 18px 42px;
+        background:
+          radial-gradient(circle at 16% 7%, rgba(129, 223, 240, .15), transparent 26%),
+          radial-gradient(circle at 78% 0%, rgba(143, 240, 199, .16), transparent 30%),
+          radial-gradient(circle at 88% 64%, rgba(98, 201, 225, .09), transparent 25%),
+          linear-gradient(180deg, #061613 0%, #08211c 46%, #061613 100%);
+      }
+
+      .ai-grid-noise {
+        opacity: .18;
+        background-size: 42px 42px;
+      }
+
+      .ai-ambient-one {
+        width: 360px;
+        height: 360px;
+        right: -120px;
+        top: 8%;
+        background: rgba(129, 223, 240, .14);
+      }
+
+      .ai-ambient-two {
+        width: 330px;
+        height: 330px;
+        left: -150px;
+        bottom: 5%;
+        background: rgba(143, 240, 199, .13);
+      }
+
+      .ai-shell {
+        width: min(1320px, 100%);
+      }
+
+      .ai-hero {
+        max-width: 920px;
+        margin-bottom: 20px;
+      }
+
+      .ai-kicker {
+        color: rgba(224, 248, 241, .72);
+      }
+
+      .ai-kicker-dot,
+      .ai-live {
+        border-color: rgba(143, 240, 199, .24);
+        background: linear-gradient(135deg, rgba(143, 240, 199, .12), rgba(129, 223, 240, .10));
+        color: var(--mint);
+      }
+
+      .ai-hero h1 {
+        margin-top: 11px;
+        font-size: clamp(46px, 6.5vw, 86px);
+        line-height: .87;
+        letter-spacing: -.065em;
+      }
+
+      .ai-hero h1 span {
+        margin-top: 5px;
+        background: linear-gradient(100deg, #f5fffb 3%, #9ff6e6 40%, #81dff0 72%, #8ff0c7);
+        -webkit-background-clip: text;
+        background-clip: text;
+        filter: drop-shadow(0 8px 24px rgba(129,223,240,.08));
+      }
+
+      .ai-hero p {
+        max-width: 760px;
+        margin-top: 12px;
+        font-size: 11px;
+        line-height: 1.55;
+        color: rgba(225, 244, 239, .60);
+      }
+
+      .ai-composer-wrap { max-width: 1080px; }
+
+      .ai-composer {
+        padding: 16px;
+        border-radius: 22px;
+        border-color: rgba(157, 237, 220, .16);
+        background:
+          linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.025)),
+          linear-gradient(135deg, rgba(14,42,35,.90), rgba(8,31,28,.84));
+        box-shadow:
+          0 22px 60px rgba(0,0,0,.26),
+          0 0 0 1px rgba(129,223,240,.03) inset,
+          inset 0 1px 0 rgba(255,255,255,.05);
+      }
+
+      .ai-composer::before {
+        background:
+          radial-gradient(circle at 12% 0%, rgba(143,240,199,.13), transparent 32%),
+          radial-gradient(circle at 90% 0%, rgba(129,223,240,.10), transparent 28%);
+      }
+
+      .ai-agent-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        color: #073229;
+        background: linear-gradient(135deg, var(--mint), var(--mint-blue));
+        box-shadow: 0 10px 26px rgba(99,214,183,.17);
+      }
+
+      .ai-composer textarea {
+        min-height: 104px;
+        margin-top: 11px;
+        font-size: clamp(18px, 2.2vw, 25px);
+        line-height: 1.32;
+        resize: none;
+      }
+
+      .ai-composer-bottom {
+        gap: 10px;
+        margin-top: 8px;
+        padding-top: 10px;
+      }
+
+      .ai-primary,
+      .ai-host-cta,
+      .ai-primary-link {
+        background: linear-gradient(135deg, #8ff0c7 0%, #81dff0 100%);
+        color: #062c25;
+        border-color: rgba(174,248,229,.30);
+        box-shadow: 0 12px 30px rgba(91,210,183,.15);
+      }
+
+      .ai-primary:hover,
+      .ai-host-cta:hover,
+      .ai-primary-link:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 34px rgba(91,210,183,.20);
+      }
+
+      .ai-examples {
+        margin-top: 9px;
+      }
+
+      .ai-example-list {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(143,240,199,.28) transparent;
+      }
+
+      .ai-example-list button {
+        flex: 0 0 auto;
+        max-width: 360px;
+        padding: 8px 10px;
+        border-radius: 11px;
+        border-color: rgba(143,240,199,.12);
+        background: rgba(255,255,255,.035);
+      }
+
+      .ai-principles {
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .ai-principles > div {
+        padding: 10px;
+        border-radius: 13px;
+      }
+
+      .ai-result-layout {
+        grid-template-columns: minmax(0, 1fr) 300px;
+        gap: 10px;
+      }
+
+      .ai-understood,
+      .ai-inventory,
+      .ai-action-sticky,
+      .ai-sent,
+      .ai-thinking {
+        border-color: rgba(151, 235, 216, .13);
+        background:
+          linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025)),
+          rgba(7, 29, 25, .82);
+        box-shadow: 0 18px 50px rgba(0,0,0,.20);
+      }
+
+      .ai-understood {
+        padding: 14px;
+        border-radius: 18px;
+      }
+
+      .ai-understood-head h2,
+      .ai-inventory-head h2,
+      .ai-action-sticky h2 {
+        font-size: clamp(20px, 2.5vw, 30px);
+        line-height: 1.04;
+      }
+
+      .ai-pills {
+        gap: 5px;
+        margin-top: 10px;
+      }
+
+      .ai-pill {
+        min-height: 48px;
+        padding: 7px 9px;
+        border-radius: 11px;
+        border-color: rgba(143,240,199,.10);
+        background: linear-gradient(135deg, rgba(143,240,199,.06), rgba(129,223,240,.045));
+      }
+
+      .ai-pill > span {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        color: var(--mint-blue);
+      }
+
+      .ai-pill small { font-size: 6px; }
+      .ai-pill strong { margin-top: 2px; font-size: 8px; }
+
+      .ai-missing {
+        margin-top: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+      }
+
+      .ai-edit-panel {
+        margin-top: 8px;
+        padding: 10px;
+        border-radius: 12px;
+      }
+
+      .ai-edit-grid {
+        gap: 6px;
+      }
+
+      .ai-edit-grid label {
+        gap: 4px;
+      }
+
+      .ai-edit-grid input,
+      .ai-edit-grid select {
+        min-height: 38px;
+        padding: 0 9px;
+        border-radius: 9px;
+      }
+
+      .ai-refresh {
+        min-height: 36px;
+        margin-top: 7px;
+        border-radius: 9px;
+      }
+
+      .ai-inventory {
+        margin-top: 8px;
+        padding: 14px;
+        border-radius: 18px;
+      }
+
+      .ai-inventory-head {
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .ai-inventory-head p {
+        margin-top: 4px;
+        font-size: 8px;
+        line-height: 1.4;
+      }
+
+      .ai-engine-status {
+        min-height: 32px;
+        padding: 0 9px;
+        border-radius: 10px;
+        color: var(--mint-blue);
+        background: rgba(129,223,240,.07);
+        border-color: rgba(129,223,240,.14);
+      }
+
+      .ai-curated-section {
+        margin-top: 9px;
+        padding-top: 9px;
+      }
+
+      .ai-curated-heading {
+        margin-bottom: 7px;
+      }
+
+      .ai-curated-grid {
+        display: flex;
+        gap: 7px;
+        overflow-x: auto;
+        padding: 1px 1px 6px;
+        scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(143,240,199,.28) transparent;
+      }
+
+      .ai-curated-card {
+        flex: 0 0 min(310px, 76vw);
+        scroll-snap-align: start;
+        border-radius: 14px;
+        border-color: rgba(143,240,199,.12);
+      }
+
+      .ai-curated-cover {
+        height: 145px;
+      }
+
+      .ai-curated-body {
+        padding: 9px;
+      }
+
+      .ai-curated-body h4 {
+        font-size: 13px;
+      }
+
+      .ai-curated-body p {
+        margin-top: 4px;
+        font-size: 7.5px;
+        line-height: 1.35;
+      }
+
+      /* Packages and events are deliberately split into TWO horizontal rails. */
+      .ai-result-section {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(151, 235, 216, .09);
+      }
+
+      .ai-result-title {
+        margin-bottom: 7px;
+        color: rgba(237,252,248,.86);
+      }
+
+      .ai-cards {
+        display: flex;
+        grid-template-columns: none;
+        gap: 7px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 1px 1px 7px;
+        scroll-snap-type: x mandatory;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(143,240,199,.30) transparent;
+      }
+
+      .ai-cards::-webkit-scrollbar,
+      .ai-event-list::-webkit-scrollbar,
+      .ai-curated-grid::-webkit-scrollbar,
+      .ai-example-list::-webkit-scrollbar {
+        height: 6px;
+      }
+
+      .ai-cards::-webkit-scrollbar-thumb,
+      .ai-event-list::-webkit-scrollbar-thumb,
+      .ai-curated-grid::-webkit-scrollbar-thumb,
+      .ai-example-list::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, rgba(143,240,199,.38), rgba(129,223,240,.38));
+        border-radius: 999px;
+      }
+
+      .ai-match-card {
+        flex: 0 0 245px;
+        scroll-snap-align: start;
+        border-radius: 13px;
+        border-color: rgba(143,240,199,.12);
+        background: rgba(255,255,255,.035);
+      }
+
+      .ai-match-cover {
+        height: 112px;
+      }
+
+      .ai-match-body {
+        padding: 8px;
+      }
+
+      .ai-match-body h3 {
+        margin-top: 4px;
+        font-size: 12px;
+        line-height: 1.15;
+      }
+
+      .ai-match-meta {
+        gap: 4px;
+      }
+
+      .ai-match-meta span {
+        padding: 3px 5px;
+        border-radius: 6px;
+        font-size: 5.5px;
+      }
+
+      .ai-match-bottom {
+        margin-top: 7px;
+        padding-top: 6px;
+      }
+
+      .ai-match-bottom strong { font-size: 9px; }
+      .ai-match-bottom span { font-size: 6.5px; }
+
+      .ai-event-list {
+        display: flex;
+        gap: 7px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 1px 1px 7px;
+        scroll-snap-type: x mandatory;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(129,223,240,.30) transparent;
+      }
+
+      .ai-event-row {
+        flex: 0 0 275px;
+        min-height: 74px;
+        scroll-snap-align: start;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 12px;
+        border-color: rgba(129,223,240,.12);
+        background: linear-gradient(135deg, rgba(129,223,240,.05), rgba(143,240,199,.035));
+      }
+
+      .ai-event-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        color: var(--mint-blue);
+        background: rgba(129,223,240,.08);
+      }
+
+      .ai-event-copy small { font-size: 5.5px; }
+      .ai-event-copy strong { margin-top: 2px; font-size: 9px; }
+      .ai-event-copy span { margin-top: 2px; font-size: 6px; }
+
+      .ai-empty-visual {
+        margin-top: 8px;
+        padding: 12px;
+        border-radius: 13px;
+        background: linear-gradient(135deg, rgba(143,240,199,.055), rgba(129,223,240,.05));
+      }
+
+      .ai-action-panel {
+        min-width: 0;
+      }
+
+      .ai-action-sticky {
+        top: 86px;
+        padding: 14px;
+        border-radius: 18px;
+      }
+
+      .ai-action-sticky > p {
+        margin-top: 6px;
+        font-size: 8px;
+        line-height: 1.45;
+      }
+
+      .ai-privacy-box {
+        gap: 7px;
+        margin-top: 9px;
+        padding: 8px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(143,240,199,.065), rgba(129,223,240,.04));
+      }
+
+      .ai-host-cta {
+        min-height: 42px;
+        margin-top: 9px;
+        border-radius: 11px;
+      }
+
+      .ai-new-search {
+        min-height: 34px;
+        margin-top: 6px;
+        border-radius: 9px;
+      }
+
+      .ai-flow-mini {
+        margin-top: 9px;
+        padding-top: 8px;
+      }
+
+      .ai-sent {
+        max-width: 760px;
+        padding: 22px;
+        border-radius: 22px;
+      }
+
+      .ai-thinking {
+        max-width: 800px;
+        padding: 18px;
+        border-radius: 20px;
+      }
+
+      @media (max-width: 920px) {
+        .ai-page { padding: 78px 10px 34px; }
+        .ai-result-layout { grid-template-columns: 1fr; }
+        .ai-action-panel { order: -1; }
+        .ai-action-sticky {
+          position: static;
+          display: grid;
+          grid-template-columns: minmax(0,1fr) auto;
+          gap: 8px 12px;
+          align-items: center;
+        }
+        .ai-action-sticky .ai-section-label,
+        .ai-action-sticky h2,
+        .ai-action-sticky > p,
+        .ai-action-sticky .ai-privacy-box,
+        .ai-action-sticky .ai-flow-mini { grid-column: 1 / -1; }
+        .ai-host-cta,
+        .ai-new-search { margin-top: 0; }
+      }
+
+      @media (max-width: 620px) {
+        .ai-page { padding: 70px 7px 24px; }
+
+        .ai-hero { margin-bottom: 11px; }
+        .ai-hero h1 {
+          margin-top: 7px;
+          font-size: 40px;
+          line-height: .90;
+        }
+        .ai-hero p {
+          margin-top: 7px;
+          font-size: 8.5px;
+          line-height: 1.4;
+        }
+
+        .ai-composer {
+          padding: 10px;
+          border-radius: 16px;
+        }
+
+        .ai-composer textarea {
+          min-height: 82px;
+          margin-top: 8px;
+          font-size: 18px;
+        }
+
+        .ai-composer-bottom {
+          align-items: stretch;
+          flex-direction: column;
+          gap: 7px;
+        }
+
+        .ai-primary {
+          width: 100%;
+          min-height: 42px;
+        }
+
+        .ai-example-list button {
+          max-width: 280px;
+          padding: 7px 8px;
+          font-size: 7px;
+        }
+
+        .ai-principles {
+          grid-template-columns: repeat(3, minmax(0,1fr));
+          gap: 4px;
+        }
+
+        .ai-principles > div {
+          padding: 7px;
+        }
+
+        .ai-principles p { display: none; }
+
+        .ai-understood,
+        .ai-inventory,
+        .ai-action-sticky {
+          padding: 9px;
+          border-radius: 14px;
+        }
+
+        .ai-understood-head {
+          gap: 6px;
+        }
+
+        .ai-understood-head h2,
+        .ai-inventory-head h2,
+        .ai-action-sticky h2 {
+          font-size: 18px;
+        }
+
+        .ai-pills {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0,1fr));
+          gap: 4px;
+        }
+
+        .ai-pill {
+          min-height: 42px;
+          padding: 5px 6px;
+        }
+
+        .ai-edit-grid {
+          grid-template-columns: repeat(2, minmax(0,1fr));
+        }
+
+        .ai-inventory-head {
+          align-items: flex-start;
+        }
+
+        .ai-inventory-head p { display: none; }
+
+        .ai-curated-card {
+          flex-basis: 82vw;
+        }
+
+        .ai-curated-cover { height: 130px; }
+
+        .ai-match-card {
+          flex-basis: 210px;
+        }
+
+        .ai-match-cover {
+          height: 96px;
+        }
+
+        .ai-event-row {
+          flex-basis: 235px;
+          min-height: 66px;
+        }
+
+        .ai-action-sticky {
+          display: block;
+        }
+
+        .ai-action-sticky > p,
+        .ai-flow-mini {
+          display: none;
+        }
+
+        .ai-privacy-box {
+          margin-top: 7px;
+        }
+
+        .ai-host-cta,
+        .ai-new-search {
+          width: 100%;
+          margin-top: 6px;
+        }
+      }
+
+      @media (max-width: 380px) {
+        .ai-hero h1 { font-size: 35px; }
+        .ai-pills { grid-template-columns: 1fr 1fr; }
+        .ai-match-card { flex-basis: 195px; }
+        .ai-event-row { flex-basis: 215px; }
       }
 
       @media (prefers-reduced-motion: reduce) {

@@ -2586,6 +2586,267 @@ function HostProfileStyles() {
         .hostStoryStats{grid-template-columns:1fr}
       }
 
+
+      /* =========================================================
+         HOST PROFILE — ULTRA COMPACT
+         Samo UI/UX sabijanje. Backend, upiti, rute i logika ostaju isti.
+         ========================================================= */
+
+      .hostProfilePage{padding-top:88px;padding-bottom:42px}
+      .profileShell{max-width:1380px}
+
+      .profileHero{min-height:470px}
+      .heroProfileInfo{gap:18px;padding-bottom:105px}
+      .profileAvatar{width:112px;height:112px;border-radius:26px}
+      .heroText h1{font-size:clamp(42px,5.6vw,72px);line-height:.92}
+      .profileMeta{gap:9px;margin-top:10px;font-size:9px}
+      .heroActivityBadges{gap:5px;margin-top:10px}
+      .heroActivityBadges span{padding:5px 7px;font-size:6.5px}
+      .heroTrustStrip{right:26px;bottom:22px;left:26px;gap:6px}
+      .heroTrustStrip article{padding:9px 11px;border-radius:12px}
+      .heroTrustStrip strong{font-size:17px}
+      .heroTrustStrip span{margin-top:2px;font-size:5.5px}
+
+      .profileContent{padding:18px}
+      .hostActionBar{gap:6px;margin-bottom:10px}
+      .hostAction{grid-template-columns:32px minmax(0,1fr);gap:6px;min-height:50px;padding:7px;border-radius:13px}
+      .hostAction small{font-size:4.5px}
+      .hostAction strong{font-size:7.5px}
+
+      .hostStats{gap:7px;margin-bottom:10px}
+      .hostStats article{gap:8px;padding:10px;border-radius:13px}
+      .hostStats article>span{width:34px;height:34px;border-radius:10px}
+      .hostStats strong{font-size:16px}
+      .hostStats small{margin-top:2px;font-size:6.5px}
+
+      .mainGrid{gap:10px}
+      .mainColumn,.sideColumn{gap:10px}
+      .contentCard,.listingSection,.reviewsSection,.reviewFeedSection,.hostMapSection,.hostGallerySection{border-radius:17px}
+      .contentCard{padding:15px}
+      .sectionHeading{gap:12px;margin-bottom:10px}
+      .sectionHeading.compact{margin-bottom:9px}
+      .sectionKicker{margin-bottom:4px;font-size:6.5px}
+      .sectionHeading h2,.listingHeader h2,.reviewsIntro h2{font-size:clamp(20px,2.4vw,28px)}
+      .sectionIcon{width:35px;height:35px;border-radius:10px}
+      .hostBio{font-size:10px;line-height:1.55}
+
+      .hostStoryStats{gap:5px;margin-top:10px}
+      .hostStoryStats article{padding:8px;border-radius:10px}
+      .hostStoryStats span{font-size:14px}
+      .hostStoryStats small{font-size:5.5px}
+      .trustMessage{gap:8px;margin-top:10px;padding:10px;border-radius:12px}
+      .trustMessage>span{width:32px;height:32px;border-radius:9px}
+      .trustMessage strong{font-size:9px}
+      .trustMessage p{margin-top:2px;font-size:7.5px;line-height:1.4}
+
+      .activityList{gap:5px}
+      .activityChip{min-height:29px;padding:0 9px;font-size:7.5px}
+
+      .contactList{gap:5px}
+      .contactItem{gap:7px;min-height:50px;padding:7px;border-radius:11px}
+      .contactIcon{width:32px;height:32px;border-radius:9px}
+      .contactText small{font-size:6px}
+      .contactText strong{margin-top:2px;font-size:8px}
+
+      .verifiedCard{gap:10px;padding:14px;border-radius:17px}
+      .verifiedIcon{width:38px;height:38px;border-radius:11px}
+      .verifiedLabel{font-size:6.5px}
+      .verifiedCard h3{margin-top:5px;font-size:14px}
+      .verifiedCard p{margin-top:5px;font-size:7.5px;line-height:1.4}
+
+      .hostMapSection,.hostGallerySection,.listingSection,.reviewFeedSection{margin-top:10px;padding:16px}
+      .listingHeader{gap:14px}
+      .listingHeader p,.reviewsIntro p{margin-top:5px;font-size:8px;line-height:1.4}
+      .sectionAction{min-height:34px;padding:0 10px;border-radius:10px;font-size:7.5px}
+
+      .hostMapFrame{height:300px;margin-top:10px;border-radius:15px}
+      .hostMapLegend{right:8px;bottom:8px;padding:6px 8px}
+      .galleryCount{min-width:32px;height:32px;border-radius:9px;font-size:8px}
+
+      .hostGalleryGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:10px}
+      .hostGalleryGrid button{height:135px;border-radius:11px}
+      .hostGalleryGrid button.featured{grid-column:span 2;grid-row:span 2;height:275px}
+      .hostGalleryGrid button>div{right:5px;bottom:5px;left:5px;padding:6px;border-radius:8px}
+
+      .emptyListing{margin-top:10px;padding:28px 14px;border-radius:14px}
+      .emptyListing.compactEmpty{padding:22px 14px}
+      .emptyListing>span{width:44px;height:44px;border-radius:13px}
+      .emptyListing h3{margin-top:10px;font-size:13px}
+      .emptyListing p{margin-top:5px;font-size:8px;line-height:1.4}
+      .emptyListing a{margin-top:10px;padding:8px 10px;font-size:7.5px}
+
+      .hostListingsGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+      .hostListingCard{border-radius:14px}
+      .hostListingImage{height:130px}
+      .hostListingType,.listingDateBadge,.listingRatingBadge{top:7px;min-height:24px;padding:0 7px;font-size:6.5px}
+      .hostListingType{left:7px}
+      .listingDateBadge,.listingRatingBadge{right:7px}
+      .hostListingBody{padding:10px}
+      .hostListingBody h3{font-size:14px}
+      .hostListingLocation{gap:4px;margin-top:6px;font-size:7px}
+      .hostListingDescription{min-height:22px;margin-top:6px;font-size:7.5px;line-height:1.4}
+      .packageQuickFacts{gap:4px;margin-top:7px}
+      .packageQuickFacts>span{min-height:24px;padding:0 7px;font-size:6.5px}
+      .hostListingFooter{gap:6px;margin-top:8px;padding-top:7px}
+      .hostListingFooter strong{font-size:10px}
+      .hostListingFooter span{font-size:6.5px}
+
+      .reviewsSection{grid-template-columns:minmax(0,.7fr) minmax(320px,1.3fr);gap:14px;margin-top:10px;padding:16px}
+      .overallRating{gap:9px;margin-top:10px}
+      .overallRating>strong{font-size:34px}
+      .reviewsPlaceholder{gap:12px;padding:12px;border-radius:13px}
+      .ratingBlock>span{width:42px;height:42px;border-radius:12px}
+      .ratingBlock strong{margin-top:7px;font-size:10px}
+      .ratingBlock small{margin-top:3px;font-size:7px}
+      .reviewBars{gap:5px}
+      .reviewBars>div{gap:4px;font-size:7px}
+      .reviewFeedGrid{gap:7px;margin-top:10px}
+      .reviewCard{padding:11px;border-radius:13px}
+      .reviewCardTop{gap:8px}
+      .reviewerIdentity{gap:7px}
+      .reviewerIdentity img{width:34px;height:34px;border-radius:10px}
+      .reviewerIdentity strong{font-size:8.5px}
+      .reviewerIdentity small,.reviewDate{font-size:6.5px}
+      .reviewVerified{margin-top:7px;padding:4px 6px}
+      .reviewStars{margin-top:7px}
+      .reviewCard>p{margin-top:7px;font-size:8px;line-height:1.45}
+
+      @media(max-width:1180px){
+        .hostListingsGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .hostGalleryGrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+      }
+
+      @media(max-width:760px){
+        .hostProfilePage{padding:72px 0 68px}
+        .profileHero{min-height:500px;padding:14px}
+        .heroTopline{top:12px;right:12px;left:12px}
+        .heroProfileInfo{gap:10px;padding-bottom:108px}
+        .profileAvatar{width:82px;height:82px;border-radius:20px}
+        .heroText h1{font-size:38px}
+        .profileMeta{gap:5px;margin-top:6px;font-size:8px}
+        .heroActivityBadges{margin-top:7px}
+        .heroTrustStrip{right:12px;bottom:12px;left:12px;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+        .heroTrustStrip article{padding:7px 5px;text-align:center}
+        .heroTrustStrip strong{font-size:13px}
+        .heroTrustStrip span{font-size:4.5px}
+
+        .profileContent{padding:8px}
+        .hostActionBar{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-bottom:6px}
+        .hostAction{display:flex;align-items:center;justify-content:center;min-height:42px;padding:5px}
+        .hostAction>svg{width:15px;height:15px}
+        .hostAction div{display:none}
+
+        .hostStats{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:6px}
+        .hostStats article{display:block;padding:7px;text-align:center}
+        .hostStats article>span{width:28px;height:28px;margin:0 auto 4px}
+        .hostStats strong{font-size:13px}
+        .hostStats small{font-size:5.5px}
+
+        .mainGrid{gap:6px}
+        .mainColumn,.sideColumn{gap:6px}
+        .sideColumn{grid-template-columns:1fr 1fr}
+        .contentCard{padding:10px}
+        .sectionHeading{margin-bottom:7px}
+        .sectionHeading h2,.listingHeader h2,.reviewsIntro h2{font-size:19px}
+        .hostBio{font-size:8.5px;line-height:1.45}
+        .hostStoryStats{margin-top:7px}
+        .trustMessage{margin-top:7px;padding:8px}
+        .trustMessage p{display:none}
+        .activityChip{min-height:26px;padding:0 7px;font-size:6.5px}
+
+        .contactItem{min-height:43px;padding:5px}
+        .contactIcon{width:28px;height:28px}
+        .contactText strong{font-size:7px}
+        .verifiedCard{padding:10px}
+        .verifiedCard p{display:none}
+        .verifiedCard h3{font-size:11px}
+
+        .hostMapSection,.hostGallerySection,.listingSection,.reviewFeedSection{margin-top:6px;padding:10px}
+        .listingHeader{align-items:center;flex-direction:row;gap:8px}
+        .listingHeader p{display:none}
+        .sectionAction{min-height:30px;padding:0 8px;font-size:6.5px}
+        .hostMapFrame{height:230px;margin-top:7px}
+
+        .hostGalleryGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:7px}
+        .hostGalleryGrid button{height:90px}
+        .hostGalleryGrid button.featured{grid-column:span 2;grid-row:span 2;height:184px}
+
+        .hostListingsGrid{
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:5px;
+          margin-top:7px;
+          max-height:440px;
+          overflow:auto;
+          overscroll-behavior:contain;
+        }
+        .hostListingImage{height:105px}
+        .hostListingBody{padding:7px}
+        .hostListingBody h3{font-size:11px}
+        .hostListingDescription{display:none}
+        .packageQuickFacts{margin-top:5px}
+        .hostListingFooter{margin-top:5px;padding-top:5px}
+        .hostListingFooter span{font-size:0}
+        .hostListingFooter span svg{width:13px;height:13px}
+
+        .reviewsSection{grid-template-columns:1fr;gap:7px;margin-top:6px;padding:10px}
+        .reviewsIntro p{display:none}
+        .overallRating{margin-top:7px}
+        .reviewsPlaceholder{grid-template-columns:110px minmax(0,1fr);gap:8px;padding:8px}
+        .reviewFeedGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:7px}
+        .reviewCard{padding:8px}
+      }
+
+      @media(max-width:520px){
+        .profileHero{min-height:470px;padding:12px}
+        .profileAvatar{width:72px;height:72px;border-radius:18px}
+        .heroText h1{font-size:34px}
+        .heroProfileInfo{padding-bottom:100px}
+        .profileMeta{flex-direction:row;flex-wrap:wrap}
+        .metaDivider{display:block!important}
+
+        .profileContent{padding:6px}
+        .contentCard,.listingSection,.reviewsSection,.reviewFeedSection,.hostMapSection,.hostGallerySection{padding:8px;border-radius:13px}
+
+        .hostStats{grid-template-columns:repeat(4,minmax(0,1fr))}
+        .hostStats article>span{display:none}
+        .hostStats article{padding:6px 3px}
+        .hostStats small{line-height:1.15}
+
+        .sideColumn{grid-template-columns:1fr}
+        .hostStoryStats{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .hostStoryStats article{padding:6px}
+
+        .hostGalleryGrid{
+          display:flex;
+          gap:4px;
+          overflow-x:auto;
+          scroll-snap-type:x proximity;
+        }
+        .hostGalleryGrid button,
+        .hostGalleryGrid button.featured{
+          flex:0 0 150px;
+          height:105px;
+          grid-column:auto;
+          grid-row:auto;
+          scroll-snap-align:start;
+        }
+
+        .hostListingsGrid{grid-template-columns:1fr 1fr;max-height:390px}
+        .hostListingImage{height:92px}
+        .hostListingType,.listingDateBadge,.listingRatingBadge{top:5px;min-height:20px;padding:0 5px;font-size:5.5px}
+        .hostListingType{left:5px}
+        .listingDateBadge,.listingRatingBadge{right:5px}
+        .hostListingBody h3{font-size:10px}
+        .hostListingLocation{font-size:6px}
+        .packageQuickFacts>span{min-height:21px;padding:0 5px;font-size:5.5px}
+        .hostListingFooter strong{font-size:8.5px}
+
+        .reviewFeedGrid{grid-template-columns:1fr;max-height:390px;overflow:auto}
+        .mobileHostDock{right:6px;bottom:6px;left:6px;padding:4px;border-radius:14px}
+        .mobileHostDock a{min-height:38px}
+      }
+
       @media(prefers-reduced-motion:reduce){
         *,*::before,*::after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
       }

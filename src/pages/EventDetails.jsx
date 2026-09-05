@@ -2622,6 +2622,633 @@ function EventDetailsStyles() {
         }
       }
 
+
+      /* =========================================================
+         EVENT DETAILS — ULTRA COMPACT UX
+         Visual/UX only. Existing Supabase, join, comments,
+         notifications, ShareSheet and routes stay unchanged.
+         ========================================================= */
+
+      .eventPage{
+        padding:88px 18px 34px;
+      }
+
+      .eventHero{
+        width:min(1240px,100%);
+        min-height:430px;
+        padding:26px;
+        border-radius:28px;
+      }
+
+      .eventHeroCopy{
+        max-width:780px;
+        padding-top:58px;
+      }
+
+      .eventEyebrow{
+        gap:7px;
+        padding:7px 10px;
+        font-size:7px;
+      }
+
+      .eventHeroCopy h1{
+        margin-top:15px;
+        font-size:clamp(44px,5.4vw,72px);
+        line-height:.92;
+      }
+
+      .eventHeroLocation{
+        margin-top:12px;
+        font-size:10px;
+      }
+
+      .eventHeroJoinLine{
+        margin-top:10px;
+        gap:6px;
+      }
+
+      .eventHeroJoinLine strong{font-size:8px}
+      .eventHeroJoinLine small{font-size:7px}
+
+      .eventHeroStats{
+        right:26px;
+        bottom:26px;
+        left:26px;
+        gap:7px;
+      }
+
+      .eventHeroStats article{
+        padding:10px 12px;
+        border-radius:13px;
+      }
+
+      .eventHeroStats span{font-size:6px}
+      .eventHeroStats strong{
+        margin-top:4px;
+        font-size:10px;
+      }
+
+      .eventContent{
+        width:min(1180px,100%);
+        margin-top:10px;
+      }
+
+      .eventActionBar{
+        gap:12px;
+        padding:12px 14px;
+        border-radius:16px;
+      }
+
+      .eventActionLabel{font-size:7px}
+      .eventActionLeft strong{
+        margin-top:3px;
+        font-size:10px;
+      }
+      .eventActionLeft small{
+        margin-top:2px;
+        font-size:7px;
+      }
+
+      .eventActionButtons{gap:6px}
+
+      .eventActionButtons button,
+      .eventCommentForm button{
+        min-height:38px;
+        padding:0 11px;
+        border-radius:10px;
+        font-size:8px;
+      }
+
+      .eventJoinButton{min-width:125px}
+
+      .eventShareButton{
+        min-height:38px;
+        padding:5px 10px;
+        border-radius:10px;
+      }
+
+      .eventParticipantsPanel{
+        margin-top:9px;
+        padding:14px;
+        border-radius:17px;
+      }
+
+      .eventParticipantsHeader{
+        align-items:center;
+        gap:12px;
+      }
+
+      .eventParticipantsHeader h2,
+      .eventExploreCard h2{
+        margin-top:4px;
+        font-size:clamp(20px,2.5vw,28px);
+      }
+
+      .eventParticipantsHeader p{
+        max-width:700px;
+        margin-top:5px;
+        font-size:7px;
+        line-height:1.4;
+      }
+
+      .eventSectionLabel{font-size:6px}
+
+      .eventParticipantCount{
+        gap:7px;
+        padding:7px 9px;
+        border-radius:11px;
+      }
+
+      .eventParticipantCount>span{
+        width:29px;
+        height:29px;
+        border-radius:9px;
+      }
+
+      .eventParticipantCount strong{font-size:12px}
+      .eventParticipantCount small{
+        margin-top:1px;
+        font-size:6px;
+      }
+
+      .eventAvatarStack{
+        margin-top:10px;
+      }
+
+      .eventParticipantAvatar,
+      .eventParticipantMore{
+        width:40px;
+        height:40px;
+        margin-left:-7px;
+        border-width:3px;
+        border-radius:12px;
+      }
+
+      .eventParticipantMore{font-size:7px}
+
+      .eventParticipantNames{
+        gap:4px 7px;
+        margin-top:7px;
+        font-size:7px;
+      }
+
+      .eventParticipantNames span::after{margin-left:7px}
+      .eventParticipantNames small{font-size:7px}
+
+      .eventParticipantsEmpty{
+        margin-top:9px;
+        padding:10px;
+        border-radius:11px;
+      }
+
+      .eventHostParticipantList{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:5px;
+        max-height:230px;
+        margin-top:9px;
+        overflow:auto;
+      }
+
+      .eventHostParticipantList article{
+        padding:7px;
+        border-radius:10px;
+      }
+
+      .eventMainGrid{
+        grid-template-columns:minmax(0,1.5fr) minmax(250px,.5fr);
+        gap:9px;
+        margin-top:9px;
+      }
+
+      .eventMainColumn,
+      .eventSidebar{
+        gap:9px;
+      }
+
+      .eventPanel{
+        padding:14px;
+        border-radius:17px;
+      }
+
+      .eventSectionHeader{
+        margin-bottom:8px;
+      }
+
+      .eventSectionHeader span,
+      .eventPanelKicker{
+        font-size:6px;
+      }
+
+      .eventSectionHeader h2{
+        margin-top:4px;
+        font-size:20px;
+      }
+
+      .eventDescription{
+        font-size:9px;
+        line-height:1.55;
+      }
+
+      .eventTimeline{
+        gap:8px;
+      }
+
+      .eventTimeline article{
+        gap:7px;
+        padding:8px;
+        border-radius:11px;
+      }
+
+      .eventTimelineIcon{
+        width:31px;
+        height:31px;
+        border-radius:9px;
+      }
+
+      .eventTimeline small{font-size:6px}
+      .eventTimeline strong{
+        margin-top:2px;
+        font-size:7.5px;
+      }
+
+      .eventHostProfile{
+        gap:8px;
+        margin-top:8px;
+        padding:8px;
+        border-radius:11px;
+      }
+
+      .eventHostProfile img{
+        width:40px;
+        height:40px;
+        border-radius:11px;
+      }
+
+      .eventHostProfile strong{font-size:8px}
+      .eventHostProfile span{font-size:6px}
+      .eventHostCard>p{
+        margin-top:7px;
+        font-size:6.5px;
+        line-height:1.4;
+      }
+
+      .eventFacts{
+        gap:5px;
+        margin-top:8px;
+      }
+
+      .eventFacts article{
+        gap:7px;
+        padding:7px;
+        border-radius:10px;
+      }
+
+      .eventFacts article>svg{width:15px;height:15px}
+      .eventFacts span{font-size:5.5px}
+      .eventFacts strong{
+        margin-top:2px;
+        font-size:7px;
+      }
+
+      .eventCommentsSection{
+        margin-top:9px;
+      }
+
+      .eventCommentForm{
+        gap:6px;
+      }
+
+      .eventCommentForm textarea{
+        min-height:64px;
+        padding:9px 10px;
+        border-radius:10px;
+        font-size:8px;
+        resize:none;
+      }
+
+      .eventCommentsList{
+        max-height:330px;
+        margin-top:8px;
+        overflow:auto;
+        padding-right:3px;
+      }
+
+      .eventComment{
+        gap:8px;
+        padding:8px 0;
+      }
+
+      .eventComment img{
+        width:34px;
+        height:34px;
+        border-radius:10px;
+      }
+
+      .eventCommentTop a{font-size:7.5px}
+      .eventCommentTop small{font-size:5.5px}
+      .eventComment p{
+        margin-top:3px;
+        font-size:7.5px;
+        line-height:1.45;
+      }
+
+      .eventExploreCard{
+        gap:12px;
+        margin-top:9px;
+        padding:14px;
+        border-radius:17px;
+      }
+
+      .eventExploreCard p{
+        margin-top:5px;
+        font-size:7px;
+        line-height:1.4;
+      }
+
+      .eventExploreCard>a{
+        min-height:38px;
+        padding:0 11px;
+        border-radius:10px;
+        font-size:7.5px;
+      }
+
+      @media(max-width:960px){
+        .eventPage{padding-top:82px}
+        .eventHero{min-height:470px}
+        .eventHeroCopy{padding-top:64px}
+        .eventMainGrid{grid-template-columns:1fr}
+        .eventSidebar{
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+        }
+      }
+
+      @media(max-width:700px){
+        .eventPage{
+          padding:70px 0 74px;
+        }
+
+        .eventHero{
+          min-height:390px;
+          padding:16px;
+          border-radius:0 0 22px 22px;
+        }
+
+        .eventHeroCopy{
+          padding-top:38px;
+        }
+
+        .eventEyebrow{
+          padding:6px 8px;
+          font-size:6px;
+        }
+
+        .eventHeroCopy h1{
+          margin-top:10px;
+          font-size:clamp(36px,11vw,52px);
+          line-height:.94;
+        }
+
+        .eventHeroLocation{
+          margin-top:8px;
+          font-size:8px;
+        }
+
+        .eventHeroJoinLine{
+          margin-top:7px;
+        }
+
+        .eventHeroStats{
+          right:12px;
+          bottom:12px;
+          left:12px;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:5px;
+        }
+
+        .eventHeroStats article{
+          padding:7px 8px;
+          border-radius:10px;
+        }
+
+        .eventContent{
+          padding:0 8px;
+          margin-top:7px;
+        }
+
+        .eventActionBar{
+          position:sticky;
+          z-index:20;
+          bottom:6px;
+          align-items:stretch;
+          flex-direction:column;
+          gap:7px;
+          padding:8px;
+          border-radius:13px;
+          background:rgba(255,255,255,.94);
+          backdrop-filter:blur(15px);
+        }
+
+        .eventActionLeft small{display:none}
+        .eventActionButtons{
+          width:100%;
+          flex-wrap:nowrap;
+          gap:5px;
+        }
+
+        .eventActionButtons button,
+        .eventShareButton{
+          flex:1;
+          min-width:0;
+          min-height:36px;
+        }
+
+        .eventLeaveButton{
+          flex:0 0 auto !important;
+        }
+
+        .eventParticipantsPanel{
+          margin-top:7px;
+          padding:10px;
+          border-radius:13px;
+        }
+
+        .eventParticipantsHeader{
+          align-items:flex-start;
+          flex-direction:row;
+          gap:7px;
+        }
+
+        .eventParticipantsHeader h2{
+          font-size:18px;
+        }
+
+        .eventParticipantsHeader p{display:none}
+
+        .eventParticipantCount{
+          padding:5px 7px;
+        }
+
+        .eventAvatarStack{margin-top:7px}
+
+        .eventParticipantAvatar,
+        .eventParticipantMore{
+          width:34px;
+          height:34px;
+          border-radius:10px;
+        }
+
+        .eventParticipantNames{
+          margin-top:5px;
+          font-size:6px;
+        }
+
+        .eventHostParticipantList{
+          grid-template-columns:1fr;
+          max-height:190px;
+        }
+
+        .eventMainGrid{
+          gap:7px;
+          margin-top:7px;
+        }
+
+        .eventMainColumn{gap:7px}
+        .eventSidebar{
+          grid-template-columns:1fr 1fr;
+          gap:7px;
+        }
+
+        .eventPanel{
+          padding:10px;
+          border-radius:13px;
+        }
+
+        .eventSectionHeader{
+          margin-bottom:6px;
+        }
+
+        .eventSectionHeader h2{
+          font-size:17px;
+        }
+
+        .eventDescription{
+          font-size:8px;
+          line-height:1.5;
+        }
+
+        .eventTimeline{
+          grid-template-columns:1fr 1fr;
+          gap:5px;
+        }
+
+        .eventTimelineLine{display:none}
+
+        .eventTimeline article{
+          padding:6px;
+        }
+
+        .eventHostCard>p{display:none}
+        .eventHostProfile{
+          margin-top:5px;
+          padding:6px;
+        }
+
+        .eventHostProfile img{
+          width:34px;
+          height:34px;
+        }
+
+        .eventFacts{
+          margin-top:5px;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+        }
+
+        .eventFacts article{
+          padding:5px;
+        }
+
+        .eventCommentsSection{
+          margin-top:7px;
+        }
+
+        .eventCommentForm textarea{
+          min-height:56px;
+        }
+
+        .eventCommentsList{
+          max-height:250px;
+        }
+
+        .eventExploreCard{
+          align-items:center;
+          flex-direction:row;
+          margin-top:7px;
+          padding:10px;
+        }
+
+        .eventExploreCard h2{
+          font-size:17px;
+        }
+
+        .eventExploreCard p{display:none}
+      }
+
+      @media(max-width:480px){
+        .eventHero{
+          min-height:370px;
+          padding:13px;
+        }
+
+        .eventHeroCopy{
+          padding-top:32px;
+        }
+
+        .eventHeroCopy h1{
+          font-size:38px;
+        }
+
+        .eventHeroStats{
+          right:9px;
+          bottom:9px;
+          left:9px;
+        }
+
+        .eventContent{
+          padding:0 6px;
+        }
+
+        .eventActionButtons{
+          overflow-x:auto;
+        }
+
+        .eventActionButtons>*{
+          flex:0 0 auto;
+        }
+
+        .eventJoinButton{
+          min-width:120px !important;
+        }
+
+        .eventParticipantsPanel,
+        .eventPanel{
+          padding:9px;
+        }
+
+        .eventSidebar{
+          grid-template-columns:1fr;
+        }
+
+        .eventTimeline{
+          grid-template-columns:1fr 1fr;
+        }
+
+        .eventExploreCard>a{
+          flex:0 0 auto;
+        }
+      }
+
+
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,

@@ -6,6 +6,29 @@ import { useAuth } from "../context/AuthContext";
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1800&q=85";
 
+const ACTIVITIES = [
+  ["hiking", "Planinarenje"],
+  ["camping", "Kampovanje"],
+  ["cycling", "Biciklizam"],
+  ["climbing", "Penjanje"],
+  ["via ferrata", "Via ferrata"],
+  ["rafting", "Rafting"],
+  ["kayaking", "Kajak"],
+  ["paragliding", "Paraglajding"],
+  ["skydiving", "Padobranstvo"],
+  ["skiing", "Skijanje"],
+  ["snowboarding", "Snowboarding"],
+  ["horse riding", "Jahanje"],
+  ["fishing", "Ribolov"],
+  ["nature trip", "Izlet u prirodi"],
+  ["trail running", "Trail running"],
+  ["canyoning", "Kanjoning"],
+  ["surfing", "Surfing"],
+  ["sailing", "Jedrenje"],
+  ["diving", "Ronjenje"],
+  ["other", "Ostalo"],
+];
+
 function Icon({
   name,
   size = 20,
@@ -273,6 +296,7 @@ export default function CreateEvent() {
   const isAgentPrefill = searchParams.get("source") === "agent";
 
   const [title, setTitle] = useState(() => searchParams.get("title") || "");
+  const [activity, setActivity] = useState(() => searchParams.get("activity") || "");
   const [description, setDescription] = useState(() => searchParams.get("description") || "");
   const [location, setLocation] = useState(() => searchParams.get("location") || "");
   const [country, setCountry] = useState(() => searchParams.get("country") || "");
@@ -300,11 +324,11 @@ export default function CreateEvent() {
 
   const completion = useMemo(() => {
     const checks = [
-      title.trim(), description.trim(), location.trim(), country.trim(),
+      activity, title.trim(), description.trim(), location.trim(), country.trim(),
       startDate, endDate, capacity, coverFile,
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  }, [title, description, location, country, startDate, endDate, capacity, coverFile]);
+  }, [activity, title, description, location, country, startDate, endDate, capacity, coverFile]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -326,6 +350,11 @@ export default function CreateEvent() {
     const cleanDescription = description.trim();
     const cleanLocation = location.trim();
     const cleanCountry = country.trim();
+
+    if (!activity) {
+      setError("Izaberi aktivnost događaja.");
+      return;
+    }
 
     if (!cleanTitle) {
       setError("Naziv događaja je obavezan.");
@@ -399,6 +428,7 @@ export default function CreateEvent() {
           .from("events")
           .insert({
             host_id: profile.id,
+            activity,
             title: cleanTitle,
             description: cleanDescription,
             location: cleanLocation,
@@ -650,6 +680,30 @@ export default function CreateEvent() {
                       Naziv i opis treba jasno da objasne šta
                       učesnici mogu da očekuju.
                     </p>
+                  </div>
+                </div>
+
+                <div className="eventActivityPicker">
+                  <div className="eventActivityPickerTop">
+                    <span>Aktivnost *</span>
+                    <small>Izaberi glavnu aktivnost događaja</small>
+                  </div>
+
+                  <div className="eventActivityGrid">
+                    {ACTIVITIES.map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={activity === value ? "active" : ""}
+                        onClick={() => {
+                          setActivity(value);
+                          if (error) setError("");
+                        }}
+                      >
+                        <span className="eventActivityDot" />
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -927,7 +981,7 @@ export default function CreateEvent() {
                 <button
                   type="submit"
                   className="publishEventButton"
-                  disabled={saving || !title.trim()}
+                  disabled={saving || !activity || !title.trim()}
                 >
                   {saving ? (
                     <>
@@ -1901,6 +1955,432 @@ function CreateEventStyles() {
           text-align: left;
         }
       }
+
+
+      /* =========================================================
+         CREATE EVENT — ULTRA COMPACT UX
+         Same direction as CreatePackage: less scroll, denser UI.
+         ========================================================= */
+
+      .createEventPage{padding:16px}
+      .createEventShell{
+        width:min(1380px,100%);
+        min-height:calc(100vh - 32px);
+        grid-template-columns:minmax(300px,.68fr) minmax(0,1.32fr);
+        border-radius:24px;
+      }
+
+      .eventPreviewPanel{
+        position:sticky;
+        top:16px;
+        align-self:start;
+        max-height:calc(100vh - 32px);
+        overflow:auto;
+      }
+
+      .eventPreviewImage{height:245px}
+      .previewBackButton,.previewBadge{
+        top:12px;
+        min-height:32px;
+        padding:0 9px;
+        border-radius:10px;
+        font-size:7px;
+      }
+      .previewBackButton{left:12px}
+      .previewBadge{right:12px}
+      .previewImageBottom{right:12px;bottom:12px;left:12px;gap:5px}
+      .previewImageBottom>span{
+        min-height:25px;
+        padding:0 7px;
+        font-size:6px;
+      }
+
+      .eventPreviewBody{padding:16px}
+      .previewKicker{font-size:6px}
+      .eventPreviewBody h2{
+        margin-top:6px;
+        font-size:clamp(24px,3vw,34px);
+      }
+      .previewLocation{margin-top:8px;font-size:8px}
+      .previewDescription{
+        margin-top:9px;
+        font-size:8px;
+        line-height:1.45;
+        display:-webkit-box;
+        -webkit-line-clamp:4;
+        -webkit-box-orient:vertical;
+        overflow:hidden;
+      }
+      .previewDetails{
+        gap:5px;
+        margin-top:10px;
+      }
+      .previewDetails article{
+        gap:6px;
+        padding:7px;
+        border-radius:10px;
+      }
+      .previewDetails article>span{
+        width:27px;
+        height:27px;
+        border-radius:8px;
+      }
+      .previewDetails small{font-size:5.5px}
+      .previewDetails strong{font-size:7px}
+      .previewHost{
+        gap:7px;
+        margin-top:10px;
+        padding-top:9px;
+      }
+      .previewHost>span{
+        width:31px;
+        height:31px;
+        border-radius:9px;
+      }
+      .previewHost small{font-size:5.5px}
+      .previewHost strong{font-size:7.5px}
+      .previewNotice{
+        gap:6px;
+        margin-top:9px;
+        padding:8px;
+        border-radius:10px;
+      }
+      .previewNotice p{font-size:6.5px;line-height:1.35}
+
+      .createEventContent{padding:20px 22px}
+      .createEventHeader{
+        gap:12px;
+        margin-bottom:12px;
+      }
+      .createEventBrand{
+        gap:6px;
+        margin-bottom:12px;
+        font-size:10px;
+      }
+      .createEventBrand>span{
+        width:31px;
+        height:31px;
+        border-radius:10px;
+      }
+      .createEventKicker{font-size:6.5px}
+      .createEventHeader h1{
+        margin-top:5px;
+        font-size:clamp(34px,4.3vw,50px);
+      }
+      .createEventHeader p{
+        margin-top:7px;
+        font-size:8px;
+        line-height:1.4;
+      }
+      .draftBadge{
+        min-height:32px;
+        padding:0 9px;
+        border-radius:9px;
+        font-size:7px;
+      }
+
+      .eventAgentBanner{
+        margin-bottom:8px;
+        padding:9px;
+        border-radius:12px;
+      }
+
+      .eventCompletion{
+        margin-bottom:8px;
+        padding:9px 11px;
+        border-radius:12px;
+      }
+      .eventCompletionTop{font-size:7px}
+      .eventCompletion p{
+        margin-top:5px;
+        font-size:6.5px;
+      }
+
+      .createEventForm{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px;
+      }
+
+      .eventFormSection{
+        padding:12px;
+        border-radius:15px;
+      }
+
+      .eventFormSection:first-of-type,
+      .eventFormSection:last-of-type{
+        grid-column:1 / -1;
+      }
+
+      .eventFormHeading{
+        gap:8px;
+        margin-bottom:9px;
+      }
+      .eventFormHeading>span{
+        width:32px;
+        height:32px;
+        border-radius:9px;
+      }
+      .eventFormHeading small{font-size:5.5px}
+      .eventFormHeading h2{
+        margin-top:3px;
+        font-size:16px;
+      }
+      .eventFormHeading p{
+        margin-top:3px;
+        font-size:6.5px;
+        line-height:1.35;
+      }
+
+      .eventFieldsGrid{gap:7px}
+      .createEventField{gap:4px}
+      .createEventLabel{font-size:7px}
+      .createEventInputIcon,
+      .createEventTextareaWrapper>span{left:10px}
+      .createEventTextareaWrapper>span{top:11px}
+      .createEventInputWrapper input{
+        min-height:38px;
+        padding:0 10px 0 34px;
+        border-radius:10px;
+        font-size:8px;
+      }
+      .createEventTextareaWrapper textarea{
+        min-height:92px;
+        padding:10px 10px 10px 34px;
+        border-radius:10px;
+        font-size:8px;
+        line-height:1.45;
+        resize:none;
+      }
+      .createEventHint{font-size:6px}
+      .descriptionCount{
+        right:8px;
+        bottom:7px;
+        padding:3px 5px;
+        font-size:5.5px;
+      }
+
+      .eventActivityPicker{
+        margin-bottom:8px;
+        padding:8px;
+        border:1px solid #dce4d9;
+        border-radius:11px;
+        background:#f8faf6;
+      }
+      .eventActivityPickerTop{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:8px;
+        margin-bottom:6px;
+      }
+      .eventActivityPickerTop>span{
+        color:#495c50;
+        font-size:7px;
+        font-weight:900;
+      }
+      .eventActivityPickerTop>small{
+        color:#8a968e;
+        font-size:6px;
+      }
+      .eventActivityGrid{
+        display:grid;
+        grid-template-columns:repeat(5,minmax(0,1fr));
+        gap:4px;
+        max-height:116px;
+        overflow:auto;
+        padding-right:2px;
+      }
+      .eventActivityGrid button{
+        display:flex;
+        align-items:center;
+        gap:5px;
+        min-height:29px;
+        padding:0 7px;
+        border:1px solid #dbe3d8;
+        border-radius:8px;
+        background:white;
+        color:#506259;
+        cursor:pointer;
+        font-size:6.5px;
+        font-weight:800;
+        text-align:left;
+      }
+      .eventActivityGrid button:hover{
+        border-color:#9db996;
+        background:#f4f8f0;
+      }
+      .eventActivityGrid button.active{
+        border-color:#75986b;
+        background:#e9f3e4;
+        color:#355a36;
+        box-shadow:0 0 0 2px rgba(117,152,107,.08);
+      }
+      .eventActivityDot{
+        flex:0 0 auto;
+        width:6px;
+        height:6px;
+        border-radius:50%;
+        background:#b8c6b3;
+      }
+      .eventActivityGrid button.active .eventActivityDot{
+        background:#5c8755;
+        box-shadow:0 0 0 3px rgba(92,135,85,.10);
+      }
+
+      .eventUpload{
+        min-height:66px;
+        gap:8px;
+        padding:9px;
+        border-radius:11px;
+      }
+      .eventUploadIcon{
+        width:36px;
+        height:36px;
+        border-radius:10px;
+      }
+      .eventUploadCopy strong{font-size:8px}
+      .eventUploadCopy small{
+        margin-top:2px;
+        font-size:6px;
+        line-height:1.3;
+      }
+      .eventUploadAction{
+        padding:6px 8px;
+        border-radius:8px;
+        font-size:6.5px;
+      }
+      .removeEventCover{
+        margin-top:6px;
+        padding:6px 8px;
+        font-size:6.5px;
+      }
+
+      .createEventError{
+        grid-column:1 / -1;
+        gap:7px;
+        padding:9px;
+        border-radius:11px;
+      }
+      .createEventError>span{
+        width:28px;
+        height:28px;
+      }
+      .createEventError p{font-size:7.5px}
+
+      .createEventActions{
+        grid-column:1 / -1;
+        gap:7px;
+      }
+      .cancelEventButton,
+      .publishEventButton{
+        min-height:40px;
+        padding:0 13px;
+        border-radius:10px;
+        font-size:8px;
+      }
+      .publishEventButton{min-width:160px}
+
+      .eventSecurityNotice{
+        grid-column:1 / -1;
+        font-size:6.5px;
+      }
+
+      @media(max-width:1050px){
+        .createEventForm{grid-template-columns:1fr}
+        .eventFormSection:first-of-type,
+        .eventFormSection:last-of-type{grid-column:auto}
+        .createEventError,.createEventActions,.eventSecurityNotice{grid-column:auto}
+      }
+
+      @media(max-width:850px){
+        .createEventPage{padding:10px}
+        .eventPreviewPanel{
+          position:static;
+          max-height:none;
+        }
+        .eventPreviewImage{height:240px}
+      }
+
+      @media(max-width:680px){
+        .createEventPage{padding:0}
+        .createEventContent{padding:14px 9px 28px}
+        .createEventHeader{
+          margin-bottom:8px;
+          flex-direction:row;
+          align-items:flex-start;
+        }
+        .mobileBackButton{
+          width:32px;
+          height:32px;
+          margin-bottom:8px;
+        }
+        .createEventBrand{margin-bottom:7px}
+        .createEventHeader h1{font-size:32px}
+        .createEventHeader p{display:none}
+        .draftBadge{
+          min-height:28px;
+          padding:0 7px;
+        }
+        .eventCompletion{padding:7px 8px}
+        .eventCompletion p{display:none}
+
+        .createEventForm{gap:6px}
+        .eventFormSection{padding:9px;border-radius:12px}
+        .eventFormHeading{
+          margin-bottom:7px;
+        }
+        .eventFormHeading>span{
+          width:28px;
+          height:28px;
+        }
+        .eventFormHeading h2{font-size:14px}
+        .eventFormHeading p{display:none}
+
+        .eventFieldsGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:5px;
+        }
+
+        .eventActivityGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          max-height:154px;
+          gap:3px;
+        }
+        .eventActivityGrid button{
+          min-height:27px;
+          padding:0 6px;
+          font-size:6px;
+        }
+        .eventActivityPickerTop>small{display:none}
+
+        .createEventInputWrapper input{min-height:36px}
+        .createEventTextareaWrapper textarea{min-height:78px}
+        .eventUpload{min-height:58px}
+
+        .createEventActions{
+          position:sticky;
+          z-index:5;
+          bottom:6px;
+          padding:6px;
+          border:1px solid #dbe4d8;
+          border-radius:12px;
+          background:rgba(250,251,247,.94);
+          backdrop-filter:blur(12px);
+          box-shadow:0 10px 28px rgba(31,51,38,.10);
+        }
+        .cancelEventButton{flex:.55}
+        .publishEventButton{
+          flex:1;
+          min-width:0;
+        }
+      }
+
+      @media(max-width:420px){
+        .eventFieldsGrid{grid-template-columns:1fr}
+        .createEventHeader h1{font-size:29px}
+        .eventActivityGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      }
+
 
       @media (prefers-reduced-motion: reduce) {
         *,

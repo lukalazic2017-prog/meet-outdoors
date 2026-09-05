@@ -208,6 +208,8 @@ export default function EditPackage() {
   const [saving, setSaving] =
     useState(false);
   const [error, setError] = useState("");
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState("");
 
   const [form, setForm] = useState({
     title: "",
@@ -292,6 +294,9 @@ export default function EditPackage() {
         ),
         cover_url: data.cover_url || "",
       });
+
+      setCoverPreview(data.cover_url || "");
+      setCoverFile(null);
     } catch (loadError) {
       console.error(
         "Greška pri učitavanju paketa:",
@@ -315,6 +320,17 @@ export default function EditPackage() {
   useEffect(() => {
     loadPackage();
   }, [loadPackage]);
+
+  useEffect(() => {
+    if (!coverFile) return undefined;
+
+    const objectUrl = URL.createObjectURL(coverFile);
+    setCoverPreview(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [coverFile]);
 
   function updateField(name, value) {
     setForm((previous) => ({
@@ -393,6 +409,39 @@ export default function EditPackage() {
         );
       }
 
+      let nextCoverUrl = form.cover_url.trim();
+
+      if (coverFile) {
+        if (!coverFile.type.startsWith("image/")) {
+          throw new Error("Naslovna fotografija mora biti slika.");
+        }
+
+        if (coverFile.size > 8 * 1024 * 1024) {
+          throw new Error("Fotografija je prevelika. Maksimalna veličina je 8 MB.");
+        }
+
+        const extension = coverFile.name.split(".").pop()?.toLowerCase() || "jpg";
+        const safeExtension = extension.replace(/[^a-z0-9]/g, "") || "jpg";
+        const fileName = `${profile.id}/package-${item.id}-${Date.now()}.${safeExtension}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("package-covers")
+          .upload(fileName, coverFile, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("package-covers")
+          .getPublicUrl(fileName);
+
+        nextCoverUrl = publicUrlData.publicUrl;
+      }
+
       const {
         data: updatedPackage,
         error: updateError,
@@ -416,8 +465,7 @@ export default function EditPackage() {
             form.not_included.trim(),
           start_date: startDate,
           end_date: endDate,
-          cover_url:
-            form.cover_url.trim(),
+          cover_url: nextCoverUrl,
           updated_at:
             new Date().toISOString(),
         })
@@ -952,31 +1000,72 @@ export default function EditPackage() {
                     />
                   </label>
 
-                  <label className="editPackageField full">
-                    <span>
-                      URL naslovne fotografije
-                    </span>
+                  <div className="editPackageField full">
+                    <span>Naslovna fotografija</span>
 
-                    <div className="editPackageInputIcon">
-                      <Icon
-                        name="image"
-                        size={17}
-                      />
-
+                    <label className={coverFile ? "editPackageUpload selected" : "editPackageUpload"}>
                       <input
-                        type="url"
-                        value={
-                          form.cover_url
-                        }
+                        type="file"
+                        accept="image/*"
                         onChange={(event) =>
-                          updateField(
-                            "cover_url",
-                            event.target.value
-                          )
+                          setCoverFile(event.target.files?.[0] || null)
                         }
                       />
-                    </div>
-                  </label>
+
+                      <span className="editPackageUploadIcon">
+                        <Icon name={coverFile ? "check" : "image"} size={20} />
+                      </span>
+
+                      <span className="editPackageUploadCopy">
+                        <strong>
+                          {coverFile
+                            ? coverFile.name
+                            : "Izaberi novu fotografiju sa telefona"}
+                        </strong>
+                        <small>
+                          {coverFile
+                            ? `${(coverFile.size / 1024 / 1024).toFixed(2)} MB`
+                            : "JPG, PNG ili WEBP · maksimalno 8 MB"}
+                        </small>
+                      </span>
+
+                      <span className="editPackageUploadAction">
+                        {coverFile ? "Promeni" : "Izaberi"}
+                      </span>
+                    </label>
+
+                    {(coverFile || form.cover_url) && (
+                      <button
+                        type="button"
+                        className="editPackageRemoveCover"
+                        onClick={() => {
+                          setCoverFile(null);
+                          setCoverPreview("");
+                          updateField("cover_url", "");
+                        }}
+                      >
+                        Ukloni naslovnu fotografiju
+                      </button>
+                    )}
+
+                    <details className="editPackageUrlFallback">
+                      <summary>Umesto toga koristi URL fotografije</summary>
+                      <div className="editPackageInputIcon">
+                        <Icon name="image" size={17} />
+                        <input
+                          type="url"
+                          value={form.cover_url}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setCoverFile(null);
+                            setCoverPreview(value);
+                            updateField("cover_url", value);
+                          }}
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </details>
+                  </div>
                 </div>
               </section>
 
@@ -1034,6 +1123,7 @@ export default function EditPackage() {
                 <div className="editPackagePreviewImage">
                   <img
                     src={
+                      coverPreview ||
                       form.cover_url ||
                       FALLBACK_COVER
                     }
@@ -1956,6 +2046,381 @@ function EditPackageStyles() {
           padding: 20px;
         }
       }
+
+
+      /* =========================================================
+         EDIT PACKAGE — ULTRA COMPACT + DEVICE COVER UPLOAD
+         ========================================================= */
+
+      .editPackagePage{padding:88px 18px 38px}
+      .editPackageHero{
+        min-height:330px;
+        padding:22px;
+        border-radius:24px;
+      }
+      .editPackageHeroCopy{
+        max-width:760px;
+        padding-top:34px;
+      }
+      .editPackageEyebrow{
+        padding:7px 10px;
+        font-size:7px;
+      }
+      .editPackageHeroCopy h1{
+        margin-top:14px;
+        font-size:clamp(42px,5.4vw,68px);
+        line-height:.92;
+      }
+      .editPackageHeroCopy p{
+        margin-top:11px;
+        max-width:620px;
+        font-size:9px;
+        line-height:1.45;
+      }
+      .editPackageHeroStats{
+        right:22px;
+        bottom:22px;
+        left:22px;
+        gap:7px;
+      }
+      .editPackageHeroStats article{
+        padding:10px 12px;
+        border-radius:12px;
+      }
+      .editPackageHeroStats strong{font-size:12px}
+      .editPackageHeroStats span{
+        margin-top:3px;
+        font-size:6px;
+      }
+
+      .editPackageContent{width:min(1200px,100%)}
+      .editPackageToolbar{
+        align-items:center;
+        margin:14px 0 9px;
+        gap:10px;
+      }
+      .editPackageToolbar h2{
+        margin-top:4px;
+        font-size:clamp(24px,3vw,34px);
+      }
+      .editPackageToolbar p{
+        margin-top:4px;
+        font-size:7px;
+      }
+      .editPackageToolbarActions{gap:5px}
+      .editPackageToolbarActions a{
+        min-height:34px;
+        padding:0 10px;
+        border-radius:9px;
+        font-size:7px;
+      }
+
+      .editPackageLayout{
+        grid-template-columns:minmax(0,1.5fr) minmax(260px,.5fr);
+        gap:9px;
+      }
+      .editPackageForm{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px;
+      }
+      .editPackagePanel{
+        padding:12px;
+        border-radius:15px;
+      }
+      .editPackagePanel:first-child,
+      .editPackagePanel:last-of-type{
+        grid-column:1/-1;
+      }
+
+      .editPackagePanelHeader{
+        gap:8px;
+        margin-bottom:9px;
+      }
+      .editPackagePanelIcon{
+        width:32px;
+        height:32px;
+        border-radius:9px;
+      }
+      .editPackagePanelHeader small{font-size:5.5px}
+      .editPackagePanelHeader h2{
+        margin-top:3px;
+        font-size:16px;
+      }
+
+      .editPackageFields{gap:7px}
+      .editPackageField{gap:4px}
+      .editPackageField>span{font-size:7px}
+      .editPackageField input{
+        min-height:38px;
+        padding:0 10px;
+        border-radius:10px;
+        font-size:8px;
+      }
+      .editPackageField textarea{
+        min-height:78px;
+        padding:9px;
+        border-radius:10px;
+        font-size:8px;
+        line-height:1.45;
+        resize:none;
+      }
+      .editPackageInputIcon>svg{left:10px}
+      .editPackageInputIcon input{padding-left:34px}
+
+      .editPackageUpload{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        min-height:64px;
+        padding:8px;
+        border:1px dashed #b9c9b4;
+        border-radius:11px;
+        background:#f8faf6;
+        cursor:pointer;
+      }
+      .editPackageUpload.selected{
+        border-style:solid;
+        border-color:#8dab80;
+        background:#eef6e9;
+      }
+      .editPackageUpload input{
+        position:absolute;
+        width:1px;
+        height:1px;
+        opacity:0;
+        pointer-events:none;
+      }
+      .editPackageUploadIcon{
+        display:grid;
+        place-items:center;
+        flex:0 0 auto;
+        width:36px;
+        height:36px;
+        border-radius:10px;
+        background:#e5efdc;
+        color:#587746;
+      }
+      .editPackageUploadCopy{
+        min-width:0;
+        flex:1;
+      }
+      .editPackageUploadCopy strong,
+      .editPackageUploadCopy small{
+        display:block;
+      }
+      .editPackageUploadCopy strong{
+        overflow:hidden;
+        color:#3f5447;
+        font-size:8px;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+      }
+      .editPackageUploadCopy small{
+        margin-top:2px;
+        color:#8a958d;
+        font-size:6px;
+      }
+      .editPackageUploadAction{
+        flex:0 0 auto;
+        padding:6px 8px;
+        border:1px solid #d6dfd2;
+        border-radius:8px;
+        background:white;
+        color:#53665a;
+        font-size:6.5px;
+        font-weight:850;
+      }
+      .editPackageRemoveCover{
+        justify-self:start;
+        padding:6px 8px;
+        border:0;
+        border-radius:8px;
+        background:#fff0ee;
+        color:#9a463c;
+        cursor:pointer;
+        font-size:6.5px;
+        font-weight:800;
+      }
+      .editPackageUrlFallback{
+        border:1px solid #e1e7de;
+        border-radius:9px;
+        background:#fafbf8;
+      }
+      .editPackageUrlFallback summary{
+        padding:7px 8px;
+        color:#78857c;
+        cursor:pointer;
+        font-size:6.5px;
+        font-weight:800;
+      }
+      .editPackageUrlFallback .editPackageInputIcon{
+        padding:0 7px 7px;
+      }
+
+      .editPackageSubmitBar{
+        grid-column:1/-1;
+        gap:10px;
+        padding:10px;
+        border-radius:13px;
+      }
+      .editPackageSubmitBar span{font-size:7px}
+      .editPackageSubmitBar p{
+        margin-top:2px;
+        font-size:6px;
+      }
+      .editPackageSubmitBar button{
+        min-height:38px;
+        padding:0 12px;
+        border-radius:10px;
+        font-size:8px;
+      }
+
+      .editPackagePreview{
+        top:88px;
+      }
+      .editPackagePreviewCard{
+        margin-top:7px;
+        border-radius:15px;
+      }
+      .editPackagePreviewImage{height:170px}
+      .editPackagePreviewBody{padding:11px}
+      .editPackagePreviewBody>small{font-size:6px}
+      .editPackagePreviewBody h2{
+        margin-top:4px;
+        font-size:18px;
+      }
+      .editPackagePreviewLocation{
+        margin-top:5px;
+        font-size:7px;
+      }
+      .editPackagePreviewFacts{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:4px;
+        margin-top:8px;
+      }
+      .editPackagePreviewFacts article{
+        padding:7px;
+        border-radius:9px;
+      }
+      .editPackagePreviewFacts span{font-size:5.5px}
+      .editPackagePreviewFacts strong{
+        margin-top:2px;
+        font-size:7px;
+      }
+      .editPackagePreviewHint{
+        gap:6px;
+        margin-top:7px;
+        padding:8px;
+        border-radius:10px;
+      }
+      .editPackagePreviewHint p{
+        font-size:6.5px;
+        line-height:1.35;
+      }
+
+      @media(max-width:980px){
+        .editPackageForm{grid-template-columns:1fr}
+        .editPackagePanel:first-child,
+        .editPackagePanel:last-of-type{grid-column:auto}
+        .editPackageSubmitBar{grid-column:auto}
+        .editPackageHero{min-height:350px}
+        .editPackageHeroStats{
+          grid-template-columns:repeat(3,minmax(0,1fr));
+        }
+      }
+
+      @media(max-width:700px){
+        .editPackagePage{padding:72px 0 62px}
+        .editPackageHero{
+          min-height:310px;
+          padding:14px;
+          border-radius:0 0 20px 20px;
+        }
+        .editPackageHeroCopy{padding-top:24px}
+        .editPackageHeroCopy h1{
+          font-size:36px;
+        }
+        .editPackageHeroCopy p{display:none}
+        .editPackageHeroStats{
+          right:12px;
+          bottom:12px;
+          left:12px;
+          gap:4px;
+        }
+        .editPackageHeroStats article{
+          padding:7px;
+        }
+
+        .editPackageContent{padding:0 8px}
+        .editPackageToolbar{
+          align-items:flex-start;
+          flex-direction:row;
+          margin:9px 0 6px;
+        }
+        .editPackageToolbar p{display:none}
+        .editPackageToolbarActions{
+          flex-wrap:nowrap;
+        }
+
+        .editPackageLayout{gap:6px}
+        .editPackageForm{gap:6px}
+        .editPackagePanel{
+          padding:9px;
+          border-radius:12px;
+        }
+        .editPackagePanelHeader{
+          margin-bottom:7px;
+        }
+        .editPackagePanelHeader h2{
+          font-size:14px;
+        }
+        .editPackageFields{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:5px;
+        }
+        .editPackageField.full{grid-column:1/-1}
+        .editPackageField textarea{min-height:70px}
+
+        .editPackageUpload{
+          min-height:56px;
+          padding:7px;
+        }
+        .editPackageUploadIcon{
+          width:31px;
+          height:31px;
+        }
+
+        .editPackageSubmitBar{
+          position:sticky;
+          z-index:10;
+          bottom:6px;
+          align-items:center;
+          flex-direction:row;
+          padding:7px;
+          background:rgba(233,241,226,.95);
+          backdrop-filter:blur(12px);
+        }
+        .editPackageSubmitBar p{display:none}
+        .editPackageSubmitBar button{
+          width:auto;
+          flex:1;
+        }
+
+        .editPackagePreview{
+          position:static;
+        }
+        .editPackagePreviewImage{height:150px}
+      }
+
+      @media(max-width:460px){
+        .editPackageHero{min-height:290px}
+        .editPackageHeroCopy h1{font-size:32px}
+        .editPackageFields{grid-template-columns:1fr}
+        .editPackageField.full{grid-column:auto}
+        .editPackagePreviewFacts{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .editPackageUploadAction{display:none}
+      }
+
 
       @media (
         prefers-reduced-motion: reduce

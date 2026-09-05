@@ -3731,6 +3731,237 @@ function DashboardStyles() {
         }
       }
 
+
+      /* ===== MeetOutdoors ULTRA COMPACT HOST DASHBOARD ===== */
+      .hostDashboardPage{padding:92px 18px 40px}
+      .dashboardContainer{width:min(1380px,100%)}
+
+      .dashboardHero{min-height:330px;padding:22px 24px;border-radius:26px}
+      .heroMain{grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:28px;margin-top:34px;align-items:center}
+      .heroCopy h1{margin-top:10px;font-size:clamp(42px,5.4vw,72px);line-height:.91}
+      .heroCopy p{margin-top:12px;font-size:11px;line-height:1.5}
+      .heroPulse{margin-top:14px;padding:8px 11px;border-radius:12px}
+      .heroActions{gap:8px}
+      .heroPrimaryAction{min-height:62px;padding:10px 12px;border-radius:15px}
+      .heroMiniAction{min-height:40px;padding:0 10px;border-radius:11px}
+      .heroBottom{right:24px;bottom:20px;left:24px;gap:8px}
+      .heroBottomMetric{min-height:58px;padding:10px 12px;border-radius:13px}
+      .heroBottomMetric span{font-size:7px}
+      .heroBottomMetric strong{margin-top:4px;font-size:14px}
+
+      .dashboardMessage,.statsGrid,.operationsGrid,.dashboardQuickActions,
+      .intelligenceShell,.analyticsShell,.inventoryHeader,.dashboardSection{margin-top:12px}
+
+      .statsGrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+      .statCard{min-height:108px;padding:11px;border-radius:16px}
+      .statCardTop{margin-bottom:8px}
+      .statIcon{width:32px;height:32px;border-radius:10px}
+      .statCard>strong{font-size:21px;line-height:1}
+      .statLabel{margin-top:4px;font-size:8px}
+      .statCard small{margin-top:3px;font-size:7px;line-height:1.25}
+
+      .operationsGrid{gap:9px}
+      .operationsCard,.financeCard,.bookingsCard{padding:14px;border-radius:17px}
+      .operationsHeader,.financeHeader,.bookingsHeader{margin-bottom:9px}
+      .bookingRows{gap:5px}
+      .bookingRow{min-height:52px;padding:7px 9px;border-radius:10px}
+
+      .dashboardQuickActions{padding:13px;border-radius:17px}
+      .quickActionGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+      .quickActionCard{min-height:86px;padding:10px;border-radius:13px}
+      .quickActionCard h3{margin-top:7px;font-size:11px}
+      .quickActionCard p{margin-top:3px;font-size:7px;line-height:1.3}
+
+      .intelligenceShell{padding:14px;border-radius:18px}
+      .intelligenceHeader{gap:10px;margin-bottom:9px}
+      .intelligenceLogo{width:38px;height:38px;border-radius:11px}
+      .intelligenceHeader h2{margin-top:3px;font-size:21px;line-height:1.04}
+      .intelligenceHeader p{margin-top:3px;font-size:7.5px;line-height:1.3}
+      .demandInboxPanel{padding:0;border:0;background:transparent;box-shadow:none}
+      .demandCardsGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+      .demandCard{padding:10px;border-radius:14px}
+      .demandActivityIcon{width:32px;height:32px;border-radius:9px}
+      .demandActivityIdentity h3{margin-top:2px;font-size:14px}
+      .demandLocation{margin-top:7px;padding:6px 7px;border-radius:9px;font-size:7.5px}
+      .demandFacts{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:7px}
+      .demandFacts>div{min-height:48px;padding:6px;border-radius:9px}
+      .demandFactIcon{width:25px;height:25px;border-radius:7px}
+      .demandFacts small{font-size:6px}
+      .demandFacts strong{font-size:7.5px}
+      .groupBudgetSignal{margin-top:7px;padding:7px;border-radius:9px}
+      .demandCardFooter{margin-top:7px;padding-top:7px;font-size:6.5px}
+      .demandCardActions{gap:5px;margin-top:7px}
+      .demandPrimaryAction,.demandRejectAction{min-height:33px;border-radius:9px;font-size:7.5px}
+
+      .analyticsShell{padding:14px;border-radius:18px}
+      .analyticsHeader{margin-bottom:8px}
+      .analyticsHeader h2{margin-top:3px;font-size:21px;line-height:1.04}
+      .analyticsHeader p{margin-top:3px;font-size:7.5px;line-height:1.3}
+      .intelligenceCommandCenter,.agentInsightsPanel,.agentRecommendation{margin-top:7px;padding:10px;border-radius:13px}
+      .commandCenterTop,.agentInsightsHeader{margin-bottom:7px}
+      .commandCenterTop h3,.agentInsightsHeader h3,.agentRecommendation h3{margin-top:2px;font-size:15px;line-height:1.08}
+      .commandCenterTop p,.agentInsightsHeader p,.agentRecommendation p{margin-top:3px;font-size:7px;line-height:1.3}
+      .commandCenterGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+      .commandDecisionCard,.commandMarketCard,.commandPerformanceCard{min-height:118px;padding:9px;border-radius:11px}
+      .commandCardTop{margin-bottom:6px}
+      .commandCardIcon{width:28px;height:28px;border-radius:8px}
+      .commandDecisionCard>strong,.commandMarketCard>strong{font-size:12px}
+      .commandDecisionCard>p,.commandMarketCard>p{margin-top:3px;font-size:7px;line-height:1.3}
+      .commandPrimaryAction,.commandSecondaryAction{min-height:29px;margin-top:6px;padding:0 8px;font-size:7px;border-radius:8px}
+      .commandMiniStats{margin-top:6px;gap:4px}
+      .commandMiniStats span{padding:5px;border-radius:7px}
+      .commandPerformanceRows{gap:4px}
+      .commandPerformanceRows>div{min-height:27px;padding:4px 6px;border-radius:7px}
+
+      .agentInsightsGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+      .agentInsightCard{min-height:116px;padding:9px;border-radius:11px}
+      .agentInsightCard>strong{margin-top:5px;font-size:10px;line-height:1.18}
+      .agentInsightCard>p{margin-top:3px;font-size:6.5px;line-height:1.3}
+      .agentRecommendation{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px}
+      .agentRecommendationSignals{margin-top:6px;gap:4px}
+      .agentRecommendationSignals span{min-height:26px;padding:0 7px;font-size:6.5px}
+      .agentRecommendationActions{min-width:230px;gap:5px}
+      .agentRecommendationPrimary,.agentRecommendationSecondary{min-height:33px;padding:0 9px;border-radius:9px;font-size:7.5px}
+
+      .analyticsKpiGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:7px}
+      .analyticsKpi{min-height:78px;padding:9px;border-radius:11px}
+      .analyticsKpi strong{margin-top:4px;font-size:18px}
+      .analyticsKpi span{margin-top:3px;font-size:6.5px}
+      .analyticsMainGrid{grid-template-columns:minmax(0,1.4fr) minmax(250px,.6fr);gap:6px;margin-top:6px}
+      .analyticsInsightGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
+      .analyticsPanel{padding:9px;border-radius:11px}
+      .analyticsPanelHeader{margin-bottom:5px}
+      .analyticsPanelHeader h3{margin-top:2px;font-size:12px}
+      .trendChart{height:90px}
+      .performanceRows{gap:4px}
+      .performanceRows>div{min-height:26px;padding:4px 6px}
+      .rankedList,.budgetSignalList{gap:4px}
+      .rankedRow{gap:6px;padding:4px 0}
+      .rankNumber{width:23px;height:23px;font-size:6.5px}
+      .rankTopline strong,.budgetSignalRow strong{font-size:7.5px}
+      .rankTopline span,.rankMain small,.budgetSignalRow small{font-size:6px}
+      .budgetSignalRow{padding:6px;border-radius:8px}
+
+      .inventoryHeader{min-height:66px;padding:10px 13px;border-radius:15px}
+      .inventoryHeader h2{margin-top:2px;font-size:20px}
+      .inventoryHeader p{margin-top:2px;font-size:7px}
+      .inventorySummary{min-width:100px;padding:8px 10px;border-radius:10px}
+      .inventorySummary span{font-size:20px}
+
+      .dashboardSection{padding:12px;border-radius:16px}
+      .dashboardSectionHeader{margin-bottom:8px}
+      .dashboardSectionHeader h2{margin-top:2px;font-size:20px}
+      .dashboardSectionHeader p{margin-top:2px;font-size:7px}
+      .sectionButton{min-height:33px;padding:0 9px;border-radius:9px;font-size:7.5px}
+      .dashboardItemsGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+      .dashboardItemCard{display:grid;grid-template-columns:105px minmax(0,1fr);min-height:158px;border-radius:14px}
+      .itemImageWrapper{height:100%;min-height:158px}
+      .itemBody{padding:8px}
+      .itemHeading h3{margin-top:2px;font-size:13px;line-height:1.06}
+      .itemMeta{gap:3px;margin-top:5px}
+      .itemMeta>span{font-size:6.5px;line-height:1.2}
+      .interestSummary{margin-top:5px;padding:5px;border-radius:8px}
+      .interestSummary>span{width:24px;height:24px}
+      .interestSummary strong{font-size:9px}
+      .interestSummary small{font-size:6px}
+      .itemActions{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;margin-top:5px}
+      .itemAction,.deleteAction{min-height:27px;padding:0 4px;border-radius:7px;font-size:6.5px}
+      .emptySection{padding:20px 12px;border-radius:13px}
+
+      @media(max-width:1180px){
+        .statsGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .dashboardItemsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .agentInsightsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      }
+
+      @media(max-width:900px){
+        .hostDashboardPage{padding:82px 10px 28px}
+        .dashboardHero{min-height:auto;padding:17px;border-radius:20px}
+        .heroMain{grid-template-columns:1fr;gap:12px;margin-top:20px}
+        .heroCopy h1{font-size:clamp(36px,9vw,52px)}
+        .heroBottom{position:static;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px}
+        .demandCardsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .commandCenterGrid{grid-template-columns:1fr}
+        .analyticsMainGrid{grid-template-columns:1fr}
+        .analyticsInsightGrid{grid-template-columns:1fr 1fr}
+        .agentRecommendation{grid-template-columns:1fr}
+        .agentRecommendationActions{min-width:0}
+      }
+
+      @media(max-width:700px){
+        .hostDashboardPage{padding:72px 0 22px}
+        .dashboardHero{margin:0 7px;padding:12px;border-radius:16px}
+        .heroTopbar{min-height:32px}
+        .refreshButton{min-height:30px;padding:0 8px;font-size:7.5px}
+        .heroMain{margin-top:14px}
+        .heroCopy h1{margin-top:5px;font-size:36px;line-height:.93}
+        .heroCopy p{margin-top:6px;font-size:8.5px;line-height:1.35}
+        .heroPulse{margin-top:8px;padding:6px 8px}
+        .heroPrimaryAction{min-height:48px}
+        .heroMiniAction{min-height:34px}
+        .heroBottom{gap:4px;margin-top:8px}
+        .heroBottomMetric{min-height:46px;padding:6px}
+        .heroBottomMetric span{font-size:5.5px}
+        .heroBottomMetric strong{font-size:8.5px;overflow-wrap:anywhere}
+
+        .dashboardMessage,.statsGrid,.operationsGrid,.dashboardQuickActions,
+        .intelligenceShell,.analyticsShell,.inventoryHeader,.dashboardSection{
+          margin:7px 7px 0;
+        }
+
+        .statsGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+        .statCard{min-height:86px;padding:8px;border-radius:12px}
+        .statIcon{width:27px;height:27px}
+        .statCard>strong{font-size:17px}
+
+        .quickActionGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+        .quickActionCard{min-height:72px;padding:8px}
+
+        .intelligenceShell,.analyticsShell,.dashboardSection{padding:9px;border-radius:13px}
+        .intelligenceHeader h2,.analyticsHeader h2{font-size:17px}
+        .intelligenceHeader p,.analyticsHeader p{display:none}
+        .intelligenceSignal{padding:5px 7px;border-radius:9px}
+
+        .demandCardsGrid{grid-template-columns:1fr;gap:5px;max-height:470px;overflow:auto;overscroll-behavior:contain}
+        .demandCard{padding:8px}
+        .demandFacts{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+        .demandFacts>div{min-height:43px;padding:4px}
+
+        .intelligenceCommandCenter,.agentInsightsPanel,.agentRecommendation{padding:8px;margin-top:5px}
+        .commandCenterTop p,.agentInsightsHeader p,.agentRecommendationCopy>p{display:none}
+        .commandDecisionCard,.commandMarketCard,.commandPerformanceCard{min-height:96px;padding:7px}
+        .agentInsightsGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+        .agentInsightCard{min-height:96px;padding:7px}
+        .agentInsightCard>p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+        .analyticsKpiGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+        .analyticsKpi{min-height:64px;padding:7px}
+        .analyticsMainGrid,.analyticsInsightGrid{gap:4px}
+        .analyticsPanel{padding:7px}
+        .trendChart{height:76px}
+
+        .inventoryHeader{min-height:52px;padding:8px 9px}
+        .inventoryHeader h2{font-size:17px}
+        .inventoryHeader p{display:none}
+        .dashboardSectionHeader{margin-bottom:6px}
+        .dashboardSectionHeader h2{font-size:17px}
+        .dashboardSectionHeader p{display:none}
+        .sectionButton{min-height:30px;padding:0 7px}
+
+        .dashboardItemsGrid{grid-template-columns:1fr;gap:5px;max-height:470px;overflow:auto;overscroll-behavior:contain}
+        .dashboardItemCard{grid-template-columns:84px minmax(0,1fr);min-height:132px}
+        .itemImageWrapper{min-height:132px}
+        .itemBody{padding:7px}
+        .itemActions{grid-template-columns:repeat(4,minmax(0,1fr))}
+        .itemAction,.deleteAction{min-height:25px;padding:0 2px;font-size:0}
+        .itemAction svg,.deleteAction svg{width:13px;height:13px}
+      }
+
+      @media(max-width:420px){
+        .analyticsInsightGrid{grid-template-columns:1fr}
+        .dashboardItemCard{grid-template-columns:80px minmax(0,1fr)}
+      }
+
       @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
     `}</style>
   );

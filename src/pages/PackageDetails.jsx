@@ -1902,6 +1902,59 @@ function PackageDetailsStyles() {
       @media(max-width:600px){.bookingFieldGrid,.bookingModalActions{grid-template-columns:1fr}.bookingModalBackdrop{padding:12px}.bookingModal{padding:20px;border-radius:22px}}
       @media(max-width:480px){.packageHero{min-height:760px;padding:19px}.packageHeroCopy h1{font-size:48px}.packageHeroStats{right:19px;bottom:19px;left:19px}.packageContent{padding:0 13px}.packageActionButtons{flex-direction:column}.packageActionButtons button{width:100%}.packagePanel{padding:20px}.packageFeedTop{align-items:flex-start;flex-direction:column}}
       @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+      /* ULTRA COMPACT UX — reduced scrolling without touching data/booking logic */
+      @media (min-width:981px){
+        .packagePage{padding-top:96px}
+        .packageHero{min-height:430px;padding:26px;border-radius:28px}
+        .packageHeroCopy{padding-top:62px;max-width:760px}
+        .packageHeroCopy h1{margin-top:16px;font-size:clamp(44px,5.4vw,72px);line-height:.94}
+        .packageHeroLocation{margin-top:14px}
+        .packageHeroStats{right:26px;bottom:26px;left:26px;gap:9px}
+        .packageHeroStats article{padding:12px 14px;border-radius:14px}
+        .packageContent{margin-top:12px}
+        .packageActionBar{padding:14px 16px;border-radius:18px}
+        .packageBookingBanner{margin-top:10px;padding:13px 15px}
+        .packageGallerySection{margin-top:14px}
+        .packageGallery{max-height:390px;overflow:hidden}
+        .packageMainGrid{margin-top:14px;gap:14px}
+        .packagePanel{padding:18px;border-radius:20px}
+        .packageIncludeGrid{gap:12px;margin-top:12px}
+        .packageCommunityGrid{gap:14px;margin-top:14px}
+        .packageForm textarea{min-height:78px}
+        .packageFeed{max-height:360px;overflow:auto;padding-right:4px}
+      }
+      @media (max-width:980px){
+        .packagePage{padding-top:86px}
+        .packageHero{min-height:500px}
+        .packageHeroCopy{padding-top:70px}
+      }
+      @media (max-width:700px){
+        .packagePage{padding:72px 0 84px}
+        .packageHero{min-height:390px;padding:18px;border-radius:0 0 24px 24px}
+        .packageHeroCopy{padding-top:46px}
+        .packageHeroCopy h1{margin-top:12px;font-size:clamp(38px,12vw,56px);line-height:.94}
+        .packageHeroLocation{margin-top:10px}
+        .packageHeroStats{right:14px;bottom:14px;left:14px;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+        .packageHeroStats article{padding:10px 11px;border-radius:12px}
+        .packageContent{padding:0 12px;margin-top:10px}
+        .packageActionBar{align-items:stretch;padding:12px;border-radius:16px}
+        .packageActionButtons{gap:7px}
+        .packageActionButtons button,.packageShareButton{min-height:42px}
+        .packageBookingBanner{grid-template-columns:auto minmax(0,1fr);padding:12px}
+        .packageBookingBanner>a{grid-column:1/-1}
+        .packageGallerySection,.packageMainGrid,.packageCommunityGrid{margin-top:12px}
+        .packagePanel{padding:15px;border-radius:18px}
+        .packageSectionHeader{margin-bottom:12px}
+        .packageSectionHeader h2{font-size:22px}
+        .packageIncludeGrid{gap:9px;margin-top:9px}
+        .packageIncludePanel{padding:14px}
+        .packageFacts article{padding:10px}
+        .packageForm{gap:8px}
+        .packageForm textarea{min-height:72px}
+        .packageFeed{max-height:320px;overflow:auto}
+        .bookingModal{max-height:88vh;overflow:auto}
+      }
+
     `}</style>
   );
 }

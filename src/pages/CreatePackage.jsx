@@ -180,7 +180,31 @@ export default function CreatePackage() {
 
   const isAgentPrefill = searchParams.get("source") === "agent";
 
+  const ACTIVITIES = [
+    ["hiking", "Planinarenje"],
+    ["camping", "Kampovanje"],
+    ["cycling", "Biciklizam"],
+    ["climbing", "Penjanje"],
+    ["via ferrata", "Via ferrata"],
+    ["rafting", "Rafting"],
+    ["kayaking", "Kajak"],
+    ["paragliding", "Paraglajding"],
+    ["skydiving", "Padobranstvo"],
+    ["skiing", "Skijanje"],
+    ["snowboarding", "Snowboarding"],
+    ["horse riding", "Jahanje"],
+    ["fishing", "Ribolov"],
+    ["nature trip", "Izlet u prirodi"],
+    ["trail running", "Trail running"],
+    ["canyoning", "Kanjoning"],
+    ["surfing", "Surfing"],
+    ["sailing", "Jedrenje"],
+    ["diving", "Ronjenje"],
+    ["other", "Ostalo"],
+  ];
+
   const [form, setForm] = useState(() => ({
+    activity: searchParams.get("activity") || "",
     title: searchParams.get("title") || "",
     description: searchParams.get("description") || "",
     location: searchParams.get("location") || "",
@@ -220,6 +244,7 @@ export default function CreatePackage() {
 
   const completion = useMemo(() => {
     const checks = [
+      form.activity,
       form.title.trim(),
       form.description.trim(),
       form.location.trim(),
@@ -244,6 +269,11 @@ export default function CreatePackage() {
     const cleanCountry = form.country.trim();
     const numericPrice = Number(form.price || 0);
     const numericCapacity = Number(form.capacity || 1);
+
+    if (!form.activity) {
+      setError("Izaberi aktivnost paketa.");
+      return;
+    }
 
     if (!cleanTitle) {
       setError("Naziv paketa je obavezan.");
@@ -304,6 +334,7 @@ export default function CreatePackage() {
         .from("packages")
         .insert({
           host_id: profile.id,
+          activity: form.activity || "other",
           title: cleanTitle,
           slug,
           description: cleanDescription,
@@ -491,6 +522,22 @@ export default function CreatePackage() {
                 </div>
 
                 <div className="createPackageFields">
+                  <div className="createPackageField full">
+                    <span>Aktivnost</span>
+                    <div className="activityGrid">
+                      {ACTIVITIES.map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={form.activity === value ? "activityChip active" : "activityChip"}
+                          onClick={() => updateField("activity", value)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <label className="createPackageField full">
                     <span>Naziv paketa</span>
 
@@ -805,7 +852,7 @@ export default function CreatePackage() {
                   </p>
                 </div>
 
-                <button type="submit" disabled={saving || !form.title.trim()}>
+                <button type="submit" disabled={saving || !form.activity || !form.title.trim()}>
                   <Icon name="plus" size={17} />
                   {saving
                     ? "Kreiranje..."
@@ -1750,6 +1797,101 @@ function CreatePackageStyles() {
 
         .createPackagePanel {
           padding: 20px;
+        }
+      }
+
+
+      .activityGrid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 2px;
+      }
+
+      .activityChip {
+        min-height: 38px;
+        padding: 8px 10px;
+        border: 1px solid #dbe4d8;
+        border-radius: 12px;
+        background: #f8faf6;
+        color: #506258;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 850;
+        line-height: 1.15;
+        transition: .18s ease;
+      }
+
+      .activityChip:hover {
+        border-color: #9db28f;
+        background: #ffffff;
+      }
+
+      .activityChip.active {
+        border-color: #6f8f57;
+        background: #e7f0dc;
+        color: #38522d;
+        box-shadow: inset 0 0 0 1px rgba(111, 143, 87, .18);
+      }
+
+      @media (min-width: 981px) {
+        .createPackageHero {
+          min-height: 430px;
+          padding: 28px 32px;
+        }
+        .createPackageHeroCopy {
+          padding-top: 56px;
+        }
+        .createPackageHeroCopy h1 {
+          font-size: clamp(52px, 6vw, 78px);
+        }
+        .createPackageContent {
+          width: min(1220px, 100%);
+        }
+        .createPackageToolbar {
+          margin: 28px 0 16px;
+        }
+        .createPackageLayout {
+          grid-template-columns: minmax(0, 1.55fr) minmax(280px, .45fr);
+          gap: 14px;
+        }
+        .createPackageForm {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+        .createPackagePanel {
+          padding: 18px;
+          border-radius: 22px;
+        }
+        .createPackagePanel:first-child,
+        .createPackagePanel:nth-child(4),
+        .createPackageSubmitBar,
+        .packageFormError {
+          grid-column: 1 / -1;
+        }
+        .createPackagePanelHeader {
+          margin-bottom: 14px;
+        }
+        .createPackageFields {
+          gap: 10px;
+        }
+        .createPackageField input {
+          min-height: 43px;
+        }
+        .createPackageField textarea {
+          min-height: 92px;
+        }
+        .createPackagePreviewImage {
+          height: 190px;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .activityGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          max-height: 180px;
         }
       }
 
