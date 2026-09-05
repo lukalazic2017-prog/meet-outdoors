@@ -1836,6 +1836,351 @@ function NavbarStyles() {
         }
       }
 
+
+      /* =========================================================
+         NAVBAR — ULTRA COMPACT MOBILE FIX
+         Fixed centered pill, no horizontal drift / no nav scroll.
+         Existing routes, auth, notifications and drawer logic kept.
+         ========================================================= */
+
+      @media (max-width: 640px) {
+        .brutalNav,
+        .brutalNav.scrolled,
+        .brutalNav.menuOpen {
+          top: calc(6px + env(safe-area-inset-top, 0px));
+          left: 8px;
+          right: 8px;
+          width: auto;
+          max-width: calc(100vw - 16px);
+          height: 50px;
+          min-height: 50px;
+          padding: 5px 6px;
+          grid-template-columns: auto 1fr auto;
+          gap: 6px;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,.12);
+          border-radius: 16px;
+          background:
+            radial-gradient(circle at 12% 0%, rgba(186,255,158,.10), transparent 32%),
+            linear-gradient(135deg, rgba(5,17,10,.97), rgba(8,27,16,.94));
+          box-shadow:
+            0 10px 28px rgba(0,0,0,.24),
+            inset 0 1px 0 rgba(255,255,255,.06);
+          backdrop-filter: blur(18px) saturate(130%);
+          -webkit-backdrop-filter: blur(18px) saturate(130%);
+          transform: none !important;
+          contain: none;
+          will-change: auto;
+        }
+
+        .brutalNav::before {
+          border-radius: 16px;
+        }
+
+        .brutalNavLogo {
+          min-width: 0;
+          gap: 0;
+        }
+
+        .brutalNavLogoMark {
+          width: 38px;
+          height: 38px;
+          flex: 0 0 38px;
+          border-radius: 12px;
+          box-shadow: none;
+        }
+
+        .brutalNavLogoMark svg {
+          width: 21px;
+          height: 21px;
+        }
+
+        .brutalNavLogoCopy {
+          display: none;
+        }
+
+        .brutalNavDesktop {
+          display: none;
+        }
+
+        .brutalNavRight {
+          justify-self: end;
+          gap: 4px;
+          min-width: 0;
+          overflow: visible;
+        }
+
+        .brutalNavBell,
+        .brutalNavProfile,
+        .brutalMenuButton {
+          width: 36px;
+          min-width: 36px;
+          height: 36px;
+          border-radius: 11px;
+          box-shadow: none;
+        }
+
+        .brutalNavBell svg {
+          width: 17px;
+          height: 17px;
+        }
+
+        .brutalMenuButton {
+          display: grid;
+          grid-template-columns: 1fr;
+          padding: 0;
+        }
+
+        .brutalMenuButtonIcon {
+          width: 100%;
+          height: 100%;
+        }
+
+        .brutalMenuButtonIcon svg {
+          width: 19px;
+          height: 19px;
+        }
+
+        .brutalMenuButtonLabel,
+        .brutalMenuButtonGlow {
+          display: none;
+        }
+
+        .brutalNavBellBadge {
+          top: -4px;
+          right: -4px;
+          min-width: 17px;
+          height: 17px;
+          padding: 0 4px;
+          border-width: 1px;
+          font-size: 6px;
+        }
+
+        .brutalNavBell.hasUnread::before {
+          display: none;
+        }
+
+        .brutalDrawer {
+          overflow: hidden;
+        }
+
+        .brutalDrawerInner {
+          grid-template-columns: 1fr;
+          gap: 10px;
+          min-height: 100svh;
+          height: 100svh;
+          padding:
+            calc(64px + env(safe-area-inset-top, 0px))
+            10px
+            calc(10px + env(safe-area-inset-bottom, 0px));
+          overflow: hidden;
+        }
+
+        .brutalDrawerIntro {
+          display: none;
+        }
+
+        .brutalDrawerNavigation {
+          min-height: 0;
+          height: 100%;
+          display: grid;
+          grid-template-rows: auto minmax(0, 1fr);
+          gap: 8px;
+          overflow: hidden;
+        }
+
+        .brutalDrawerMainLinks {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 5px;
+        }
+
+        .brutalDrawerMainLinks > a,
+        .brutalDrawerMainLinks > a:first-child {
+          display: grid;
+          grid-template-columns: 1fr;
+          justify-items: center;
+          align-content: center;
+          gap: 4px;
+          min-height: 58px;
+          padding: 6px 3px;
+          border: 1px solid rgba(255,255,255,.10);
+          border-radius: 11px;
+          background: rgba(255,255,255,.045);
+          text-align: center;
+        }
+
+        .brutalDrawerMainLinks > a:hover,
+        .brutalDrawerMainLinks > a.active {
+          padding-left: 3px;
+          background: rgba(186,255,158,.10);
+          border-color: rgba(186,255,158,.20);
+        }
+
+        .brutalDrawerLinkIndex,
+        .brutalDrawerLinkArrow {
+          display: none;
+        }
+
+        .brutalDrawerLinkIcon {
+          width: 27px;
+          height: 27px;
+          border: 0;
+          border-radius: 8px;
+          background: rgba(186,255,158,.08);
+        }
+
+        .brutalDrawerLinkIcon svg {
+          width: 15px;
+          height: 15px;
+        }
+
+        .brutalDrawerMainLinks strong {
+          font-size: 8px;
+          line-height: 1.05;
+          letter-spacing: 0;
+        }
+
+        .brutalDrawerAccount {
+          min-height: 0;
+          gap: 6px;
+          padding: 8px;
+          border-radius: 13px;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          scrollbar-width: none;
+        }
+
+        .brutalDrawerAccount::-webkit-scrollbar {
+          display: none;
+        }
+
+        .brutalDrawerAccountTop {
+          gap: 6px;
+        }
+
+        .brutalDrawerAccountLabel {
+          font-size: 6px;
+        }
+
+        .drawerNotificationPill {
+          min-height: 24px;
+          padding: 0 7px;
+          font-size: 6px;
+        }
+
+        .brutalDrawerAuthGrid,
+        .brutalDrawerShortcutGrid {
+          grid-template-columns: repeat(2, minmax(0,1fr));
+          gap: 5px;
+        }
+
+        .brutalDrawerSecondary,
+        .brutalDrawerPrimary,
+        .brutalDrawerShortcutGrid a,
+        .brutalDrawerHostActions a,
+        .brutalDrawerLogout {
+          min-height: 36px;
+          padding: 0 9px;
+          border-radius: 9px;
+          font-size: 7px;
+        }
+
+        .brutalDrawerHostPanel {
+          gap: 7px;
+          padding: 8px;
+          border-radius: 11px;
+        }
+
+        .hostPanelCopy small {
+          display: none;
+        }
+
+        .hostPanelCopy span {
+          font-size: 6px;
+        }
+
+        .hostPanelCopy strong {
+          margin-top: 3px;
+          font-size: 9px;
+        }
+
+        .brutalDrawerHostActions {
+          grid-template-columns: repeat(3, minmax(0,1fr));
+          gap: 5px;
+        }
+
+        .brutalDrawerHostActions a:first-child {
+          grid-column: auto;
+        }
+
+        .brutalDrawerHostActions a {
+          grid-template-columns: auto minmax(0,1fr);
+          gap: 5px;
+          padding: 0 7px;
+        }
+
+        .brutalDrawerHostActions a svg:last-child {
+          display: none;
+        }
+
+        .brutalDrawerFooter {
+          display: none;
+        }
+      }
+
+      @media (max-width: 390px) {
+        .brutalNav,
+        .brutalNav.scrolled,
+        .brutalNav.menuOpen {
+          left: 6px;
+          right: 6px;
+          max-width: calc(100vw - 12px);
+          height: 48px;
+          min-height: 48px;
+          padding: 5px;
+          border-radius: 15px;
+        }
+
+        .brutalNavLogoMark {
+          width: 36px;
+          height: 36px;
+          flex-basis: 36px;
+        }
+
+        .brutalNavBell,
+        .brutalNavProfile,
+        .brutalMenuButton {
+          width: 34px;
+          min-width: 34px;
+          height: 34px;
+          border-radius: 10px;
+        }
+
+        .brutalNavRight {
+          gap: 3px;
+        }
+
+        .brutalDrawerInner {
+          padding-left: 7px;
+          padding-right: 7px;
+        }
+
+        .brutalDrawerMainLinks {
+          gap: 4px;
+        }
+
+        .brutalDrawerMainLinks > a,
+        .brutalDrawerMainLinks > a:first-child {
+          min-height: 54px;
+        }
+
+        .brutalDrawerMainLinks strong {
+          font-size: 7px;
+        }
+      }
+
+
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
