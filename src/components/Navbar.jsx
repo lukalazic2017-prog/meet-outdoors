@@ -724,26 +724,28 @@ function NavbarStyles() {
         grid-template-columns: 1fr auto 1fr;
         align-items: center;
         gap: 18px;
-        height: 74px;
-        padding: 10px 11px 10px 15px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 24px;
+        height: 72px;
+        padding: 9px 10px 9px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 22px;
         background:
-          radial-gradient(circle at 12% 0%, rgba(186, 255, 158, 0.09), transparent 32%),
+          radial-gradient(circle at 10% 0%, rgba(186, 255, 158, 0.10), transparent 31%),
           linear-gradient(
             120deg,
-            rgba(5, 16, 10, 0.92),
-            rgba(8, 27, 16, 0.82)
+            rgba(4, 15, 9, 0.94),
+            rgba(8, 27, 16, 0.87)
           );
         box-shadow:
-          0 20px 70px rgba(0, 0, 0, 0.34),
-          0 2px 12px rgba(0, 0, 0, 0.18),
-          inset 0 1px 0 rgba(255, 255, 255, 0.07),
+          0 18px 62px rgba(0, 0, 0, 0.32),
+          0 2px 10px rgba(0, 0, 0, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.075),
           inset 0 -1px 0 rgba(255, 255, 255, 0.025);
-        backdrop-filter: blur(28px) saturate(150%);
-        -webkit-backdrop-filter: blur(28px) saturate(150%);
+        backdrop-filter: blur(24px) saturate(145%);
+        -webkit-backdrop-filter: blur(24px) saturate(145%);
         pointer-events: none;
         isolation: isolate;
+        transform: translateZ(0);
+        backface-visibility: hidden;
       }
 
       .brutalNav::before {
@@ -768,9 +770,9 @@ function NavbarStyles() {
         top: 12px;
         left: 12px;
         right: 12px;
-        height: 74px;
-        padding: 10px 11px 10px 15px;
-        border-radius: 24px;
+        height: 72px;
+        padding: 9px 10px 9px 14px;
+        border-radius: 22px;
       }
 
       .brutalNavLogo,
@@ -1654,29 +1656,64 @@ function NavbarStyles() {
       }
 
       @media (max-width: 640px) {
-        .brutalNav {
-          top: 8px;
-          left: 8px;
-          right: 8px;
-          height: 66px;
-          padding: 8px 8px 8px 11px;
-          border-radius: 20px;
-        }
-
+        .brutalNav,
         .brutalNav.scrolled,
         .brutalNav.menuOpen {
-          top: 8px;
-          left: 8px;
-          right: 8px;
-          height: 66px;
-          padding: 8px 8px 8px 11px;
-          border-radius: 20px;
+          top: 0;
+          left: 0;
+          right: 0;
+          width: 100%;
+          height: calc(64px + env(safe-area-inset-top, 0px));
+          padding:
+            env(safe-area-inset-top, 0px)
+            10px
+            0
+            12px;
+          border-top: 0;
+          border-right: 0;
+          border-left: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+          border-radius: 0 0 20px 20px;
+          background:
+            linear-gradient(
+              180deg,
+              rgba(5, 17, 10, 0.985),
+              rgba(7, 24, 14, 0.965)
+            );
+          box-shadow:
+            0 12px 36px rgba(0, 0, 0, 0.26),
+            inset 0 -1px 0 rgba(186,255,158,.025);
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          transform: translate3d(0, 0, 0);
+          will-change: transform;
+          contain: layout paint;
+        }
+
+        .brutalNav::before {
+          background:
+            radial-gradient(circle at 18% 0%, rgba(186,255,158,.11), transparent 36%),
+            linear-gradient(90deg, rgba(255,255,255,.025), transparent 32%);
         }
 
         .brutalNavLogoMark {
           width: 43px;
           height: 43px;
           border-radius: 14px;
+        }
+
+        .brutalNavLogoMark {
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.10),
+            0 8px 20px rgba(0,0,0,.18);
+        }
+
+        .brutalNavBell,
+        .brutalNavProfile,
+        .brutalMenuButton {
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.07),
+            0 7px 18px rgba(0,0,0,.16);
         }
 
         .brutalNavLogoCopy small {
@@ -1753,20 +1790,20 @@ function NavbarStyles() {
       }
 
       @media (max-width: 440px) {
-        .brutalNav {
-          top: 7px;
-          left: 7px;
-          right: 7px;
-          padding-inline: 10px;
-        }
-
+        .brutalNav,
         .brutalNav.scrolled,
         .brutalNav.menuOpen {
-          top: 7px;
-          left: 7px;
-          right: 7px;
-          height: 66px;
-          padding: 8px 10px;
+          top: 0;
+          left: 0;
+          right: 0;
+          width: 100%;
+          height: calc(62px + env(safe-area-inset-top, 0px));
+          padding:
+            env(safe-area-inset-top, 0px)
+            8px
+            0
+            10px;
+          border-radius: 0 0 18px 18px;
         }
 
         .brutalNavLogo {

@@ -30,6 +30,7 @@ const ACTIVITIES = [
   { value: "Off-road", label: "Terenska vožnja" },
   { value: "Motocross", label: "Motokros" },
   { value: "Paragliding", label: "Paraglajding" },
+  { value: "Skydiving", label: "Padobranstvo" },
   { value: "Zip line", label: "Zip-lajn" },
   { value: "Skiing", label: "Skijanje" },
   { value: "Snowboarding", label: "Snoubording" },
@@ -1010,28 +1011,48 @@ export default function Signup() {
                   </div>
                 </div>
 
-                <div className="activityChips">
-                  {ACTIVITIES.map((activity) => {
-                    const selected =
-                      form.activities.includes(activity.value);
+                <div className="activityPicker">
+                  <div className="activityPickerTop">
+                    <span>Izaberi interesovanja</span>
+                    <strong>
+                      {form.activities.length > 0
+                        ? `${form.activities.length} izabrano`
+                        : "Nijedna izabrana"}
+                    </strong>
+                  </div>
 
-                    return (
-                      <button
-                        key={activity.value}
-                        type="button"
-                        className={selected ? "selected" : ""}
-                        onClick={() => toggleActivity(activity.value)}
-                      >
-                        {selected && <Icon name="check" size={14} />}
-                        {activity.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                  <div className="activityChips">
+                    {ACTIVITIES.map((activity) => {
+                      const selected =
+                        form.activities.includes(activity.value);
 
-                <div className="selectedCount">
-                  <span>{form.activities.length}</span>
-                  izabranih aktivnosti
+                      return (
+                        <button
+                          key={activity.value}
+                          type="button"
+                          className={selected ? "selected" : ""}
+                          onClick={() => toggleActivity(activity.value)}
+                          aria-pressed={selected}
+                        >
+                          <span className="activityCheck">
+                            {selected && <Icon name="check" size={12} />}
+                          </span>
+                          <span>{activity.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="activityPickerBottom">
+                    <span>
+                      Možeš izabrati više aktivnosti. Lista je skrolabilna.
+                    </span>
+
+                    <div className="selectedCount">
+                      <span>{form.activities.length}</span>
+                      izabrano
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1718,59 +1739,155 @@ function SignupStyles() {
         box-shadow: 0 5px 14px rgba(34, 54, 42, 0.08);
       }
 
-      .activityChips {
+      .activityPicker {
+        overflow: hidden;
+        border: 1px solid #d9e1d6;
+        border-radius: 20px;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,.9), rgba(248,250,246,.92));
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.9),
+          0 12px 34px rgba(38, 62, 46, 0.06);
+      }
+
+      .activityPickerTop,
+      .activityPickerBottom {
         display: flex;
-        flex-wrap: wrap;
-        gap: 9px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 12px 14px;
+      }
+
+      .activityPickerTop {
+        border-bottom: 1px solid #e5eae3;
+        background: rgba(244, 248, 241, 0.88);
+      }
+
+      .activityPickerTop > span {
+        color: #617067;
+        font-size: 10px;
+        font-weight: 800;
+      }
+
+      .activityPickerTop > strong {
+        flex: 0 0 auto;
+        color: #183a27;
+        font-size: 10px;
+        font-weight: 900;
+      }
+
+      .activityChips {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+        max-height: 248px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 12px;
+        scrollbar-width: thin;
+        scrollbar-color: #a8b7a2 transparent;
+      }
+
+      .activityChips::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .activityChips::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: #b4c0af;
       }
 
       .activityChips button {
-        display: inline-flex;
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
         align-items: center;
-        gap: 6px;
-        min-height: 39px;
-        padding: 0 13px;
-        border: 1px solid #d5ddd3;
-        border-radius: 999px;
-        background: #fafbf8;
-        color: #637068;
+        gap: 7px;
+        min-width: 0;
+        min-height: 40px;
+        padding: 7px 10px 7px 8px;
+        border: 1px solid #dce3d9;
+        border-radius: 12px;
+        background: #fbfcfa;
+        color: #59685f;
         cursor: pointer;
-        font-size: 11px;
-        font-weight: 750;
-        transition: 0.18s ease;
+        text-align: left;
+        font-size: 10px;
+        font-weight: 780;
+        line-height: 1.22;
+        transition:
+          border-color 0.16s ease,
+          background 0.16s ease,
+          color 0.16s ease,
+          transform 0.16s ease,
+          box-shadow 0.16s ease;
       }
 
       .activityChips button:hover {
-        border-color: #93a687;
-        color: #33493a;
+        border-color: #9eaf96;
+        background: #f4f8f1;
+        color: #2e4436;
+        transform: translateY(-1px);
+      }
+
+      .activityCheck {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border: 1px solid #d8e0d5;
+        border-radius: 7px;
+        background: white;
+        color: transparent;
       }
 
       .activityChips button.selected {
-        border-color: #183a27;
-        background: #183a27;
-        color: #c9f28c;
-        box-shadow: 0 8px 20px rgba(24, 58, 39, 0.12);
+        border-color: #315b3e;
+        background:
+          linear-gradient(145deg, #183a27, #214b32);
+        color: #f6fff2;
+        box-shadow: 0 7px 17px rgba(24, 58, 39, 0.13);
+      }
+
+      .activityChips button.selected .activityCheck {
+        border-color: rgba(201, 242, 140, 0.26);
+        background: rgba(201, 242, 140, 0.14);
+        color: #d8ffa2;
+      }
+
+      .activityPickerBottom {
+        min-height: 46px;
+        border-top: 1px solid #e5eae3;
+        background: rgba(250, 251, 249, 0.94);
+      }
+
+      .activityPickerBottom > span {
+        color: #88938b;
+        font-size: 9px;
+        line-height: 1.35;
       }
 
       .selectedCount {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 7px;
-        margin-top: 17px;
-        color: #7d8981;
-        font-size: 10px;
+        gap: 6px;
+        flex: 0 0 auto;
+        color: #64736a;
+        font-size: 9px;
+        font-weight: 800;
       }
 
       .selectedCount span {
         display: grid;
         place-items: center;
-        width: 24px;
+        min-width: 24px;
         height: 24px;
+        padding: 0 6px;
         border-radius: 8px;
         background: #e8f1dd;
-        color: #527039;
-        font-size: 11px;
-        font-weight: 900;
+        color: #45632f;
+        font-size: 10px;
+        font-weight: 950;
       }
 
       .signupError {
@@ -1997,6 +2114,28 @@ function SignupStyles() {
       }
 
       @media (max-width: 650px) {
+        .activityChips {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          max-height: 230px;
+          padding: 10px;
+          gap: 6px;
+        }
+
+        .activityChips button {
+          min-height: 38px;
+          padding: 6px 8px 6px 7px;
+          font-size: 9px;
+        }
+
+        .activityPickerTop,
+        .activityPickerBottom {
+          padding: 10px 11px;
+        }
+
+        .activityPickerBottom > span {
+          display: none;
+        }
+
         .signupVisual {
           min-height: 600px;
         }
@@ -2038,6 +2177,24 @@ function SignupStyles() {
       }
 
       @media (max-width: 430px) {
+        .activityChips {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          max-height: 210px;
+        }
+
+        .activityChips button {
+          grid-template-columns: 20px minmax(0, 1fr);
+          gap: 6px;
+          min-height: 36px;
+          border-radius: 10px;
+        }
+
+        .activityCheck {
+          width: 20px;
+          height: 20px;
+          border-radius: 6px;
+        }
+
         .signupVisual {
           min-height: 560px;
           padding: 22px;
