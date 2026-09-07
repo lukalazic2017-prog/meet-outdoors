@@ -2091,10 +2091,10 @@ function HomeStyles() {
       .guestHero {
         position: relative;
         isolation: isolate;
-        min-height: 760px;
+        min-height: 560px;
         display: flex;
         align-items: center;
-        padding: 135px 0 105px;
+        padding: 105px 0 76px;
         color: white;
       }
 
@@ -2388,11 +2388,11 @@ function HomeStyles() {
 
       .featuredSection,
       .roleChoice {
-        padding: 105px 0;
+        padding: 68px 0;
       }
 
       .firstSection {
-        padding-top: 120px;
+        padding-top: 82px;
       }
 
       .sectionHeading {
@@ -2456,7 +2456,7 @@ function HomeStyles() {
 
       .eventCard {
         position: relative;
-        min-height: 490px;
+        min-height: 370px;
         overflow: hidden;
         border-radius: 27px;
         color: white;
@@ -2655,7 +2655,7 @@ function HomeStyles() {
 
       .roleCard {
         position: relative;
-        min-height: 540px;
+        min-height: 360px;
         overflow: hidden;
         border-radius: 30px;
         color: white;
@@ -2738,10 +2738,10 @@ function HomeStyles() {
       .guestFinal {
         position: relative;
         isolation: isolate;
-        min-height: 620px;
+        min-height: 380px;
         display: grid;
         place-items: center;
-        padding: 80px 24px;
+        padding: 56px 24px;
         color: white;
         text-align: center;
       }
@@ -2804,12 +2804,12 @@ function HomeStyles() {
       /* LIVE HOME DISCOVERY */
 
       .homeDiscovery {
-        padding: 15px 0 100px;
+        padding: 10px 0 68px;
       }
 
       .homeDiscoveryIntro {
         max-width: 820px;
-        margin-bottom: 52px;
+        margin-bottom: 32px;
       }
 
       .homeDiscoveryIntro h2 {
@@ -2828,7 +2828,7 @@ function HomeStyles() {
       }
 
       .homeDiscoveryBlock + .homeDiscoveryBlock {
-        margin-top: 72px;
+        margin-top: 44px;
       }
 
       .homeHostGrid,
@@ -4494,8 +4494,8 @@ function HomeStyles() {
         }
 
         .guestHero {
-          min-height: 700px;
-          padding: 115px 0 90px;
+          min-height: 540px;
+          padding: 96px 0 68px;
         }
 
         .heroTopBar {
@@ -4543,11 +4543,11 @@ function HomeStyles() {
 
         .featuredSection,
         .roleChoice {
-          padding: 80px 0;
+          padding: 54px 0;
         }
 
         .firstSection {
-          padding-top: 95px;
+          padding-top: 70px;
         }
 
         .sectionHeading,
@@ -4575,11 +4575,11 @@ function HomeStyles() {
         }
 
         .eventCard {
-          min-height: 460px;
+          min-height: 350px;
         }
 
         .roleCard {
-          min-height: 490px;
+          min-height: 330px;
         }
 
         .roleContent h3 {
@@ -4612,11 +4612,11 @@ function HomeStyles() {
         }
 
         .hostOverviewHero {
-          min-height: 420px;
+          min-height: 350px;
         }
 
         .hostWorkspace {
-          padding: 75px 0;
+          padding: 52px 0;
         }
 
         .bookingItem {
@@ -4634,7 +4634,7 @@ function HomeStyles() {
         }
 
         .hostMotivation {
-          min-height: 620px;
+          min-height: 390px;
           border-radius: 26px;
         }
 
@@ -4649,7 +4649,7 @@ function HomeStyles() {
 
       @media (max-width: 460px) {
         .guestHero {
-          min-height: 670px;
+          min-height: 520px;
         }
 
         .guestCopy h1 {

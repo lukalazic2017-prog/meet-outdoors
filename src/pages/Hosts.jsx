@@ -194,12 +194,6 @@ function HostCard({ host }) {
           </span>
         </div>
 
-        <div className="hostMediaBottom">
-          <span>
-            <Icon name="mapPin" size={14} />
-            {location}
-          </span>
-        </div>
       </Link>
 
       <div className="hostCardBody">
@@ -222,6 +216,11 @@ function HostCard({ host }) {
               <h2>{displayName}</h2>
             </div>
             <span>@{host.username || "host"}</span>
+
+            <div className="hostIdentityLocation">
+              <Icon name="mapPin" size={14} />
+              <span>{location}</span>
+            </div>
           </div>
         </div>
 
@@ -1318,7 +1317,8 @@ function HostsStyles() {
 
       .hostIdentityText {
         min-width: 0;
-        padding: 14px 0 3px;
+        flex: 1;
+        padding: 15px 0 2px;
       }
 
       .hostIdentityText h2 {
@@ -1332,13 +1332,38 @@ function HostsStyles() {
         white-space: nowrap;
       }
 
-      .hostIdentityText span {
+      .hostIdentityText > span {
         display: block;
         overflow: hidden;
         margin-top: 5px;
         color: #879188;
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 750;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hostIdentityLocation {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        margin-top: 9px;
+        color: #5f7167;
+      }
+
+      .hostIdentityLocation svg {
+        flex: 0 0 auto;
+        color: #6f9250;
+      }
+
+      .hostIdentityLocation span {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.25;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
@@ -1804,10 +1829,10 @@ function HostsStyles() {
         }
 
         .hostAvatar {
-          width: 80px;
-          height: 80px;
-          margin-top: -40px;
-          border-radius: 23px;
+          width: 88px;
+          height: 88px;
+          margin-top: -43px;
+          border-radius: 26px;
         }
 
         .hostCardFooter {
@@ -1913,7 +1938,7 @@ function HostsStyles() {
       .hostMedia {
         position: relative;
         display: block;
-        height: 250px;
+        height: 292px;
         overflow: hidden;
         background: #dce5d6;
       }
@@ -2006,40 +2031,13 @@ function HostsStyles() {
       }
 
       .hostMediaBottom {
-        position: absolute;
-        right: 16px;
-        bottom: 17px;
-        left: 16px;
-      }
-
-      .hostMediaBottom > span {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        max-width: 100%;
-        min-height: 31px;
-        padding: 0 10px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 999px;
-        background: rgba(5, 18, 10, 0.42);
-        color: rgba(255, 255, 255, 0.88);
-        font-size: 8px;
-        font-weight: 800;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        backdrop-filter: blur(12px);
-      }
-
-      .hostMediaBottom svg {
-        flex: 0 0 auto;
-        color: #d5f4a6;
+        display: none;
       }
 
       .hostCardBody {
         position: relative;
         z-index: 1;
-        padding: 0 21px 21px;
+        padding: 0 22px 22px;
       }
 
       .hostIdentity {
@@ -2057,11 +2055,11 @@ function HostsStyles() {
 
       .hostAvatar {
         display: block;
-        width: 88px;
-        height: 88px;
-        margin-top: -43px;
+        width: 96px;
+        height: 96px;
+        margin-top: -47px;
         border: 5px solid #ffffff;
-        border-radius: 27px;
+        border-radius: 29px;
         object-fit: cover;
         background: #e5ebdf;
         box-shadow:

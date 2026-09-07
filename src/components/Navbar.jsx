@@ -716,32 +716,24 @@ function NavbarStyles() {
 
       .brutalNav {
         position: fixed;
-        top: 12px;
-        left: 12px;
-        right: 12px;
+        top: 10px;
+        left: 18px;
+        right: 18px;
         z-index: 3000;
         display: grid;
         grid-template-columns: 1fr auto 1fr;
         align-items: center;
-        gap: 18px;
-        height: 72px;
-        padding: 9px 10px 9px 14px;
+        gap: 14px;
+        height: 64px;
+        padding: 8px 9px 8px 12px;
         border: 1px solid rgba(255, 255, 255, 0.13);
-        border-radius: 22px;
-        background:
-          radial-gradient(circle at 10% 0%, rgba(186, 255, 158, 0.10), transparent 31%),
-          linear-gradient(
-            120deg,
-            rgba(4, 15, 9, 0.94),
-            rgba(8, 27, 16, 0.87)
-          );
+        border-radius: 18px;
+        background: rgba(5, 18, 11, 0.92);
         box-shadow:
-          0 18px 62px rgba(0, 0, 0, 0.32),
-          0 2px 10px rgba(0, 0, 0, 0.14),
-          inset 0 1px 0 rgba(255, 255, 255, 0.075),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.025);
-        backdrop-filter: blur(24px) saturate(145%);
-        -webkit-backdrop-filter: blur(24px) saturate(145%);
+          0 12px 34px rgba(0, 0, 0, 0.24),
+          inset 0 1px 0 rgba(255, 255, 255, 0.055);
+        backdrop-filter: blur(18px) saturate(125%);
+        -webkit-backdrop-filter: blur(18px) saturate(125%);
         pointer-events: none;
         isolation: isolate;
         transform: translateZ(0);
@@ -767,12 +759,12 @@ function NavbarStyles() {
 
       .brutalNav.scrolled,
       .brutalNav.menuOpen {
-        top: 12px;
-        left: 12px;
-        right: 12px;
-        height: 72px;
-        padding: 9px 10px 9px 14px;
-        border-radius: 22px;
+        top: 10px;
+        left: 18px;
+        right: 18px;
+        height: 64px;
+        padding: 8px 9px 8px 12px;
+        border-radius: 18px;
       }
 
       .brutalNavLogo,
@@ -785,17 +777,17 @@ function NavbarStyles() {
         display: inline-flex;
         align-items: center;
         justify-self: start;
-        gap: 11px;
+        gap: 9px;
         color: white !important;
       }
 
       .brutalNavLogoMark {
         display: grid;
         place-items: center;
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         border: 1px solid rgba(186, 255, 158, 0.24);
-        border-radius: 16px;
+        border-radius: 12px;
         background:
           radial-gradient(circle at 30% 20%, rgba(186,255,158,.16), transparent 45%),
           linear-gradient(
@@ -833,7 +825,7 @@ function NavbarStyles() {
       }
 
       .brutalNavLogoCopy strong {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 950;
         letter-spacing: -0.035em;
         text-transform: uppercase;
@@ -841,9 +833,9 @@ function NavbarStyles() {
       }
 
       .brutalNavLogoCopy small {
-        margin-top: 3px;
-        color: rgba(255, 255, 255, 0.52);
-        font-size: 7px;
+        margin-top: 2px;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 8px;
         font-weight: 800;
         letter-spacing: 0.09em;
         text-transform: uppercase;
@@ -853,27 +845,23 @@ function NavbarStyles() {
         display: flex;
         align-items: center;
         justify-self: center;
-        gap: 3px;
-        padding: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.10);
+        gap: 2px;
+        padding: 3px;
+        border: 0;
         border-radius: 999px;
-        background:
-          linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018)),
-          rgba(3, 10, 6, 0.34);
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,.04),
-          0 8px 26px rgba(0,0,0,.12);
-        backdrop-filter: blur(18px);
+        background: rgba(255, 255, 255, 0.035);
+        box-shadow: none;
+        backdrop-filter: none;
       }
 
       .brutalNavDesktop a {
         position: relative;
-        padding: 10px 15px;
+        padding: 9px 13px;
         border-radius: 999px;
         color: rgba(255, 255, 255, 0.66);
-        font-size: 9px;
-        font-weight: 850;
-        letter-spacing: .01em;
+        font-size: 12px;
+        font-weight: 760;
+        letter-spacing: -0.01em;
         transition:
           color 0.2s ease,
           background 0.2s ease,
@@ -888,8 +876,7 @@ function NavbarStyles() {
       }
 
       .brutalNavDesktop a.active {
-        background:
-          linear-gradient(180deg, rgba(186,255,158,.14), rgba(186,255,158,.07));
+        background: rgba(186, 255, 158, 0.10);
         color: #efffe9;
         box-shadow:
           inset 0 0 0 1px rgba(186,255,158,.11),
@@ -899,31 +886,31 @@ function NavbarStyles() {
 
       .brutalNavDesktop a.active::after {
         position: absolute;
-        right: 12px;
-        bottom: 5px;
-        left: 12px;
-        height: 2px;
+        right: 14px;
+        bottom: 4px;
+        left: 14px;
+        height: 1px;
         border-radius: 999px;
         background: #baff9e;
         content: "";
-        box-shadow: 0 0 14px rgba(186, 255, 158, 0.7);
+        box-shadow: none;
       }
 
       .brutalNavRight {
         display: flex;
         align-items: center;
         justify-self: end;
-        gap: 8px;
+        gap: 7px;
       }
 
       .brutalNavBell {
         position: relative;
         display: grid;
         place-items: center;
-        width: 45px;
-        height: 45px;
+        width: 40px;
+        height: 40px;
         border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 15px;
+        border-radius: 12px;
         background:
           linear-gradient(
             145deg,
@@ -1007,11 +994,11 @@ function NavbarStyles() {
       .brutalNavProfile {
         display: grid;
         place-items: center;
-        width: 45px;
-        height: 45px;
+        width: 40px;
+        height: 40px;
         overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 15px;
+        border-radius: 12px;
         background: rgba(255, 255, 255, 0.09);
         color: #0c2517;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
@@ -1046,6 +1033,7 @@ function NavbarStyles() {
 
       .brutalMenuButton {
         position: relative;
+        display: none;
         display: inline-grid;
         grid-template-columns: auto auto;
         align-items: center;
@@ -1200,9 +1188,9 @@ function NavbarStyles() {
         grid-template-columns:
           minmax(300px, 0.9fr)
           minmax(450px, 1.1fr);
-        gap: 80px;
+        gap: 54px;
         min-height: 100svh;
-        padding: 150px 5vw 90px;
+        padding: 118px 5vw 72px;
       }
 
       .brutalDrawerIntro {
@@ -1222,14 +1210,14 @@ function NavbarStyles() {
 
       .brutalDrawerIntro h2 {
         margin: 24px 0 0;
-        font-size: clamp(62px, 8vw, 122px);
-        line-height: 0.82;
+        font-size: clamp(48px, 6vw, 84px);
+        line-height: 0.9;
         letter-spacing: -0.08em;
       }
 
       .brutalDrawerIntro > p {
         max-width: 520px;
-        margin: 28px 0 0;
+        margin: 20px 0 0;
         color: rgba(255, 255, 255, 0.52);
         font-size: 13px;
         line-height: 1.75;
@@ -1314,7 +1302,7 @@ function NavbarStyles() {
         grid-template-columns: 34px 44px minmax(0, 1fr) auto;
         align-items: center;
         gap: 12px;
-        min-height: 94px;
+        min-height: 72px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.12);
         color: rgba(255, 255, 255, 0.82);
         transition:
@@ -1357,7 +1345,7 @@ function NavbarStyles() {
       }
 
       .brutalDrawerMainLinks strong {
-        font-size: clamp(34px, 4vw, 58px);
+        font-size: clamp(24px, 2.8vw, 38px);
         line-height: 1;
         letter-spacing: -0.055em;
       }
@@ -1636,6 +1624,10 @@ function NavbarStyles() {
       }
 
       @media (max-width: 980px) {
+        .brutalMenuButton {
+          display: inline-grid;
+        }
+
         .brutalNav {
           grid-template-columns: 1fr auto;
         }

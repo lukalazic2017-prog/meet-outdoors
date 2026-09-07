@@ -1194,7 +1194,7 @@ function SignupStyles() {
         height: 100vh;
         display: flex;
         flex-direction: column;
-        padding: 42px;
+        padding: 34px;
         overflow: hidden;
         background-image: var(--signup-image);
         background-position: center;
@@ -1256,7 +1256,7 @@ function SignupStyles() {
       .visualContent {
         max-width: 620px;
         margin-top: auto;
-        padding: 80px 0 50px;
+        padding: 58px 0 34px;
       }
 
       .visualKicker {
@@ -1285,15 +1285,15 @@ function SignupStyles() {
 
       .visualContent h1 {
         max-width: 650px;
-        margin: 24px 0 0;
-        font-size: clamp(49px, 5.1vw, 78px);
+        margin: 18px 0 0;
+        font-size: clamp(44px, 4.7vw, 68px);
         line-height: 0.98;
         letter-spacing: -0.07em;
       }
 
       .visualContent > p {
         max-width: 570px;
-        margin: 25px 0 0;
+        margin: 18px 0 0;
         color: rgba(255, 255, 255, 0.68);
         font-size: 16px;
         line-height: 1.72;
@@ -1301,8 +1301,8 @@ function SignupStyles() {
 
       .visualBenefits {
         display: grid;
-        gap: 11px;
-        margin-top: 35px;
+        gap: 8px;
+        margin-top: 24px;
       }
 
       .visualBenefits > div {
@@ -1342,7 +1342,7 @@ function SignupStyles() {
         display: flex;
         justify-content: space-between;
         gap: 20px;
-        padding-top: 24px;
+        padding-top: 18px;
         border-top: 1px solid rgba(255, 255, 255, 0.13);
         color: rgba(255, 255, 255, 0.46);
         font-size: 10px;
@@ -1353,7 +1353,7 @@ function SignupStyles() {
 
       .signupFormSection {
         min-width: 0;
-        padding: 60px 30px 90px;
+        padding: 42px 28px 64px;
       }
 
       .signupFormContainer {
@@ -1366,7 +1366,7 @@ function SignupStyles() {
       }
 
       .formHeader {
-        margin-bottom: 31px;
+        margin-bottom: 22px;
       }
 
       .formKicker {
@@ -1381,14 +1381,14 @@ function SignupStyles() {
 
       .formHeader h2 {
         margin: 0;
-        font-size: clamp(38px, 4vw, 52px);
+        font-size: clamp(34px, 3.6vw, 47px);
         line-height: 1.02;
         letter-spacing: -0.06em;
       }
 
       .formHeader p {
         max-width: 590px;
-        margin: 15px 0 0;
+        margin: 11px 0 0;
         color: #748077;
         font-size: 14px;
         line-height: 1.65;
@@ -1397,8 +1397,8 @@ function SignupStyles() {
       .roleSwitch {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-        margin-bottom: 27px;
+        gap: 10px;
+        margin-bottom: 20px;
       }
 
       .roleSwitch > button {
@@ -1407,8 +1407,8 @@ function SignupStyles() {
         grid-template-columns: auto 1fr auto;
         align-items: center;
         gap: 13px;
-        min-height: 83px;
-        padding: 14px;
+        min-height: 70px;
+        padding: 11px 12px;
         border: 1px solid #d9e0d7;
         border-radius: 20px;
         background: rgba(255, 255, 255, 0.68);
@@ -1433,8 +1433,8 @@ function SignupStyles() {
       .roleSwitchIcon {
         display: grid;
         place-items: center;
-        width: 47px;
-        height: 47px;
+        width: 40px;
+        height: 40px;
         border-radius: 15px;
         background: #e9f2de;
         color: #527135;
@@ -1482,11 +1482,11 @@ function SignupStyles() {
 
       .signupForm {
         display: grid;
-        gap: 18px;
+        gap: 13px;
       }
 
       .formSection {
-        padding: 27px;
+        padding: 21px;
         border: 1px solid #dce2da;
         border-radius: 25px;
         background: rgba(255, 255, 255, 0.76);
@@ -1507,16 +1507,16 @@ function SignupStyles() {
       .formSectionHeading {
         display: flex;
         align-items: center;
-        gap: 13px;
-        margin-bottom: 24px;
+        gap: 11px;
+        margin-bottom: 17px;
       }
 
       .formSectionHeading > span {
         display: grid;
         place-items: center;
         flex: 0 0 auto;
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         border-radius: 12px;
         background: #e8f1dd;
         color: #58743e;
@@ -1543,16 +1543,16 @@ function SignupStyles() {
       .uploadGrid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 17px;
+        gap: 13px;
       }
 
       .formGrid + .inputGroup {
-        margin-top: 17px;
+        margin-top: 13px;
       }
 
       .inputGroup {
         display: grid;
-        gap: 8px;
+        gap: 6px;
         min-width: 0;
       }
 
@@ -1566,8 +1566,8 @@ function SignupStyles() {
         display: flex;
         align-items: center;
         gap: 11px;
-        min-height: 54px;
-        padding: 0 15px;
+        min-height: 49px;
+        padding: 0 13px;
         border: 1px solid #d8dfd6;
         border-radius: 15px;
         background: #fbfcf9;
@@ -1584,7 +1584,7 @@ function SignupStyles() {
       .inputWrapper input {
         width: 100%;
         min-width: 0;
-        min-height: 52px;
+        min-height: 47px;
         border: 0;
         outline: 0;
         background: transparent;
@@ -1628,8 +1628,8 @@ function SignupStyles() {
 
       .inputGroup textarea {
         width: 100%;
-        min-height: 128px;
-        padding: 15px;
+        min-height: 102px;
+        padding: 13px;
         resize: vertical;
         border: 1px solid #d8dfd6;
         border-radius: 15px;
@@ -1657,9 +1657,9 @@ function SignupStyles() {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
-        gap: 13px;
-        min-height: 87px;
-        padding: 13px;
+        gap: 11px;
+        min-height: 74px;
+        padding: 10px 11px;
         overflow: hidden;
         border: 1px dashed #bac5b6;
         border-radius: 18px;
@@ -1689,8 +1689,8 @@ function SignupStyles() {
 
       .fileIcon,
       .filePreview {
-        width: 55px;
-        height: 55px;
+        width: 46px;
+        height: 46px;
         border-radius: 15px;
       }
 
@@ -1755,8 +1755,8 @@ function SignupStyles() {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 14px;
-        padding: 12px 14px;
+        gap: 12px;
+        padding: 10px 12px;
       }
 
       .activityPickerTop {
@@ -1780,11 +1780,11 @@ function SignupStyles() {
       .activityChips {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 7px;
-        max-height: 248px;
+        gap: 6px;
+        max-height: 205px;
         overflow-y: auto;
         overscroll-behavior: contain;
-        padding: 12px;
+        padding: 10px;
         scrollbar-width: thin;
         scrollbar-color: #a8b7a2 transparent;
       }
@@ -1804,8 +1804,8 @@ function SignupStyles() {
         align-items: center;
         gap: 7px;
         min-width: 0;
-        min-height: 40px;
-        padding: 7px 10px 7px 8px;
+        min-height: 36px;
+        padding: 6px 9px 6px 7px;
         border: 1px solid #dce3d9;
         border-radius: 12px;
         background: #fbfcfa;
@@ -1923,8 +1923,8 @@ function SignupStyles() {
         justify-content: center;
         gap: 11px;
         width: 100%;
-        min-height: 60px;
-        padding: 0 22px;
+        min-height: 54px;
+        padding: 0 20px;
         border: 0;
         border-radius: 17px;
         background: #183a27;
@@ -2056,7 +2056,7 @@ function SignupStyles() {
         }
 
         .signupVisual {
-          padding: 30px;
+          padding: 26px;
         }
 
         .visualContent h1 {
@@ -2075,19 +2075,19 @@ function SignupStyles() {
 
         .signupVisual {
           position: relative;
-          min-height: 590px;
+          min-height: 500px;
           height: auto;
-          padding: 28px;
+          padding: 24px;
         }
 
         .visualContent {
           max-width: 650px;
-          padding-top: 130px;
+          padding-top: 96px;
         }
 
         .visualContent h1 {
           max-width: 620px;
-          font-size: clamp(48px, 9vw, 67px);
+          font-size: clamp(42px, 8vw, 58px);
         }
 
         .visualBenefits {
@@ -2099,14 +2099,14 @@ function SignupStyles() {
         }
 
         .signupFormSection {
-          padding: 65px 24px 85px;
+          padding: 46px 22px 62px;
         }
 
         .mobileBack {
           display: inline-flex;
           align-items: center;
           gap: 7px;
-          margin-bottom: 30px;
+          margin-bottom: 22px;
           color: #65736a;
           font-size: 11px;
           font-weight: 800;
