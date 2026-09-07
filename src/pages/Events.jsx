@@ -255,9 +255,24 @@ export default function Events() {
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [priceFilter, setPriceFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   useEffect(() => {
     loadEvents();
+  }, []);
+
+  useEffect(() => {
+    function syncPageSize() {
+      const width = window.innerWidth;
+      if (width <= 580) setPageSize(6);
+      else if (width <= 1080) setPageSize(8);
+      else setPageSize(12);
+    }
+
+    syncPageSize();
+    window.addEventListener("resize", syncPageSize);
+    return () => window.removeEventListener("resize", syncPageSize);
   }, []);
 
   async function loadEvents() {
@@ -334,6 +349,25 @@ export default function Events() {
       return matchesSearch && matchesLocation && matchesPrice;
     });
   }, [events, search, locationFilter, priceFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, locationFilter, priceFilter]);
+
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(filteredEvents.length / pageSize)),
+    [filteredEvents.length, pageSize]
+  );
+
+  const paginatedEvents = useMemo(() => {
+    const safePage = Math.min(page, pageCount);
+    const startIndex = (safePage - 1) * pageSize;
+    return filteredEvents.slice(startIndex, startIndex + pageSize);
+  }, [filteredEvents, page, pageCount, pageSize]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
 
   function clearFilters() {
     setSearch("");
@@ -536,11 +570,33 @@ export default function Events() {
               )}
             </div>
           ) : (
-            <div className="eventsGrid">
-              {filteredEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
+            <>
+              <div className="eventsGrid">
+                {paginatedEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+
+              {pageCount > 1 && (
+                <nav className="eventsPagination" aria-label="Stranice događaja">
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={page === 1}
+                  >
+                    Prethodna
+                  </button>
+                  <span>Strana {page} od {pageCount}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                    disabled={page === pageCount}
+                  >
+                    Sledeća
+                  </button>
+                </nav>
+              )}
+            </>
           )}
 
           <section className="eventsCta">
@@ -1477,6 +1533,395 @@ function EventsStyles() {
           transition: none !important;
         }
       }
+
+      /* =========================================================
+         EVENTS — COMPACT DISCOVERY
+         ========================================================= */
+
+      .eventsPage { padding: 82px 18px 44px; }
+
+      .eventsHero {
+        min-height: 230px;
+        padding: 22px;
+        border-radius: 24px;
+      }
+
+      .eventsHeroContent {
+        max-width: 760px;
+        padding: 26px 0 20px;
+      }
+
+      .heroKicker {
+        padding: 7px 10px;
+        font-size: 8px;
+      }
+
+      .eventsHeroContent h1 {
+        margin-top: 13px;
+        font-size: clamp(42px, 6vw, 66px);
+        line-height: .92;
+      }
+
+      .eventsHeroContent p {
+        max-width: 590px;
+        margin-top: 12px;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .heroStats {
+        gap: 8px;
+        padding-top: 13px;
+      }
+
+      .heroStats strong { font-size: 20px; }
+      .heroStats span { font-size: 7px; }
+
+      .filterPanel {
+        grid-template-columns:
+          minmax(260px, 1.6fr)
+          minmax(150px, .7fr)
+          minmax(150px, .7fr)
+          auto;
+        gap: 8px;
+        margin: -20px 18px 0;
+        padding: 9px;
+        border-radius: 16px;
+      }
+
+      .searchField,
+      .filterField,
+      .clearFilters {
+        min-height: 44px;
+        border-radius: 11px;
+      }
+
+      .searchField,
+      .filterField { padding: 0 11px; }
+
+      .searchField input,
+      .filterField select {
+        min-height: 42px;
+        font-size: 10px;
+      }
+
+      .clearFilters {
+        padding: 0 11px;
+        font-size: 8px;
+      }
+
+      .eventsSectionHeader {
+        margin: 28px 0 14px;
+        align-items: center;
+      }
+
+      .eventsSectionHeader h2 {
+        margin-top: 4px;
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      .eventsSectionHeader p {
+        margin-top: 6px;
+        font-size: 9px;
+      }
+
+      .resultCount {
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 9px;
+      }
+
+      .eventsGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .eventCard {
+        border-radius: 20px;
+      }
+
+      .eventImageWrapper {
+        height: 170px;
+      }
+
+      .eventTypeBadge,
+      .eventPriceBadge {
+        top: 10px;
+        font-size: 7px;
+        min-height: 27px;
+        padding: 0 8px;
+      }
+
+      .eventTypeBadge { left: 10px; }
+      .eventPriceBadge { right: 10px; }
+
+      .eventCardBody {
+        padding: 14px;
+      }
+
+      .eventKicker { font-size: 7px; }
+
+      .eventCardBody h2 {
+        margin-top: 6px;
+        font-size: 18px;
+      }
+
+      .eventMeta {
+        gap: 6px;
+        margin-top: 9px;
+      }
+
+      .eventMeta span {
+        min-height: 26px;
+        padding: 0 8px;
+        font-size: 7px;
+      }
+
+      .eventDescription {
+        margin-top: 9px;
+        font-size: 9px;
+        line-height: 1.45;
+        -webkit-line-clamp: 2;
+      }
+
+      .eventCardFooter {
+        margin-top: 11px;
+        padding-top: 10px;
+      }
+
+      .eventCardFooter small { font-size: 7px; }
+      .eventCardFooter strong { font-size: 16px; }
+
+      .eventArrow {
+        font-size: 8px;
+      }
+
+      .eventsCta {
+        margin-top: 18px;
+        padding: 20px 22px;
+        border-radius: 20px;
+      }
+
+      .eventsCta h2 {
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      .eventsCta p {
+        margin-top: 8px;
+        font-size: 9px;
+      }
+
+      .eventsCta > a {
+        min-height: 40px;
+        padding: 0 13px;
+        border-radius: 11px;
+        font-size: 8px;
+      }
+
+      .eventsPagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .eventsPagination button {
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid #d8e0d5;
+        border-radius: 11px;
+        background: rgba(255,255,255,.85);
+        color: #405448;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 850;
+      }
+
+      .eventsPagination button:disabled {
+        opacity: .4;
+        cursor: default;
+      }
+
+      .eventsPagination span {
+        color: #76827a;
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      @media (max-width: 1080px) {
+        .eventsGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 760px) {
+        .eventsPage {
+          padding: 74px 0 34px;
+        }
+
+        .eventsHero {
+          min-height: 175px;
+          padding: 16px;
+          border-radius: 0 0 22px 22px;
+        }
+
+        .eventsHeroContent {
+          padding: 18px 0 12px;
+        }
+
+        .eventsHeroContent h1 {
+          margin-top: 9px;
+          font-size: 34px;
+        }
+
+        .eventsHeroContent p {
+          margin-top: 7px;
+          font-size: 10px;
+        }
+
+        .heroStats {
+          gap: 5px;
+          padding-top: 10px;
+        }
+
+        .heroStats strong { font-size: 16px; }
+        .heroStats span { font-size: 6px; }
+
+        .filterPanel {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          margin: -13px 12px 0;
+          padding: 7px;
+          gap: 6px;
+        }
+
+        .searchField { grid-column: 1 / -1; }
+
+        .eventsSectionHeader,
+        .eventsGrid,
+        .emptyEvents,
+        .eventsCta,
+        .eventsError,
+        .eventsPagination {
+          margin-right: 12px;
+          margin-left: 12px;
+        }
+
+        .eventsSectionHeader {
+          margin-top: 20px;
+          margin-bottom: 10px;
+        }
+
+        .eventsSectionHeader h2 { font-size: 27px; }
+
+        .eventsGrid {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .eventCard {
+          display: grid;
+          grid-template-columns: 116px minmax(0, 1fr);
+          min-height: 154px;
+          border-radius: 16px;
+        }
+
+        .eventImageWrapper {
+          height: 100%;
+          min-height: 154px;
+        }
+
+        .eventTypeBadge {
+          top: 8px;
+          left: 8px;
+          max-width: 92px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .eventPriceBadge {
+          top: auto;
+          right: 8px;
+          bottom: 8px;
+        }
+
+        .eventCardBody {
+          min-width: 0;
+          padding: 10px 11px;
+        }
+
+        .eventKicker { font-size: 7px; }
+
+        .eventCardBody h2 {
+          margin-top: 5px;
+          font-size: 15px;
+        }
+
+        .eventMeta {
+          margin-top: 7px;
+          gap: 4px;
+        }
+
+        .eventMeta span {
+          min-height: 22px;
+          padding: 0 6px;
+          font-size: 7px;
+        }
+
+        .eventMeta span:nth-child(n+3) { display: none; }
+
+        .eventDescription {
+          margin-top: 7px;
+          font-size: 9px;
+          -webkit-line-clamp: 1;
+        }
+
+        .eventCardFooter {
+          margin-top: 8px;
+          padding-top: 7px;
+        }
+
+        .eventCardFooter small { font-size: 6px; }
+        .eventCardFooter strong { font-size: 14px; }
+
+        .eventArrow {
+          font-size: 7px;
+        }
+
+        .eventsCta {
+          align-items: center;
+          flex-direction: row;
+          gap: 12px;
+          padding: 16px;
+        }
+
+        .eventsCta .sectionKicker,
+        .eventsCta p { display: none; }
+
+        .eventsCta h2 {
+          margin: 0;
+          font-size: 20px;
+        }
+
+        .eventsCta > a {
+          min-height: 38px;
+          white-space: nowrap;
+        }
+      }
+
+      @media (max-width: 580px) {
+        .eventsHero { min-height: 165px; }
+        .eventsHeroContent h1 { font-size: 31px; }
+
+        .eventCard {
+          grid-template-columns: 108px minmax(0,1fr);
+          min-height: 148px;
+        }
+
+        .eventImageWrapper { min-height: 148px; }
+      }
+
     `}</style>
   );
 }

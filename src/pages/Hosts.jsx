@@ -275,9 +275,32 @@ export default function Hosts() {
   const [locationFilter, setLocationFilter] = useState("");
   const [activityFilter, setActivityFilter] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   useEffect(() => {
     loadHosts();
+  }, []);
+
+  useEffect(() => {
+    function syncPageSize() {
+      const width = window.innerWidth;
+
+      if (width <= 580) {
+        setPageSize(6);
+      } else if (width <= 1080) {
+        setPageSize(8);
+      } else {
+        setPageSize(12);
+      }
+    }
+
+    syncPageSize();
+    window.addEventListener("resize", syncPageSize);
+
+    return () => {
+      window.removeEventListener("resize", syncPageSize);
+    };
   }, []);
 
   async function loadHosts() {
@@ -402,6 +425,28 @@ export default function Hosts() {
     activityFilter,
     verifiedOnly,
   ]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, locationFilter, activityFilter, verifiedOnly]);
+
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(filteredHosts.length / pageSize)),
+    [filteredHosts.length, pageSize]
+  );
+
+  const paginatedHosts = useMemo(() => {
+    const safePage = Math.min(page, pageCount);
+    const startIndex = (safePage - 1) * pageSize;
+
+    return filteredHosts.slice(startIndex, startIndex + pageSize);
+  }, [filteredHosts, page, pageCount, pageSize]);
+
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
 
   const verifiedCount = useMemo(
     () => hosts.filter((host) => host.is_verified).length,
@@ -634,11 +679,41 @@ export default function Hosts() {
               )}
             </div>
           ) : (
-            <section className="hostsGrid">
-              {filteredHosts.map((host) => (
-                <HostCard key={host.id} host={host} />
-              ))}
-            </section>
+            <>
+              <section className="hostsGrid">
+                {paginatedHosts.map((host) => (
+                  <HostCard key={host.id} host={host} />
+                ))}
+              </section>
+
+              {pageCount > 1 && (
+                <nav className="hostsPagination" aria-label="Stranice domaćina">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPage((current) => Math.max(1, current - 1))
+                    }
+                    disabled={page === 1}
+                  >
+                    Prethodna
+                  </button>
+
+                  <span>
+                    Strana {page} od {pageCount}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPage((current) => Math.min(pageCount, current + 1))
+                    }
+                    disabled={page === pageCount}
+                  >
+                    Sledeća
+                  </button>
+                </nav>
+              )}
+            </>
           )}
 
           <section className="hostsTrustSection">
@@ -2213,6 +2288,557 @@ function HostsStyles() {
           transition: none !important;
         }
       }
+
+      /* =========================================================
+         HOSTS — COMPACT DISCOVERY
+         ========================================================= */
+
+      .hostsPage {
+        padding: 82px 18px 44px;
+      }
+
+      .hostsHero {
+        min-height: 250px;
+        padding: 22px;
+        border-radius: 24px;
+      }
+
+      .hostsHeroContent {
+        max-width: 760px;
+        padding: 28px 0 22px;
+      }
+
+      .heroKicker {
+        padding: 7px 10px;
+        font-size: 8px;
+      }
+
+      .hostsHeroContent h1 {
+        margin-top: 14px;
+        font-size: clamp(42px, 6vw, 68px);
+        line-height: .92;
+      }
+
+      .hostsHeroContent p {
+        max-width: 590px;
+        margin-top: 13px;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .heroStats {
+        gap: 8px;
+        padding-top: 14px;
+      }
+
+      .heroStats strong {
+        font-size: 20px;
+      }
+
+      .heroStats span {
+        font-size: 7px;
+      }
+
+      .hostsFilters {
+        grid-template-columns:
+          minmax(260px, 1.6fr)
+          minmax(150px, .7fr)
+          minmax(150px, .7fr)
+          auto
+          auto;
+        gap: 8px;
+        margin: -22px 18px 0;
+        padding: 9px;
+        border-radius: 16px;
+      }
+
+      .searchField,
+      .filterField,
+      .verifiedFilter,
+      .clearFilters {
+        min-height: 44px;
+        border-radius: 11px;
+      }
+
+      .searchField,
+      .filterField {
+        padding: 0 11px;
+      }
+
+      .searchField input,
+      .filterField select {
+        min-height: 42px;
+        font-size: 10px;
+      }
+
+      .verifiedFilter,
+      .clearFilters {
+        padding: 0 11px;
+        font-size: 8px;
+      }
+
+      .hostsSectionHeader {
+        margin: 28px 0 14px;
+        align-items: center;
+      }
+
+      .hostsSectionHeader h2 {
+        margin-top: 4px;
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      .hostsSectionHeader p {
+        margin-top: 6px;
+        font-size: 9px;
+      }
+
+      .hostResultCount {
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 9px;
+      }
+
+      .hostsGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .hostCard {
+        border-radius: 20px;
+      }
+
+      .hostMedia {
+        height: 170px;
+      }
+
+      .hostMediaTop {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+      }
+
+      .hostStatus {
+        min-height: 27px;
+        padding: 0 8px;
+        font-size: 7px;
+      }
+
+      .hostMediaArrow {
+        width: 30px;
+        height: 30px;
+      }
+
+      .hostMediaBottom {
+        right: 10px;
+        bottom: 10px;
+        left: 10px;
+      }
+
+      .hostMediaBottom > span {
+        min-height: 27px;
+        padding: 0 8px;
+        font-size: 7px;
+      }
+
+      .hostCardBody {
+        padding: 0 14px 14px;
+      }
+
+      .hostIdentity {
+        gap: 10px;
+      }
+
+      .hostAvatar {
+        width: 60px;
+        height: 60px;
+        margin-top: -30px;
+        border-width: 3px;
+        border-radius: 18px;
+      }
+
+      .hostIdentityText {
+        padding: 9px 0 1px;
+      }
+
+      .hostIdentityText h2 {
+        font-size: 17px;
+      }
+
+      .hostIdentityText span {
+        margin-top: 3px;
+        font-size: 8px;
+      }
+
+      .hostBio {
+        min-height: 0;
+        margin-top: 10px;
+        font-size: 9px;
+        line-height: 1.5;
+        -webkit-line-clamp: 2;
+      }
+
+      .hostActivities {
+        gap: 5px;
+        margin-top: 10px;
+      }
+
+      .hostActivities > span {
+        min-height: 25px;
+        padding: 0 8px;
+        font-size: 7px;
+      }
+
+      .hostCardFooter {
+        margin-top: 11px;
+        padding-top: 10px;
+      }
+
+      .hostTrust {
+        display: none;
+      }
+
+      .viewHostButton {
+        width: 100%;
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 10px;
+        font-size: 8px;
+      }
+
+      .hostsTrustSection {
+        margin-top: 24px;
+        padding: 18px;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        border-radius: 20px;
+      }
+
+      .trustIntro {
+        display: none;
+      }
+
+      .trustCards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .trustCards article {
+        align-items: center;
+        padding: 10px;
+        border-radius: 12px;
+      }
+
+      .trustCards article > span {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+      }
+
+      .trustCards strong {
+        font-size: 9px;
+      }
+
+      .trustCards small {
+        margin-top: 3px;
+        font-size: 7px;
+        line-height: 1.4;
+      }
+
+      .hostsCta {
+        margin-top: 16px;
+        padding: 20px 22px;
+        border-radius: 20px;
+      }
+
+      .hostsCta h2 {
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      .hostsCta p {
+        margin-top: 8px;
+        font-size: 9px;
+      }
+
+      .hostsCta > a {
+        min-height: 40px;
+        padding: 0 13px;
+        border-radius: 11px;
+        font-size: 8px;
+      }
+
+      .hostsPagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .hostsPagination button {
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid #d8e0d5;
+        border-radius: 11px;
+        background: rgba(255,255,255,.85);
+        color: #405448;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 850;
+      }
+
+      .hostsPagination button:disabled {
+        opacity: .4;
+        cursor: default;
+      }
+
+      .hostsPagination span {
+        color: #76827a;
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      @media (max-width: 1080px) {
+        .hostsGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .trustCards {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .hostsPage {
+          padding: 74px 0 34px;
+        }
+
+        .hostsHero {
+          min-height: 180px;
+          padding: 16px;
+          border-radius: 0 0 22px 22px;
+        }
+
+        .hostsHeroContent {
+          padding: 18px 0 12px;
+        }
+
+        .hostsHeroContent h1 {
+          margin-top: 9px;
+          font-size: 34px;
+        }
+
+        .hostsHeroContent p {
+          margin-top: 7px;
+          font-size: 10px;
+        }
+
+        .heroStats {
+          gap: 5px;
+          padding-top: 10px;
+        }
+
+        .heroStats strong {
+          font-size: 16px;
+        }
+
+        .heroStats span {
+          font-size: 6px;
+        }
+
+        .hostsFilters {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          margin: -14px 12px 0;
+          padding: 7px;
+          gap: 6px;
+        }
+
+        .searchField {
+          grid-column: 1 / -1;
+        }
+
+        .hostsSectionHeader,
+        .hostsGrid,
+        .emptyHosts,
+        .hostsTrustSection,
+        .hostsCta,
+        .hostsError,
+        .hostsPagination {
+          margin-right: 12px;
+          margin-left: 12px;
+        }
+
+        .hostsSectionHeader {
+          margin-top: 20px;
+          margin-bottom: 10px;
+        }
+
+        .hostsSectionHeader h2 {
+          font-size: 27px;
+        }
+
+        .hostsGrid {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .hostCard {
+          display: grid;
+          grid-template-columns: 116px minmax(0, 1fr);
+          min-height: 156px;
+          border-radius: 16px;
+        }
+
+        .hostMedia {
+          height: 100%;
+          min-height: 156px;
+        }
+
+        .hostMediaTop {
+          inset: 8px 8px auto 8px;
+        }
+
+        .hostStatus {
+          max-width: 92px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .hostMediaArrow {
+          display: none;
+        }
+
+        .hostMediaBottom {
+          right: 8px;
+          bottom: 8px;
+          left: 8px;
+        }
+
+        .hostMediaBottom > span {
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .hostCardBody {
+          min-width: 0;
+          padding: 10px 11px;
+        }
+
+        .hostAvatarWrap {
+          display: none;
+        }
+
+        .hostIdentityText {
+          padding: 0;
+        }
+
+        .hostIdentityText h2 {
+          font-size: 15px;
+        }
+
+        .hostIdentityText span {
+          font-size: 8px;
+        }
+
+        .hostBio {
+          margin-top: 8px;
+          font-size: 9px;
+          line-height: 1.4;
+          -webkit-line-clamp: 2;
+        }
+
+        .hostActivities {
+          margin-top: 8px;
+        }
+
+        .hostActivities > span {
+          min-height: 23px;
+          padding: 0 7px;
+          font-size: 7px;
+        }
+
+        .hostActivities > span:nth-child(n+3) {
+          display: none;
+        }
+
+        .hostCardFooter {
+          margin-top: 9px;
+          padding-top: 8px;
+        }
+
+        .viewHostButton {
+          min-height: 34px;
+          font-size: 8px;
+        }
+
+        .hostsTrustSection {
+          margin-top: 18px;
+          padding: 12px;
+        }
+
+        .trustCards {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .trustCards::-webkit-scrollbar {
+          display: none;
+        }
+
+        .trustCards article {
+          flex: 0 0 220px;
+        }
+
+        .hostsCta {
+          align-items: center;
+          flex-direction: row;
+          gap: 12px;
+          padding: 16px;
+        }
+
+        .hostsCta .sectionKicker,
+        .hostsCta p {
+          display: none;
+        }
+
+        .hostsCta h2 {
+          margin: 0;
+          font-size: 20px;
+        }
+
+        .hostsCta > a {
+          min-height: 38px;
+          white-space: nowrap;
+        }
+      }
+
+      @media (max-width: 580px) {
+        .hostsHero {
+          min-height: 165px;
+        }
+
+        .hostsHeroContent h1 {
+          font-size: 31px;
+        }
+
+        .hostsHeroContent p {
+          font-size: 9.5px;
+        }
+
+        .hostCard {
+          grid-template-columns: 108px minmax(0, 1fr);
+          min-height: 150px;
+        }
+
+        .hostMedia {
+          min-height: 150px;
+        }
+      }
+
     `}</style>
   );
 }

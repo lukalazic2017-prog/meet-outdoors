@@ -348,9 +348,24 @@ export default function Packages() {
   const [country, setCountry] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [durationFilter, setDurationFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   useEffect(() => {
     loadPackages();
+  }, []);
+
+  useEffect(() => {
+    function syncPageSize() {
+      const width = window.innerWidth;
+      if (width <= 580) setPageSize(6);
+      else if (width <= 1080) setPageSize(8);
+      else setPageSize(12);
+    }
+
+    syncPageSize();
+    window.addEventListener("resize", syncPageSize);
+    return () => window.removeEventListener("resize", syncPageSize);
   }, []);
 
   async function loadPackages() {
@@ -450,6 +465,25 @@ export default function Packages() {
     maxPrice,
     durationFilter,
   ]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, country, maxPrice, durationFilter]);
+
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(filteredPackages.length / pageSize)),
+    [filteredPackages.length, pageSize]
+  );
+
+  const paginatedPackages = useMemo(() => {
+    const safePage = Math.min(page, pageCount);
+    const startIndex = (safePage - 1) * pageSize;
+    return filteredPackages.slice(startIndex, startIndex + pageSize);
+  }, [filteredPackages, page, pageCount, pageSize]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
 
   const totalCountries = countries.length;
 
@@ -710,14 +744,36 @@ export default function Packages() {
               )}
             </div>
           ) : (
-            <section className="packagesGrid">
-              {filteredPackages.map((item) => (
-                <PackageCard
-                  key={item.id}
-                  item={item}
-                />
-              ))}
-            </section>
+            <>
+              <section className="packagesGrid">
+                {paginatedPackages.map((item) => (
+                  <PackageCard
+                    key={item.id}
+                    item={item}
+                  />
+                ))}
+              </section>
+
+              {pageCount > 1 && (
+                <nav className="packagesPagination" aria-label="Stranice paketa">
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={page === 1}
+                  >
+                    Prethodna
+                  </button>
+                  <span>Strana {page} od {pageCount}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                    disabled={page === pageCount}
+                  >
+                    Sledeća
+                  </button>
+                </nav>
+              )}
+            </>
           )}
 
           <section className="packageBenefits">
@@ -892,7 +948,7 @@ function PackagesStyles() {
         z-index: -3;
         content: "";
         background:
-          url("https://images.unsplash.com/photo-1517825738774-7de9363ef735?auto=format&fit=crop&w=1900&q=90")
+          url("https://images.unsplash.com/photo-1718955389515-9b70f3614cce?auto=format&fit=crop&w=1900&q=90")
           center / cover;
         transition: transform 0.8s ease;
       }
@@ -1861,6 +1917,463 @@ function PackagesStyles() {
           transition: none !important;
         }
       }
+
+      /* =========================================================
+         PACKAGES — COMPACT DISCOVERY
+         ========================================================= */
+
+      .packagesPage { padding: 82px 18px 44px; }
+
+      .packagesHero {
+        min-height: 230px;
+        padding: 22px;
+        border-radius: 24px;
+      }
+
+      .packagesHeroContent {
+        max-width: 780px;
+        padding: 26px 0 20px;
+      }
+
+      .heroKicker {
+        padding: 7px 10px;
+        font-size: 8px;
+      }
+
+      .packagesHeroContent h1 {
+        margin-top: 13px;
+        font-size: clamp(42px, 6vw, 66px);
+        line-height: .92;
+      }
+
+      .packagesHeroContent p {
+        max-width: 610px;
+        margin-top: 12px;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .heroStats {
+        gap: 8px;
+        padding-top: 13px;
+      }
+
+      .heroStats strong { font-size: 20px; }
+      .heroStats span { font-size: 7px; }
+
+      .packagesFilters {
+        grid-template-columns:
+          minmax(260px, 1.55fr)
+          minmax(145px, .65fr)
+          minmax(145px, .65fr)
+          minmax(135px, .55fr)
+          auto;
+        gap: 8px;
+        margin: -20px 18px 0;
+        padding: 9px;
+        border-radius: 16px;
+      }
+
+      .searchField,
+      .filterField,
+      .clearFilters {
+        min-height: 44px;
+        border-radius: 11px;
+      }
+
+      .searchField,
+      .filterField { padding: 0 11px; }
+
+      .searchField input,
+      .filterField select,
+      .priceFilterField input {
+        min-height: 42px;
+        font-size: 10px;
+      }
+
+      .clearFilters {
+        padding: 0 11px;
+        font-size: 8px;
+      }
+
+      .packagesSectionHeader {
+        margin: 28px 0 14px;
+        align-items: center;
+      }
+
+      .packagesSectionHeader h2 {
+        margin-top: 4px;
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      .packagesSectionHeader p {
+        margin-top: 6px;
+        font-size: 9px;
+      }
+
+      .packageResultCount {
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 9px;
+      }
+
+      .packagesGrid {
+        grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 14px;
+      }
+
+      .packageCard {
+        border-radius: 20px;
+      }
+
+      .packageImageWrapper {
+        height: 170px;
+      }
+
+      .packageTypeBadge,
+      .packagePriceBadge {
+        top: 10px;
+        min-height: 27px;
+        padding: 0 8px;
+        font-size: 7px;
+      }
+
+      .packageTypeBadge { left: 10px; }
+      .packagePriceBadge { right: 10px; }
+
+      .packageImageBottom {
+        left: 10px;
+        bottom: 10px;
+        gap: 5px;
+      }
+
+      .packageImageBottom span {
+        min-height: 26px;
+        padding: 0 8px;
+        font-size: 7px;
+      }
+
+      .packageCardBody {
+        padding: 14px;
+      }
+
+      .packageKicker { font-size: 7px; }
+
+      .packageCardBody h2 {
+        margin-top: 6px;
+        font-size: 18px;
+      }
+
+      .packageLocation {
+        margin-top: 7px;
+        font-size: 8px;
+      }
+
+      .packageDescription {
+        margin-top: 8px;
+        font-size: 9px;
+        line-height: 1.45;
+        -webkit-line-clamp: 2;
+      }
+
+      .packageFeatureGrid {
+        display: none;
+      }
+
+      .packageCardFooter {
+        margin-top: 11px;
+        padding-top: 10px;
+      }
+
+      .packageCardFooter small { font-size: 7px; }
+      .packageCardFooter strong { font-size: 16px; }
+
+      .packageArrow {
+        font-size: 8px;
+      }
+
+      .packageBenefits {
+        margin-top: 20px;
+        padding: 14px;
+        border-radius: 18px;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .benefitsIntro {
+        display: none;
+      }
+
+      .benefitsGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .benefitsGrid article {
+        padding: 10px;
+        border-radius: 12px;
+      }
+
+      .benefitsGrid article > span {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+      }
+
+      .benefitsGrid strong { font-size: 9px; }
+      .benefitsGrid small {
+        margin-top: 3px;
+        font-size: 7px;
+        line-height: 1.4;
+      }
+
+      .packagesCta {
+        margin-top: 16px;
+        padding: 20px 22px;
+        border-radius: 20px;
+      }
+
+      .packagesCta h2 {
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      .packagesCta p {
+        margin-top: 8px;
+        font-size: 9px;
+      }
+
+      .packagesCta > a {
+        min-height: 40px;
+        padding: 0 13px;
+        border-radius: 11px;
+        font-size: 8px;
+      }
+
+      .packagesPagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .packagesPagination button {
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid #d8e0d5;
+        border-radius: 11px;
+        background: rgba(255,255,255,.85);
+        color: #405448;
+        cursor: pointer;
+        font-size: 9px;
+        font-weight: 850;
+      }
+
+      .packagesPagination button:disabled {
+        opacity: .4;
+        cursor: default;
+      }
+
+      .packagesPagination span {
+        color: #76827a;
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      @media (max-width: 1080px) {
+        .packagesGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .benefitsGrid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .packagesPage {
+          padding: 74px 0 34px;
+        }
+
+        .packagesHero {
+          min-height: 175px;
+          padding: 16px;
+          border-radius: 0 0 22px 22px;
+        }
+
+        .packagesHeroContent {
+          padding: 18px 0 12px;
+        }
+
+        .packagesHeroContent h1 {
+          margin-top: 9px;
+          font-size: 34px;
+        }
+
+        .packagesHeroContent p {
+          margin-top: 7px;
+          font-size: 10px;
+        }
+
+        .heroStats {
+          gap: 5px;
+          padding-top: 10px;
+        }
+
+        .heroStats strong { font-size: 16px; }
+        .heroStats span { font-size: 6px; }
+
+        .packagesFilters {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          margin: -13px 12px 0;
+          padding: 7px;
+          gap: 6px;
+        }
+
+        .searchField { grid-column: 1 / -1; }
+
+        .packagesSectionHeader,
+        .packagesGrid,
+        .emptyPackages,
+        .packageBenefits,
+        .packagesCta,
+        .packagesError,
+        .packagesPagination {
+          margin-right: 12px;
+          margin-left: 12px;
+        }
+
+        .packagesSectionHeader {
+          margin-top: 20px;
+          margin-bottom: 10px;
+        }
+
+        .packagesSectionHeader h2 { font-size: 27px; }
+
+        .packagesGrid {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .packageCard {
+          display: grid;
+          grid-template-columns: 118px minmax(0,1fr);
+          min-height: 156px;
+          border-radius: 16px;
+        }
+
+        .packageImageWrapper {
+          height: 100%;
+          min-height: 156px;
+        }
+
+        .packageTypeBadge {
+          top: 8px;
+          left: 8px;
+          max-width: 92px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .packagePriceBadge {
+          top: auto;
+          right: 8px;
+          bottom: 8px;
+        }
+
+        .packageImageBottom {
+          display: none;
+        }
+
+        .packageCardBody {
+          min-width: 0;
+          padding: 10px 11px;
+        }
+
+        .packageKicker { font-size: 7px; }
+
+        .packageCardBody h2 {
+          margin-top: 5px;
+          font-size: 15px;
+        }
+
+        .packageLocation {
+          margin-top: 6px;
+          font-size: 8px;
+        }
+
+        .packageDescription {
+          margin-top: 7px;
+          font-size: 9px;
+          -webkit-line-clamp: 1;
+        }
+
+        .packageCardFooter {
+          margin-top: 8px;
+          padding-top: 7px;
+        }
+
+        .packageCardFooter small { font-size: 6px; }
+        .packageCardFooter strong { font-size: 14px; }
+
+        .packageArrow {
+          font-size: 7px;
+        }
+
+        .packageBenefits {
+          margin-top: 18px;
+          padding: 12px;
+        }
+
+        .benefitsGrid {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .benefitsGrid::-webkit-scrollbar { display: none; }
+
+        .benefitsGrid article {
+          flex: 0 0 220px;
+        }
+
+        .packagesCta {
+          align-items: center;
+          flex-direction: row;
+          gap: 12px;
+          padding: 16px;
+        }
+
+        .packagesCta .sectionKicker,
+        .packagesCta p {
+          display: none;
+        }
+
+        .packagesCta h2 {
+          margin: 0;
+          font-size: 20px;
+        }
+
+        .packagesCta > a {
+          min-height: 38px;
+          white-space: nowrap;
+        }
+      }
+
+      @media (max-width: 580px) {
+        .packagesHero { min-height: 165px; }
+        .packagesHeroContent h1 { font-size: 31px; }
+
+        .packageCard {
+          grid-template-columns: 110px minmax(0,1fr);
+          min-height: 150px;
+        }
+
+        .packageImageWrapper { min-height: 150px; }
+      }
+
     `}</style>
   );
 }
