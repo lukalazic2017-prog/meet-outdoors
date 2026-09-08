@@ -8,25 +8,46 @@ const FALLBACK_COVER =
 
 const ACTIVITIES = [
   ["hiking", "Planinarenje"],
+  ["trekking", "Trekking"],
   ["camping", "Kampovanje"],
   ["cycling", "Biciklizam"],
+  ["mountain biking", "MTB"],
+  ["trail running", "Trail running"],
   ["climbing", "Penjanje"],
   ["via ferrata", "Via ferrata"],
+  ["caving", "Speleologija"],
+  ["canyoning", "Kanjoning"],
   ["rafting", "Rafting"],
   ["kayaking", "Kajak"],
+  ["canoeing", "Kanu"],
+  ["sup", "SUP"],
+  ["sailing", "Jedrenje"],
+  ["surfing", "Surfing"],
+  ["kitesurfing", "Kitesurfing"],
+  ["diving", "Ronjenje"],
   ["paragliding", "Paraglajding"],
   ["skydiving", "Padobranstvo"],
   ["skiing", "Skijanje"],
   ["snowboarding", "Snowboarding"],
+  ["snowshoeing", "Krpljanje"],
   ["horse riding", "Jahanje"],
   ["fishing", "Ribolov"],
+  ["off-road", "Off-road / 4x4"],
   ["nature trip", "Izlet u prirodi"],
-  ["trail running", "Trail running"],
-  ["canyoning", "Kanjoning"],
-  ["surfing", "Surfing"],
-  ["sailing", "Jedrenje"],
-  ["diving", "Ronjenje"],
   ["other", "Ostalo"],
+];
+
+const INCLUDED_PRESETS = [
+  "Ručak",
+  "Prevoz",
+  "Vodič",
+  "Oprema",
+  "Noćenje",
+  "Fotografisanje",
+  "Osiguranje",
+  "Piće / osveženje",
+  "Ulaznice",
+  "Kupanje",
 ];
 
 function Icon({
@@ -296,7 +317,12 @@ export default function CreateEvent() {
   const isAgentPrefill = searchParams.get("source") === "agent";
 
   const [title, setTitle] = useState(() => searchParams.get("title") || "");
-  const [activity, setActivity] = useState(() => searchParams.get("activity") || "");
+  const [activities, setActivities] = useState(() => {
+    const prefill = searchParams.get("activity");
+    return prefill ? [prefill] : [];
+  });
+  const [includedItems, setIncludedItems] = useState([]);
+  const [customIncludedItem, setCustomIncludedItem] = useState("");
   const [description, setDescription] = useState(() => searchParams.get("description") || "");
   const [location, setLocation] = useState(() => searchParams.get("location") || "");
   const [country, setCountry] = useState(() => searchParams.get("country") || "");
@@ -304,31 +330,105 @@ export default function CreateEvent() {
   const [capacity, setCapacity] = useState(() => searchParams.get("capacity") || "");
   const [startDate, setStartDate] = useState(() => searchParams.get("start") || "");
   const [endDate, setEndDate] = useState(() => searchParams.get("end") || "");
-  const [coverFile, setCoverFile] = useState(null);
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [coverIndex, setCoverIndex] = useState(0);
 
-  const coverPreview = useMemo(() => {
-    if (coverFile) {
-      return URL.createObjectURL(coverFile);
-    }
+  const photoPreviews = useMemo(
+    () => photoFiles.map((file) => URL.createObjectURL(file)),
+    [photoFiles]
+  );
 
-    return FALLBACK_COVER;
-  }, [coverFile]);
+  const coverPreview = photoPreviews[coverIndex] || FALLBACK_COVER;
 
   useEffect(() => {
     return () => {
-      if (coverFile && coverPreview.startsWith("blob:")) {
-        URL.revokeObjectURL(coverPreview);
-      }
+      photoPreviews.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [coverFile, coverPreview]);
+  }, [photoPreviews]);
+
+  function toggleActivity(value) {
+    setActivities((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    );
+    if (error) setError("");
+  }
+
+  function toggleIncludedItem(item) {
+    setIncludedItems((current) =>
+      current.includes(item)
+        ? current.filter((value) => value !== item)
+        : [...current, item]
+    );
+    if (error) setError("");
+  }
+
+  function addCustomIncludedItem() {
+    const clean = customIncludedItem.trim();
+    if (!clean) return;
+
+    if (!includedItems.some((item) => item.toLowerCase() === clean.toLowerCase())) {
+      setIncludedItems((current) => [...current, clean]);
+    }
+
+    setCustomIncludedItem("");
+    if (error) setError("");
+  }
+
+  function removeIncludedItem(item) {
+    setIncludedItems((current) => current.filter((value) => value !== item));
+  }
+
+  function handlePhotoSelection(event) {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = "";
+
+    if (!selected.length) return;
+
+    const invalid = selected.find((file) => !file.type.startsWith("image/"));
+    if (invalid) {
+      setError("Možeš dodati samo fotografije.");
+      return;
+    }
+
+    const tooLarge = selected.find((file) => file.size > 8 * 1024 * 1024);
+    if (tooLarge) {
+      setError("Svaka fotografija može imati najviše 8 MB.");
+      return;
+    }
+
+    setPhotoFiles((current) => {
+      const remaining = Math.max(8 - current.length, 0);
+      if (remaining === 0) {
+        setError("Možeš dodati najviše 8 fotografija.");
+        return current;
+      }
+
+      if (selected.length > remaining) {
+        setError(`Dodato je prvih ${remaining} fotografija. Maksimum je 8.`);
+      }
+
+      return [...current, ...selected.slice(0, remaining)];
+    });
+  }
+
+  function removePhoto(index) {
+    setPhotoFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setCoverIndex((currentCover) => {
+      if (index < currentCover) return Math.max(currentCover - 1, 0);
+      if (index === currentCover) return 0;
+      return currentCover;
+    });
+  }
 
   const completion = useMemo(() => {
     const checks = [
-      activity, title.trim(), description.trim(), location.trim(), country.trim(),
-      startDate, endDate, capacity, coverFile,
+      activities.length, title.trim(), description.trim(), location.trim(), country.trim(),
+      capacity, photoFiles.length,
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  }, [activity, title, description, location, country, startDate, endDate, capacity, coverFile]);
+  }, [activities, title, description, location, country, capacity, photoFiles.length]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -351,8 +451,8 @@ export default function CreateEvent() {
     const cleanLocation = location.trim();
     const cleanCountry = country.trim();
 
-    if (!activity) {
-      setError("Izaberi aktivnost događaja.");
+    if (!activities.length) {
+      setError("Izaberi najmanje jednu aktivnost događaja.");
       return;
     }
 
@@ -383,57 +483,65 @@ export default function CreateEvent() {
       return;
     }
 
-    if (coverFile && !coverFile.type.startsWith("image/")) {
-      setError("Naslovna fotografija mora biti slika.");
-      return;
-    }
-
-    if (coverFile && coverFile.size > 8 * 1024 * 1024) {
-      setError("Fotografija je prevelika. Maksimalna veličina je 8 MB.");
-      return;
-    }
-
     try {
       setSaving(true);
 
-      let cover_url = null;
+      const uploadedPaths = [];
+      const uploadedUrls = [];
 
-      if (coverFile) {
-        const safeName = coverFile.name
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9.-]/g, "");
+      try {
+        for (let index = 0; index < photoFiles.length; index += 1) {
+          const file = photoFiles[index];
+          const safeName = (file.name || `photo-${index}.jpg`)
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9.-]/g, "");
 
-        const fileName = `${profile.id}/${Date.now()}-${safeName}`;
+          const fileName = `${profile.id}/${Date.now()}-${index}-${Math.random()
+            .toString(36)
+            .slice(2)}-${safeName}`;
 
-        const { error: uploadError } =
-          await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from("event-covers")
-            .upload(fileName, coverFile);
+            .upload(fileName, file, {
+              cacheControl: "3600",
+              upsert: false,
+              contentType: file.type || undefined,
+            });
 
-        if (uploadError) {
-          throw uploadError;
-        }
+          if (uploadError) throw uploadError;
 
-        const { data: publicUrlData } =
-          supabase.storage
+          const { data: publicUrlData } = supabase.storage
             .from("event-covers")
             .getPublicUrl(fileName);
 
-        cover_url = publicUrlData.publicUrl;
-      }
+          if (!publicUrlData?.publicUrl) {
+            throw new Error("Nije moguće dobiti URL fotografije.");
+          }
 
-      const { data, error: insertError } =
-        await supabase
+          uploadedPaths.push(fileName);
+          uploadedUrls.push(publicUrlData.publicUrl);
+        }
+
+        const cover_url =
+          uploadedUrls.length > 0
+            ? uploadedUrls[Math.min(coverIndex, uploadedUrls.length - 1)]
+            : null;
+
+        const { data, error: insertError } = await supabase
           .from("events")
           .insert({
             host_id: profile.id,
-            activity,
+            activities,
             title: cleanTitle,
             description: cleanDescription,
             location: cleanLocation,
             country: cleanCountry,
             cover_url,
+            gallery_urls: uploadedUrls.filter(
+              (_, index) => index !== Math.min(coverIndex, Math.max(uploadedUrls.length - 1, 0))
+            ).slice(0, 7),
+            included_items: includedItems,
             price: Number(price || 0),
             capacity: Number(capacity || 1),
             start_date: startDate || null,
@@ -443,11 +551,22 @@ export default function CreateEvent() {
           .select("id")
           .single();
 
-      if (insertError) {
-        throw insertError;
-      }
+        if (insertError) throw insertError;
 
-      navigate(`/event/${data.id}`);
+        navigate(`/event/${data.id}`);
+      } catch (submitError) {
+        if (uploadedPaths.length) {
+          const { error: cleanupError } = await supabase.storage
+            .from("event-covers")
+            .remove(uploadedPaths);
+
+          if (cleanupError) {
+            console.error("Cleanup fotografija nije uspeo:", cleanupError);
+          }
+        }
+
+        throw submitError;
+      }
     } catch (err) {
       console.error("Greška pri kreiranju događaja:", err);
 
@@ -501,7 +620,7 @@ export default function CreateEvent() {
               <div className="previewImageBottom">
                 <span>
                   <Icon name="clock" size={14} />
-                  {formatDate(startDate)}
+                  {startDate ? formatDate(startDate) : "Termin po dogovoru"}
                 </span>
 
                 <span>
@@ -538,7 +657,7 @@ export default function CreateEvent() {
 
                   <div>
                     <small>Početak</small>
-                    <strong>{formatDate(startDate)}</strong>
+                    <strong>{startDate ? formatDate(startDate) : "Termin po dogovoru"}</strong>
                   </div>
                 </article>
 
@@ -549,7 +668,7 @@ export default function CreateEvent() {
 
                   <div>
                     <small>Završetak</small>
-                    <strong>{formatDate(endDate)}</strong>
+                    <strong>{endDate ? formatDate(endDate) : "Po dogovoru"}</strong>
                   </div>
                 </article>
 
@@ -685,8 +804,8 @@ export default function CreateEvent() {
 
                 <div className="eventActivityPicker">
                   <div className="eventActivityPickerTop">
-                    <span>Aktivnost *</span>
-                    <small>Izaberi glavnu aktivnost događaja</small>
+                    <span>Aktivnosti *</span>
+                    <small>Izaberi jednu ili više aktivnosti</small>
                   </div>
 
                   <div className="eventActivityGrid">
@@ -694,11 +813,9 @@ export default function CreateEvent() {
                       <button
                         key={value}
                         type="button"
-                        className={activity === value ? "active" : ""}
-                        onClick={() => {
-                          setActivity(value);
-                          if (error) setError("");
-                        }}
+                        className={activities.includes(value) ? "active" : ""}
+                        aria-pressed={activities.includes(value)}
+                        onClick={() => toggleActivity(value)}
                       >
                         <span className="eventActivityDot" />
                         {label}
@@ -750,6 +867,73 @@ export default function CreateEvent() {
               <section className="eventFormSection">
                 <div className="eventFormHeading">
                   <span>
+                    <Icon name="check" size={20} />
+                  </span>
+
+                  <div>
+                    <small>Šta je uključeno? · opciono</small>
+                    <h2>Istakni šta učesnik dobija</h2>
+                    <p>
+                      Izaberi gotove stavke ili dodaj svoju, na primer „Kupanje na vodopadu“.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="eventIncludedPresetGrid">
+                  {INCLUDED_PRESETS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className={includedItems.includes(item) ? "active" : ""}
+                      aria-pressed={includedItems.includes(item)}
+                      onClick={() => toggleIncludedItem(item)}
+                    >
+                      <span>✓</span>
+                      {item}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="eventIncludedCustomRow">
+                  <input
+                    type="text"
+                    value={customIncludedItem}
+                    maxLength={80}
+                    onChange={(event) => setCustomIncludedItem(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addCustomIncludedItem();
+                      }
+                    }}
+                    placeholder="Dodaj svoju stavku, npr. Kupanje na vodopadu"
+                  />
+                  <button type="button" onClick={addCustomIncludedItem}>
+                    Dodaj
+                  </button>
+                </div>
+
+                {includedItems.length > 0 && (
+                  <div className="eventIncludedSelected">
+                    {includedItems.map((item) => (
+                      <span key={item}>
+                        ✓ {item}
+                        <button
+                          type="button"
+                          onClick={() => removeIncludedItem(item)}
+                          aria-label={`Ukloni ${item}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="eventFormSection">
+                <div className="eventFormHeading">
+                  <span>
                     <Icon name="mapPin" size={20} />
                   </span>
 
@@ -793,11 +977,11 @@ export default function CreateEvent() {
                   </span>
 
                   <div>
-                    <small>Vreme održavanja</small>
+                    <small>Vreme održavanja · opciono</small>
                     <h2>Datum i trajanje</h2>
                     <p>
-                      Unesi početak i završetak događaja kako bi
-                      učesnici mogli da planiraju dolazak.
+                      Ako termin još nije poznat, ostavi prazno.
+                      Na događaju će pisati „Termin po dogovoru“.
                     </p>
                   </div>
                 </div>
@@ -879,71 +1063,72 @@ export default function CreateEvent() {
                   </span>
 
                   <div>
-                    <small>Naslovna fotografija</small>
-                    <h2>Dodaj fotografiju događaja</h2>
+                    <small>Galerija događaja · opciono</small>
+                    <h2>Dodaj do 8 fotografija</h2>
                     <p>
-                      Kvalitetna horizontalna fotografija pomaže
-                      događaju da se izdvoji.
+                      Na telefonu možeš izabrati više fotografija direktno iz galerije.
+                      Označi jednu kao naslovnu.
                     </p>
                   </div>
                 </div>
 
-                <label
-                  className={
-                    coverFile
-                      ? "eventUpload selected"
-                      : "eventUpload"
-                  }
-                >
+                <label className={photoFiles.length ? "eventUpload selected" : "eventUpload"}>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(event) =>
-                      setCoverFile(
-                        event.target.files?.[0] || null
-                      )
-                    }
+                    multiple
+                    onChange={handlePhotoSelection}
                   />
 
                   <span className="eventUploadIcon">
-                    <Icon
-                      name={coverFile ? "check" : "upload"}
-                      size={22}
-                    />
+                    <Icon name={photoFiles.length ? "check" : "upload"} size={22} />
                   </span>
 
                   <span className="eventUploadCopy">
                     <strong>
-                      {coverFile
-                        ? coverFile.name
-                        : "Izaberi naslovnu fotografiju"}
+                      {photoFiles.length
+                        ? `${photoFiles.length} / 8 fotografija`
+                        : "Izaberi fotografije"}
                     </strong>
-
                     <small>
-                      {coverFile
-                        ? `${(
-                            coverFile.size /
-                            1024 /
-                            1024
-                          ).toFixed(2)} MB`
-                        : "JPG, PNG ili WEBP. Preporučena širina najmanje 1200 px."}
+                      JPG, PNG ili WEBP · do 8 MB po fotografiji · maksimalno 8.
                     </small>
                   </span>
 
                   <span className="eventUploadAction">
-                    {coverFile ? "Promeni" : "Izaberi"}
+                    {photoFiles.length ? "Dodaj još" : "Izaberi"}
                   </span>
                 </label>
 
-                {coverFile && (
-                  <button
-                    type="button"
-                    className="removeEventCover"
-                    onClick={() => setCoverFile(null)}
-                  >
-                    <Icon name="trash" size={15} />
-                    Ukloni fotografiju
-                  </button>
+                {photoFiles.length > 0 && (
+                  <div className="eventPhotoGrid">
+                    {photoPreviews.map((preview, index) => (
+                      <article
+                        key={`${photoFiles[index]?.name}-${index}`}
+                        className={coverIndex === index ? "eventPhotoItem cover" : "eventPhotoItem"}
+                      >
+                        <img src={preview} alt={`Fotografija ${index + 1}`} />
+                        {coverIndex === index && (
+                          <span className="eventPhotoCoverBadge">Naslovna</span>
+                        )}
+                        <div className="eventPhotoActions">
+                          {coverIndex !== index && (
+                            <button type="button" onClick={() => setCoverIndex(index)}>
+                              Postavi naslovnu
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => removePhoto(index)}
+                            aria-label={`Ukloni fotografiju ${index + 1}`}
+                          >
+                            <Icon name="trash" size={14} />
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 )}
               </section>
 
@@ -981,7 +1166,7 @@ export default function CreateEvent() {
                 <button
                   type="submit"
                   className="publishEventButton"
-                  disabled={saving || !activity || !title.trim()}
+                  disabled={saving || !activities.length || !title.trim()}
                 >
                   {saving ? (
                     <>
@@ -2279,6 +2464,94 @@ function CreateEventStyles() {
         font-size:8px;
       }
       .publishEventButton{min-width:160px}
+
+      .eventIncludedPresetGrid{
+        display:grid;
+        grid-template-columns:repeat(5,minmax(0,1fr));
+        gap:8px;
+      }
+      .eventIncludedPresetGrid button{
+        display:flex;align-items:center;gap:7px;justify-content:center;
+        min-height:40px;padding:8px 9px;border-radius:12px;
+        border:1px solid rgba(26,57,40,.13);background:#fff;color:#254333;
+        font:inherit;font-size:9px;font-weight:800;cursor:pointer;
+      }
+      .eventIncludedPresetGrid button span{font-size:10px;opacity:.65}
+      .eventIncludedPresetGrid button.active{
+        background:#1f4d35;color:#fff;border-color:#1f4d35;
+      }
+      .eventIncludedCustomRow{
+        display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px;
+      }
+      .eventIncludedCustomRow input{
+        width:100%;min-height:42px;border:1px solid rgba(26,57,40,.14);
+        border-radius:12px;padding:0 12px;background:#fff;color:#183326;
+        font:inherit;font-size:11px;outline:none;
+      }
+      .eventIncludedCustomRow button{
+        border:0;border-radius:12px;padding:0 16px;background:#244d36;color:#fff;
+        font:inherit;font-size:10px;font-weight:800;cursor:pointer;
+      }
+      .eventIncludedSelected{
+        display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;
+      }
+      .eventIncludedSelected>span{
+        display:inline-flex;align-items:center;gap:7px;
+        padding:7px 9px;border-radius:999px;background:#edf4ef;color:#244d36;
+        font-size:9px;font-weight:800;
+      }
+      .eventIncludedSelected button{
+        border:0;background:transparent;color:inherit;font-size:15px;line-height:1;
+        padding:0;cursor:pointer;
+      }
+      @media(max-width:700px){
+        .eventIncludedPresetGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .eventIncludedCustomRow{grid-template-columns:1fr}
+        .eventIncludedCustomRow button{min-height:40px}
+      }
+
+      .eventPhotoGrid{
+        display:grid;
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:10px;
+        margin-top:12px;
+      }
+      .eventPhotoItem{
+        position:relative;
+        overflow:hidden;
+        border:1px solid rgba(21,52,36,.12);
+        border-radius:14px;
+        background:#eef2ec;
+        aspect-ratio:4/3;
+      }
+      .eventPhotoItem.cover{
+        box-shadow:0 0 0 2px #315f43 inset;
+      }
+      .eventPhotoItem img{
+        width:100%;height:100%;object-fit:cover;display:block;
+      }
+      .eventPhotoCoverBadge{
+        position:absolute;left:8px;top:8px;
+        padding:5px 8px;border-radius:999px;
+        background:rgba(14,35,24,.88);color:#fff;
+        font-size:9px;font-weight:800;
+      }
+      .eventPhotoActions{
+        position:absolute;left:6px;right:6px;bottom:6px;
+        display:flex;gap:6px;justify-content:flex-end;
+      }
+      .eventPhotoActions button{
+        border:0;border-radius:9px;padding:7px 9px;
+        background:rgba(255,255,255,.94);color:#183326;
+        font-size:9px;font-weight:800;cursor:pointer;
+      }
+      .eventPhotoActions button.danger{
+        display:grid;place-items:center;padding:7px;color:#8d2f2f;
+      }
+      @media(max-width:640px){
+        .eventPhotoGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+        .eventPhotoActions button{font-size:10px;padding:8px}
+      }
 
       .eventSecurityNotice{
         grid-column:1 / -1;

@@ -15,6 +15,50 @@ import { useAuth } from "../context/AuthContext";
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&auto=format&fit=crop";
 
+const ACTIVITIES = [
+  ["hiking", "Planinarenje"],
+  ["trekking", "Trekking"],
+  ["camping", "Kampovanje"],
+  ["cycling", "Biciklizam"],
+  ["mountain biking", "MTB"],
+  ["trail running", "Trail running"],
+  ["climbing", "Penjanje"],
+  ["via ferrata", "Via ferrata"],
+  ["caving", "Speleologija"],
+  ["canyoning", "Kanjoning"],
+  ["rafting", "Rafting"],
+  ["kayaking", "Kajak"],
+  ["canoeing", "Kanu"],
+  ["sup", "SUP"],
+  ["sailing", "Jedrenje"],
+  ["surfing", "Surfing"],
+  ["kitesurfing", "Kitesurfing"],
+  ["diving", "Ronjenje"],
+  ["paragliding", "Paraglajding"],
+  ["skydiving", "Padobranstvo"],
+  ["skiing", "Skijanje"],
+  ["snowboarding", "Snowboarding"],
+  ["snowshoeing", "Krpljanje"],
+  ["horse riding", "Jahanje"],
+  ["fishing", "Ribolov"],
+  ["off-road", "Off-road / 4x4"],
+  ["nature trip", "Izlet u prirodi"],
+  ["other", "Ostalo"],
+];
+
+const INCLUDED_PRESETS = [
+  "Ručak",
+  "Prevoz",
+  "Vodič",
+  "Oprema",
+  "Noćenje",
+  "Fotografisanje",
+  "Osiguranje",
+  "Piće / osveženje",
+  "Ulaznice",
+  "Kupanje",
+];
+
 function Icon({
   name,
   size = 20,
@@ -244,8 +288,13 @@ export default function EditEvent() {
     useState(false);
   const [error, setError] =
     useState("");
-  const [coverFile, setCoverFile] =
-    useState(null);
+  const [activities, setActivities] = useState([]);
+  const [includedItems, setIncludedItems] = useState([]);
+  const [customIncludedItem, setCustomIncludedItem] = useState("");
+  const [newCoverIndex, setNewCoverIndex] = useState(null);
+  const [existingPhotos, setExistingPhotos] = useState([]);
+  const [newPhotoFiles, setNewPhotoFiles] = useState([]);
+  const [coverUrl, setCoverUrl] = useState("");
 
   const [form, setForm] = useState({
     title: "",
@@ -297,7 +346,17 @@ export default function EditEvent() {
       }
 
       setEvent(data);
-      setCoverFile(null);
+      setActivities(Array.isArray(data.activities) ? data.activities : []);
+      setIncludedItems(Array.isArray(data.included_items) ? data.included_items : []);
+      setCustomIncludedItem("");
+      setNewCoverIndex(null);
+
+      const initialPhotos = Array.from(
+        new Set([data.cover_url, ...(Array.isArray(data.gallery_urls) ? data.gallery_urls : [])].filter(Boolean))
+      ).slice(0, 8);
+      setExistingPhotos(initialPhotos);
+      setNewPhotoFiles([]);
+      setCoverUrl(data.cover_url || initialPhotos[0] || "");
 
       setForm({
         title: data.title || "",
@@ -368,86 +427,150 @@ export default function EditEvent() {
     [form.location, form.country]
   );
 
-  const previewCover = useMemo(() => {
-    if (coverFile) {
-      return URL.createObjectURL(
-        coverFile
-      );
-    }
-
-    return (
-      event?.cover_url ||
-      FALLBACK_COVER
-    );
-  }, [
-    coverFile,
-    event?.cover_url,
-  ]);
+  const newPhotoPreviews = useMemo(
+    () => newPhotoFiles.map((file) => URL.createObjectURL(file)),
+    [newPhotoFiles]
+  );
 
   useEffect(() => {
     return () => {
-      if (
-        coverFile &&
-        previewCover.startsWith("blob:")
-      ) {
-        URL.revokeObjectURL(
-          previewCover
-        );
-      }
+      newPhotoPreviews.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [
-    coverFile,
-    previewCover,
-  ]);
+  }, [newPhotoPreviews]);
 
-  async function uploadCover() {
-    if (
-      !coverFile ||
-      !profile?.id ||
-      !event?.id
-    ) {
-      return event?.cover_url || "";
+  const previewCover =
+    (newCoverIndex !== null ? newPhotoPreviews[newCoverIndex] : null) ||
+    coverUrl ||
+    existingPhotos[0] ||
+    newPhotoPreviews[0] ||
+    event?.cover_url ||
+    FALLBACK_COVER;
+
+  function toggleActivity(value) {
+    setActivities((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    );
+    if (error) setError("");
+  }
+
+  function toggleIncludedItem(item) {
+    setIncludedItems((current) =>
+      current.includes(item)
+        ? current.filter((value) => value !== item)
+        : [...current, item]
+    );
+    if (error) setError("");
+  }
+
+  function addCustomIncludedItem() {
+    const clean = customIncludedItem.trim();
+    if (!clean) return;
+
+    if (!includedItems.some((item) => item.toLowerCase() === clean.toLowerCase())) {
+      setIncludedItems((current) => [...current, clean]);
     }
 
-    const extension =
-      getFileExtension(coverFile);
+    setCustomIncludedItem("");
+    if (error) setError("");
+  }
 
-    const filePath = [
-      profile.id,
-      event.id,
-      `${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2)}.${extension}`,
-    ].join("/");
+  function removeIncludedItem(item) {
+    setIncludedItems((current) => current.filter((value) => value !== item));
+  }
 
-    const {
-      error: uploadError,
-    } = await supabase.storage
-      .from("event-covers")
-      .upload(filePath, coverFile, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType:
-          coverFile.type ||
-          undefined,
-      });
+  function handleNewPhotos(changeEvent) {
+    const selected = Array.from(changeEvent.target.files || []);
+    changeEvent.target.value = "";
+    if (!selected.length) return;
 
-    if (uploadError) {
-      throw uploadError;
+    const invalid = selected.find((file) => !file.type.startsWith("image/"));
+    if (invalid) {
+      setError("Možeš dodati samo fotografije.");
+      return;
     }
 
-    const { data } =
-      supabase.storage
+    const tooLarge = selected.find((file) => file.size > 8 * 1024 * 1024);
+    if (tooLarge) {
+      setError("Svaka fotografija može imati najviše 8 MB.");
+      return;
+    }
+
+    const freeSlots = Math.max(8 - existingPhotos.length - newPhotoFiles.length, 0);
+    if (!freeSlots) {
+      setError("Možeš imati najviše 8 fotografija.");
+      return;
+    }
+
+    if (selected.length > freeSlots) {
+      setError(`Dodato je prvih ${freeSlots} fotografija. Maksimum je 8.`);
+    }
+
+    setNewPhotoFiles((current) => [...current, ...selected.slice(0, freeSlots)]);
+  }
+
+  function removeExistingPhoto(url) {
+    setExistingPhotos((current) => current.filter((item) => item !== url));
+    if (coverUrl === url) {
+      const next = existingPhotos.find((item) => item !== url) || "";
+      setCoverUrl(next);
+      if (!next && newPhotoFiles.length) {
+        setNewCoverIndex(0);
+      }
+    }
+  }
+
+  function removeNewPhoto(index) {
+    setNewPhotoFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setNewCoverIndex((current) => {
+      if (current === null) return null;
+      if (index < current) return current - 1;
+      if (index === current) return null;
+      return current;
+    });
+  }
+
+  function storagePathFromPublicUrl(url) {
+    const marker = "/storage/v1/object/public/event-covers/";
+    const index = url?.indexOf(marker);
+    return index >= 0 ? decodeURIComponent(url.slice(index + marker.length)) : null;
+  }
+
+  async function uploadNewPhotos() {
+    const uploaded = [];
+
+    for (let index = 0; index < newPhotoFiles.length; index += 1) {
+      const file = newPhotoFiles[index];
+      const extension = getFileExtension(file);
+      const filePath = [
+        profile.id,
+        event.id,
+        `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}.${extension}`,
+      ].join("/");
+
+      const { error: uploadError } = await supabase.storage
+        .from("event-covers")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
         .from("event-covers")
         .getPublicUrl(filePath);
 
-    if (!data?.publicUrl) {
-      throw new Error(
-        "Nije moguće dobiti URL nove fotografije."
-      );
+      if (!data?.publicUrl) {
+        throw new Error("Nije moguće dobiti URL nove fotografije.");
+      }
+
+      uploaded.push({ path: filePath, url: data.publicUrl });
     }
 
-    return data.publicUrl;
+    return uploaded;
   }
 
   async function handleSave(eventSubmit) {
@@ -467,6 +590,10 @@ export default function EditEvent() {
 
       const title =
         form.title.trim();
+
+      if (!activities.length) {
+        throw new Error("Izaberi najmanje jednu aktivnost.");
+      }
 
       if (!title) {
         throw new Error(
@@ -517,8 +644,22 @@ export default function EditEvent() {
         );
       }
 
-      const coverUrl =
-        await uploadCover();
+      const uploaded = await uploadNewPhotos();
+      const uploadedUrls = uploaded.map((item) => item.url);
+      const allPhotoUrls = [...existingPhotos, ...uploadedUrls].slice(0, 8);
+
+      let nextCoverUrl =
+        newCoverIndex !== null
+          ? uploadedUrls[newCoverIndex] || null
+          : coverUrl;
+
+      if (!nextCoverUrl || !allPhotoUrls.includes(nextCoverUrl)) {
+        nextCoverUrl = allPhotoUrls[0] || null;
+      }
+
+      const galleryUrls = allPhotoUrls
+        .filter((url) => url !== nextCoverUrl)
+        .slice(0, 7);
 
       const {
         data: updatedEvent,
@@ -526,6 +667,8 @@ export default function EditEvent() {
       } = await supabase
         .from("events")
         .update({
+          activities,
+          included_items: includedItems,
           title,
           description:
             form.description.trim(),
@@ -537,7 +680,8 @@ export default function EditEvent() {
           capacity,
           start_date: startDate,
           end_date: endDate,
-          cover_url: coverUrl,
+          cover_url: nextCoverUrl,
+          gallery_urls: galleryUrls,
           updated_at:
             new Date().toISOString(),
         })
@@ -551,9 +695,31 @@ export default function EditEvent() {
       }
 
       if (!updatedEvent) {
+        if (uploaded.length) {
+          await supabase.storage
+            .from("event-covers")
+            .remove(uploaded.map((item) => item.path));
+        }
         throw new Error(
           "Događaj nije ažuriran. Proveri dozvole i vlasništvo."
         );
+      }
+
+      const originalPhotos = Array.from(
+        new Set([event.cover_url, ...(Array.isArray(event.gallery_urls) ? event.gallery_urls : [])].filter(Boolean))
+      );
+      const removedPaths = originalPhotos
+        .filter((url) => ![nextCoverUrl, ...galleryUrls].includes(url))
+        .map(storagePathFromPublicUrl)
+        .filter(Boolean);
+
+      if (removedPaths.length) {
+        const { error: removeError } = await supabase.storage
+          .from("event-covers")
+          .remove(removedPaths);
+        if (removeError) {
+          console.error("Stare fotografije nisu obrisane iz Storage-a:", removeError);
+        }
       }
 
       navigate(`/event/${event.id}`);
@@ -761,6 +927,87 @@ export default function EditEvent() {
               <section className="editEventPanel">
                 <div className="editEventPanelHeader">
                   <span className="editEventPanelIcon">
+                    <Icon name="check" size={19} />
+                  </span>
+                  <div>
+                    <small>Aktivnosti</small>
+                    <h2>Izaberi jednu ili više.</h2>
+                  </div>
+                </div>
+
+                <div className="editEventActivityGrid">
+                  {ACTIVITIES.map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={activities.includes(value) ? "active" : ""}
+                      aria-pressed={activities.includes(value)}
+                      onClick={() => toggleActivity(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="editEventPanel">
+                <div className="editEventPanelHeader">
+                  <span className="editEventPanelIcon">
+                    <Icon name="check" size={19} />
+                  </span>
+                  <div>
+                    <small>Šta je uključeno? · opciono</small>
+                    <h2>Istakni usluge i pogodnosti.</h2>
+                    <p>Izaberi predloge ili dodaj svoju stavku.</p>
+                  </div>
+                </div>
+
+                <div className="editIncludedPresetGrid">
+                  {INCLUDED_PRESETS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className={includedItems.includes(item) ? "active" : ""}
+                      aria-pressed={includedItems.includes(item)}
+                      onClick={() => toggleIncludedItem(item)}
+                    >
+                      ✓ {item}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="editIncludedCustomRow">
+                  <input
+                    type="text"
+                    maxLength={80}
+                    value={customIncludedItem}
+                    onChange={(changeEvent) => setCustomIncludedItem(changeEvent.target.value)}
+                    onKeyDown={(keyEvent) => {
+                      if (keyEvent.key === "Enter") {
+                        keyEvent.preventDefault();
+                        addCustomIncludedItem();
+                      }
+                    }}
+                    placeholder="Npr. Kupanje na vodopadu"
+                  />
+                  <button type="button" onClick={addCustomIncludedItem}>Dodaj</button>
+                </div>
+
+                {includedItems.length > 0 && (
+                  <div className="editIncludedSelected">
+                    {includedItems.map((item) => (
+                      <span key={item}>
+                        ✓ {item}
+                        <button type="button" onClick={() => removeIncludedItem(item)}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="editEventPanel">
+                <div className="editEventPanelHeader">
+                  <span className="editEventPanelIcon">
                     <Icon
                       name="edit"
                       size={19}
@@ -942,12 +1189,15 @@ export default function EditEvent() {
 
                   <div>
                     <small>
-                      Termin događaja
+                      Termin događaja · opciono
                     </small>
 
                     <h2>
                       Početak i završetak.
                     </h2>
+                    <p>
+                      Ostavi prazno ako je termin po dogovoru.
+                    </p>
                   </div>
                 </div>
 
@@ -997,76 +1247,83 @@ export default function EditEvent() {
               <section className="editEventPanel">
                 <div className="editEventPanelHeader">
                   <span className="editEventPanelIcon">
-                    <Icon
-                      name="image"
-                      size={19}
-                    />
+                    <Icon name="image" size={19} />
                   </span>
-
                   <div>
-                    <small>
-                      Naslovna fotografija
-                    </small>
-
-                    <h2>
-                      Osveži vizuelni identitet.
-                    </h2>
+                    <small>Galerija događaja</small>
+                    <h2>Do 8 fotografija.</h2>
+                    <p>Na telefonu možeš izabrati više fotografija iz galerije.</p>
                   </div>
                 </div>
 
                 <label className="editEventUpload">
                   <span className="editEventUploadIcon">
-                    <Icon
-                      name="upload"
-                      size={22}
-                    />
+                    <Icon name="upload" size={22} />
                   </span>
-
                   <div>
-                    <strong>
-                      {coverFile
-                        ? coverFile.name
-                        : "Izaberi novu fotografiju"}
-                    </strong>
-
-                    <p>
-                      Trenutna fotografija
-                      ostaje ako ne izabereš
-                      novu.
-                    </p>
+                    <strong>Dodaj fotografije</strong>
+                    <p>{existingPhotos.length + newPhotoFiles.length} / 8 izabrano</p>
                   </div>
-
-                  <span className="editEventUploadAction">
-                    Izaberi fajl
-                  </span>
-
+                  <span className="editEventUploadAction">Izaberi</span>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(changeEvent) =>
-                      setCoverFile(
-                        changeEvent
-                          .target.files?.[0] ||
-                          null
-                      )
-                    }
+                    multiple
+                    onChange={handleNewPhotos}
                   />
                 </label>
 
-                {coverFile && (
-                  <button
-                    type="button"
-                    className="editEventRemoveCover"
-                    onClick={() =>
-                      setCoverFile(null)
-                    }
-                  >
-                    <Icon
-                      name="trash"
-                      size={14}
-                    />
-                    Ukloni izabranu fotografiju
-                  </button>
+                {(existingPhotos.length > 0 || newPhotoFiles.length > 0) && (
+                  <div className="editEventGalleryGrid">
+                    {existingPhotos.map((url, index) => (
+                      <article key={url} className={coverUrl === url ? "cover" : ""}>
+                        <img src={url} alt={`Fotografija ${index + 1}`} />
+                        {coverUrl === url && <span>Naslovna</span>}
+                        <div>
+                          {coverUrl !== url && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCoverUrl(url);
+                                setNewCoverIndex(null);
+                              }}
+                            >
+                              Naslovna
+                            </button>
+                          )}
+                          <button type="button" onClick={() => removeExistingPhoto(url)}>
+                            <Icon name="trash" size={14} />
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+
+                    {newPhotoPreviews.map((url, index) => (
+                      <article
+                        key={`new-${index}`}
+                        className={newCoverIndex === index ? "cover" : ""}
+                      >
+                        <img src={url} alt={`Nova fotografija ${index + 1}`} />
+                        <span>{newCoverIndex === index ? "Naslovna" : "Nova"}</span>
+                        <div>
+                          {newCoverIndex !== index && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewCoverIndex(index);
+                                setCoverUrl("");
+                              }}
+                            >
+                              Naslovna
+                            </button>
+                          )}
+                          <button type="button" onClick={() => removeNewPhoto(index)}>
+                            <Icon name="trash" size={14} />
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 )}
               </section>
 

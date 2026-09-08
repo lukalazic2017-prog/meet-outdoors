@@ -16,6 +16,37 @@ const FALLBACK_COVER =
 const FALLBACK_AVATAR =
   "https://api.dicebear.com/8.x/initials/svg?seed=MeetOutdoors";
 
+const ACTIVITY_LABELS = Object.fromEntries([
+  ["hiking", "Planinarenje"],
+  ["trekking", "Trekking"],
+  ["camping", "Kampovanje"],
+  ["cycling", "Biciklizam"],
+  ["mountain biking", "MTB"],
+  ["trail running", "Trail running"],
+  ["climbing", "Penjanje"],
+  ["via ferrata", "Via ferrata"],
+  ["caving", "Speleologija"],
+  ["canyoning", "Kanjoning"],
+  ["rafting", "Rafting"],
+  ["kayaking", "Kajak"],
+  ["canoeing", "Kanu"],
+  ["sup", "SUP"],
+  ["sailing", "Jedrenje"],
+  ["surfing", "Surfing"],
+  ["kitesurfing", "Kitesurfing"],
+  ["diving", "Ronjenje"],
+  ["paragliding", "Paraglajding"],
+  ["skydiving", "Padobranstvo"],
+  ["skiing", "Skijanje"],
+  ["snowboarding", "Snowboarding"],
+  ["snowshoeing", "Krpljanje"],
+  ["horse riding", "Jahanje"],
+  ["fishing", "Ribolov"],
+  ["off-road", "Off-road / 4x4"],
+  ["nature trip", "Izlet u prirodi"],
+  ["other", "Ostalo"],
+]);
+
 function Icon({ name, size = 20, strokeWidth = 2 }) {
   const icons = {
     mapPin: (
@@ -120,7 +151,7 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
 }
 
 function formatDate(value) {
-  if (!value) return "Nije postavljeno";
+  if (!value) return "Termin po dogovoru";
 
   const date = new Date(value);
 
@@ -639,6 +670,25 @@ export default function EventDetails() {
     [event?.location, event?.country]
   );
 
+  const eventPhotos = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          event?.cover_url,
+          ...(Array.isArray(event?.gallery_urls) ? event.gallery_urls : []),
+        ].filter(Boolean))
+      ).slice(0, 8),
+    [event?.cover_url, event?.gallery_urls]
+  );
+
+  const eventActivities = Array.isArray(event?.activities)
+    ? event.activities
+    : [];
+
+  const includedItems = Array.isArray(event?.included_items)
+    ? event.included_items.filter(Boolean)
+    : [];
+
   const participantCount = participants.length;
 
   const capacity = Number(event?.capacity || 0);
@@ -714,14 +764,14 @@ export default function EventDetails() {
           `Pridruži se događaju ${event.title} na MeetOutdoors. Pogledaj datum, lokaciju, organizatora, cenu i detalje prijave.`
         }
         canonicalPath={`/event/${event.id}`}
-        image={event.cover_url || FALLBACK_COVER}
+        image={eventPhotos[0] || FALLBACK_COVER}
         type="article"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "Event",
           name: event.title,
           description: event.description || undefined,
-          image: event.cover_url ? [event.cover_url] : undefined,
+          image: eventPhotos.length ? eventPhotos : undefined,
           startDate: event.start_date || undefined,
           endDate: event.end_date || undefined,
           eventStatus: event.is_active === false
@@ -778,7 +828,7 @@ export default function EventDetails() {
               180deg,
               rgba(6, 20, 12, 0.08),
               rgba(6, 20, 12, 0.88)
-            ), url(${event.cover_url || FALLBACK_COVER})`,
+            ), url(${eventPhotos[0] || FALLBACK_COVER})`,
           }}
         >
           <div className="eventHeroCopy">
@@ -793,6 +843,16 @@ export default function EventDetails() {
               <Icon name="mapPin" size={17} />
               {location}
             </p>
+
+            {eventActivities.length > 0 && (
+              <div className="eventActivityChips">
+                {eventActivities.map((activity) => (
+                  <span key={activity}>
+                    {ACTIVITY_LABELS[activity] || activity}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <div className="eventHeroJoinLine">
               <span className="eventHeroLiveDot" />
@@ -870,7 +930,7 @@ export default function EventDetails() {
               <ShareSheet
                 type="event"
                 title={event.title || "Outdoor događaj"}
-                image={event.cover_url || FALLBACK_COVER}
+                image={eventPhotos[0] || FALLBACK_COVER}
                 location={location}
                 subtitle={`${formatDate(event.start_date)} · €${event.price || 0}`}
                 url={`https://www.meetoutdoors.app/event/${event.id}`}
@@ -1120,6 +1180,33 @@ export default function EventDetails() {
             )}
           </section>
 
+          {eventPhotos.length > 1 && (
+            <section className="eventPanel eventGalleryPanel">
+              <div className="eventSectionHeader">
+                <div>
+                  <span>Galerija</span>
+                  <h2>Fotografije događaja.</h2>
+                </div>
+                <small>{eventPhotos.length} fotografija</small>
+              </div>
+
+              <div className="eventGalleryGrid">
+                {eventPhotos.map((url, index) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={index === 0 ? "featured" : ""}
+                  >
+                    <img src={url} alt={`${event.title} — fotografija ${index + 1}`} />
+                    {index === 0 && <span>Naslovna</span>}
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
           <div className="eventMainGrid">
             <div className="eventMainColumn">
               <section className="eventPanel">
@@ -1136,11 +1223,31 @@ export default function EventDetails() {
                 </p>
               </section>
 
+              {includedItems.length > 0 && (
+                <section className="eventPanel">
+                  <div className="eventSectionHeader">
+                    <div>
+                      <span>Šta je uključeno</span>
+                      <h2>U sklopu iskustva.</h2>
+                    </div>
+                  </div>
+
+                  <div className="eventIncludedList">
+                    {includedItems.map((item) => (
+                      <article key={item}>
+                        <span>✓</span>
+                        <strong>{item}</strong>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <section className="eventPanel eventTimelinePanel">
                 <div className="eventSectionHeader">
                   <div>
                     <span>Vreme događaja</span>
-                    <h2>Planiraj unapred.</h2>
+                    <h2>{event.start_date ? "Planiraj unapred." : "Termin po dogovoru."}</h2>
                   </div>
                 </div>
 
@@ -1580,6 +1687,15 @@ function EventDetailsStyles() {
           rgba(255, 255, 255, 0.72);
         font-size: 13px;
         font-weight: 750;
+      }
+
+      .eventActivityChips{
+        display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;
+      }
+      .eventActivityChips span{
+        padding:7px 10px;border-radius:999px;
+        background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);
+        color:#fff;font-size:10px;font-weight:800;backdrop-filter:blur(8px);
       }
 
       .eventHeroJoinLine {
@@ -2051,6 +2167,48 @@ function EventDetailsStyles() {
         color: #53665a;
         font-size: 8px;
         font-weight: 850;
+      }
+
+      .eventIncludedList{
+        display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;
+      }
+      .eventIncludedList article{
+        display:flex;align-items:center;gap:10px;min-height:44px;
+        padding:10px 12px;border-radius:13px;background:#f4f7f3;
+        border:1px solid rgba(26,57,40,.09);
+      }
+      .eventIncludedList article span{
+        display:grid;place-items:center;flex:0 0 auto;width:23px;height:23px;
+        border-radius:50%;background:#244d36;color:#fff;font-size:11px;font-weight:900;
+      }
+      .eventIncludedList article strong{
+        color:#203d2d;font-size:11px;line-height:1.35;
+      }
+      @media(max-width:640px){
+        .eventIncludedList{grid-template-columns:1fr}
+      }
+
+      .eventGalleryPanel{margin-bottom:18px}
+      .eventGalleryGrid{
+        display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
+      }
+      .eventGalleryGrid a{
+        position:relative;overflow:hidden;border-radius:16px;
+        aspect-ratio:4/3;background:#edf1ec;display:block;
+      }
+      .eventGalleryGrid a.featured{grid-column:span 2;grid-row:span 2}
+      .eventGalleryGrid img{
+        width:100%;height:100%;object-fit:cover;display:block;
+        transition:transform .25s ease;
+      }
+      .eventGalleryGrid a:hover img{transform:scale(1.025)}
+      .eventGalleryGrid span{
+        position:absolute;left:9px;top:9px;padding:6px 9px;border-radius:999px;
+        background:rgba(10,30,20,.82);color:#fff;font-size:9px;font-weight:800;
+      }
+      @media(max-width:700px){
+        .eventGalleryGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+        .eventGalleryGrid a.featured{grid-column:span 2;grid-row:auto;aspect-ratio:16/10}
       }
 
       .eventMainGrid {
