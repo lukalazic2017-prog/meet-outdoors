@@ -94,10 +94,11 @@ function ShareIcon({ name, size = 20 }) {
   );
 }
 
-function buildShareText({ type, title, location, subtitle }) {
+function buildShareText({ type, title, location, subtitle, organizer }) {
   if (type === "event") {
     return [
       `🥾 ${title}`,
+      organizer ? `Organizuje: ${organizer}` : "",
       location ? `📍 ${location}` : "",
       subtitle || "",
       "Pogledaj događaj na MeetOutdoors.",
@@ -214,6 +215,7 @@ async function createStoryFile({
   avatar,
   location,
   subtitle,
+  organizer,
 }) {
   const canvas = document.createElement("canvas");
   canvas.width = STORY_W;
@@ -345,6 +347,17 @@ async function createStoryFile({
     y += lineHeight;
   });
 
+  if (type === "event" && organizer) {
+    y += 20;
+    ctx.fillStyle = "#d9ffca";
+    ctx.font = "800 28px Inter, Arial, sans-serif";
+    const organizerLines = wrapText(ctx, `Organizuje: ${organizer}`, 930, 1);
+    organizerLines.forEach((line) => {
+      ctx.fillText(line, 64, y);
+      y += 40;
+    });
+  }
+
   if (location) {
     y += 22;
     ctx.fillStyle = "rgba(255,255,255,.78)";
@@ -427,6 +440,7 @@ export default function ShareSheet({
   avatar,
   location,
   subtitle,
+  organizer,
   url,
   triggerClassName = "shareSheetTrigger",
   triggerEyebrow = "PODELI",
@@ -443,8 +457,8 @@ export default function ShareSheet({
   }, [url]);
 
   const shareText = useMemo(
-    () => buildShareText({ type, title, location, subtitle }),
-    [type, title, location, subtitle]
+    () => buildShareText({ type, title, location, subtitle, organizer }),
+    [type, title, location, subtitle, organizer]
   );
 
   function flash(message) {
@@ -503,6 +517,7 @@ export default function ShareSheet({
         avatar,
         location,
         subtitle,
+        organizer,
       });
 
       const canShareFile =
@@ -644,6 +659,9 @@ export default function ShareSheet({
                     : "TURA I PAKET"}
                 </small>
                 <strong>{title}</strong>
+                {type === "event" && organizer && (
+                  <span className="moShareOrganizer">Organizuje: {organizer}</span>
+                )}
                 {location && <span>{location}</span>}
                 {subtitle && <em>{subtitle}</em>}
               </div>
@@ -792,7 +810,7 @@ export default function ShareSheet({
             .moSharePreviewCopy{display:flex;justify-content:center;flex-direction:column;min-width:0;padding-right:6px}
             .moSharePreviewCopy small{color:#baff9e;font-size:6px;font-weight:950;letter-spacing:.1em}
             .moSharePreviewCopy strong{margin-top:6px;overflow:hidden;font-size:17px;line-height:1.12;text-overflow:ellipsis;white-space:nowrap}
-            .moSharePreviewCopy span,.moSharePreviewCopy em{display:block;margin-top:5px;color:rgba(255,255,255,.46);font-size:8px;font-style:normal;line-height:1.4}
+            .moSharePreviewCopy span,.moSharePreviewCopy em{display:block;margin-top:5px;color:rgba(255,255,255,.46);font-size:8px;font-style:normal;line-height:1.4}.moSharePreviewCopy .moShareOrganizer{color:#d9ffca;font-weight:850}
             .moStoryHero{display:grid;grid-template-columns:54px minmax(0,1fr) 42px;align-items:center;gap:12px;width:100%;margin-top:14px;padding:14px;border:1px solid rgba(255,113,192,.23);border-radius:21px;background:linear-gradient(135deg,rgba(255,70,142,.17),rgba(174,72,255,.14) 52%,rgba(255,164,67,.13));color:#fff;text-align:left;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:.18s ease}
             .moStoryHero:hover{transform:translateY(-2px);border-color:rgba(255,168,219,.38)}
             .moStoryHero:disabled{cursor:wait;opacity:.72}

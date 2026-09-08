@@ -211,12 +211,12 @@ function toIsoValue(value) {
 }
 
 function formatPreviewDate(value) {
-  if (!value) return "Nije postavljeno";
+  if (!value) return "Termin po dogovoru";
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Nije postavljeno";
+    return "Termin po dogovoru";
   }
 
   return new Intl.DateTimeFormat(
@@ -2381,6 +2381,302 @@ function EditEventStyles() {
           animation: none !important;
           scroll-behavior: auto !important;
           transition: none !important;
+        }
+      }
+
+      /* ACTIVITIES */
+      .editEventActivityGrid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .editEventActivityGrid button {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        min-width: 0;
+        min-height: 40px;
+        padding: 9px 10px;
+        border: 1px solid rgba(36, 77, 54, 0.13);
+        border-radius: 12px;
+        background: #f8faf6;
+        color: #33483b;
+        cursor: pointer;
+        font: inherit;
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 1.2;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        transition: 0.18s ease;
+      }
+
+      .editEventActivityGrid button:hover {
+        border-color: #9db28f;
+        background: #f1f6ed;
+      }
+
+      .editEventActivityGrid button.active {
+        border-color: #244d36;
+        background: #244d36;
+        color: #fff;
+      }
+
+      /* INCLUDED ITEMS */
+      .editIncludedPresetGrid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .editIncludedPresetGrid button {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        min-width: 0;
+        min-height: 40px;
+        padding: 9px 8px;
+        border: 1px solid rgba(36, 77, 54, 0.13);
+        border-radius: 12px;
+        background: #f8faf6;
+        color: #33483b;
+        cursor: pointer;
+        font: inherit;
+        font-size: 9px;
+        font-weight: 800;
+        line-height: 1.2;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      .editIncludedPresetGrid button.active {
+        border-color: #244d36;
+        background: #244d36;
+        color: #fff;
+      }
+
+      .editIncludedCustomRow {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+        margin-top: 11px;
+      }
+
+      .editIncludedCustomRow input {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 0 13px;
+        border: 1px solid #dbe4d8;
+        border-radius: 13px;
+        background: #f8faf6;
+        color: #33483b;
+        outline: none;
+        font: inherit;
+        font-size: 11px;
+      }
+
+      .editIncludedCustomRow button {
+        -webkit-appearance: none;
+        appearance: none;
+        min-width: 82px;
+        min-height: 44px;
+        padding: 0 15px;
+        border: 0;
+        border-radius: 13px;
+        background: #244d36;
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .editIncludedSelected {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        width: 100%;
+        min-width: 0;
+        margin-top: 11px;
+      }
+
+      .editIncludedSelected > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        max-width: 100%;
+        padding: 7px 8px 7px 10px;
+        border: 1px solid rgba(36, 77, 54, 0.09);
+        border-radius: 999px;
+        background: #edf4ef;
+        color: #244d36;
+        font-size: 9px;
+        font-weight: 800;
+        line-height: 1.2;
+      }
+
+      .editIncludedSelected > span > button {
+        -webkit-appearance: none;
+        appearance: none;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 22px;
+        min-width: 22px;
+        height: 22px;
+        min-height: 22px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(36, 77, 54, 0.1);
+        color: #244d36;
+        cursor: pointer;
+        font: inherit;
+        font-size: 15px;
+        line-height: 1;
+      }
+
+      /* GALLERY */
+      .editEventGalleryGrid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        width: 100%;
+        min-width: 0;
+        margin-top: 13px;
+      }
+
+      .editEventGalleryGrid article {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid rgba(36, 77, 54, 0.12);
+        border-radius: 15px;
+        background: #edf1e9;
+        aspect-ratio: 4 / 3;
+      }
+
+      .editEventGalleryGrid article.cover {
+        border-color: #244d36;
+        box-shadow: inset 0 0 0 2px #244d36;
+      }
+
+      .editEventGalleryGrid img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .editEventGalleryGrid article > span {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        padding: 5px 8px;
+        border-radius: 999px;
+        background: rgba(13, 35, 23, 0.88);
+        color: #fff;
+        font-size: 8px;
+        font-weight: 850;
+      }
+
+      .editEventGalleryGrid article > div {
+        position: absolute;
+        right: 7px;
+        bottom: 7px;
+        left: 7px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+
+      .editEventGalleryGrid article > div button {
+        -webkit-appearance: none;
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 31px;
+        padding: 0 9px;
+        border: 0;
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.94);
+        color: #244d36;
+        cursor: pointer;
+        font: inherit;
+        font-size: 8px;
+        font-weight: 850;
+      }
+
+      @media (max-width: 900px) {
+        .editEventActivityGrid,
+        .editIncludedPresetGrid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .editEventGalleryGrid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 700px) {
+        .editEventActivityGrid,
+        .editIncludedPresetGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .editEventActivityGrid button,
+        .editIncludedPresetGrid button {
+          min-height: 44px;
+          padding: 9px 10px;
+          font-size: 11px;
+        }
+
+        .editIncludedCustomRow {
+          grid-template-columns: minmax(0, 1fr) 82px;
+        }
+
+        .editIncludedCustomRow button {
+          width: 82px;
+          min-width: 82px;
+          padding: 0 8px;
+          font-size: 11px;
+        }
+
+        .editIncludedSelected > span {
+          font-size: 10px;
+        }
+
+        .editEventGalleryGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+      }
+
+      @media (max-width: 390px) {
+        .editEventPanel {
+          padding: 17px;
+        }
+
+        .editIncludedCustomRow {
+          grid-template-columns: 1fr;
+        }
+
+        .editIncludedCustomRow button {
+          width: 100%;
+          min-width: 0;
         }
       }
     `}</style>
