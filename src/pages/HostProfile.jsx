@@ -334,12 +334,12 @@ function NotFoundState() {
 }
 
 function formatDate(value) {
-  if (!value) return "Termin uskoro";
+  if (!value) return "Termin po dogovoru";
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Termin uskoro";
+    return "Termin po dogovoru";
   }
 
   return new Intl.DateTimeFormat("sr-Latn-RS", {
@@ -2391,57 +2391,6 @@ export default function HostProfile() {
   };
 
 
-  const reviewStats = useMemo(() => {
-    if (reviews.length === 0) {
-      return {
-        average: 0,
-        count: 0,
-        distribution: {
-          5: 0,
-          4: 0,
-          3: 0,
-          2: 0,
-          1: 0,
-        },
-      };
-    }
-
-    const distribution = {
-      5: 0,
-      4: 0,
-      3: 0,
-      2: 0,
-      1: 0,
-    };
-
-    let total = 0;
-
-    reviews.forEach((review) => {
-      const rating = Math.max(
-        1,
-        Math.min(
-          5,
-          Number(review.rating || 0)
-        )
-      );
-
-      total += rating;
-
-      if (
-        distribution[rating] !== undefined
-      ) {
-        distribution[rating] += 1;
-      }
-    });
-
-    return {
-      average: total / reviews.length,
-      count: reviews.length,
-      distribution,
-    };
-  }, [reviews]);
-
-
 
   const visitedPlaces = useMemo(() => {
     const unique = new Map();
@@ -2543,11 +2492,6 @@ export default function HostProfile() {
     profile.full_name ||
     profile.username ||
     "Outdoor Host";
-
-  const hostLevel =
-    getHostLevel(
-      visitedPlaces.length
-    );
 
   const completedAdventureCount =
     completedEvents.length +
@@ -2699,32 +2643,6 @@ export default function HostProfile() {
                       Domaćin smeštaja
                     </span>
                   )}
-
-                  {isAdventureHost && (
-                    <span className="heroLevelBadge">
-                      <Icon
-                        name="trophy"
-                        size={14}
-                      />
-                      {hostLevel}
-                    </span>
-                  )}
-
-                  {reviewStats.count > 0 && (
-                    <span className="heroRatingBadge">
-                      <Icon
-                        name="star"
-                        size={14}
-                        fill="currentColor"
-                      />
-                      {reviewStats.average.toFixed(
-                        1
-                      )}
-                      <small>
-                        ({reviewStats.count})
-                      </small>
-                    </span>
-                  )}
                 </div>
 
                 <h1>{displayName}</h1>
@@ -2781,17 +2699,9 @@ export default function HostProfile() {
               </article>
 
               <article>
-                <strong>
-                  {reviewStats.count > 0
-                    ? reviewStats.average.toFixed(
-                        1
-                      )
-                    : "—"}
-                </strong>
-                <span>
-                  prosečna ocena
-                </span>
-              </article>
+                  <strong>{completedEvents.length}</strong>
+                  <span>održanih avantura</span>
+                </article>
 
               <article>
                 <strong>
@@ -2954,7 +2864,7 @@ export default function HostProfile() {
                     {activeEvents.length}
                   </strong>
                   <small>
-                    Aktivnih događaja
+                    Aktivnih avantura
                   </small>
                 </div>
               </article>
@@ -2962,17 +2872,17 @@ export default function HostProfile() {
               <article>
                 <span>
                   <Icon
-                    name="package"
+                    name="home"
                     size={19}
                   />
                 </span>
 
                 <div>
                   <strong>
-                    {packages.length}
+                    {accommodations.length}
                   </strong>
                   <small>
-                    Paketa i tura
+                    Smeštaja
                   </small>
                 </div>
               </article>
@@ -3047,7 +2957,7 @@ export default function HostProfile() {
                         {completedAdventureCount}
                       </span>
                       <small>
-                        aktivne ponude
+                        održanih avantura
                       </small>
                     </article>
 
@@ -3061,12 +2971,8 @@ export default function HostProfile() {
                     </article>
 
                     <article>
-                      <span>
-                        {reviewStats.count}
-                      </span>
-                      <small>
-                        recenzija
-                      </small>
+                      <span>{offers.length}</span>
+                      <small>aktivnih ponuda</small>
                     </article>
                   </div>
 
@@ -3294,9 +3200,6 @@ export default function HostProfile() {
                           place.longitude
                         ),
                       ]}
-                      icon={makeHostPlaceMarker(
-                        place
-                      )}
                       eventHandlers={{
                         click: () =>
                           navigate(
@@ -3964,143 +3867,6 @@ export default function HostProfile() {
                 </div>
               </section>
             )}
-
-            <section className="reviewsSection">
-              <div className="reviewsIntro">
-                <span className="sectionKicker">
-                  Utisci učesnika
-                </span>
-
-                <h2>
-                  Recenzije hostovih avantura
-                </h2>
-
-                <p>
-                  Ocena domaćina se računa iz
-                  recenzija svih paketa koje je
-                  kreirao.
-                </p>
-
-                {reviewStats.count > 0 && (
-                  <div className="overallRating">
-                    <strong>
-                      {reviewStats.average.toFixed(
-                        1
-                      )}
-                    </strong>
-
-                    <div>
-                      <span className="overallStars">
-                        {[1, 2, 3, 4, 5].map(
-                          (star) => (
-                            <Icon
-                              key={star}
-                              name="star"
-                              size={16}
-                              fill={
-                                star <=
-                                Math.round(
-                                  reviewStats.average
-                                )
-                                  ? "currentColor"
-                                  : "none"
-                              }
-                            />
-                          )
-                        )}
-                      </span>
-
-                      <small>
-                        Na osnovu{" "}
-                        {reviewStats.count}{" "}
-                        {reviewStats.count === 1
-                          ? "recenzije"
-                          : "recenzija"}
-                      </small>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="reviewsSummary">
-                <div className="reviewsPlaceholder">
-                  <div className="ratingBlock">
-                    <span>
-                      <Icon
-                        name="star"
-                        size={27}
-                        fill={
-                          reviewStats.count > 0
-                            ? "currentColor"
-                            : "none"
-                        }
-                      />
-                    </span>
-
-                    <strong>
-                      {reviewStats.count > 0
-                        ? reviewStats.average.toFixed(
-                            1
-                          )
-                        : "Još nema ocena"}
-                    </strong>
-
-                    <small>
-                      {reviewStats.count > 0
-                        ? `${reviewStats.count} ukupno`
-                        : "Prva recenzija će se pojaviti ovde."}
-                    </small>
-                  </div>
-
-                  <div className="reviewBars">
-                    {[5, 4, 3, 2, 1].map(
-                      (rating) => {
-                        const count =
-                          reviewStats
-                            .distribution[
-                            rating
-                          ] || 0;
-
-                        const width =
-                          reviewStats.count > 0
-                            ? `${Math.round(
-                                (count /
-                                  reviewStats.count) *
-                                  100
-                              )}%`
-                            : "0%";
-
-                        return (
-                          <div key={rating}>
-                            <span>
-                              {rating}
-                            </span>
-
-                            <Icon
-                              name="star"
-                              size={12}
-                              fill="currentColor"
-                            />
-
-                            <div>
-                              <span
-                                style={{
-                                  width,
-                                }}
-                              />
-                            </div>
-
-                            <small>
-                              {count}
-                            </small>
-                          </div>
-                        );
-                      }
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
           </div>
         </section>
 
