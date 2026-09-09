@@ -14,7 +14,6 @@ import {
   Marker,
   TileLayer,
 } from "react-leaflet";
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "../supabaseClient";
 import ShareSheet from "../components/ShareSheet";

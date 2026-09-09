@@ -452,7 +452,7 @@ export default function EventDetails() {
       void supabase.removeChannel(participantsChannel);
       void supabase.removeChannel(commentsChannel);
     };
-  }, [event?.id, loadComments, loadParticipants]);
+  }, [event?.id, event?.host_id, loadComments, loadParticipants]);
 
   useEffect(() => {
     if (!actionMessage) return undefined;
