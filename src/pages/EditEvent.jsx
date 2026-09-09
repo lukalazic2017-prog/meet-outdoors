@@ -258,7 +258,7 @@ function LoadingState() {
         <div className="editEventStateCard">
           <span className="editEventLoader" />
 
-          <h1>Učitavanje događaja</h1>
+          <h1>Učitavanje avanture</h1>
 
           <p>
             Pripremamo podatke za
@@ -335,13 +335,13 @@ export default function EditEvent() {
 
       if (!data) {
         throw new Error(
-          "Događaj nije pronađen."
+          "Avantura nije pronađena."
         );
       }
 
       if (data.host_id !== profile.id) {
         throw new Error(
-          "Možeš da uređuješ samo svoje događaje."
+          "Možeš da uređuješ samo svoje avanture."
         );
       }
 
@@ -385,14 +385,14 @@ export default function EditEvent() {
       });
     } catch (loadError) {
       console.error(
-        "Greška pri učitavanju događaja:",
+        "Greška pri učitavanju avanture:",
         loadError
       );
 
       setEvent(null);
       setError(
         loadError?.message ||
-          "Događaj trenutno nije moguće učitati."
+          "Avanturu trenutno nije moguće učitati."
       );
     } finally {
       setPageLoading(false);
@@ -597,7 +597,7 @@ export default function EditEvent() {
 
       if (!title) {
         throw new Error(
-          "Naziv događaja je obavezan."
+          "Naziv avanture je obavezan."
         );
       }
 
@@ -701,7 +701,7 @@ export default function EditEvent() {
             .remove(uploaded.map((item) => item.path));
         }
         throw new Error(
-          "Događaj nije ažuriran. Proveri dozvole i vlasništvo."
+          "Avantura nije ažurirana. Proveri dozvole i vlasništvo."
         );
       }
 
@@ -725,13 +725,13 @@ export default function EditEvent() {
       navigate(`/event/${event.id}`);
     } catch (saveError) {
       console.error(
-        "Greška pri čuvanju događaja:",
+        "Greška pri čuvanju avanture:",
         saveError
       );
 
       setError(
         saveError?.message ||
-          "Događaj nije moguće ažurirati."
+          "Avanturu nije moguće ažurirati."
       );
     } finally {
       setSaving(false);
@@ -765,7 +765,7 @@ export default function EditEvent() {
 
             <p>
               Samo host profili mogu da
-              uređuju događaje.
+              uređuju avanture.
             </p>
 
             <Link
@@ -800,12 +800,12 @@ export default function EditEvent() {
             </span>
 
             <h1>
-              Događaj nije moguće urediti
+              Avanturu nije moguće urediti
             </h1>
 
             <p>
               {error ||
-                "Događaj ne postoji ili nemaš dozvolu da ga uređuješ."}
+                "Avantura ne postoji ili nemaš dozvolu da je uređuješ."}
             </p>
 
             <div className="editEventStateActions">
@@ -848,7 +848,7 @@ export default function EditEvent() {
             </span>
 
             <h1>
-              Uredi događaj.
+              Uredi avanturu.
               <br />
               Sačuvaj atmosferu.
             </h1>
@@ -865,10 +865,10 @@ export default function EditEvent() {
             <article>
               <strong>
                 {form.title ||
-                  "Događaj"}
+                  "Avantura"}
               </strong>
               <span>
-                aktivni događaj
+                aktivna avantura
               </span>
             </article>
 
@@ -894,7 +894,7 @@ export default function EditEvent() {
           <div className="editEventToolbar">
             <div>
               <span className="editEventSectionLabel">
-                Uredi događaj
+                Uredi avanturu
               </span>
 
               <h2>
@@ -904,7 +904,7 @@ export default function EditEvent() {
 
               <p>
                 Izmene se čuvaju direktno
-                u postojećem događaju.
+                u postojećoj avanturi.
               </p>
             </div>
 
@@ -915,7 +915,7 @@ export default function EditEvent() {
                 name="image"
                 size={16}
               />
-              Pogledaj događaj
+              Pogledaj avanturu
             </Link>
           </div>
 
@@ -1028,7 +1028,7 @@ export default function EditEvent() {
                 <div className="editEventFields">
                   <label className="editEventField full">
                     <span>
-                      Naziv događaja
+                      Naziv avanture
                     </span>
 
                     <input
@@ -1189,7 +1189,7 @@ export default function EditEvent() {
 
                   <div>
                     <small>
-                      Termin događaja · opciono
+                      Termin avanture · opciono
                     </small>
 
                     <h2>
@@ -1250,7 +1250,7 @@ export default function EditEvent() {
                     <Icon name="image" size={19} />
                   </span>
                   <div>
-                    <small>Galerija događaja</small>
+                    <small>Galerija avanture</small>
                     <h2>Do 8 fotografija.</h2>
                     <p>Na telefonu možeš izabrati više fotografija iz galerije.</p>
                   </div>
@@ -1352,7 +1352,7 @@ export default function EditEvent() {
                   <p>
                     Izmene će odmah biti
                     vidljive na stranici
-                    događaja.
+                    avanture.
                   </p>
                 </div>
 
@@ -1374,7 +1374,7 @@ export default function EditEvent() {
 
             <aside className="editEventPreview">
               <span className="editEventSectionLabel">
-                Pregled događaja
+                Pregled avanture
               </span>
 
               <article className="editEventPreviewCard">
@@ -1383,7 +1383,7 @@ export default function EditEvent() {
                     src={previewCover}
                     alt={
                       form.title ||
-                      "Pregled događaja"
+                      "Pregled avanture"
                     }
                     onError={(imageEvent) => {
                       imageEvent.currentTarget.src =
@@ -1402,12 +1402,12 @@ export default function EditEvent() {
 
                 <div className="editEventPreviewBody">
                   <small>
-                    MeetOutdoors događaj
+                    MeetOutdoors avantura
                   </small>
 
                   <h2>
                     {form.title ||
-                      "Naziv događaja"}
+                      "Naziv avanture"}
                   </h2>
 
                   <p className="editEventPreviewLocation">

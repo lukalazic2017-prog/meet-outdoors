@@ -325,9 +325,12 @@ export default function Agent() {
     return start || end;
   }, [intent]);
 
-  const packages = useMemo(() => inventory?.packages || [], [inventory?.packages]);
   const events = useMemo(() => inventory?.events || [], [inventory?.events]);
-  const hasInventory = packages.length > 0 || events.length > 0;
+  const accommodations = useMemo(
+    () => inventory?.accommodations || [],
+    [inventory?.accommodations]
+  );
+  const hasInventory = events.length > 0 || accommodations.length > 0;
   const recommendations = useMemo(
     () => ranking?.recommendations || [],
     [ranking?.recommendations]
@@ -338,14 +341,16 @@ export default function Agent() {
     return recommendations
       .map((rec) => {
         const source =
-          rec.type === "package"
-            ? packages.find((item) => String(item.package_id) === String(rec.id))
+          rec.type === "accommodation"
+            ? accommodations.find(
+                (item) => String(item.accommodation_id) === String(rec.id)
+              )
             : events.find((item) => String(item.event_id) === String(rec.id));
 
         return source ? { ...rec, source } : null;
       })
       .filter(Boolean);
-  }, [recommendations, packages, events]);
+  }, [recommendations, events, accommodations]);
 
   const canSearch = prompt.trim().length >= 4 && !thinking;
 
@@ -361,8 +366,8 @@ export default function Agent() {
 
   async function rankInventoryWithAI(currentIntent, currentInventory, session) {
     const candidateCount =
-      (currentInventory?.packages?.length || 0) +
-      (currentInventory?.events?.length || 0);
+      (currentInventory?.events?.length || 0) +
+      (currentInventory?.accommodations?.length || 0);
 
     if (!candidateCount) {
       setRanking({
@@ -383,8 +388,8 @@ export default function Agent() {
             mode: "rank",
             intent: currentIntent,
             inventory: {
-              packages: currentInventory?.packages || [],
               events: currentInventory?.events || [],
+              accommodations: currentInventory?.accommodations || [],
             },
           },
           headers: {
@@ -539,26 +544,10 @@ export default function Agent() {
         console.error("Outdoor DNA learning error:", dnaError);
       }
 
-      if (!parsed.activity) {
-        setInventory({
-          packages: [],
-          events: [],
-          counts: { packages: 0, events: 0 },
-          has_existing_inventory: false,
-        });
-        setRanking({
-          recommendations: [],
-          has_good_match: false,
-          best_score: 0,
-          assistant_message: "Treba mi još malo informacija da pronađem pravu opciju.",
-        });
-        return;
-      }
-
       const { data: inventoryData, error: inventoryError } = await supabase.rpc(
         "search_adventure_inventory",
         {
-          p_activity: normalizeActivity(parsed.activity),
+          p_activity: normalizeActivity(parsed.activity) || null,
           p_location_text: parsed.location_text || null,
           p_start_date: parsed.start_date || null,
           p_end_date: parsed.end_date || null,
@@ -570,6 +559,7 @@ export default function Agent() {
               : Number(parsed.budget_per_person),
           p_currency: parsed.currency || "RSD",
           p_difficulty: parsed.difficulty || null,
+          p_intent_type: parsed.intent_type || "adventure",
         }
       );
 
@@ -577,9 +567,9 @@ export default function Agent() {
 
       const normalizedInventory =
         inventoryData || {
-          packages: [],
           events: [],
-          counts: { packages: 0, events: 0 },
+          accommodations: [],
+          counts: { events: 0, accommodations: 0 },
           has_existing_inventory: false,
         };
 
@@ -597,8 +587,8 @@ export default function Agent() {
   }
 
   async function rerunInventory() {
-    if (!intent?.activity) {
-      setError("Agent još nema dovoljno informacija o aktivnosti.");
+    if (!intent?.intent_type) {
+      setError("Agent još nema dovoljno informacija za novu pretragu.");
       return;
     }
 
@@ -619,7 +609,7 @@ export default function Agent() {
       const { data, error: rpcError } = await supabase.rpc(
         "search_adventure_inventory",
         {
-          p_activity: normalizeActivity(intent.activity),
+          p_activity: normalizeActivity(intent.activity) || null,
           p_location_text: intent.location_text || null,
           p_start_date: intent.start_date || null,
           p_end_date: intent.end_date || null,
@@ -632,11 +622,17 @@ export default function Agent() {
               : Number(intent.budget_per_person),
           p_currency: intent.currency || "RSD",
           p_difficulty: intent.difficulty || null,
+          p_intent_type: intent.intent_type || "adventure",
         }
       );
 
       if (rpcError) throw rpcError;
-      const normalizedInventory = data || { packages: [], events: [] };
+      const normalizedInventory = data || {
+        events: [],
+        accommodations: [],
+        counts: { events: 0, accommodations: 0 },
+        has_existing_inventory: false,
+      };
       setInventory(normalizedInventory);
       await rankInventoryWithAI(intent, normalizedInventory, session);
       setShowEdit(false);
@@ -649,7 +645,15 @@ export default function Agent() {
   }
 
   async function sendDemandToHosts() {
-    if (!intent?.activity || sendingDemand) return;
+    if (!intent || sendingDemand) return;
+
+    const intentType = intent.intent_type || "adventure";
+    const needsActivity = intentType === "adventure" || intentType === "mixed";
+
+    if (needsActivity && !intent.activity) {
+      setError("Za ovu potražnju Agent mora da zna koju avanturu ili aktivnost tražiš.");
+      return;
+    }
 
     setSendingDemand(true);
     setError("");
@@ -658,7 +662,7 @@ export default function Agent() {
       const { data, error: rpcError } = await supabase.rpc(
         "create_adventure_intent_and_notify_hosts",
         {
-          p_activity: normalizeActivity(intent.activity),
+          p_activity: normalizeActivity(intent.activity) || null,
           p_location_text: intent.location_text || null,
           p_start_date: intent.start_date || null,
           p_end_date: intent.end_date || null,
@@ -674,6 +678,7 @@ export default function Agent() {
           p_has_car:
             typeof intent.has_car === "boolean" ? intent.has_car : null,
           p_notes: prompt.trim() || intent.notes || null,
+          p_intent_type: intentType,
         }
       );
 
@@ -746,7 +751,7 @@ export default function Agent() {
             </h1>
 
             <p>
-              Reci Agentu šta želiš. Proveriće stvarne pakete i događaje,
+              Reci Agentu šta želiš. Proveriće stvarne avanture i smeštaj,
               izdvojiti najbolje opcije i, ako ništa ne odgovara, aktivirati
               relevantne domaćine.
             </p>
@@ -880,14 +885,27 @@ export default function Agent() {
 
                   <div className="ai-pills">
                     <DetailPill
-                      icon="mountain"
-                      label="Aktivnost"
+                      icon="sparkles"
+                      label="Tražiš"
                       value={
-                        ACTIVITY_LABELS[intent.activity] ||
-                        intent.activity ||
-                        null
+                        intent.intent_type === "accommodation"
+                          ? "Smeštaj"
+                          : intent.intent_type === "mixed"
+                            ? "Avanturu + smeštaj"
+                            : "Avanturu"
                       }
                     />
+                    {intent.intent_type !== "accommodation" && (
+                      <DetailPill
+                        icon="mountain"
+                        label="Aktivnost"
+                        value={
+                          ACTIVITY_LABELS[intent.activity] ||
+                          intent.activity ||
+                          null
+                        }
+                      />
+                    )}
                     <DetailPill
                       icon="map"
                       label="Lokacija"
@@ -919,15 +937,17 @@ export default function Agent() {
                         intent.currency || "RSD"
                       )}
                     />
-                    <DetailPill
-                      icon="route"
-                      label="Težina"
-                      value={
-                        DIFFICULTY_LABELS[intent.difficulty] ||
-                        intent.difficulty ||
-                        null
-                      }
-                    />
+                    {intent.intent_type !== "accommodation" && (
+                      <DetailPill
+                        icon="route"
+                        label="Težina"
+                        value={
+                          DIFFICULTY_LABELS[intent.difficulty] ||
+                          intent.difficulty ||
+                          null
+                        }
+                      />
+                    )}
                     <DetailPill
                       icon="car"
                       label="Prevoz"
@@ -954,22 +974,24 @@ export default function Agent() {
                   {showEdit && (
                     <div className="ai-edit-panel">
                       <div className="ai-edit-grid">
-                        <label>
-                          <span>Aktivnost</span>
-                          <select
-                            value={intent.activity || ""}
-                            onChange={(e) =>
-                              updateIntent("activity", normalizeActivity(e.target.value || null))
-                            }
-                          >
-                            <option value="">Izaberi</option>
-                            {Object.entries(ACTIVITY_LABELS).map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                        {intent.intent_type !== "accommodation" && (
+                          <label>
+                            <span>Aktivnost</span>
+                            <select
+                              value={intent.activity || ""}
+                              onChange={(e) =>
+                                updateIntent("activity", normalizeActivity(e.target.value || null))
+                              }
+                            >
+                              <option value="">Izaberi</option>
+                              {Object.entries(ACTIVITY_LABELS).map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
 
                         <label>
                           <span>Lokacija</span>
@@ -1088,7 +1110,7 @@ export default function Agent() {
                       {hasGoodMatch
                         ? `${ranking?.best_score || 0}% najbolji match`
                         : hasInventory
-                          ? `${packages.length + events.length} kandidata`
+                          ? `${events.length + accommodations.length} kandidata`
                           : "Custom match"}
                     </div>
                   </div>
@@ -1121,25 +1143,23 @@ export default function Agent() {
                       <div className="ai-curated-grid">
                         {rankedItems.map((rec, index) => {
                           const item = rec.source;
-                          const isPackage = rec.type === "package";
-                          const href = isPackage
-                            ? item.slug
-                              ? `/paketi/${item.slug}`
-                              : `/package/${item.package_id}`
-                            : `/event/${item.event_id}`;
-                          const image = isPackage ? item.cover_url : item.cover_url;
-                          const location = isPackage
-                            ? item.city || item.location_text || item.country
-                            : item.location || item.country;
-                          const price = formatMoney(item.price, item.currency || "RSD");
+                          const isAccommodation = rec.type === "accommodation";
+                          const image = item.cover_url;
+                          const location = item.location || item.country;
+                          const eventPrice = !isAccommodation
+                            ? formatMoney(item.price, item.currency || "RSD")
+                            : null;
+                          const accommodationPrice = isAccommodation
+                            ? item.price_on_request
+                              ? "Cena na upit"
+                              : item.price_per_night !== null &&
+                                  item.price_per_night !== undefined
+                                ? `${Number(item.price_per_night).toLocaleString("sr-RS")} / noć`
+                                : "Cena na upit"
+                            : null;
 
-                          return (
-                            <Link
-                              to={href}
-                              key={`${rec.type}-${rec.id}`}
-                              className={`ai-curated-card ${index === 0 ? "is-top" : ""}`}
-                              style={{ "--rank-delay": `${index * 80}ms` }}
-                            >
+                          const cardContent = (
+                            <>
                               <div
                                 className="ai-curated-cover"
                                 style={
@@ -1150,11 +1170,21 @@ export default function Agent() {
                                     : undefined
                                 }
                               >
-                                {!image && <Icon name={isPackage ? "mountain" : "calendar"} size={34} />}
+                                {!image && (
+                                  <Icon
+                                    name={isAccommodation ? "home" : "calendar"}
+                                    size={34}
+                                  />
+                                )}
                                 <span className="ai-rank-number">0{index + 1}</span>
                                 <div
                                   className="ai-score-orb"
-                                  style={{ "--score": `${Math.max(0, Math.min(100, Number(rec.score) || 0)) * 3.6}deg` }}
+                                  style={{
+                                    "--score": `${Math.max(
+                                      0,
+                                      Math.min(100, Number(rec.score) || 0)
+                                    ) * 3.6}deg`,
+                                  }}
                                 >
                                   <span>{rec.score}</span>
                                   <small>match</small>
@@ -1163,18 +1193,46 @@ export default function Agent() {
 
                               <div className="ai-curated-body">
                                 <div className="ai-curated-meta">
-                                  <span>{isPackage ? "Paket" : "Događaj"}</span>
+                                  <span>{isAccommodation ? "Smeštaj" : "Avantura"}</span>
                                   {location && <span>{location}</span>}
                                 </div>
                                 <h4>{item.title}</h4>
                                 <p>{rec.reason}</p>
                                 <div className="ai-curated-bottom">
-                                  <strong>{price || "Cena na upit"}</strong>
+                                  <strong>
+                                    {isAccommodation
+                                      ? accommodationPrice
+                                      : eventPrice || "Cena na upit"}
+                                  </strong>
                                   <span>
-                                    Pogledaj opciju <Icon name="arrow" size={14} />
+                                    {isAccommodation
+                                      ? "Pronađen smeštaj"
+                                      : "Pogledaj avanturu"}{" "}
+                                    {!isAccommodation && (
+                                      <Icon name="arrow" size={14} />
+                                    )}
                                   </span>
                                 </div>
                               </div>
+                            </>
+                          );
+
+                          return isAccommodation ? (
+                            <div
+                              key={`${rec.type}-${rec.id}`}
+                              className={`ai-curated-card ${index === 0 ? "is-top" : ""}`}
+                              style={{ "--rank-delay": `${index * 80}ms` }}
+                            >
+                              {cardContent}
+                            </div>
+                          ) : (
+                            <Link
+                              to={`/event/${item.event_id}`}
+                              key={`${rec.type}-${rec.id}`}
+                              className={`ai-curated-card ${index === 0 ? "is-top" : ""}`}
+                              style={{ "--rank-delay": `${index * 80}ms` }}
+                            >
+                              {cardContent}
                             </Link>
                           );
                         })}
@@ -1182,22 +1240,19 @@ export default function Agent() {
                     </div>
                   )}
 
-                  {packages.length > 0 && (
+                  {accommodations.length > 0 && (
                     <div className="ai-result-section">
                       <div className="ai-result-title">
-                        <Icon name="package" size={16} />
-                        {rankedItems.length > 0 ? "Sve pronađene paket opcije" : "Paketi"}
+                        <Icon name="home" size={16} />
+                        {rankedItems.length > 0
+                          ? "Sav pronađeni smeštaj"
+                          : "Smeštaj"}
                       </div>
 
                       <div className="ai-cards">
-                        {packages.slice(0, 6).map((item, index) => (
-                          <Link
-                            to={
-                              item.slug
-                                ? `/paketi/${item.slug}`
-                                : `/package/${item.package_id}`
-                            }
-                            key={item.package_id}
+                        {accommodations.slice(0, 6).map((item, index) => (
+                          <div
+                            key={item.accommodation_id}
                             className="ai-match-card"
                             style={{ "--delay": `${index * 60}ms` }}
                           >
@@ -1211,40 +1266,42 @@ export default function Agent() {
                                   : undefined
                               }
                             >
-                              {!item.cover_url && (
-                                <Icon name="mountain" size={30} />
-                              )}
-
-                              <span className="ai-score">
-                                {item.match_score || 0}% match
-                              </span>
+                              {!item.cover_url && <Icon name="home" size={30} />}
+                              <span className="ai-score">Smeštaj</span>
                             </div>
 
                             <div className="ai-match-body">
                               <div className="ai-match-meta">
-                                <span>
-                                  {ACTIVITY_LABELS[item.activity] ||
-                                    item.activity}
-                                </span>
-                                {item.city && <span>{item.city}</span>}
+                                <span>{item.type || "Smeštaj"}</span>
+                                {item.location && <span>{item.location}</span>}
                               </div>
 
                               <h3>{item.title}</h3>
 
                               <div className="ai-match-bottom">
                                 <strong>
-                                  {formatMoney(item.price, item.currency) ||
-                                    "Cena na upit"}
+                                  {item.price_on_request
+                                    ? "Cena na upit"
+                                    : item.price_per_night !== null &&
+                                        item.price_per_night !== undefined
+                                      ? `${Number(item.price_per_night).toLocaleString("sr-RS")} / noć`
+                                      : "Cena na upit"}
                                 </strong>
                                 <span>
-                                  Otvori
-                                  <Icon name="chevron" size={14} />
+                                  {item.max_guests
+                                    ? `Do ${item.max_guests} gostiju`
+                                    : "MeetOutdoors smeštaj"}
                                 </span>
                               </div>
                             </div>
-                          </Link>
+                          </div>
                         ))}
                       </div>
+
+                      <Link to="/stays" className="ai-refresh">
+                        <Icon name="home" size={16} />
+                        Pogledaj sve smeštaje
+                      </Link>
                     </div>
                   )}
 
@@ -1252,7 +1309,7 @@ export default function Agent() {
                     <div className="ai-result-section">
                       <div className="ai-result-title">
                         <Icon name="event" size={16} />
-                        {rankedItems.length > 0 ? "Svi pronađeni događaji" : "Događaji"}
+                        {rankedItems.length > 0 ? "Sve pronađene avanture" : "Avanture"}
                       </div>
 
                       <div className="ai-event-list">
@@ -1315,23 +1372,27 @@ export default function Agent() {
                 <div className="ai-action-sticky">
                   <span className="ai-section-label">
                     <Icon name="sparkles" size={14} />
-                    CUSTOM MATCH
+                    {intent.intent_type === "accommodation" ? "SMEŠTAJ" : "CUSTOM MATCH"}
                   </span>
 
                   <h2>
-                    {hasGoodMatch
-                      ? "Nešto je baš dobro. Hoćeš custom?"
-                      : hasInventory
-                        ? "Nijedna nije dovoljno jaka?"
-                        : "Da aktiviram domaćine?"}
+                    {intent.intent_type === "accommodation"
+                      ? "Treba ti još opcija za smeštaj?"
+                      : hasGoodMatch
+                        ? "Nešto je baš dobro. Hoćeš custom?"
+                        : hasInventory
+                          ? "Nijedna nije dovoljno jaka?"
+                          : "Da aktiviram domaćine?"}
                   </h2>
 
                   <p>
-                    {hasGoodMatch
-                      ? "Imaš dobar postojeći izbor. Ako želiš nešto još preciznije, Agent može da otvori privatnu potražnju prema relevantnim domaćinima."
-                      : hasInventory
-                        ? "Našao sam kandidate, ali ne želim da ih proglasim idealnim. Možemo odmah tražiti ponudu skrojenu baš za tebe."
-                        : "Relevantni outdoor domaćini dobiće anonimnu potražnju i moći će da ti pošalju konkretnu ponudu."}
+                    {intent.intent_type === "accommodation"
+                      ? "Agent je proverio aktivni smeštaj. Ako nema dovoljno dobre opcije, može da pošalje tvoju potražnju relevantnim domaćinima."
+                      : hasGoodMatch
+                        ? "Imaš dobar postojeći izbor. Ako želiš nešto još preciznije, Agent može da otvori privatnu potražnju prema relevantnim domaćinima."
+                        : hasInventory
+                          ? "Našao sam kandidate, ali ne želim da ih proglasim idealnim. Možemo odmah tražiti ponudu skrojenu baš za tebe."
+                          : "Relevantni outdoor domaćini dobiće anonimnu potražnju i moći će da ti pošalju konkretnu ponudu."}
                   </p>
 
                   <div className="ai-privacy-box">
@@ -1348,7 +1409,12 @@ export default function Agent() {
                     type="button"
                     className="ai-host-cta"
                     onClick={sendDemandToHosts}
-                    disabled={sendingDemand || !intent.activity}
+                    disabled={
+                      sendingDemand ||
+                      ((intent.intent_type === "adventure" ||
+                        intent.intent_type === "mixed") &&
+                        !intent.activity)
+                    }
                   >
                     {sendingDemand ? (
                       <>
@@ -1358,16 +1424,30 @@ export default function Agent() {
                     ) : (
                       <>
                         <span>
-                          {hasGoodMatch
-                            ? "Ipak traži custom ponude"
-                            : hasInventory
-                              ? "Traži bolju custom opciju"
-                              : "Pošalji potražnju hostovima"}
+                          {intent.intent_type === "accommodation"
+                            ? hasInventory
+                              ? "Traži još opcija od domaćina"
+                              : "Pošalji potražnju za smeštaj"
+                            : intent.intent_type === "mixed"
+                              ? hasInventory
+                                ? "Traži custom avanturu + smeštaj"
+                                : "Pošalji potražnju za oba"
+                              : hasGoodMatch
+                                ? "Ipak traži custom ponude"
+                                : hasInventory
+                                  ? "Traži bolju custom opciju"
+                                  : "Pošalji potražnju hostovima"}
                         </span>
                         <Icon name="send" size={17} />
                       </>
                     )}
                   </button>
+
+                  {intent.intent_type === "accommodation" && (
+                    <Link to="/stays" className="ai-new-search">
+                      Pogledaj sve smeštaje
+                    </Link>
+                  )}
 
                   <button
                     type="button"
@@ -1465,7 +1545,7 @@ export default function Agent() {
               <div>
                 <span>02</span>
                 <strong>Agent proverava stvarnost</strong>
-                <p>Paketi i događaji dolaze iz stvarne MeetOutdoors baze.</p>
+                <p>Avanture i smeštaj dolaze iz stvarne MeetOutdoors baze.</p>
               </div>
               <div>
                 <span>03</span>

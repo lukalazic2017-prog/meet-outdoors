@@ -2837,6 +2837,255 @@ function HostsStyles() {
         }
       }
 
+
+      /* =========================================================
+         HOSTS V3 — PREMIUM COMPACT DISCOVERY
+         Existing profile query, filters and pagination preserved.
+         ========================================================= */
+
+      .hostsPage{
+        padding-top:74px;
+        padding-bottom:46px;
+      }
+
+      .hostsHero,
+      .hostsContent{
+        width:min(1420px,calc(100% - 28px));
+      }
+
+      .hostsHero{
+        min-height:320px;
+        border-radius:26px;
+      }
+
+      .hostsHeroContent{
+        max-width:780px;
+        padding:30px;
+      }
+
+      .hostsHeroContent h1{
+        font-size:clamp(42px,5vw,68px);
+        line-height:.94;
+        letter-spacing:-.065em;
+      }
+
+      .hostsHeroContent p{
+        max-width:650px;
+        margin-top:12px;
+        font-size:11px;
+        line-height:1.55;
+      }
+
+      .heroStats{
+        right:20px;
+        bottom:18px;
+        left:20px;
+        gap:6px;
+      }
+
+      .heroStats article{
+        min-height:56px;
+        padding:8px 10px;
+        border-radius:12px;
+      }
+
+      .heroStats strong{font-size:16px}
+      .heroStats span{font-size:6px}
+
+      .hostsContent{
+        padding-top:10px;
+      }
+
+      .hostsFilters{
+        position:sticky;
+        top:72px;
+        z-index:25;
+        gap:6px;
+        padding:8px;
+        border-radius:14px;
+        backdrop-filter:blur(18px);
+      }
+
+      .searchField,
+      .filterField,
+      .verifiedFilter{
+        min-height:40px;
+        border-radius:10px;
+      }
+
+      .searchField input,
+      .filterField select{
+        font-size:9px;
+      }
+
+      .hostsSectionHeader{
+        margin-top:10px;
+        margin-bottom:8px;
+      }
+
+      .hostsSectionHeader h2{
+        font-size:clamp(20px,2.2vw,28px);
+      }
+
+      .hostsGrid{
+        gap:10px;
+      }
+
+      .hostCard{
+        border-radius:17px;
+        overflow:hidden;
+      }
+
+      .hostMedia{
+        min-height:180px;
+      }
+
+      .hostCardBody{
+        padding:11px;
+      }
+
+      .hostAvatarWrap{
+        width:46px;
+        height:46px;
+      }
+
+      .hostIdentityText h2{
+        font-size:16px;
+      }
+
+      .hostBio{
+        display:-webkit-box;
+        min-height:30px;
+        margin-top:8px;
+        overflow:hidden;
+        font-size:8px;
+        line-height:1.45;
+        -webkit-box-orient:vertical;
+        -webkit-line-clamp:2;
+      }
+
+      .hostActivities{
+        gap:4px;
+        margin-top:8px;
+      }
+
+      .hostActivities span{
+        padding:5px 7px;
+        font-size:6px;
+      }
+
+      .hostCardFooter{
+        margin-top:8px;
+        padding-top:8px;
+      }
+
+      .viewHostButton{
+        min-height:32px;
+        padding:0 9px;
+        border-radius:9px;
+      }
+
+      @media(max-width:760px){
+        .hostsPage{
+          padding-top:62px;
+          padding-bottom:62px;
+        }
+
+        .hostsHero,
+        .hostsContent{
+          width:100%;
+        }
+
+        .hostsHero{
+          min-height:285px;
+          border-radius:0 0 22px 22px;
+        }
+
+        .hostsHeroContent{
+          padding:18px 14px 78px;
+        }
+
+        .hostsHeroContent h1{
+          font-size:35px;
+        }
+
+        .hostsHeroContent p{
+          max-width:92%;
+          font-size:9px;
+        }
+
+        .heroStats{
+          right:10px;
+          bottom:10px;
+          left:10px;
+          gap:4px;
+        }
+
+        .heroStats article{
+          min-height:48px;
+          padding:6px;
+        }
+
+        .heroStats strong{font-size:12px}
+        .heroStats span{font-size:5px}
+
+        .hostsContent{padding:6px}
+
+        .hostsFilters{
+          top:60px;
+          display:flex;
+          gap:5px;
+          overflow-x:auto;
+          padding:6px;
+          scrollbar-width:none;
+        }
+
+        .hostsFilters::-webkit-scrollbar{display:none}
+
+        .searchField{
+          flex:1 0 78vw;
+          min-width:240px;
+        }
+
+        .filterField,
+        .verifiedFilter{
+          flex:0 0 auto;
+          min-width:150px;
+        }
+
+        .hostsGrid{
+          display:flex;
+          gap:8px;
+          overflow-x:auto;
+          padding:2px 14px 7px 1px;
+          scroll-snap-type:x mandatory;
+          scrollbar-width:none;
+        }
+
+        .hostsGrid::-webkit-scrollbar{display:none}
+
+        .hostCard{
+          flex:0 0 82vw;
+          max-width:315px;
+          display:block;
+          min-height:auto;
+          scroll-snap-align:start;
+        }
+
+        .hostMedia{
+          min-height:170px;
+          height:170px;
+        }
+
+        .hostCardBody{padding:10px}
+      }
+
+      @media(max-width:420px){
+        .hostsHero{min-height:270px}
+        .hostsHeroContent h1{font-size:31px}
+        .hostCard{flex-basis:86vw}
+      }
+
     `}</style>
   );
 }

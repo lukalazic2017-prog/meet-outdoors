@@ -11,9 +11,6 @@ import { useAuth } from "../context/AuthContext";
 const FALLBACK_EVENT_IMAGE =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85";
 
-const FALLBACK_PACKAGE_IMAGE =
-  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=85";
-
 const EMPTY_DEMAND_INTELLIGENCE = {
   total_open_demands: 0,
   new_demands_7d: 0,
@@ -33,7 +30,6 @@ const EMPTY_HOST_ANALYTICS = {
 };
 
 const EMPTY_SUMMARY = {
-  total_packages: 0,
   total_events: 0,
   total_bookings: 0,
   pending_bookings: 0,
@@ -362,7 +358,7 @@ function DashboardLoading() {
           <span className="dashboardLoader" />
           <h1>Učitavanje kontrolnog centra</h1>
           <p>
-            Pripremamo rezervacije, finansije, događaje i pakete.
+            Pripremamo rezervacije, finansije i avanture.
           </p>
         </div>
       </main>
@@ -385,7 +381,7 @@ function UnauthorizedState() {
 
           <p>
             Ovaj kontrolni centar namenjen je host profilima koji
-            upravljaju događajima, turama i rezervacijama.
+            upravljaju avanturama i rezervacijama.
           </p>
 
           <Link to="/" className="stateLink">
@@ -438,28 +434,14 @@ function StatusBadge({ status }) {
 }
 
 function DashboardItemCard({
-  type,
   item,
   interestedCount,
   deleting,
   onDelete,
 }) {
-  const isEvent = type === "event";
-
-  const detailsUrl = isEvent
-    ? `/event/${item.id}`
-    : `/package/${item.id}`;
-
-  const editUrl = isEvent
-    ? `/edit-event/${item.id}`
-    : `/edit-package/${item.id}`;
-
-  const imageUrl =
-    item.cover_url ||
-    item.image_url ||
-    (isEvent
-      ? FALLBACK_EVENT_IMAGE
-      : FALLBACK_PACKAGE_IMAGE);
+  const detailsUrl = `/event/${item.id}`;
+  const editUrl = `/edit-event/${item.id}`;
+  const imageUrl = item.cover_url || item.image_url || FALLBACK_EVENT_IMAGE;
 
   const location =
     [item.location, item.country].filter(Boolean).join(", ") ||
@@ -476,18 +458,15 @@ function DashboardItemCard({
       <div className="itemImageWrapper">
         <img
           src={imageUrl}
-          alt={item.title || "Outdoor ponuda"}
+          alt={item.title || "Outdoor avantura"}
           className="itemImage"
         />
 
         <div className="itemImageOverlay" />
 
         <span className="itemTypeBadge">
-          <Icon
-            name={isEvent ? "calendar" : "package"}
-            size={14}
-          />
-          {isEvent ? "Događaj" : "Paket"}
+          <Icon name="calendar" size={14} />
+          Avantura
         </span>
 
         <span className="interestBadge">
@@ -498,10 +477,7 @@ function DashboardItemCard({
 
       <div className="itemBody">
         <div className="itemHeading">
-          <span className="itemKicker">
-            {isEvent ? "Outdoor događaj" : "Outdoor paket"}
-          </span>
-
+          <span className="itemKicker">Avantura</span>
           <h3>{item.title || "Bez naziva"}</h3>
         </div>
 
@@ -543,23 +519,13 @@ function DashboardItemCard({
             Uredi
           </Link>
 
-          {isEvent ? (
-            <Link
-              to={`/event/${item.id}/interested`}
-              className="itemAction"
-            >
-              <Icon name="interested" size={16} />
-              Interesovanje
-            </Link>
-          ) : (
-            <Link
-              to={`/edit-package/${item.id}/gallery`}
-              className="itemAction"
-            >
-              <Icon name="gallery" size={16} />
-              Galerija
-            </Link>
-          )}
+          <Link
+            to={`/event/${item.id}/interested`}
+            className="itemAction"
+          >
+            <Icon name="interested" size={16} />
+            Interesovanje
+          </Link>
 
           <button
             type="button"
@@ -592,7 +558,7 @@ function EmptySection({
     <div className="emptySection">
       <span className="emptyIcon">
         <Icon
-          name={type === "event" ? "calendar" : "package"}
+          name="calendar"
           size={28}
         />
       </span>
@@ -1037,7 +1003,7 @@ function buildAgentRecommendation(analytics) {
     demandCount: numberValue(topActivity.demand_count),
     people,
     suggestedPrice,
-    packageUrl: `/create-package?${params.toString()}`,
+    adventureUrl: `/create-event?${params.toString()}`,
     eventUrl: `/create-event?${params.toString()}`,
   };
 }
@@ -1063,8 +1029,8 @@ function AgentRecommendation({ analytics }) {
         </div>
       </div>
       <div className="agentRecommendationActions">
-        <Link to={recommendation.packageUrl} className="agentRecommendationPrimary">
-          <Icon name="package" size={17} /> Kreiraj paket
+        <Link to={recommendation.adventureUrl} className="agentRecommendationPrimary">
+          <Icon name="calendar" size={17} /> Kreiraj avanturu
         </Link>
         <Link to={recommendation.eventUrl} className="agentRecommendationSecondary">
           <Icon name="calendar" size={17} /> Kreiraj event
@@ -1345,7 +1311,6 @@ export default function HostDashboard() {
   const { profile, isHost, loading } = useAuth();
 
   const [events, setEvents] = useState([]);
-  const [packages, setPackages] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [demandIntelligence, setDemandIntelligence] = useState(EMPTY_DEMAND_INTELLIGENCE);
@@ -1353,7 +1318,6 @@ export default function HostDashboard() {
   const [hostAnalytics, setHostAnalytics] = useState(EMPTY_HOST_ANALYTICS);
   const [analyticsError, setAnalyticsError] = useState("");
   const [eventCounts, setEventCounts] = useState({});
-  const [packageCounts, setPackageCounts] = useState({});
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [deletingItem, setDeletingItem] = useState("");
@@ -1364,7 +1328,6 @@ export default function HostDashboard() {
     async ({ silent = false } = {}) => {
       if (!profile?.id || !isHost) {
         setEvents([]);
-        setPackages([]);
         setBookings([]);
         setSummary(EMPTY_SUMMARY);
         setDemandIntelligence(EMPTY_DEMAND_INTELLIGENCE);
@@ -1372,7 +1335,6 @@ export default function HostDashboard() {
         setHostAnalytics(EMPTY_HOST_ANALYTICS);
         setAnalyticsError("");
         setEventCounts({});
-        setPackageCounts({});
         setDashboardLoading(false);
         return;
       }
@@ -1388,7 +1350,6 @@ export default function HostDashboard() {
       try {
         const [
           eventsResult,
-          packagesResult,
           bookingsResult,
           summaryResult,
           demandResult,
@@ -1398,16 +1359,6 @@ export default function HostDashboard() {
             .from("events")
             .select(
               "id, title, cover_url, location, country, start_date, created_at, is_active"
-            )
-            .eq("host_id", profile.id)
-            .order("created_at", {
-              ascending: false,
-            }),
-
-          supabase
-            .from("packages")
-            .select(
-              "id, title, cover_url, image_url, location, country, start_date, created_at, price, currency, is_active"
             )
             .eq("host_id", profile.id)
             .order("created_at", {
@@ -1451,19 +1402,12 @@ export default function HostDashboard() {
           throw eventsResult.error;
         }
 
-        if (packagesResult.error) {
-          throw packagesResult.error;
-        }
-
         if (bookingsResult.error) {
           throw bookingsResult.error;
         }
 
         const loadedEvents = eventsResult.data || [];
-        const loadedPackages = packagesResult.data || [];
-
         setEvents(loadedEvents);
-        setPackages(loadedPackages);
         setBookings(bookingsResult.data || []);
 
         if (summaryResult.error) {
@@ -1517,44 +1461,19 @@ export default function HostDashboard() {
         }
 
         const eventIds = loadedEvents.map((item) => item.id);
-        const packageIds = loadedPackages.map((item) => item.id);
 
-        const [
-          eventInterestResult,
-          packageInterestResult,
-        ] = await Promise.all([
+        const eventInterestResult =
           eventIds.length > 0
-            ? supabase
+            ? await supabase
                 .from("event_interested")
                 .select("event_id")
                 .in("event_id", eventIds)
-            : Promise.resolve({
-                data: [],
-                error: null,
-              }),
-
-          packageIds.length > 0
-            ? supabase
-                .from("package_interested")
-                .select("package_id")
-                .in("package_id", packageIds)
-            : Promise.resolve({
-                data: [],
-                error: null,
-              }),
-        ]);
+            : { data: [], error: null };
 
         if (eventInterestResult.error) {
           console.error(
             "Event interest error:",
             eventInterestResult.error
-          );
-        }
-
-        if (packageInterestResult.error) {
-          console.error(
-            "Package interest error:",
-            packageInterestResult.error
           );
         }
 
@@ -1567,17 +1486,7 @@ export default function HostDashboard() {
           return accumulator;
         }, {});
 
-        const nextPackageCounts = (
-          packageInterestResult.data || []
-        ).reduce((accumulator, row) => {
-          accumulator[row.package_id] =
-            numberValue(accumulator[row.package_id]) + 1;
-
-          return accumulator;
-        }, {});
-
         setEventCounts(nextEventCounts);
-        setPackageCounts(nextPackageCounts);
       } catch (error) {
         console.error(
           "Greška pri učitavanju dashboarda:",
@@ -1709,57 +1618,13 @@ export default function HostDashboard() {
     } catch (error) {
       setMessage(
         error?.message ||
-          "Događaj nije moguće obrisati."
+          "Avanturu nije moguće obrisati."
       );
     } finally {
       setDeletingItem("");
     }
   }, []);
 
-  const deletePackage = useCallback(async (id) => {
-    const confirmed = window.confirm(
-      "Da li sigurno želiš da obrišeš ovaj paket?"
-    );
-
-    if (!confirmed) return;
-
-    setDeletingItem(`package-${id}`);
-    setMessage("");
-
-    try {
-      const { error } = await supabase
-        .from("packages")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setPackages((current) =>
-        current.filter((item) => item.id !== id)
-      );
-
-      setPackageCounts((current) => {
-        const next = { ...current };
-        delete next[id];
-        return next;
-      });
-
-      setSummary((current) => ({
-        ...current,
-        total_packages: Math.max(
-          numberValue(current.total_packages) - 1,
-          0
-        ),
-      }));
-    } catch (error) {
-      setMessage(
-        error?.message ||
-          "Paket nije moguće obrisati."
-      );
-    } finally {
-      setDeletingItem("");
-    }
-  }, []);
 
   const totalEventInterested = useMemo(
     () =>
@@ -1770,17 +1635,7 @@ export default function HostDashboard() {
     [eventCounts]
   );
 
-  const totalPackageInterested = useMemo(
-    () =>
-      Object.values(packageCounts).reduce(
-        (sum, count) => sum + numberValue(count),
-        0
-      ),
-    [packageCounts]
-  );
-
-  const totalInterest =
-    totalEventInterested + totalPackageInterested;
+  const totalInterest = totalEventInterested;
 
   const grossRevenue = numberValue(summary.gross_revenue);
   const totalExpenses = numberValue(summary.total_expenses);
@@ -1893,21 +1748,7 @@ export default function HostDashboard() {
                 </Link>
 
                 <div className="heroActionPair">
-                  <Link
-                    to="/create-event"
-                    className="heroMiniAction"
-                  >
-                    <Icon name="calendar" size={18} />
-                    Novi događaj
-                  </Link>
 
-                  <Link
-                    to="/create-package"
-                    className="heroMiniAction"
-                  >
-                    <Icon name="package" size={18} />
-                    Novi paket
-                  </Link>
                 </div>
               </div>
             </div>
@@ -2108,7 +1949,7 @@ export default function HostDashboard() {
                 </span>
 
                 <div>
-                  <strong>Novi događaj</strong>
+                  <strong>Nova avantura</strong>
                   <small>
                     Objavi jednodnevnu avanturu.
                   </small>
@@ -2117,23 +1958,6 @@ export default function HostDashboard() {
                 <Icon name="arrowRight" size={17} />
               </Link>
 
-              <Link
-                to="/create-package"
-                className="quickActionCard"
-              >
-                <span>
-                  <Icon name="package" size={21} />
-                </span>
-
-                <div>
-                  <strong>Novi paket</strong>
-                  <small>
-                    Kreiraj turu ili višednevno iskustvo.
-                  </small>
-                </div>
-
-                <Icon name="arrowRight" size={17} />
-              </Link>
 
               <Link
                 to="/host-bookings"
@@ -2202,7 +2026,7 @@ export default function HostDashboard() {
 
             <div className="inventorySummary">
               <span>
-                {events.length + packages.length}
+                {events.length}
               </span>
               <small>ukupno aktivnih stavki</small>
             </div>
@@ -2212,9 +2036,9 @@ export default function HostDashboard() {
             <div className="dashboardSectionHeader">
               <div>
                 <span className="sectionKicker">
-                  Događaji
+                  Avanture
                 </span>
-                <h2>Moji događaji</h2>
+                <h2>Moje avanture</h2>
 
                 <p>
                   Jednodnevna okupljanja, aktivnosti i avanture.
@@ -2226,16 +2050,16 @@ export default function HostDashboard() {
                 className="sectionButton"
               >
                 <Icon name="plus" size={16} />
-                Novi događaj
+                Nova avantura
               </Link>
             </div>
 
             {events.length === 0 ? (
               <EmptySection
                 type="event"
-                title="Još nemaš objavljene događaje."
+                title="Još nemaš objavljene avanture."
                 description="Kreiraj prvu outdoor avanturu i počni da okupljaš zajednicu."
-                buttonText="Kreiraj prvi događaj"
+                buttonText="Kreiraj prvu avanturu"
                 buttonUrl="/create-event"
               />
             ) : (
@@ -2253,57 +2077,6 @@ export default function HostDashboard() {
                       `event-${event.id}`
                     }
                     onDelete={deleteEvent}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="dashboardSection packagesDashboardSection">
-            <div className="dashboardSectionHeader">
-              <div>
-                <span className="sectionKicker">
-                  Paketi i ture
-                </span>
-                <h2>Moji paketi</h2>
-
-                <p>
-                  Višednevna iskustva, ture i kompletne outdoor ponude.
-                </p>
-              </div>
-
-              <Link
-                to="/create-package"
-                className="sectionButton"
-              >
-                <Icon name="plus" size={16} />
-                Novi paket
-              </Link>
-            </div>
-
-            {packages.length === 0 ? (
-              <EmptySection
-                type="package"
-                title="Još nemaš objavljene pakete."
-                description="Kreiraj turu ili kompletno iskustvo sa aktivnostima, rasporedom i cenom."
-                buttonText="Kreiraj prvi paket"
-                buttonUrl="/create-package"
-              />
-            ) : (
-              <div className="dashboardItemsGrid">
-                {packages.map((item) => (
-                  <DashboardItemCard
-                    key={item.id}
-                    type="package"
-                    item={item}
-                    interestedCount={
-                      packageCounts[item.id] || 0
-                    }
-                    deleting={
-                      deletingItem ===
-                      `package-${item.id}`
-                    }
-                    onDelete={deletePackage}
                   />
                 ))}
               </div>
@@ -2564,7 +2337,6 @@ function DashboardStyles() {
       .quickActionCard small{margin-top:4px;color:#909992;font-size:8px;line-height:1.45}
       .quickActionCard>svg{color:#8c978f}
       .dashboardSection{padding:27px;border:1px solid #d9e1d6;border-radius:28px;background:rgba(255,255,255,.6);box-shadow:0 15px 43px rgba(32,51,39,.045)}
-      .packagesDashboardSection{background:linear-gradient(145deg,rgba(238,245,231,.9),rgba(255,255,255,.68))}
       .sectionButton{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;min-height:43px;padding:0 15px;border-radius:13px;background:#183a27;color:#fff!important;font-size:10px;font-weight:850;box-shadow:0 11px 25px rgba(24,58,39,.15);transition:.18s}
       .sectionButton:hover{gap:11px;background:#224c34;transform:translateY(-2px)}
       .dashboardItemsGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}

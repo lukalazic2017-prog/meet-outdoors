@@ -29,10 +29,6 @@ import EditEvent from "./pages/EditEvent";
 import InterestedUsers from "./pages/InterestedUsers";
 import MyInterestedEvents from "./pages/MyInterestedEvents";
 import Notifications from "./pages/Notifications";
-import CreatePackage from "./pages/CreatePackage";
-import Packages from "./pages/Packages";
-import PackageDetails from "./pages/PackageDetails";
-import EditPackage from "./pages/EditPackage";
 import BookingRequests from "./pages/BookingRequests";
 import MyBookings from "./pages/MyBookings";
 import EditPackageGallery from "./pages/EditPackageGallery";
@@ -53,6 +49,7 @@ import TermsOfUse from "./pages/TermsOfUse";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import HostTerms from "./pages/HostTerms";
 import Safety from "./pages/Safety";
+import Stays from "./pages/Stays";
 
 function AppRoutes() {
   const {
@@ -212,14 +209,16 @@ function AppRoutes() {
         />
 
         <Route
+  path="/stays"
+  element={<Stays />}
+/>
+
+        <Route
           path="/notifications"
           element={<Notifications />}
         />
 
-        <Route
-          path="/create-package"
-          element={<CreatePackage />}
-        />
+        
 
         <Route
           path="/host/demand/:id"
@@ -231,25 +230,6 @@ function AppRoutes() {
           element={<AdventureRequestDetails />}
         />
 
-        <Route
-          path="/packages"
-          element={<Packages />}
-        />
-
-        <Route
-          path="/package/:id"
-          element={<PackageDetails />}
-        />
-
-        <Route
-          path="/paketi/:slug"
-          element={<PackageDetails />}
-        />
-
-        <Route
-          path="/edit-package/:id"
-          element={<EditPackage />}
-        />
 
         <Route
           path="/booking-requests"

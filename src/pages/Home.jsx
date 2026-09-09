@@ -369,19 +369,19 @@ function useHomeLiveData(profile) {
     users: 0,
     hosts: 0,
     events: 0,
-    packages: 0,
+    stays: 0,
   });
 
   const [notifications, setNotifications] = useState([]);
   const [hostOwnStats, setHostOwnStats] = useState({
     events: 0,
-    packages: 0,
+    stays: 0,
   });
 
   const [homeDiscovery, setHomeDiscovery] = useState({
     hosts: [],
     events: [],
-    packages: [],
+    stays: [],
     places: [],
   });
 
@@ -390,7 +390,7 @@ function useHomeLiveData(profile) {
 
     async function loadPlatformStats() {
       try {
-        const [usersRes, hostsRes, eventsRes, packagesRes] =
+        const [usersRes, hostsRes, eventsRes, staysRes] =
           await Promise.all([
             supabase
               .from("profiles")
@@ -403,15 +403,16 @@ function useHomeLiveData(profile) {
               .from("events")
               .select("id", { count: "exact", head: true }),
             supabase
-              .from("packages")
-              .select("id", { count: "exact", head: true }),
+              .from("host_accommodations")
+              .select("id", { count: "exact", head: true })
+              .eq("is_active", true),
           ]);
 
         const firstError =
           usersRes.error ||
           hostsRes.error ||
           eventsRes.error ||
-          packagesRes.error;
+          staysRes.error;
 
         if (firstError) {
           console.error(
@@ -427,7 +428,7 @@ function useHomeLiveData(profile) {
           users: usersRes.count ?? 0,
           hosts: hostsRes.count ?? 0,
           events: eventsRes.count ?? 0,
-          packages: packagesRes.count ?? 0,
+          stays: staysRes.count ?? 0,
         });
       } catch (error) {
         console.error(
@@ -444,7 +445,7 @@ function useHomeLiveData(profile) {
         const [
           hostsRes,
           eventsRes,
-          packagesRes,
+          staysRes,
           placesRes,
         ] = await Promise.all([
           supabase
@@ -486,24 +487,24 @@ function useHomeLiveData(profile) {
             .limit(6),
 
           supabase
-            .from("packages")
+            .from("host_accommodations")
             .select(`
               id,
               host_id,
               title,
+              type,
               location,
-              country,
+              description,
+              max_guests,
+              price_per_night,
+              price_on_request,
               cover_url,
-              price,
-              currency,
-              duration,
-              capacity,
               created_at,
               is_active
             `)
             .eq("is_active", true)
             .order("created_at", { ascending: false })
-            .limit(6),
+            .limit(8),
 
           supabase
             .from("places")
@@ -530,7 +531,7 @@ function useHomeLiveData(profile) {
         const discoveryError =
           hostsRes.error ||
           eventsRes.error ||
-          packagesRes.error ||
+          staysRes.error ||
           placesRes.error;
 
         if (discoveryError) {
@@ -546,7 +547,7 @@ function useHomeLiveData(profile) {
         setHomeDiscovery({
           hosts: hostsRes.data ?? [],
           events: eventsRes.data ?? [],
-          packages: packagesRes.data ?? [],
+          stays: staysRes.data ?? [],
           places: placesRes.data ?? [],
         });
       } catch (error) {
@@ -580,7 +581,7 @@ function useHomeLiveData(profile) {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "packages" },
+        { event: "*", schema: "public", table: "host_accommodations" },
         () => {
           void loadPlatformStats();
           void loadHomeDiscovery();
@@ -604,7 +605,7 @@ function useHomeLiveData(profile) {
 
     if (!userId) {
       setNotifications([]);
-      setHostOwnStats({ events: 0, packages: 0 });
+      setHostOwnStats({ events: 0, stays: 0 });
 
       return () => {
         mounted = false;
@@ -639,24 +640,25 @@ function useHomeLiveData(profile) {
     async function loadHostOwnStats() {
       if (role !== "host") {
         if (mounted) {
-          setHostOwnStats({ events: 0, packages: 0 });
+          setHostOwnStats({ events: 0, stays: 0 });
         }
         return;
       }
 
       try {
-        const [eventsRes, packagesRes] = await Promise.all([
+        const [eventsRes, staysRes] = await Promise.all([
           supabase
             .from("events")
             .select("id", { count: "exact", head: true })
             .eq("host_id", userId),
           supabase
-            .from("packages")
+            .from("host_accommodations")
             .select("id", { count: "exact", head: true })
-            .eq("host_id", userId),
+            .eq("host_id", userId)
+            .eq("is_active", true),
         ]);
 
-        const firstError = eventsRes.error || packagesRes.error;
+        const firstError = eventsRes.error || staysRes.error;
 
         if (firstError) {
           console.error(
@@ -670,7 +672,7 @@ function useHomeLiveData(profile) {
 
         setHostOwnStats({
           events: eventsRes.count ?? 0,
-          packages: packagesRes.count ?? 0,
+          stays: staysRes.count ?? 0,
         });
       } catch (error) {
         console.error(
@@ -716,7 +718,7 @@ function useHomeLiveData(profile) {
               {
                 event: "*",
                 schema: "public",
-                table: "packages",
+                table: "host_accommodations",
                 filter: `host_id=eq.${userId}`,
               },
               () => void loadHostOwnStats()
@@ -960,7 +962,7 @@ function EventCards({ events = [] }) {
 
 function HomeDiscoveryShowcase({ discovery }) {
   const hosts = discovery?.hosts || [];
-  const packages = discovery?.packages || [];
+  const stays = discovery?.stays || [];
   const places = discovery?.places || [];
 
   return (
@@ -974,7 +976,7 @@ function HomeDiscoveryShowcase({ discovery }) {
         <h2>Zajednica se menja svaki dan.</h2>
 
         <p>
-          Najnoviji domaćini, ture i lokacije dolaze direktno iz MeetOutdoors
+          Najnoviji domaćini, smeštaji i lokacije dolaze direktno iz MeetOutdoors
           zajednice.
         </p>
       </div>
@@ -1060,59 +1062,53 @@ function HomeDiscoveryShowcase({ discovery }) {
 
       <div className="homeDiscoveryBlock">
         <SectionHeader
-          kicker="Nove ture i paketi"
-          title="Nova iskustva koja možeš da rezervišeš."
-          description="Najnovije aktivne ture i paketi, direktno od domaćina."
-          linkTo="/packages"
-          linkLabel="Svi paketi"
+          kicker="Smeštaj u prirodi"
+          title="Odmori tamo gde avantura počinje."
+          description="Aktivni smeštaji domaćina — kompaktno, pregledno i spremno za swipe."
+          linkTo="/stays"
+          linkLabel="Sav smeštaj"
         />
 
-        {packages.length > 0 ? (
+        {stays.length > 0 ? (
           <div className="homePackageGrid homeSwipeRow">
-            {packages.slice(0, 4).map((item) => {
-              const packageLocation =
-                [item.location, item.country]
-                  .filter(Boolean)
-                  .join(", ") || "Lokacija nije navedena";
+            {stays.map((item) => {
+              const stayPrice =
+                item.price_on_request || item.price_per_night == null
+                  ? "Cena na upit"
+                  : `${Number(item.price_per_night).toLocaleString("sr-RS")} / noć`;
 
               return (
                 <Link
                   key={item.id}
-                  to={`/package/${item.id}`}
+                  to="/stays"
                   className="homePackageCard"
                 >
                   <div className="homePackageImage">
                     <img
                       src={item.cover_url || HOME_FALLBACK_COVER}
-                      alt={item.title || "Outdoor paket"}
+                      alt={item.title || "Smeštaj u prirodi"}
                     />
                     <div />
                     <span>
-                      <Icon name="package" size={13} />
-                      Novi paket
+                      <Icon name="home" size={13} />
+                      {item.type || "Smeštaj"}
                     </span>
                   </div>
 
                   <div className="homePackageBody">
                     <small>
                       <Icon name="mapPin" size={13} />
-                      {packageLocation}
+                      {item.location || "Lokacija nije navedena"}
                     </small>
 
-                    <h3>{item.title || "Outdoor paket"}</h3>
+                    <h3>{item.title || "Smeštaj u prirodi"}</h3>
 
                     <div>
                       <span>
-                        <Icon name="clock" size={13} />
-                        {item.duration || "Trajanje uskoro"}
+                        <Icon name="users" size={13} />
+                        {item.max_guests ? `Do ${item.max_guests} gostiju` : "Pošalji upit"}
                       </span>
-
-                      <strong>
-                        {formatHomePrice(
-                          item.price,
-                          item.currency || "EUR"
-                        )}
-                      </strong>
+                      <strong>{stayPrice}</strong>
                     </div>
                   </div>
                 </Link>
@@ -1121,12 +1117,10 @@ function HomeDiscoveryShowcase({ discovery }) {
           </div>
         ) : (
           <div className="liveHomeEmpty">
-            <span>
-              <Icon name="package" size={23} />
-            </span>
+            <span><Icon name="home" size={23} /></span>
             <div>
-              <strong>Još nema novih aktivnih paketa.</strong>
-              <p>Čim domaćin objavi paket, pojaviće se ovde.</p>
+              <strong>Još nema aktivnog smeštaja.</strong>
+              <p>Čim domaćin objavi smeštaj, pojaviće se ovde.</p>
             </div>
           </div>
         )}
@@ -1226,18 +1220,19 @@ function GuestHome({ platformStats, discovery }) {
             </h1>
 
             <p>
-              Otkrij outdoor događaje, upoznaj lokalne domaćine i
-              rezerviši iskustva koja se pamte duže od jedne fotografije.
+              Avanture, smeštaj i mesta u prirodi — ili samo reci Adventure Agentu
+              kakav vikend želiš.
             </p>
 
             <div className="guestActions">
-              <Link to="/events" className="lightButton">
-                Istraži avanture
+              <Link to="/agent" className="lightButton">
+                <Icon name="sparkles" size={17} />
+                Pitaj Adventure Agenta
                 <Icon name="arrowRight" />
               </Link>
 
-              <Link to="/signup" className="glassButton">
-                Pridruži se zajednici
+              <Link to="/events" className="glassButton">
+                Istraži avanture
               </Link>
             </div>
 
@@ -1252,11 +1247,11 @@ function GuestHome({ platformStats, discovery }) {
               </div>
               <div>
                 <strong>{platformStats.events}</strong>
-                <span>aktivnih događaja</span>
+                <span>aktivnih avantura</span>
               </div>
               <div>
-                <strong>{platformStats.packages}</strong>
-                <span>paketa i tura</span>
+                <strong>{platformStats.stays}</strong>
+                <span>aktivnih smeštaja</span>
               </div>
             </div>
           </div>
@@ -1269,9 +1264,9 @@ function GuestHome({ platformStats, discovery }) {
 
       <section className="featuredSection pageContainer firstSection">
         <SectionHeader
-          kicker="Najnoviji događaji"
+          kicker="Najnovije avanture"
           title="Nove avanture na MeetOutdoors."
-          description="Poslednji aktivni događaji koje su domaćini objavili na platformi."
+          description="Najnovije aktivne avanture koje su domaćini objavili na platformi."
           linkTo="/events"
           linkLabel="Pogledaj sve"
         />
@@ -1455,19 +1450,19 @@ function UserHome({ profile, notifications, onRead, discovery }) {
             <Icon name="compass" />
           </span>
           <div>
-            <strong>Istraži događaje</strong>
-            <small>Jednodnevne avanture i okupljanja</small>
+            <strong>Istraži avanture</strong>
+            <small>Termin ili dogovor, jednodnevno ili višednevno</small>
           </div>
           <Icon name="arrowRight" />
         </Link>
 
-        <Link to="/packages">
+        <Link to="/stays">
           <span>
-            <Icon name="package" />
+            <Icon name="home" />
           </span>
           <div>
-            <strong>Adventure paketi</strong>
-            <small>Kompletna višednevna iskustva</small>
+            <strong>Smeštaj u prirodi</strong>
+            <small>Vikendice, kampovi i outdoor boravak</small>
           </div>
           <Icon name="arrowRight" />
         </Link>
@@ -1490,7 +1485,7 @@ function UserHome({ profile, notifications, onRead, discovery }) {
           title="Tvoj sledeći vikend može početi ovde."
           description="Najnoviji aktivni događaji koje su domaćini upravo objavili."
           linkTo="/events"
-          linkLabel="Svi događaji"
+          linkLabel="Sve avanture"
         />
 
         <EventCards events={discovery.events} />
@@ -1522,15 +1517,13 @@ function UserHome({ profile, notifications, onRead, discovery }) {
                 icon: "calendar",
                 to: `/event/${event.id}`,
               })),
-              ...discovery.packages.slice(0, 2).map((item) => ({
-                id: `package-${item.id}`,
+              ...discovery.stays.slice(0, 2).map((item) => ({
+                id: `stay-${item.id}`,
                 title: item.title,
-                date: [item.location, item.country]
-                  .filter(Boolean)
-                  .join(", ") || "Nova outdoor ponuda",
-                status: "Paket",
-                icon: "package",
-                to: `/package/${item.id}`,
+                date: item.location || "Smeštaj u prirodi",
+                status: "Smeštaj",
+                icon: "home",
+                to: "/stays",
               })),
             ]
               .slice(0, 4)
@@ -1552,9 +1545,9 @@ function UserHome({ profile, notifications, onRead, discovery }) {
               ))}
 
             {discovery.events.length === 0 &&
-              discovery.packages.length === 0 && (
+              discovery.stays.length === 0 && (
                 <div className="homeMiniEmpty">
-                  Novi događaji i paketi će se pojaviti ovde.
+                  Nove avanture i smeštaji će se pojaviti ovde.
                 </div>
               )}
           </div>
@@ -1600,16 +1593,16 @@ function HostHome({ profile, notifications, onRead, hostOwnStats }) {
 
   const liveStats = [
     {
-      label: "Aktivni događaji",
+      label: "Aktivne avanture",
       value: hostOwnStats.events,
       description: "Objavljeno i aktivno",
       icon: "calendar",
     },
     {
-      label: "Aktivni paketi",
-      value: hostOwnStats.packages,
-      description: "Paketi na tvom profilu",
-      icon: "package",
+      label: "Aktivni smeštaji",
+      value: hostOwnStats.stays,
+      description: "Smeštaji na tvom profilu",
+      icon: "home",
     },
     {
       label: "Nove rezervacije",
@@ -1645,12 +1638,12 @@ function HostHome({ profile, notifications, onRead, hostOwnStats }) {
         <div className="hostTopActions hostTopActionsTriple">
           <Link to="/create-event" className="hostPrimaryAction">
             <Icon name="plus" size={18} />
-            Novi događaj
+            Nova avantura
           </Link>
 
-          <Link to="/create-package" className="hostSecondaryAction">
-            <Icon name="package" size={18} />
-            Novi paket
+          <Link to="/stays" className="hostSecondaryAction">
+            <Icon name="home" size={18} />
+            Smeštaj
           </Link>
 
           <Link to="/dashboard" className="hostSecondaryAction">
@@ -1677,7 +1670,7 @@ function HostHome({ profile, notifications, onRead, hostOwnStats }) {
             <p>
               {bookingAlerts > 0
                 ? "Odgovori gostima dok je interesovanje sveže. Nove aktivnosti stižu ovde u realnom vremenu."
-                : "Nema hitnih zahteva. Možeš da se fokusiraš na nove događaje i pakete."}
+                : "Nema hitnih zahteva. Možeš da se fokusiraš na nove avanture i smeštaj."}
             </p>
 
             <Link to={bookingAlerts > 0 ? "/host-bookings" : "/notifications"} className="lightButton">
@@ -1713,15 +1706,15 @@ function HostHome({ profile, notifications, onRead, hostOwnStats }) {
               <Icon name="calendar" />
               <div>
                 <strong>{hostOwnStats.events}</strong>
-                <span>Aktivni događaji</span>
+                <span>Aktivne avanture</span>
               </div>
             </article>
 
             <article>
-              <Icon name="package" />
+              <Icon name="home" />
               <div>
-                <strong>{hostOwnStats.packages}</strong>
-                <span>Aktivni paketi</span>
+                <strong>{hostOwnStats.stays}</strong>
+                <span>Aktivni smeštaji</span>
               </div>
             </article>
           </div>
@@ -1774,18 +1767,18 @@ function HostHome({ profile, notifications, onRead, hostOwnStats }) {
           <div className="hostCreationGrid">
             <Link to="/create-event" className="hostCreationCard eventCreation">
               <span><Icon name="calendar" size={24} /></span>
-              <small>Jednodnevna avantura</small>
-              <h3>Kreiraj novi događaj.</h3>
-              <p>Dodaj termin, lokaciju, kapacitet, cenu i naslovnu fotografiju.</p>
+              <small>Jednodnevno ili višednevno</small>
+              <h3>Kreiraj novu avanturu.</h3>
+              <p>Dodaj termin ili ostavi „po dogovoru“, lokaciju, kapacitet, cenu i fotografije.</p>
               <strong>Pokreni kreiranje <Icon name="arrowRight" size={18} /></strong>
             </Link>
 
-            <Link to="/create-package" className="hostCreationCard packageCreation">
-              <span><Icon name="package" size={24} /></span>
-              <small>Kompletno iskustvo</small>
-              <h3>Kreiraj novi paket.</h3>
-              <p>Složi višednevnu ponudu sa sadržajem, terminima i cenom.</p>
-              <strong>Pokreni kreiranje <Icon name="arrowRight" size={18} /></strong>
+            <Link to="/stays" className="hostCreationCard packageCreation">
+              <span><Icon name="home" size={24} /></span>
+              <small>Smeštaj u prirodi</small>
+              <h3>Upravljaj smeštajem.</h3>
+              <p>Predstavi vikendicu, kamp ili drugi outdoor smeštaj i primaj upite.</p>
+              <strong>Otvori smeštaj <Icon name="arrowRight" size={18} /></strong>
             </Link>
           </div>
         </div>
@@ -1845,17 +1838,17 @@ function HostHome({ profile, notifications, onRead, hostOwnStats }) {
             <em>Stvaraš uspomene.</em>
           </h2>
           <p>
-            Svaki novi događaj i paket je prilika da neko otkrije novo mesto,
+            Svaka nova avantura ili smeštaj je prilika da neko otkrije novo mesto,
             upozna nove ljude i ponese priču koju će dugo pamtiti.
           </p>
 
           <div className="hostMotivationActions">
             <Link to="/create-event" className="lightButton">
-              Kreiraj događaj
+              Kreiraj avanturu
               <Icon name="arrowRight" />
             </Link>
-            <Link to="/create-package" className="glassButton">
-              Kreiraj paket
+            <Link to="/stays" className="glassButton">
+              Upravljaj smeštajem
               <Icon name="arrowRight" />
             </Link>
           </div>
@@ -4388,6 +4381,146 @@ function HomeStyles() {
         }
       }
 
+
+      /* =====================================================
+         COMPACT DISCOVERY V2
+         Existing Home logic preserved; visual density improved.
+      ===================================================== */
+
+      .guestHero {
+        min-height: 430px;
+        padding: 82px 0 48px;
+      }
+
+      .guestCopy {
+        max-width: 760px;
+      }
+
+      .guestCopy h1 {
+        margin-top: 15px;
+        font-size: clamp(48px, 5.7vw, 76px);
+      }
+
+      .guestCopy > p {
+        max-width: 610px;
+        margin-top: 15px;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .guestActions {
+        margin-top: 20px;
+        gap: 9px;
+      }
+
+      .guestProof {
+        margin-top: 22px;
+        gap: 22px;
+      }
+
+      .guestSearchWrap {
+        margin-top: -28px;
+      }
+
+      .featuredSection,
+      .roleChoice {
+        padding-top: 42px;
+        padding-bottom: 42px;
+      }
+
+      .homeDiscovery {
+        padding-top: 12px;
+        padding-bottom: 42px;
+      }
+
+      .homeDiscoveryIntro {
+        margin-bottom: 25px;
+      }
+
+      .homeDiscoveryBlock + .homeDiscoveryBlock {
+        margin-top: 30px;
+      }
+
+      .homeSwipeRow,
+      .eventGrid {
+        display: grid !important;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(245px, 29%);
+        grid-template-columns: none !important;
+        gap: 12px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 2px 2px 10px;
+        scroll-snap-type: x mandatory;
+        overscroll-behavior-inline: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .homeSwipeRow::-webkit-scrollbar,
+      .eventGrid::-webkit-scrollbar {
+        display: none;
+      }
+
+      .homeSwipeRow > *,
+      .eventGrid > * {
+        min-width: 0;
+        scroll-snap-align: start;
+      }
+
+      .eventCard:first-child {
+        grid-column: auto !important;
+      }
+
+      .eventCard {
+        min-height: 300px;
+      }
+
+      .homeHostCover,
+      .homePackageImage {
+        height: 145px;
+      }
+
+      .homePackageBody {
+        padding: 12px;
+      }
+
+      .homePackageBody h3 {
+        font-size: 15px;
+      }
+
+      .homePlaceGrid {
+        grid-auto-columns: minmax(225px, 24%);
+      }
+
+      .homePlaceCard {
+        min-height: 220px;
+      }
+
+      .homeHostGrid,
+      .homePackageGrid {
+        grid-auto-columns: minmax(225px, 24%);
+      }
+
+      .sectionHeading {
+        margin-bottom: 14px;
+      }
+
+      .userTop,
+      .hostTop {
+        padding-top: 22px;
+        padding-bottom: 20px;
+      }
+
+      .userSearchStage {
+        min-height: 300px;
+      }
+
+      .hostOverviewHero {
+        min-height: 330px;
+      }
+
+
       @media (max-width: 460px) {
         .liveProof {
           grid-template-columns: 1fr 1fr;
@@ -5200,6 +5333,80 @@ function HomeStyles() {
           transition: none !important;
         }
       }
+
+      @media (max-width: 760px) {
+        .guestHero {
+          min-height: 440px;
+          padding: 78px 0 46px;
+        }
+
+        .guestCopy h1 {
+          font-size: 43px;
+        }
+
+        .guestCopy > p {
+          font-size: 13px;
+          margin-top: 13px;
+        }
+
+        .guestProof {
+          margin-top: 18px;
+          gap: 15px;
+        }
+
+        .guestSearchWrap {
+          margin-top: -24px;
+        }
+
+        .homeSwipeRow,
+        .eventGrid {
+          grid-auto-columns: 82%;
+          width: calc(100% + 16px);
+          padding-right: 16px;
+        }
+
+        .homePlaceGrid,
+        .homeHostGrid {
+          grid-auto-columns: 72%;
+        }
+
+        .homePackageGrid {
+          grid-auto-columns: 80%;
+        }
+
+        .eventCard {
+          min-height: 285px;
+        }
+
+        .homePlaceCard {
+          min-height: 210px;
+        }
+      }
+
+      @media (max-width: 460px) {
+        .guestHero {
+          min-height: 420px;
+        }
+
+        .guestCopy h1 {
+          font-size: 39px;
+        }
+
+        .guestProof > div:nth-child(n+4) {
+          display: none;
+        }
+
+        .homeSwipeRow,
+        .eventGrid {
+          grid-auto-columns: 86%;
+        }
+
+        .homePlaceGrid,
+        .homeHostGrid {
+          grid-auto-columns: 78%;
+        }
+      }
+
     `}</style>
   );
 }

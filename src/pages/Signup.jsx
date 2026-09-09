@@ -54,6 +54,21 @@ const ACTIVITIES = [
   { value: "Yoga outdoors", label: "Joga u prirodi" },
 ];
 
+const HOST_PURPOSES = [
+  {
+    value: "adventures",
+    title: "Organizujem avanture",
+    text: "Ture, izleti i konkretna iskustva sa terminom ili po dogovoru.",
+    icon: "compass",
+  },
+  {
+    value: "accommodation",
+    title: "Nudim smeštaj",
+    text: "Brvnare, kampovi, glamping, vikendice i drugi smeštaj u prirodi.",
+    icon: "home",
+  },
+];
+
 function Icon({
   name,
   size = 20,
@@ -89,6 +104,14 @@ function Icon({
         <path d="m6 20 2-10h8l2 10" />
         <path d="M9 10V6a3 3 0 0 1 6 0v4" />
         <path d="M10 15h4" />
+      </>
+    ),
+
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+        <path d="M9 20v-6h6v6" />
       </>
     ),
 
@@ -296,6 +319,7 @@ export default function Signup() {
     website_url: "",
     promo_video_url: "",
     activities: [],
+    host_purposes: [],
   });
 
   const [avatarFile, setAvatarFile] = useState(null);
@@ -318,6 +342,19 @@ export default function Signup() {
     setError("");
   }
 
+  function toggleHostPurpose(purpose) {
+    setForm((prev) => {
+      const exists = prev.host_purposes.includes(purpose);
+      return {
+        ...prev,
+        host_purposes: exists
+          ? prev.host_purposes.filter((item) => item !== purpose)
+          : [...prev.host_purposes, purpose],
+      };
+    });
+    if (error) setError("");
+  }
+
   function toggleActivity(activity) {
     setForm((prev) => {
       const exists = prev.activities.includes(activity);
@@ -334,8 +371,20 @@ export default function Signup() {
   async function handleSignup(event) {
   event.preventDefault();
 
-  if (form.activities.length === 0) {
-    setError("Izaberi najmanje jednu aktivnost.");
+  if (role === "host" && form.host_purposes.length === 0) {
+    setError("Izaberi najmanje jednu stvar koju želiš da nudiš.");
+    return;
+  }
+
+  const hostNeedsActivities =
+    role === "host" && form.host_purposes.includes("adventures");
+
+  if ((role === "user" || hostNeedsActivities) && form.activities.length === 0) {
+    setError(
+      role === "host"
+        ? "Izaberi najmanje jednu aktivnost koju organizuješ ili nudiš."
+        : "Izaberi najmanje jednu aktivnost."
+    );
     return;
   }
 
@@ -395,6 +444,7 @@ export default function Signup() {
                 ? form.promo_video_url.trim()
                 : "",
             activities: form.activities,
+            host_purposes: role === "host" ? form.host_purposes : [],
             legal_consent: true,
             legal_consent_version: "2026-09-05",
             legal_consent_at: new Date().toISOString(),
@@ -500,6 +550,7 @@ export default function Signup() {
               form.promo_video_url.trim()
             : "",
         activities: form.activities,
+        host_purposes: role === "host" ? form.host_purposes : [],
         avatar_url,
         cover_url,
       })
@@ -552,8 +603,8 @@ export default function Signup() {
     role === "host"
       ? {
           kicker: "Nalog domaćina",
-          title: "Pretvori svoju strast u iskustvo.",
-          text: "Kreiraj događaje u prirodi, prihvataj rezervacije i izgradi zajednicu ljudi koji žele da istražuju.",
+          title: "Ponudi ono što prirodu čini posebnim.",
+          text: "Objavi avanture ili smeštaj u prirodi — možeš da izabereš i oba.",
           image:
             "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1800&q=90",
         }
@@ -679,7 +730,7 @@ export default function Signup() {
                 </span>
 
                 <span className="roleSwitchText">
-                  <strong>Kreiraj avanture</strong>
+                  <strong>Ponudi nešto u prirodi</strong>
                   <small>Domaćin</small>
                 </span>
 
@@ -759,7 +810,7 @@ export default function Signup() {
                   <label className="inputGroup">
                     <span>
                       {role === "host"
-                        ? "Naziv organizatora"
+                        ? "Naziv domaćina / objekta"
                         : "Ime i prezime"}
                     </span>
 
@@ -774,7 +825,7 @@ export default function Signup() {
                         }
                         placeholder={
                           role === "host"
-                            ? "Mountain Crew"
+                            ? "Mountain Crew ili Brvnara Javor"
                             : "Luka Petrović"
                         }
                       />
@@ -834,7 +885,7 @@ export default function Signup() {
                 <label className="inputGroup">
                   <span>
                     {role === "host"
-                      ? "Opiši svoja iskustva"
+                      ? "Predstavi svoju ponudu"
                       : "Napiši nešto o sebi"}
                   </span>
 
@@ -846,7 +897,7 @@ export default function Signup() {
                     }
                     placeholder={
                       role === "host"
-                        ? "Opiši kakve avanture organizuješ, svoje iskustvo i šta gosti mogu da očekuju."
+                        ? "Opiši avanture ili smeštaj koji nudiš i šta gosti mogu da očekuju."
                         : "Reci zajednici šta voliš da istražuješ i kakve avanture tražiš."
                     }
                   />
@@ -895,9 +946,51 @@ export default function Signup() {
               </div>
 
               {role === "host" && (
-                <div className="formSection hostDetailsSection">
+                <div className="formSection hostPurposeSection">
                   <div className="formSectionHeading">
                     <span>03</span>
+                    <div>
+                      <strong>Šta želiš da nudiš?</strong>
+                      <small>Izaberi jedno ili više. Profil ćemo prilagoditi tvojoj ponudi.</small>
+                    </div>
+                  </div>
+
+                  <div className="hostPurposeGrid">
+                    {HOST_PURPOSES.map((item) => {
+                      const selected = form.host_purposes.includes(item.value);
+                      return (
+                        <button
+                          key={item.value}
+                          type="button"
+                          className={`hostPurposeCard ${selected ? "selected" : ""}`}
+                          onClick={() => toggleHostPurpose(item.value)}
+                          aria-pressed={selected}
+                        >
+                          <span className="hostPurposeIcon">
+                            <Icon name={item.icon} size={22} />
+                          </span>
+                          <span className="hostPurposeCopy">
+                            <strong>{item.title}</strong>
+                            <small>{item.text}</small>
+                          </span>
+                          <span className="hostPurposeCheck">
+                            {selected && <Icon name="check" size={13} />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="hostPurposeHint">
+                    Ako nudiš samo smeštaj, ne moraš da kreiraš avanture niti da biraš aktivnosti.
+                  </p>
+                </div>
+              )}
+
+              {role === "host" && (
+                <div className="formSection hostDetailsSection">
+                  <div className="formSectionHeading">
+                    <span>04</span>
 
                     <div>
                       <strong>Podaci domaćina</strong>
@@ -994,9 +1087,11 @@ export default function Signup() {
                 </div>
               )}
 
+              {(role === "user" ||
+                form.host_purposes.includes("adventures")) && (
               <div className="formSection">
                 <div className="formSectionHeading">
-                  <span>{role === "host" ? "04" : "03"}</span>
+                  <span>{role === "host" ? "05" : "03"}</span>
 
                   <div>
                     <strong>
@@ -1055,6 +1150,7 @@ export default function Signup() {
                   </div>
                 </div>
               </div>
+              )}
 
               {error && (
                 <div className="signupError" role="alert">
@@ -1079,7 +1175,7 @@ export default function Signup() {
                 ) : (
                   <>
                     {role === "host"
-                      ? "Kreiraj nalog domaćina"
+                      ? "Kreiraj profil domaćina"
                       : "Kreiraj korisnički nalog"}
 
                     <Icon name="arrowRight" size={19} />
@@ -1492,6 +1588,110 @@ function SignupStyles() {
         background: rgba(255, 255, 255, 0.76);
         box-shadow: 0 13px 36px rgba(34, 53, 42, 0.055);
         backdrop-filter: blur(14px);
+      }
+
+      .hostPurposeSection {
+        border-color: #c8d8bd;
+        background:
+          radial-gradient(circle at top right, rgba(201,242,140,.22), transparent 34%),
+          linear-gradient(145deg, rgba(245,250,239,.98), rgba(255,255,255,.88));
+      }
+
+      .hostPurposeGrid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .hostPurposeCard {
+        position: relative;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: start;
+        gap: 11px;
+        min-height: 122px;
+        padding: 15px;
+        border: 1px solid #d7e0d2;
+        border-radius: 19px;
+        background: rgba(255,255,255,.82);
+        color: #24362b;
+        cursor: pointer;
+        text-align: left;
+        transition: .2s ease;
+      }
+
+      .hostPurposeCard:hover {
+        border-color: #9caf8f;
+        transform: translateY(-2px);
+      }
+
+      .hostPurposeCard.selected {
+        border-color: #183a27;
+        background: #183a27;
+        color: #fff;
+        box-shadow: 0 13px 30px rgba(24,58,39,.14);
+      }
+
+      .hostPurposeIcon {
+        display: grid;
+        place-items: center;
+        width: 39px;
+        height: 39px;
+        border-radius: 13px;
+        background: #e9f2de;
+        color: #55733d;
+      }
+
+      .hostPurposeCard.selected .hostPurposeIcon {
+        background: rgba(201,242,140,.14);
+        color: #c9f28c;
+      }
+
+      .hostPurposeCopy strong,
+      .hostPurposeCopy small {
+        display: block;
+      }
+
+      .hostPurposeCopy strong {
+        padding-right: 20px;
+        font-size: 12px;
+        line-height: 1.25;
+      }
+
+      .hostPurposeCopy small {
+        margin-top: 7px;
+        color: #849087;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
+      .hostPurposeCard.selected .hostPurposeCopy small {
+        color: rgba(255,255,255,.58);
+      }
+
+      .hostPurposeCheck {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border: 1px solid #d7dfd3;
+        border-radius: 50%;
+      }
+
+      .hostPurposeCard.selected .hostPurposeCheck {
+        border-color: #c9f28c;
+        background: #c9f28c;
+        color: #183a27;
+      }
+
+      .hostPurposeHint {
+        margin: 11px 2px 0;
+        color: #748078;
+        font-size: 10px;
+        line-height: 1.55;
       }
 
       .hostDetailsSection {
@@ -2248,6 +2448,15 @@ function SignupStyles() {
           animation: none !important;
           scroll-behavior: auto !important;
           transition: none !important;
+        }
+      }
+      @media (max-width: 760px) {
+        .hostPurposeGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .hostPurposeCard {
+          min-height: 0;
         }
       }
     `}</style>

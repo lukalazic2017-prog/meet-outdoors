@@ -54,6 +54,14 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M12 11v10" />
       </>
     ),
+
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+        <path d="M9 20v-6h6v6" />
+      </>
+    ),
     users: (
       <>
         <circle cx="9" cy="8" r="3" />
@@ -307,21 +315,21 @@ export default function Navbar() {
       index: "02",
     },
     {
-      to: "/explore",
-      label: "Mapa",
-      icon: "mapPin",
+      to: "/stays",
+      label: "Smeštaj",
+      icon: "home",
       index: "03",
     },
     {
-      to: "/events",
-      label: "Događaji",
-      icon: "calendar",
+      to: "/explore",
+      label: "Mapa",
+      icon: "mapPin",
       index: "04",
     },
     {
-      to: "/packages",
-      label: "Paketi",
-      icon: "package",
+      to: "/events",
+      label: "Avanture",
+      icon: "calendar",
       index: "05",
     },
     {
@@ -348,7 +356,7 @@ export default function Navbar() {
 
           <span className="brutalNavLogoCopy">
             <strong>MeetOutdoors</strong>
-            <small>Idi dalje od običnog.</small>
+            <small>Priroda. Ljudi. Avanture.</small>
           </span>
         </Link>
 
@@ -453,14 +461,13 @@ export default function Navbar() {
             </span>
 
             <h2>
-              Izaberi
+              Kreni
               <br />
-              sledeći potez.
+              napolje.
             </h2>
 
             <p>
-              Događaji, domaćini i outdoor iskustva — sve što ti
-              treba da pronađeš ili kreiraš sledeću avanturu.
+              Avanture, smeštaj, mesta i domaćini — sve na jednom mestu.
             </p>
 
             {!loading && profile && (
@@ -583,7 +590,7 @@ export default function Navbar() {
 
                     <Link to="/my-events">
                       <Icon name="calendar" size={17} />
-                      Moji događaji
+                      Moje avanture
                     </Link>
 
                     <Link
@@ -614,10 +621,10 @@ export default function Navbar() {
                       <div className="hostPanelCopy">
                         <span>Host režim</span>
                         <strong>
-                          Kreiraj iskustva koja ljudi pamte.
+                          Objavi avanture, ponude i smeštaj.
                         </strong>
                         <small>
-                          Objavi novi događaj ili napravi paket direktno iz menija.
+                          Upravljaj svojim sadržajem direktno iz host profila i studija.
                         </small>
                       </div>
 
@@ -634,29 +641,31 @@ export default function Navbar() {
                           />
                         </Link>
 
+                        {Array.isArray(profile.host_purposes) &&
+                          profile.host_purposes.includes("accommodation") && (
+                            <Link
+                              to={`${profileUrl}#accommodation`}
+                              className="hostActionPrimary"
+                            >
+                              <Icon name="home" size={17} />
+                              Moj smeštaj
+                              <Icon name="chevron" size={15} />
+                            </Link>
+                          )}
+
                         <Link
                           to="/create-event"
                           className="hostActionPrimary"
                         >
                           <Icon name="calendar" size={17} />
-                          Kreiraj događaj
+                          Kreiraj avanturu
                           <Icon
                             name="plus"
                             size={15}
                           />
                         </Link>
 
-                        <Link
-                          to="/create-package"
-                          className="hostActionPrimary"
-                        >
-                          <Icon name="package" size={17} />
-                          Kreiraj paket
-                          <Icon
-                            name="plus"
-                            size={15}
-                          />
-                        </Link>
+                        
                       </div>
                     </div>
                   )}
@@ -2419,6 +2428,359 @@ function NavbarStyles() {
           transition: none !important;
         }
       }
+
+      /* =========================================================
+         NAVBAR V2 — PREMIUM COMPACT
+         Existing auth, notifications, routes and drawer logic preserved.
+         ========================================================= */
+
+      .brutalNav,
+      .brutalNav.scrolled,
+      .brutalNav.menuOpen{
+        top:8px;
+        left:14px;
+        right:14px;
+        height:58px;
+        padding:6px 7px 6px 10px;
+        border-radius:16px;
+      }
+
+      .brutalNavLogo{
+        gap:8px;
+      }
+
+      .brutalNavLogoMark{
+        width:36px;
+        height:36px;
+        border-radius:11px;
+      }
+
+      .brutalNavLogoCopy strong{
+        font-size:12px;
+      }
+
+      .brutalNavLogoCopy small{
+        margin-top:1px;
+        font-size:6.5px;
+        letter-spacing:.08em;
+      }
+
+      .brutalNavDesktop{
+        gap:1px;
+        padding:2px;
+      }
+
+      .brutalNavDesktop a{
+        padding:8px 10px;
+        font-size:10.5px;
+      }
+
+      .brutalNavDesktop a.active::after{
+        right:12px;
+        bottom:3px;
+        left:12px;
+      }
+
+      .brutalNavRight{
+        gap:5px;
+      }
+
+      .brutalNavBell,
+      .brutalNavProfile{
+        width:36px;
+        height:36px;
+        border-radius:11px;
+      }
+
+      .brutalNavBellBadge{
+        top:-6px;
+        right:-6px;
+        min-width:20px;
+        height:20px;
+        padding:0 5px;
+        font-size:7px;
+      }
+
+      .brutalMenuButton{
+        min-width:92px;
+        height:42px;
+        padding:0 12px 0 9px;
+        border-radius:13px;
+      }
+
+      .brutalMenuButtonLabel{
+        font-size:7.5px;
+      }
+
+      .brutalMenuButtonIcon{
+        width:25px;
+        height:25px;
+      }
+
+      .brutalDrawerInner{
+        gap:34px;
+        padding:96px 4vw 52px;
+      }
+
+      .brutalDrawerIntro h2{
+        margin-top:16px;
+        font-size:clamp(42px,5vw,68px);
+      }
+
+      .brutalDrawerIntro > p{
+        max-width:440px;
+        margin-top:14px;
+        font-size:11px;
+        line-height:1.6;
+      }
+
+      .brutalDrawerUser{
+        max-width:390px;
+        margin-top:22px;
+        padding:10px;
+        border-radius:15px;
+      }
+
+      .brutalDrawerAvatar{
+        width:44px;
+        height:44px;
+        border-radius:13px;
+      }
+
+      .brutalDrawerNavigation{
+        gap:18px;
+      }
+
+      .brutalDrawerMainLinks > a{
+        min-height:58px;
+        grid-template-columns:28px 38px minmax(0,1fr) auto;
+        gap:9px;
+      }
+
+      .brutalDrawerLinkIcon{
+        width:34px;
+        height:34px;
+        border-radius:11px;
+      }
+
+      .brutalDrawerMainLinks strong{
+        font-size:clamp(19px,2.2vw,30px);
+      }
+
+      .brutalDrawerAccount{
+        gap:10px;
+        padding:13px;
+        border-radius:17px;
+      }
+
+      .brutalDrawerSecondary,
+      .brutalDrawerPrimary,
+      .brutalDrawerShortcutGrid a,
+      .brutalDrawerHostActions a,
+      .brutalDrawerLogout{
+        min-height:40px;
+        padding:0 11px;
+        border-radius:11px;
+        font-size:8px;
+      }
+
+      .brutalDrawerHostPanel{
+        gap:10px;
+        padding:12px;
+        border-radius:15px;
+      }
+
+      .hostPanelCopy strong{
+        font-size:11px;
+      }
+
+      .hostPanelCopy small{
+        margin-top:4px;
+        font-size:7px;
+      }
+
+      .brutalDrawerHostActions{
+        gap:6px;
+      }
+
+      .brutalDrawerFooter{
+        padding:0 4vw 18px;
+        font-size:7px;
+      }
+
+      @media(max-width:1100px){
+        .brutalNavDesktop a{
+          padding-inline:9px;
+        }
+      }
+
+      @media(max-width:980px){
+        .brutalDrawerInner{
+          gap:24px;
+          padding-top:92px;
+        }
+
+        .brutalDrawerIntro h2{
+          font-size:clamp(44px,10vw,76px);
+        }
+      }
+
+      @media(max-width:640px){
+        .brutalNav,
+        .brutalNav.scrolled,
+        .brutalNav.menuOpen{
+          height:calc(58px + env(safe-area-inset-top,0px));
+          padding:
+            env(safe-area-inset-top,0px)
+            8px
+            0
+            9px;
+          border-radius:0 0 16px 16px;
+        }
+
+        .brutalNavLogoMark{
+          width:38px;
+          height:38px;
+        }
+
+        .brutalNavLogoCopy strong{
+          font-size:11px;
+        }
+
+        .brutalNavLogoCopy small{
+          display:none;
+        }
+
+        .brutalNavBell,
+        .brutalNavProfile{
+          width:34px;
+          height:34px;
+        }
+
+        .brutalMenuButton{
+          min-width:42px;
+          width:42px;
+          height:38px;
+          padding:0;
+          grid-template-columns:1fr;
+          border-radius:11px;
+        }
+
+        .brutalMenuButtonLabel{
+          display:none;
+        }
+
+        .brutalMenuButtonIcon{
+          margin:auto;
+        }
+
+        .brutalDrawer{
+          overflow:auto;
+        }
+
+        .brutalDrawerInner{
+          display:block;
+          min-height:auto;
+          padding:78px 12px 22px;
+        }
+
+        .brutalDrawerIntro{
+          display:none;
+        }
+
+        .brutalDrawerNavigation{
+          gap:10px;
+        }
+
+        .brutalDrawerMainLinks{
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:7px;
+        }
+
+        .brutalDrawerMainLinks > a,
+        .brutalDrawerMainLinks > a:first-child{
+          min-height:78px;
+          grid-template-columns:30px minmax(0,1fr);
+          grid-template-rows:auto auto;
+          gap:4px 7px;
+          padding:10px;
+          border:1px solid rgba(255,255,255,.10);
+          border-radius:13px;
+          background:rgba(255,255,255,.045);
+        }
+
+        .brutalDrawerMainLinks > a:hover,
+        .brutalDrawerMainLinks > a.active{
+          padding-left:10px;
+          background:rgba(186,255,158,.09);
+        }
+
+        .brutalDrawerLinkIndex{
+          grid-column:1;
+          grid-row:1;
+        }
+
+        .brutalDrawerLinkIcon{
+          grid-column:1;
+          grid-row:2;
+          width:30px;
+          height:30px;
+        }
+
+        .brutalDrawerMainLinks strong{
+          grid-column:2;
+          grid-row:1 / span 2;
+          align-self:center;
+          font-size:16px;
+          line-height:1.05;
+        }
+
+        .brutalDrawerLinkArrow{
+          display:none;
+        }
+
+        .brutalDrawerAccount{
+          margin-top:10px;
+          padding:10px;
+        }
+
+        .brutalDrawerShortcutGrid,
+        .brutalDrawerAuthGrid{
+          gap:6px;
+        }
+
+        .brutalDrawerHostActions{
+          grid-template-columns:1fr;
+        }
+
+        .brutalDrawerHostActions a:first-child{
+          grid-column:auto;
+        }
+
+        .brutalDrawerFooter{
+          padding:0 12px 14px;
+        }
+
+        .brutalDrawerFooter span:last-child{
+          display:none;
+        }
+      }
+
+      @media(max-width:390px){
+        .brutalDrawerMainLinks{
+          grid-template-columns:1fr 1fr;
+        }
+
+        .brutalDrawerMainLinks > a{
+          min-height:72px;
+        }
+
+        .brutalDrawerMainLinks strong{
+          font-size:14px;
+        }
+      }
+
     `}</style>
   );
 }

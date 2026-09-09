@@ -132,7 +132,7 @@ function formatPrice(value) {
 }
 
 function formatDate(value) {
-  if (!value) return "Datum uskoro";
+  if (!value) return "Termin po dogovoru";
 
   const date = new Date(value);
 
@@ -147,6 +147,82 @@ function formatDate(value) {
   }).format(date);
 }
 
+
+const ACTIVITY_LABELS = {
+  hiking: "Planinarenje",
+  trekking: "Trekking",
+  camping: "Kampovanje",
+  cycling: "Biciklizam",
+  "mountain biking": "MTB",
+  "trail running": "Trail running",
+  climbing: "Penjanje",
+  "via ferrata": "Via ferrata",
+  caving: "Speleologija",
+  canyoning: "Kanjoning",
+  rafting: "Rafting",
+  kayaking: "Kajak",
+  canoeing: "Kanu",
+  sup: "SUP",
+  sailing: "Jedrenje",
+  surfing: "Surfing",
+  kitesurfing: "Kitesurfing",
+  diving: "Ronjenje",
+  paragliding: "Paraglajding",
+  skydiving: "Padobranstvo",
+  skiing: "Skijanje",
+  snowboarding: "Snowboarding",
+  snowshoeing: "Krpljanje",
+  "horse riding": "Jahanje",
+  fishing: "Ribolov",
+  "off-road": "Off-road / 4x4",
+  "nature trip": "Izlet u prirodi",
+  other: "Ostalo",
+};
+
+function normalizeActivityValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getAdventureActivities(item) {
+  return [
+    item.activity,
+    item.activity_type,
+    ...(Array.isArray(item.activities) ? item.activities : []),
+  ]
+    .filter(Boolean)
+    .map(normalizeActivityValue);
+}
+
+function getAdventureDurationDays(item) {
+  const explicitDays = Number(item.duration_days || item.days || 0);
+  if (Number.isFinite(explicitDays) && explicitDays > 0) {
+    return explicitDays;
+  }
+
+  if (item.start_date && item.end_date) {
+    const start = new Date(item.start_date);
+    const end = new Date(item.end_date);
+
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+      const diff = end.getTime() - start.getTime();
+
+      if (diff >= 0) {
+        return Math.max(1, Math.ceil(diff / 86400000));
+      }
+    }
+  }
+
+  const durationText = String(item.duration || "").toLowerCase();
+  const match = durationText.match(/(\d+)/);
+
+  if (match) {
+    const parsed = Number(match[1]);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+
+  return null;
+}
+
 function LoadingState() {
   return (
     <>
@@ -155,7 +231,7 @@ function LoadingState() {
       <main className="eventsStatePage">
         <div className="eventsStateCard">
           <span className="eventsLoader" />
-          <h1>Učitavanje događaja</h1>
+          <h1>Učitavanje avantura</h1>
           <p>Pronalazimo najnovije outdoor avanture.</p>
         </div>
       </main>
@@ -163,29 +239,46 @@ function LoadingState() {
   );
 }
 
-function EventCard({ event }) {
-  const location =
-    [event.location, event.country].filter(Boolean).join(", ") ||
-    "Lokacija nije dodata";
-
-  const dateValue =
-    event.start_date ||
-    event.event_date ||
-    event.date ||
-    event.created_at;
-
-  const capacity =
-    event.capacity ||
-    event.max_people ||
-    event.max_participants ||
+function getAdventureDate(item) {
+  const value =
+    item.start_date ||
+    item.event_date ||
+    item.date ||
     null;
 
+  if (!value) return "Termin po dogovoru";
+  return formatDate(value);
+}
+
+function getAdventureDuration(item) {
+  const days = getAdventureDurationDays(item);
+  if (!days || days <= 1) return null;
+  return `${days} dana`;
+}
+
+function AdventureCard({ item }) {
+  const location =
+    [item.location, item.country].filter(Boolean).join(", ") ||
+    "Lokacija nije dodata";
+
+  const capacity =
+    item.capacity ||
+    item.max_people ||
+    item.max_participants ||
+    null;
+
+  const duration = getAdventureDuration(item);
+
+  const href = `/event/${item.id}`;
+  const typeLabel = "Avantura";
+  const priceLabel = "Cena po osobi";
+
   return (
-    <Link to={`/event/${event.id}`} className="eventCard">
+    <Link to={href} className="eventCard">
       <div className="eventImageWrapper">
         <img
-          src={event.cover_url || FALLBACK_IMAGE}
-          alt={event.title || "Outdoor događaj"}
+          src={item.cover_url || FALLBACK_IMAGE}
+          alt={item.title || "Outdoor avantura"}
           className="eventImage"
         />
 
@@ -193,18 +286,18 @@ function EventCard({ event }) {
 
         <span className="eventTypeBadge">
           <Icon name="compass" size={14} />
-          Outdoor događaj
+          {typeLabel}
         </span>
 
         <span className="eventPriceBadge">
-          {formatPrice(event.price)}
+          {formatPrice(item.price)}
         </span>
       </div>
 
       <div className="eventCardBody">
-        <span className="eventKicker">MeetOutdoors iskustvo</span>
+        <span className="eventKicker">MeetOutdoors avantura</span>
 
-        <h2>{event.title || "Događaj bez naziva"}</h2>
+        <h2>{item.title || "Avantura bez naziva"}</h2>
 
         <div className="eventMeta">
           <span>
@@ -214,8 +307,15 @@ function EventCard({ event }) {
 
           <span>
             <Icon name="calendar" size={15} />
-            {formatDate(dateValue)}
+            {getAdventureDate(item)}
           </span>
+
+          {duration && (
+            <span>
+              <Icon name="clock" size={15} />
+              {duration}
+            </span>
+          )}
 
           {capacity && (
             <span>
@@ -225,20 +325,20 @@ function EventCard({ event }) {
           )}
         </div>
 
-        {event.description && (
+        {item.description && (
           <p className="eventDescription">
-            {event.description}
+            {item.description}
           </p>
         )}
 
         <div className="eventCardFooter">
           <div>
-            <small>Cena po osobi</small>
-            <strong>{formatPrice(event.price)}</strong>
+            <small>{priceLabel}</small>
+            <strong>{formatPrice(item.price)}</strong>
           </div>
 
           <span className="eventArrow">
-            Pogledaj događaj
+            Pogledaj avanturu
             <Icon name="arrowRight" size={17} />
           </span>
         </div>
@@ -253,7 +353,10 @@ export default function Events() {
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
+  const [activityFilter, setActivityFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
+  const [termFilter, setTermFilter] = useState("all");
+  const [durationFilter, setDurationFilter] = useState("all");
   const [priceFilter, setPriceFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -285,25 +388,39 @@ export default function Events() {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (eventsError) {
-        throw eventsError;
-      }
+      if (eventsError) throw eventsError;
 
       setEvents(data || []);
     } catch (err) {
-      console.error("Greška pri učitavanju događaja:", err);
+      console.error("Greška pri učitavanju avantura:", err);
+      setEvents([]);
       setError(
-        err.message || "Događaje trenutno nije moguće učitati."
+        err.message || "Avanture trenutno nije moguće učitati."
       );
     } finally {
       setLoading(false);
     }
   }
 
+  const adventures = useMemo(
+    () =>
+      events
+        .map((item) => ({
+          ...item,
+          source_key: `event-${item.id}`,
+        }))
+        .sort((a, b) => {
+          const aTime = new Date(a.created_at || a.start_date || 0).getTime();
+          const bTime = new Date(b.created_at || b.start_date || 0).getTime();
+          return bTime - aTime;
+        }),
+    [events]
+  );
+
   const locations = useMemo(() => {
     const uniqueLocations = new Set();
 
-    events.forEach((event) => {
+    adventures.forEach((event) => {
       const location = [event.location, event.country]
         .filter(Boolean)
         .join(", ");
@@ -316,28 +433,69 @@ export default function Events() {
     return Array.from(uniqueLocations).sort((a, b) =>
       a.localeCompare(b)
     );
-  }, [events]);
+  }, [adventures]);
+
+  const activityOptions = useMemo(() => {
+    const values = new Set();
+
+    adventures.forEach((item) => {
+      getAdventureActivities(item).forEach((activity) => {
+        if (activity) values.add(activity);
+      });
+    });
+
+    return Array.from(values)
+      .map((value) => ({
+        value,
+        label: ACTIVITY_LABELS[value] || value,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "sr"));
+  }, [adventures]);
 
   const filteredEvents = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    return events.filter((event) => {
+    return adventures.filter((event) => {
       const title = event.title?.toLowerCase() || "";
       const description = event.description?.toLowerCase() || "";
+      const activities = getAdventureActivities(event);
+      const activityText = activities.join(" ");
       const location = [event.location, event.country]
         .filter(Boolean)
         .join(", ");
       const normalizedLocation = location.toLowerCase();
       const price = Number(event.price || 0);
+      const durationDays = getAdventureDurationDays(event);
+      const hasFixedDate = Boolean(event.start_date);
 
       const matchesSearch =
         !normalizedSearch ||
         title.includes(normalizedSearch) ||
         description.includes(normalizedSearch) ||
+        activityText.includes(normalizedSearch) ||
         normalizedLocation.includes(normalizedSearch);
+
+      const matchesActivity =
+        !activityFilter || activities.includes(activityFilter);
 
       const matchesLocation =
         !locationFilter || location === locationFilter;
+
+      const matchesTerm =
+        termFilter === "all" ||
+        (termFilter === "fixed" && hasFixedDate) ||
+        (termFilter === "agreement" && !hasFixedDate);
+
+      const matchesDuration =
+        durationFilter === "all" ||
+        (durationFilter === "day" && durationDays === 1) ||
+        (durationFilter === "2to3" &&
+          durationDays !== null &&
+          durationDays >= 2 &&
+          durationDays <= 3) ||
+        (durationFilter === "4plus" &&
+          durationDays !== null &&
+          durationDays >= 4);
 
       const matchesPrice =
         priceFilter === "all" ||
@@ -346,13 +504,28 @@ export default function Events() {
         (priceFilter === "50to100" && price >= 50 && price <= 100) ||
         (priceFilter === "over100" && price > 100);
 
-      return matchesSearch && matchesLocation && matchesPrice;
+      return (
+        matchesSearch &&
+        matchesActivity &&
+        matchesLocation &&
+        matchesTerm &&
+        matchesDuration &&
+        matchesPrice
+      );
     });
-  }, [events, search, locationFilter, priceFilter]);
+  }, [
+    adventures,
+    search,
+    activityFilter,
+    locationFilter,
+    termFilter,
+    durationFilter,
+    priceFilter,
+  ]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, locationFilter, priceFilter]);
+  }, [search, activityFilter, locationFilter, termFilter, durationFilter, priceFilter]);
 
   const pageCount = useMemo(
     () => Math.max(1, Math.ceil(filteredEvents.length / pageSize)),
@@ -371,13 +544,19 @@ export default function Events() {
 
   function clearFilters() {
     setSearch("");
+    setActivityFilter("");
     setLocationFilter("");
+    setTermFilter("all");
+    setDurationFilter("all");
     setPriceFilter("all");
   }
 
   const hasFilters =
     search.trim() ||
+    activityFilter ||
     locationFilter ||
+    termFilter !== "all" ||
+    durationFilter !== "all" ||
     priceFilter !== "all";
 
   if (loading) {
@@ -397,7 +576,7 @@ export default function Events() {
           <div className="eventsHeroContent">
             <span className="heroKicker">
               <span />
-              Događaji na otvorenom
+              Avanture na otvorenom
             </span>
 
             <h1>
@@ -407,15 +586,15 @@ export default function Events() {
             </h1>
 
             <p>
-              Otkrij događaje koje organizuju lokalni domaćini i
-              pridruži se ljudima koji biraju prirodu.
+              Otkrij ture, događaje i višednevna iskustva lokalnih domaćina
+              — sve na jednom mestu, kao prave MeetOutdoors avanture.
             </p>
           </div>
 
           <div className="heroStats">
             <div>
-              <strong>{events.length}</strong>
-              <span>objavljenih događaja</span>
+              <strong>{adventures.length}</strong>
+              <span>objavljenih avantura</span>
             </div>
 
             <div>
@@ -439,7 +618,7 @@ export default function Events() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Pretraži događaje, aktivnosti ili lokacije"
+                placeholder="Pretraži avanture, aktivnosti ili lokacije"
               />
 
               {search && (
@@ -451,6 +630,25 @@ export default function Events() {
                   <Icon name="close" size={16} />
                 </button>
               )}
+            </div>
+
+            <div className="filterField">
+              <Icon name="compass" size={17} />
+
+              <select
+                value={activityFilter}
+                onChange={(event) =>
+                  setActivityFilter(event.target.value)
+                }
+              >
+                <option value="">Sve aktivnosti</option>
+
+                {activityOptions.map((activity) => (
+                  <option key={activity.value} value={activity.value}>
+                    {activity.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="filterField">
@@ -469,6 +667,37 @@ export default function Events() {
                     {location}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div className="filterField">
+              <Icon name="calendar" size={17} />
+
+              <select
+                value={termFilter}
+                onChange={(event) =>
+                  setTermFilter(event.target.value)
+                }
+              >
+                <option value="all">Svi termini</option>
+                <option value="fixed">Određen datum</option>
+                <option value="agreement">Termin po dogovoru</option>
+              </select>
+            </div>
+
+            <div className="filterField">
+              <Icon name="clock" size={17} />
+
+              <select
+                value={durationFilter}
+                onChange={(event) =>
+                  setDurationFilter(event.target.value)
+                }
+              >
+                <option value="all">Sva trajanja</option>
+                <option value="day">1 dan</option>
+                <option value="2to3">2–3 dana</option>
+                <option value="4plus">4+ dana</option>
               </select>
             </div>
 
@@ -524,12 +753,12 @@ export default function Events() {
               <h2>
                 {hasFilters
                   ? "Rezultati pretrage"
-                  : "Najnoviji događaji"}
+                  : "Najnovije avanture"}
               </h2>
 
               <p>
-                Prikazano {filteredEvents.length} od {events.length}{" "}
-                događaja.
+                Prikazano {filteredEvents.length} od {adventures.length}{" "}
+                avantura.
               </p>
             </div>
 
@@ -547,8 +776,8 @@ export default function Events() {
 
               <h3>
                 {events.length === 0
-                  ? "Još nema objavljenih događaja."
-                  : "Nema događaja za izabrane filtere."}
+                  ? "Još nema objavljenih avantura."
+                  : "Nema avantura za izabrane filtere."}
               </h3>
 
               <p>
@@ -572,13 +801,13 @@ export default function Events() {
           ) : (
             <>
               <div className="eventsGrid">
-                {paginatedEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
+                {paginatedEvents.map((item) => (
+                  <AdventureCard key={item.source_key} item={item} />
                 ))}
               </div>
 
               {pageCount > 1 && (
-                <nav className="eventsPagination" aria-label="Stranice događaja">
+                <nav className="eventsPagination" aria-label="Stranice avantura">
                   <button
                     type="button"
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
@@ -608,14 +837,14 @@ export default function Events() {
               <h2>Podeli svoje iskustvo sa zajednicom.</h2>
 
               <p>
-                Kreiraj događaj, pronađi učesnike i izgradi svoj
+                Kreiraj avanturu, pronađi učesnike i izgradi svoj
                 MeetOutdoors profil.
               </p>
             </div>
 
             <Link to="/create-event">
               <Icon name="plus" size={17} />
-              Kreiraj događaj
+              Kreiraj avanturu
             </Link>
           </section>
         </section>
@@ -763,27 +992,6 @@ function EventsStyles() {
         backdrop-filter: blur(13px);
       }
 
-      .packagesLink {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        min-height: 42px;
-        padding: 0 14px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 13px;
-        background: rgba(255, 255, 255, 0.09);
-        color: white !important;
-        font-size: 10px;
-        font-weight: 850;
-        backdrop-filter: blur(13px);
-        transition: 0.18s ease;
-      }
-
-      .packagesLink:hover {
-        gap: 12px;
-        background: rgba(255, 255, 255, 0.17);
-      }
-
       .eventsHeroContent {
         max-width: 850px;
         margin-top: auto;
@@ -870,9 +1078,8 @@ function EventsStyles() {
         z-index: 5;
         display: grid;
         grid-template-columns:
-          minmax(280px, 1.7fr)
-          minmax(180px, 0.7fr)
-          minmax(170px, 0.65fr)
+          minmax(320px, 1.55fr)
+          repeat(5, minmax(145px, 0.72fr))
           auto;
         gap: 10px;
         margin: -33px 28px 0;
@@ -1384,6 +1591,16 @@ function EventsStyles() {
         font-size: 11px;
       }
 
+      @media (max-width: 1240px) {
+        .filterPanel {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .searchField {
+          grid-column: 1 / -1;
+        }
+      }
+
       @media (max-width: 1030px) {
         .filterPanel {
           grid-template-columns: 1fr 1fr;
@@ -1441,13 +1658,6 @@ function EventsStyles() {
 
         .eventsBrand {
           font-size: 14px;
-        }
-
-        .packagesLink {
-          width: 42px;
-          padding: 0;
-          justify-content: center;
-          font-size: 0;
         }
 
         .eventsHeroContent h1 {
@@ -1920,6 +2130,258 @@ function EventsStyles() {
         }
 
         .eventImageWrapper { min-height: 148px; }
+      }
+
+
+      /* =========================================================
+         EVENTS / AVANTURE V3 — PREMIUM COMPACT DISCOVERY
+         Data, filters, pagination and event routes preserved.
+         ========================================================= */
+
+      .eventsPage{
+        padding-top:74px;
+        padding-bottom:46px;
+      }
+
+      .eventsHero,
+      .eventsContent{
+        width:min(1420px,calc(100% - 28px));
+      }
+
+      .eventsHero{
+        min-height:330px;
+        border-radius:26px;
+      }
+
+      .eventsHeroContent{
+        max-width:780px;
+        padding:30px;
+      }
+
+      .eventsHeroContent h1{
+        font-size:clamp(42px,5vw,68px);
+        line-height:.94;
+        letter-spacing:-.065em;
+      }
+
+      .eventsHeroContent p{
+        max-width:650px;
+        margin-top:12px;
+        font-size:11px;
+        line-height:1.55;
+      }
+
+      .heroStats{
+        right:20px;
+        bottom:18px;
+        left:20px;
+        gap:6px;
+      }
+
+      .heroStats > div{
+        min-height:56px;
+        padding:8px 10px;
+        border-radius:12px;
+      }
+
+      .heroStats strong{font-size:16px}
+      .heroStats span{font-size:6px}
+
+      .eventsContent{
+        padding-top:10px;
+      }
+
+      .filterPanel{
+        position:sticky;
+        top:72px;
+        z-index:25;
+        gap:6px;
+        padding:8px;
+        border-radius:14px;
+        backdrop-filter:blur(18px);
+      }
+
+      .searchField,
+      .filterField{
+        min-height:40px;
+        border-radius:10px;
+      }
+
+      .searchField input,
+      .filterField select{
+        font-size:9px;
+      }
+
+      .eventsSectionHeader{
+        margin-top:10px;
+        margin-bottom:8px;
+      }
+
+      .eventsSectionHeader h2{
+        font-size:clamp(20px,2.2vw,28px);
+      }
+
+      .eventsGrid{
+        gap:10px;
+      }
+
+      .eventCard{
+        border-radius:17px;
+        overflow:hidden;
+      }
+
+      .eventImageWrapper{
+        min-height:190px;
+      }
+
+      .eventCardBody{
+        padding:11px;
+      }
+
+      .eventCardBody h2{
+        font-size:17px;
+        line-height:1.08;
+      }
+
+      .eventMeta{
+        gap:5px 8px;
+        margin-top:8px;
+      }
+
+      .eventMeta span{
+        font-size:7.5px;
+      }
+
+      .eventDescription{
+        display:-webkit-box;
+        min-height:30px;
+        margin-top:8px;
+        overflow:hidden;
+        font-size:8px;
+        line-height:1.45;
+        -webkit-box-orient:vertical;
+        -webkit-line-clamp:2;
+      }
+
+      .eventCardFooter{
+        margin-top:8px;
+        padding-top:8px;
+      }
+
+      .eventCardFooter strong{
+        font-size:14px;
+      }
+
+      .eventArrow{
+        font-size:8px;
+      }
+
+      .pagination{
+        margin-top:14px;
+      }
+
+      @media(max-width:760px){
+        .eventsPage{
+          padding-top:62px;
+          padding-bottom:62px;
+        }
+
+        .eventsHero,
+        .eventsContent{
+          width:100%;
+        }
+
+        .eventsHero{
+          min-height:290px;
+          border-radius:0 0 22px 22px;
+        }
+
+        .eventsHeroContent{
+          padding:18px 14px 82px;
+        }
+
+        .eventsHeroContent h1{
+          font-size:36px;
+        }
+
+        .eventsHeroContent p{
+          max-width:92%;
+          font-size:9px;
+        }
+
+        .heroStats{
+          right:10px;
+          bottom:10px;
+          left:10px;
+          gap:4px;
+        }
+
+        .heroStats > div{
+          min-height:48px;
+          padding:6px;
+        }
+
+        .heroStats strong{font-size:12px}
+        .heroStats span{font-size:5px}
+
+        .eventsContent{
+          padding:6px;
+        }
+
+        .filterPanel{
+          top:60px;
+          display:flex;
+          gap:5px;
+          overflow-x:auto;
+          padding:6px;
+          scrollbar-width:none;
+        }
+
+        .filterPanel::-webkit-scrollbar{display:none}
+
+        .searchField{
+          flex:1 0 78vw;
+          min-width:240px;
+        }
+
+        .filterField{
+          flex:0 0 auto;
+          min-width:150px;
+        }
+
+        .eventsGrid{
+          display:flex;
+          gap:8px;
+          overflow-x:auto;
+          padding:2px 14px 7px 1px;
+          scroll-snap-type:x mandatory;
+          scrollbar-width:none;
+        }
+
+        .eventsGrid::-webkit-scrollbar{display:none}
+
+        .eventCard{
+          flex:0 0 82vw;
+          max-width:315px;
+          display:block;
+          min-height:auto;
+          scroll-snap-align:start;
+        }
+
+        .eventImageWrapper{
+          min-height:175px;
+          height:175px;
+        }
+
+        .eventCardBody{
+          padding:10px;
+        }
+      }
+
+      @media(max-width:420px){
+        .eventsHero{min-height:275px}
+        .eventsHeroContent h1{font-size:32px}
+        .eventCard{flex-basis:86vw}
       }
 
     `}</style>

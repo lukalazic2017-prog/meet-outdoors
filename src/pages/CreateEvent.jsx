@@ -299,7 +299,7 @@ function LoadingState() {
       <main className="createEventStatePage">
         <div className="createEventStateCard">
           <span className="createEventLoader" />
-          <h1>Pripremamo formu</h1>
+          <h1>Pripremamo avanturu</h1>
           <p>Učitavamo tvoj host profil i podešavanja.</p>
         </div>
       </main>
@@ -442,7 +442,7 @@ export default function CreateEvent() {
     }
 
     if (!isHost) {
-      setError("Samo domaćin može da kreira događaj.");
+      setError("Samo domaćin može da kreira avanturu.");
       return;
     }
 
@@ -452,12 +452,12 @@ export default function CreateEvent() {
     const cleanCountry = country.trim();
 
     if (!activities.length) {
-      setError("Izaberi najmanje jednu aktivnost događaja.");
+      setError("Izaberi najmanje jednu aktivnost avanture.");
       return;
     }
 
     if (!cleanTitle) {
-      setError("Naziv događaja je obavezan.");
+      setError("Naziv avanture je obavezan.");
       return;
     }
 
@@ -568,10 +568,10 @@ export default function CreateEvent() {
         throw submitError;
       }
     } catch (err) {
-      console.error("Greška pri kreiranju događaja:", err);
+      console.error("Greška pri kreiranju avanture:", err);
 
       setError(
-        err.message || "Greška pri kreiranju događaja."
+        err.message || "Greška pri kreiranju avanture."
       );
     } finally {
       setSaving(false);
@@ -614,7 +614,7 @@ export default function CreateEvent() {
 
               <span className="previewBadge">
                 <Icon name="calendar" size={15} />
-                Novi događaj
+                Nova avantura
               </span>
 
               <div className="previewImageBottom">
@@ -634,10 +634,10 @@ export default function CreateEvent() {
 
             <div className="eventPreviewBody">
               <span className="previewKicker">
-                Pregled događaja
+                Pregled avanture
               </span>
 
-              <h2>{title.trim() || "Naziv tvog događaja"}</h2>
+              <h2>{title.trim() || "Naziv tvoje avanture"}</h2>
 
               <div className="previewLocation">
                 <Icon name="mapPin" size={15} />
@@ -646,7 +646,7 @@ export default function CreateEvent() {
 
               <p className="previewDescription">
                 {description.trim() ||
-                  "Opis događaja će se prikazati ovde. Dodaj informacije o planu, mestu okupljanja i opremi koju učesnici treba da ponesu."}
+                  "Opis avanture će se prikazati ovde. Dodaj informacije o planu, mestu okupljanja, trajanju i opremi koju učesnici treba da ponesu."}
               </p>
 
               <div className="previewDetails">
@@ -718,7 +718,7 @@ export default function CreateEvent() {
                 <Icon name="info" size={17} />
 
                 <p>
-                  Ovo je približan pregled kartice događaja.
+                  Ovo je približan pregled kartice avanture.
                   Objavljena stranica može sadržati dodatne
                   informacije.
                 </p>
@@ -749,12 +749,12 @@ export default function CreateEvent() {
                   Host alat
                 </span>
 
-                <h1>Kreiraj događaj.</h1>
+                <h1>Kreiraj avanturu.</h1>
 
                 <p>
-                  Objavi lokalnu outdoor avanturu koju ljudi
-                  mogu da pronađu, prate i kojoj mogu da se
-                  pridruže.
+                  Jedna forma za ture, avanturae i višednevna iskustva.
+                  Dodaj detalje, termin i sadržaj — korisnik sve vidi kao
+                  jednu MeetOutdoors avanturu.
                 </p>
               </div>
 
@@ -777,9 +777,9 @@ export default function CreateEvent() {
             )}
 
             <section className="eventCompletion">
-              <div className="eventCompletionTop"><span>Spremnost događaja</span><strong>{completion}%</strong></div>
+              <div className="eventCompletionTop"><span>Spremnost avanture</span><strong>{completion}%</strong></div>
               <div className="eventCompletionTrack"><span style={{ width: `${completion}%` }} /></div>
-              <p>{completion >= 75 ? "Događaj je skoro spreman — proveri detalje i objavi." : "Dodaj lokaciju, vreme i vizuelni identitet da korisnik odmah razume ponudu."}</p>
+              <p>{completion >= 75 ? "Avantura je skoro spremna — proveri detalje i objavi." : "Dodaj lokaciju, vreme i vizuelni identitet da korisnik odmah razume ponudu."}</p>
             </section>
 
             <form
@@ -794,10 +794,9 @@ export default function CreateEvent() {
 
                   <div>
                     <small>Osnovne informacije</small>
-                    <h2>Predstavi događaj</h2>
+                    <h2>Predstavi avanturu</h2>
                     <p>
-                      Naziv i opis treba jasno da objasne šta
-                      učesnici mogu da očekuju.
+                      Naziv i opis treba jasno da objasne šta učesnici mogu da očekuju od avanture.
                     </p>
                   </div>
                 </div>
@@ -825,7 +824,7 @@ export default function CreateEvent() {
                 </div>
 
                 <FormField
-                  label="Naziv događaja"
+                  label="Naziv avanture"
                   icon="mountain"
                   value={title}
                   onChange={(event) => {
@@ -839,7 +838,7 @@ export default function CreateEvent() {
 
                 <label className="createEventField eventDescriptionField">
                   <span className="createEventLabel">
-                    Opis događaja
+                    Opis avanture
                   </span>
 
                   <span className="createEventTextareaWrapper">
@@ -854,7 +853,7 @@ export default function CreateEvent() {
                       onChange={(event) =>
                         setDescription(event.target.value)
                       }
-                      placeholder="Opiši događaj, mesto okupljanja, plan, pravila i opremu koju učesnici treba da ponesu..."
+                      placeholder="Opiši avanturu, tok iskustva, mesto okupljanja, pravila i opremu koju učesnici treba da ponesu..."
                     />
                   </span>
 
@@ -942,7 +941,7 @@ export default function CreateEvent() {
                     <h2>Gde se avantura održava?</h2>
                     <p>
                       Dodaj mesto okupljanja ili naziv područja
-                      u kome se događaj održava.
+                      u kome se avantura održava.
                     </p>
                   </div>
                 </div>
@@ -977,18 +976,33 @@ export default function CreateEvent() {
                   </span>
 
                   <div>
-                    <small>Vreme održavanja · opciono</small>
-                    <h2>Datum i trajanje</h2>
+                    <small>Termin i trajanje · opciono</small>
+                    <h2>Termin avanture</h2>
                     <p>
-                      Ako termin još nije poznat, ostavi prazno.
-                      Na događaju će pisati „Termin po dogovoru“.
+                      Ako termin još nije poznat, ostavi oba polja prazna — pisaće „Termin po dogovoru“. Za višednevnu avanturu unesi početak i završetak.
                     </p>
                   </div>
                 </div>
 
+                <div
+                  style={{
+                    marginBottom: 14,
+                    padding: "12px 14px",
+                    borderRadius: 14,
+                    background: "rgba(45, 91, 61, 0.07)",
+                    border: "1px solid rgba(45, 91, 61, 0.12)",
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    color: "#496057",
+                  }}
+                >
+                  <strong style={{ color: "#20382c" }}>Kako radi termin:</strong>{" "}
+                  jedan datum = jednodnevna avantura · početak + završetak = višednevna avantura · bez datuma = termin po dogovoru.
+                </div>
+
                 <div className="eventFieldsGrid">
                   <FormField
-                    label="Početak događaja"
+                    label="Početak avanture"
                     icon="calendar"
                     type="datetime-local"
                     value={startDate}
@@ -998,7 +1012,7 @@ export default function CreateEvent() {
                   />
 
                   <FormField
-                    label="Završetak događaja"
+                    label="Završetak avanture"
                     icon="clock"
                     type="datetime-local"
                     value={endDate}
@@ -1020,7 +1034,7 @@ export default function CreateEvent() {
                     <small>Učešće</small>
                     <h2>Cena i kapacitet</h2>
                     <p>
-                      Besplatan događaj može imati cenu 0.
+                      Besplatna avantura može imati cenu 0.
                       Kapacitet određuje maksimalan broj učesnika.
                     </p>
                   </div>
@@ -1063,7 +1077,7 @@ export default function CreateEvent() {
                   </span>
 
                   <div>
-                    <small>Galerija događaja · opciono</small>
+                    <small>Galerija avanture · opciono</small>
                     <h2>Dodaj do 8 fotografija</h2>
                     <p>
                       Na telefonu možeš izabrati više fotografija direktno iz galerije.
@@ -1171,11 +1185,11 @@ export default function CreateEvent() {
                   {saving ? (
                     <>
                       <span className="publishLoader" />
-                      Kreiranje događaja...
+                      Kreiranje avanture...
                     </>
                   ) : (
                     <>
-                      Objavi događaj
+                      Objavi avanturu
                       <Icon name="arrowRight" size={17} />
                     </>
                   )}
@@ -1186,7 +1200,7 @@ export default function CreateEvent() {
                 <Icon name="shield" size={17} />
 
                 <p>
-                  Događaj će odmah biti vidljiv korisnicima
+                  Avantura će odmah biti vidljiva korisnicima
                   nakon uspešnog objavljivanja.
                 </p>
               </div>
