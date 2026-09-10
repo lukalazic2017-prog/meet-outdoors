@@ -482,7 +482,7 @@ function useHomeLiveData(profile) {
               is_active
             `)
             .eq("is_active", true)
-            .gte("start_date", now)
+            .or(`start_date.gte.${now},start_date.is.null`)
             .order("created_at", { ascending: false })
             .limit(6),
 
@@ -908,48 +908,49 @@ function EventCards({ events = [] }) {
             .filter(Boolean)
             .join(", ") || "Lokacija nije navedena";
 
+        const hasFixedDate = Boolean(event.start_date);
+
         return (
           <Link
             key={event.id}
             to={`/event/${event.id}`}
-            className="eventCard"
+            className="eventCard eventCardClean"
           >
-            <img
-              src={event.cover_url || HOME_FALLBACK_COVER}
-              alt={event.title || "Outdoor događaj"}
-            />
+            <div className="eventCardCleanMedia">
+              <img
+                src={event.cover_url || HOME_FALLBACK_COVER}
+                alt={event.title || "Outdoor događaj"}
+              />
 
-            <div className="eventOverlay" />
-
-            <div className="eventTop">
-              <span>Novi događaj</span>
-              <span>{formatHomeDate(event.start_date)}</span>
+              <span className="eventCardCleanDate">
+                <Icon name="calendar" size={13} />
+                {hasFixedDate ? formatHomeDate(event.start_date) : "Termin po dogovoru"}
+              </span>
             </div>
 
-            <div className="eventBody">
-              <div className="eventLocation">
-                <Icon name="mapPin" size={15} />
-                {eventLocation}
+            <div className="eventCardCleanBody">
+              <div className="eventCardCleanLocation">
+                <Icon name="mapPin" size={14} />
+                <span>{eventLocation}</span>
               </div>
 
               <h3>{event.title || "Outdoor događaj"}</h3>
 
-              <div className="eventMetaLine">
-                <span>
-                  <Icon name="users" size={14} />
-                  {event.capacity || "—"} mesta
-                </span>
-                <span>{formatHomePrice(event.price)}</span>
-              </div>
-
-              <div className="eventFooter">
-                <div>
-                  <small>Početak</small>
-                  <strong>{formatHomeDate(event.start_date)}</strong>
+              <div className="eventCardCleanBottom">
+                <div className="eventCardCleanInfo">
+                  <span>
+                    <Icon name="users" size={14} />
+                    {event.capacity ? `${event.capacity} mesta` : "Broj mesta po dogovoru"}
+                  </span>
                 </div>
 
-                <span>
-                  <Icon name="arrowRight" />
+                <div className="eventCardCleanPrice">
+                  <small>Cena</small>
+                  <strong>{formatHomePrice(event.price)}</strong>
+                </div>
+
+                <span className="eventCardCleanArrow">
+                  <Icon name="arrowRight" size={17} />
                 </span>
               </div>
             </div>
@@ -959,6 +960,7 @@ function EventCards({ events = [] }) {
     </div>
   );
 }
+
 
 function HomeDiscoveryShowcase({ discovery }) {
   const hosts = discovery?.hosts || [];
@@ -1858,6 +1860,113 @@ function HostHome({ profile, notifications, onRead, hostOwnStats }) {
   );
 }
 
+
+function HomeContactForm() {
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+
+  function handleContactSubmit(event) {
+    event.preventDefault();
+
+    const subject = encodeURIComponent(
+      `MeetOutdoors kontakt${contactName.trim() ? ` — ${contactName.trim()}` : ""}`
+    );
+
+    const body = encodeURIComponent(
+      [
+        contactName.trim() ? `Ime: ${contactName.trim()}` : "",
+        contactEmail.trim() ? `Email: ${contactEmail.trim()}` : "",
+        "",
+        contactMessage.trim(),
+      ]
+        .filter((line, index, lines) => line || (index > 0 && index < lines.length - 1))
+        .join("\n")
+    );
+
+    window.location.href = `mailto:infomeetoutdoors@gmail.com?subject=${subject}&body=${body}`;
+  }
+
+  return (
+    <section className="homeContactSection">
+      <div className="pageContainer homeContactShell">
+        <div className="homeContactIntro">
+          <span className="dashboardKicker">
+            <span />
+            Kontakt
+          </span>
+
+          <h2>Tu smo ako ti zatreba pomoć.</h2>
+
+          <p>
+            Imaš pitanje o avanturi, smeštaju, host profilu ili samoj platformi?
+            Pošalji nam poruku.
+          </p>
+
+          <div className="homeContactDirect">
+            <a href="mailto:infomeetoutdoors@gmail.com">
+              <strong>infomeetoutdoors@gmail.com</strong>
+              <span>Email</span>
+            </a>
+
+            <a
+              href="https://www.instagram.com/meetoutdoors/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <strong>@meetoutdoors</strong>
+              <span>Instagram</span>
+            </a>
+          </div>
+        </div>
+
+        <form className="homeContactForm" onSubmit={handleContactSubmit}>
+          <div className="homeContactFields">
+            <label>
+              <span>Ime</span>
+              <input
+                type="text"
+                value={contactName}
+                onChange={(event) => setContactName(event.target.value)}
+                placeholder="Tvoje ime"
+                autoComplete="name"
+              />
+            </label>
+
+            <label>
+              <span>Email</span>
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(event) => setContactEmail(event.target.value)}
+                placeholder="tvoj@email.com"
+                autoComplete="email"
+                required
+              />
+            </label>
+          </div>
+
+          <label className="homeContactMessage">
+            <span>Poruka</span>
+            <textarea
+              value={contactMessage}
+              onChange={(event) => setContactMessage(event.target.value)}
+              placeholder="Kako možemo da pomognemo?"
+              rows={5}
+              required
+            />
+          </label>
+
+          <button type="submit">
+            Pošalji poruku
+            <Icon name="arrowRight" size={17} />
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
 function HomeLegalFooter() {
   return (
     <footer className="homeLegalFooter">
@@ -1935,6 +2044,7 @@ export default function Home() {
           hostOwnStats={hostOwnStats}
         />
       )}
+      <HomeContactForm />
       <HomeLegalFooter />
     </>
   );
@@ -5404,6 +5514,415 @@ function HomeStyles() {
         .homePlaceGrid,
         .homeHostGrid {
           grid-auto-columns: 78%;
+        }
+      }
+
+
+      /* HOME CONTACT — dodatak bez menjanja postojećeg Home dizajna */
+      .homeContactSection {
+        padding: 18px 0 72px;
+        background: #f4f5ef;
+      }
+
+      .homeContactShell {
+        display: grid;
+        grid-template-columns: minmax(0, .85fr) minmax(420px, 1.15fr);
+        gap: 26px;
+        align-items: stretch;
+        padding: 30px;
+        border: 1px solid #dce3da;
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 0% 0%, rgba(201,242,140,.14), transparent 34%),
+          #ffffff;
+        box-shadow: 0 22px 60px rgba(27,45,34,.08);
+      }
+
+      .homeContactIntro {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 8px 10px 8px 4px;
+      }
+
+      .homeContactIntro h2 {
+        max-width: 560px;
+        margin: 13px 0 0;
+        color: #14251d;
+        font-size: clamp(34px, 4.2vw, 52px);
+        line-height: .98;
+        letter-spacing: -.055em;
+      }
+
+      .homeContactIntro > p {
+        max-width: 520px;
+        margin: 15px 0 0;
+        color: #758178;
+        font-size: 12px;
+        line-height: 1.65;
+      }
+
+      .homeContactDirect {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-top: 24px;
+      }
+
+      .homeContactDirect a {
+        min-width: 180px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 13px 14px;
+        border: 1px solid #dce3da;
+        border-radius: 15px;
+        background: #f8faf6;
+      }
+
+      .homeContactDirect strong {
+        color: #294233;
+        font-size: 10px;
+      }
+
+      .homeContactDirect span {
+        color: #8a948d;
+        font-size: 8px;
+      }
+
+      .homeContactForm {
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+        padding: 18px;
+        border-radius: 22px;
+        background: #182f22;
+        color: white;
+      }
+
+      .homeContactFields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .homeContactForm label {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .homeContactForm label > span {
+        color: rgba(255,255,255,.68);
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      .homeContactForm input,
+      .homeContactForm textarea {
+        width: 100%;
+        border: 1px solid rgba(255,255,255,.12);
+        outline: none;
+        border-radius: 14px;
+        background: rgba(255,255,255,.08);
+        color: white;
+        transition: .18s ease;
+      }
+
+      .homeContactForm input {
+        min-height: 50px;
+        padding: 0 13px;
+      }
+
+      .homeContactForm textarea {
+        min-height: 130px;
+        padding: 13px;
+        resize: vertical;
+      }
+
+      .homeContactForm input::placeholder,
+      .homeContactForm textarea::placeholder {
+        color: rgba(255,255,255,.38);
+      }
+
+      .homeContactForm input:focus,
+      .homeContactForm textarea:focus {
+        border-color: rgba(201,242,140,.55);
+        box-shadow: 0 0 0 4px rgba(201,242,140,.08);
+      }
+
+      .homeContactForm button {
+        min-height: 50px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 14px;
+        background: #c9f28c;
+        color: #173021;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      @media (max-width: 820px) {
+        .homeContactShell {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .homeContactSection {
+          padding: 8px 0 54px;
+        }
+
+        .homeContactShell {
+          width: calc(100% - 24px);
+          gap: 18px;
+          padding: 18px;
+          border-radius: 22px;
+        }
+
+        .homeContactIntro {
+          padding: 2px;
+        }
+
+        .homeContactIntro h2 {
+          font-size: 31px;
+        }
+
+        .homeContactDirect {
+          flex-direction: column;
+          margin-top: 18px;
+        }
+
+        .homeContactDirect a {
+          width: 100%;
+        }
+
+        .homeContactForm {
+          padding: 14px;
+          border-radius: 18px;
+        }
+
+        .homeContactFields {
+          grid-template-columns: 1fr;
+        }
+      }
+
+
+      /* =====================================================
+         EVENT CARD CLEAN V2
+         Fotografija gore, informacije na čistoj površini dole.
+      ===================================================== */
+
+      .eventCard.eventCardClean {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+        border: 1px solid #dde3dd;
+        border-radius: 22px;
+        background: #ffffff;
+        color: #17251d;
+        box-shadow: 0 10px 28px rgba(25, 46, 34, .08);
+        transition:
+          transform .2s ease,
+          box-shadow .2s ease,
+          border-color .2s ease;
+      }
+
+      .eventCard.eventCardClean:hover {
+        transform: translateY(-3px);
+        border-color: #cbd6cc;
+        box-shadow: 0 18px 38px rgba(25, 46, 34, .13);
+      }
+
+      .eventCardCleanMedia {
+        position: relative;
+        height: 210px;
+        flex: 0 0 210px;
+        overflow: hidden;
+        background: #e7ebe6;
+      }
+
+      .eventCardCleanMedia img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        transition: transform .35s ease;
+      }
+
+      .eventCardClean:hover .eventCardCleanMedia img {
+        transform: scale(1.025);
+      }
+
+      .eventCardCleanDate {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: calc(100% - 24px);
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid rgba(255,255,255,.62);
+        border-radius: 10px;
+        background: rgba(255,255,255,.94);
+        color: #1c3326;
+        box-shadow: 0 5px 16px rgba(0,0,0,.10);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        font-size: 9px;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
+      .eventCardCleanBody {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        padding: 16px 16px 15px;
+        background: #ffffff;
+      }
+
+      .eventCardCleanLocation {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        color: #758078;
+        font-size: 9px;
+        font-weight: 700;
+      }
+
+      .eventCardCleanLocation svg {
+        flex: 0 0 auto;
+        color: #66815f;
+      }
+
+      .eventCardCleanLocation span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .eventCardCleanBody h3 {
+        display: -webkit-box;
+        overflow: hidden;
+        margin: 8px 0 15px;
+        color: #17251d;
+        font-size: 20px;
+        font-weight: 900;
+        line-height: 1.08;
+        letter-spacing: -.035em;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .eventCardCleanBottom {
+        display: grid;
+        grid-template-columns: minmax(0,1fr) auto auto;
+        align-items: center;
+        gap: 11px;
+        margin-top: auto;
+        padding-top: 13px;
+        border-top: 1px solid #edf0ed;
+      }
+
+      .eventCardCleanInfo {
+        min-width: 0;
+      }
+
+      .eventCardCleanInfo > span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        overflow: hidden;
+        color: #727d75;
+        font-size: 9px;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .eventCardCleanInfo svg {
+        flex: 0 0 auto;
+        color: #738b6c;
+      }
+
+      .eventCardCleanPrice {
+        text-align: right;
+      }
+
+      .eventCardCleanPrice small,
+      .eventCardCleanPrice strong {
+        display: block;
+      }
+
+      .eventCardCleanPrice small {
+        margin-bottom: 2px;
+        color: #98a099;
+        font-size: 7px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+      }
+
+      .eventCardCleanPrice strong {
+        color: #17251d;
+        font-size: 13px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .eventCardCleanArrow {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border-radius: 11px;
+        background: #183d2a;
+        color: #ffffff;
+        transition: transform .18s ease, background .18s ease;
+      }
+
+      .eventCardClean:hover .eventCardCleanArrow {
+        transform: translateX(2px);
+        background: #235438;
+      }
+
+      @media (max-width: 620px) {
+        .eventCard.eventCardClean {
+          border-radius: 19px;
+          box-shadow: 0 8px 22px rgba(25,46,34,.08);
+        }
+
+        .eventCardCleanMedia {
+          height: 190px;
+          flex-basis: 190px;
+        }
+
+        .eventCardCleanBody {
+          padding: 14px;
+        }
+
+        .eventCardCleanBody h3 {
+          margin: 7px 0 13px;
+          font-size: 18px;
+        }
+
+        .eventCardCleanBottom {
+          gap: 8px;
+          padding-top: 11px;
+        }
+
+        .eventCardCleanArrow {
+          width: 32px;
+          height: 32px;
         }
       }
 
