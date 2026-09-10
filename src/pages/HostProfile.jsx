@@ -885,6 +885,13 @@ function AccommodationCard({
           {item.type || "Smeštaj"}
         </span>
 
+        {Array.isArray(item.gallery_urls) && item.gallery_urls.length > 0 && (
+          <span className="stayPhotoCountBadge">
+            <Icon name="camera" size={12} />
+            {Math.min(item.gallery_urls.length + (item.cover_url ? 1 : 0), 8)} fotografija
+          </span>
+        )}
+
         {isOwner && (
           <div className="offerOwnerActions">
             <button type="button" onClick={() => onEdit?.(item)} aria-label="Izmeni smeštaj">
@@ -945,8 +952,11 @@ function AccommodationModal({
   mode,
   form,
   setForm,
-  imagePreview,
-  onImageChange,
+  photoItems,
+  coverIndex,
+  onPhotoChange,
+  onRemovePhoto,
+  onSetCover,
   onClose,
   onSubmit,
   saving,
@@ -1081,24 +1091,73 @@ function AccommodationModal({
             </span>
           </label>
 
-          <label className="offerImagePicker">
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={onImageChange}
-            />
-            <div className="offerImagePreview">
-              {imagePreview ? (
-                <img src={imagePreview} alt="Pregled smeštaja" />
-              ) : (
-                <span><Icon name="camera" size={24} /></span>
-              )}
+          <div className="stayGalleryEditor">
+            <div className="stayGalleryEditorHead">
               <div>
-                <strong>{imagePreview ? "Promeni fotografiju" : "Dodaj fotografiju"}</strong>
-                <small>JPG, PNG ili WEBP · do 8 MB</small>
+                <span>Fotografije smeštaja</span>
+                <strong>Dodaj do 8 fotografija</strong>
+                <small>Izaberi naslovnu fotografiju koja će se prikazivati na kartici smeštaja.</small>
               </div>
+              <span className="stayGalleryCount">{photoItems.length} / 8</span>
             </div>
-          </label>
+
+            <label className={photoItems.length ? "offerImagePicker stayMultiPicker selected" : "offerImagePicker stayMultiPicker"}>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={onPhotoChange}
+              />
+              <div className="offerImagePreview stayMultiUpload">
+                <span><Icon name={photoItems.length ? "plus" : "camera"} size={24} /></span>
+                <div>
+                  <strong>{photoItems.length ? "Dodaj još fotografija" : "Dodaj fotografije"}</strong>
+                  <small>JPG, PNG ili WEBP · do 8 MB po fotografiji · maksimalno 8</small>
+                </div>
+              </div>
+            </label>
+
+            {photoItems.length > 0 && (
+              <div className="stayPhotoGrid">
+                {photoItems.map((photo, index) => (
+                  <article
+                    key={photo.id}
+                    className={coverIndex === index ? "stayPhotoItem cover" : "stayPhotoItem"}
+                  >
+                    <img src={photo.url} alt={`Fotografija smeštaja ${index + 1}`} />
+
+                    {coverIndex === index && (
+                      <span className="stayPhotoCoverBadge">
+                        <Icon name="check" size={12} />
+                        Naslovna
+                      </span>
+                    )}
+
+                    <div className="stayPhotoActions">
+                      {coverIndex !== index && (
+                        <button
+                          type="button"
+                          className="setCover"
+                          onClick={() => onSetCover(index)}
+                        >
+                          Postavi naslovnu
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="removePhoto"
+                        onClick={() => onRemovePhoto(index)}
+                        aria-label={`Ukloni fotografiju ${index + 1}`}
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
 
           {error && <div className="offerFormError">{error}</div>}
 
@@ -1319,8 +1378,8 @@ export default function HostProfile() {
   const [stayModalMode, setStayModalMode] = useState("create");
   const [editingStay, setEditingStay] = useState(null);
   const [stayForm, setStayForm] = useState(emptyStayForm);
-  const [stayImageFile, setStayImageFile] = useState(null);
-  const [stayImagePreview, setStayImagePreview] = useState("");
+  const [stayPhotoItems, setStayPhotoItems] = useState([]);
+  const [stayCoverIndex, setStayCoverIndex] = useState(0);
   const [staySaving, setStaySaving] = useState(false);
   const [stayError, setStayError] = useState("");
 
@@ -2076,11 +2135,22 @@ export default function HostProfile() {
   };
 
 
+  const revokeStayBlobUrls = (items = []) => {
+    items.forEach((item) => {
+      if (item?.url?.startsWith("blob:")) {
+        URL.revokeObjectURL(item.url);
+      }
+    });
+  };
+
   const resetStayEditor = () => {
     setStayForm(emptyStayForm);
     setEditingStay(null);
-    setStayImageFile(null);
-    setStayImagePreview("");
+    setStayPhotoItems((current) => {
+      revokeStayBlobUrls(current);
+      return [];
+    });
+    setStayCoverIndex(0);
     setStayError("");
     setStayModalMode("create");
   };
@@ -2105,8 +2175,24 @@ export default function HostProfile() {
           : "",
       price_on_request: Boolean(item.price_on_request),
     });
-    setStayImageFile(null);
-    setStayImagePreview(item.cover_url || "");
+
+    const existingUrls = [
+      item.cover_url,
+      ...(Array.isArray(item.gallery_urls) ? item.gallery_urls : []),
+    ].filter(Boolean);
+
+    const uniqueUrls = [...new Set(existingUrls)].slice(0, 8);
+
+    setStayPhotoItems((current) => {
+      revokeStayBlobUrls(current);
+      return uniqueUrls.map((url, index) => ({
+        id: `existing-${item.id}-${index}-${url}`,
+        url,
+        file: null,
+        existing: true,
+      }));
+    });
+    setStayCoverIndex(0);
     setStayError("");
     setStayModalOpen(true);
   };
@@ -2117,37 +2203,80 @@ export default function HostProfile() {
     resetStayEditor();
   };
 
-  const handleStayImageChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleStayPhotosChange = (event) => {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = "";
 
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setStayError("Fotografija mora biti JPG, PNG ili WEBP.");
+    if (!selected.length) return;
+
+    const invalid = selected.find(
+      (file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type)
+    );
+
+    if (invalid) {
+      setStayError("Fotografije moraju biti JPG, PNG ili WEBP.");
       return;
     }
 
-    if (file.size > 8 * 1024 * 1024) {
-      setStayError("Fotografija može imati najviše 8 MB.");
+    const tooLarge = selected.find((file) => file.size > 8 * 1024 * 1024);
+
+    if (tooLarge) {
+      setStayError("Svaka fotografija može imati najviše 8 MB.");
       return;
     }
 
-    setStayError("");
-    setStayImageFile(file);
-    const previewUrl = URL.createObjectURL(file);
-    setStayImagePreview((current) => {
-      if (current?.startsWith("blob:")) URL.revokeObjectURL(current);
-      return previewUrl;
+    setStayPhotoItems((current) => {
+      const remaining = Math.max(8 - current.length, 0);
+
+      if (remaining === 0) {
+        setStayError("Možeš dodati najviše 8 fotografija.");
+        return current;
+      }
+
+      const accepted = selected.slice(0, remaining);
+      const created = accepted.map((file, index) => ({
+        id: `new-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+        url: URL.createObjectURL(file),
+        file,
+        existing: false,
+      }));
+
+      if (selected.length > remaining) {
+        setStayError(`Dodato je prvih ${remaining} fotografija. Maksimum je 8.`);
+      } else {
+        setStayError("");
+      }
+
+      return [...current, ...created];
     });
   };
 
-  const uploadStayCover = async (file, hostId) => {
+  const removeStayPhoto = (index) => {
+    setStayPhotoItems((current) => {
+      const target = current[index];
+      if (target?.url?.startsWith("blob:")) {
+        URL.revokeObjectURL(target.url);
+      }
+      return current.filter((_, itemIndex) => itemIndex !== index);
+    });
+
+    setStayCoverIndex((currentCover) => {
+      if (index < currentCover) return Math.max(currentCover - 1, 0);
+      if (index === currentCover) return 0;
+      return currentCover;
+    });
+
+    if (stayError) setStayError("");
+  };
+
+  const uploadStayPhoto = async (file, hostId, index = 0) => {
     if (!file) return null;
 
     const extension =
       file.name.split(".").pop()?.toLowerCase() ||
       (file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg");
 
-    const path = `${hostId}/stay-${Date.now()}-${Math.random()
+    const path = `${hostId}/stay-${Date.now()}-${index}-${Math.random()
       .toString(36)
       .slice(2, 8)}.${extension}`;
 
@@ -2165,7 +2294,11 @@ export default function HostProfile() {
       .from("host-accommodations")
       .getPublicUrl(path);
 
-    return { url: data?.publicUrl || "", path };
+    if (!data?.publicUrl) {
+      throw new Error("Nije moguće dobiti URL fotografije smeštaja.");
+    }
+
+    return { url: data.publicUrl, path };
   };
 
   const submitStay = async (event) => {
@@ -2188,12 +2321,37 @@ export default function HostProfile() {
 
     setStaySaving(true);
     setStayError("");
-    let uploaded = null;
+    const uploadedPaths = [];
 
     try {
-      if (stayImageFile) {
-        uploaded = await uploadStayCover(stayImageFile, profile.id);
+      const resolvedPhotos = [];
+
+      for (let index = 0; index < stayPhotoItems.length; index += 1) {
+        const photo = stayPhotoItems[index];
+
+        if (photo.existing && !photo.file) {
+          resolvedPhotos.push(photo.url);
+          continue;
+        }
+
+        if (photo.file) {
+          const uploaded = await uploadStayPhoto(photo.file, profile.id, index);
+          uploadedPaths.push(uploaded.path);
+          resolvedPhotos.push(uploaded.url);
+        }
       }
+
+      const safeCoverIndex =
+        resolvedPhotos.length > 0
+          ? Math.min(stayCoverIndex, resolvedPhotos.length - 1)
+          : 0;
+
+      const coverUrl =
+        resolvedPhotos.length > 0 ? resolvedPhotos[safeCoverIndex] : null;
+
+      const galleryUrls = resolvedPhotos
+        .filter((_, index) => index !== safeCoverIndex)
+        .slice(0, 7);
 
       const payload = {
         host_id: profile.id,
@@ -2208,7 +2366,8 @@ export default function HostProfile() {
             ? Number(stayForm.price_per_night)
             : null,
         price_on_request: Boolean(stayForm.price_on_request),
-        cover_url: uploaded?.url || editingStay?.cover_url || null,
+        cover_url: coverUrl,
+        gallery_urls: galleryUrls,
         updated_at: new Date().toISOString(),
       };
 
@@ -2242,10 +2401,10 @@ export default function HostProfile() {
     } catch (error) {
       console.error("Host accommodation save:", error);
 
-      if (uploaded?.path) {
+      if (uploadedPaths.length) {
         await supabase.storage
           .from("host-accommodations")
-          .remove([uploaded.path])
+          .remove(uploadedPaths)
           .catch(() => {});
       }
 
@@ -3942,8 +4101,11 @@ export default function HostProfile() {
           mode={stayModalMode}
           form={stayForm}
           setForm={setStayForm}
-          imagePreview={stayImagePreview}
-          onImageChange={handleStayImageChange}
+          photoItems={stayPhotoItems}
+          coverIndex={stayCoverIndex}
+          onPhotoChange={handleStayPhotosChange}
+          onRemovePhoto={removeStayPhoto}
+          onSetCover={setStayCoverIndex}
           onClose={closeStayModal}
           onSubmit={submitStay}
           saving={staySaving}
@@ -4114,6 +4276,31 @@ function HostProfileStyles() {
       .offerImagePreview>div{display:grid;gap:4px}
       .offerImagePreview strong{font-size:10px}
       .offerImagePreview small{color:#87938b;font-size:8px}
+      .stayGalleryEditor{display:grid;gap:12px;padding:15px;border:1px solid #dce4d9;border-radius:18px;background:#f8faf6}
+      .stayGalleryEditorHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+      .stayGalleryEditorHead>div{display:grid;gap:3px}
+      .stayGalleryEditorHead>div>span{color:#78905f;font-size:8px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+      .stayGalleryEditorHead>div>strong{color:#263d30;font-size:14px;letter-spacing:-.025em}
+      .stayGalleryEditorHead>div>small{max-width:520px;color:#87938b;font-size:8px;line-height:1.5}
+      .stayGalleryCount{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:28px;padding:0 9px;border:1px solid #d5dfd1;border-radius:999px;background:#fff;color:#5d735f;font-size:8px;font-weight:900}
+      .stayMultiPicker{display:block}
+      .stayMultiUpload{min-height:82px}
+      .stayMultiPicker.selected .offerImagePreview{border-color:#a9bea2;background:#eef4ea}
+      .stayPhotoGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+      .stayPhotoItem{position:relative;min-width:0;aspect-ratio:1.35/1;overflow:hidden;border:1px solid #d9e1d6;border-radius:14px;background:#e9eee7}
+      .stayPhotoItem.cover{border-color:#789b69;box-shadow:0 0 0 3px rgba(120,155,105,.10)}
+      .stayPhotoItem>img{width:100%;height:100%;display:block;object-fit:cover}
+      .stayPhotoItem::after{content:"";position:absolute;inset:45% 0 0;background:linear-gradient(180deg,transparent,rgba(7,24,14,.78));pointer-events:none}
+      .stayPhotoCoverBadge{position:absolute;top:8px;left:8px;z-index:2;display:inline-flex;align-items:center;gap:4px;min-height:25px;padding:0 8px;border-radius:999px;background:rgba(239,255,231,.95);color:#31533a;font-size:7px;font-weight:900;box-shadow:0 5px 15px rgba(0,0,0,.12)}
+      .stayPhotoActions{position:absolute;right:7px;bottom:7px;left:7px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:6px}
+      .stayPhotoActions button{min-height:29px;border:0;border-radius:9px;cursor:pointer;font-size:7px;font-weight:900}
+      .stayPhotoActions .setCover{padding:0 9px;background:rgba(255,255,255,.94);color:#294334}
+      .stayPhotoActions .removePhoto{display:grid;place-items:center;width:31px;flex:0 0 31px;background:rgba(89,25,25,.86);color:#fff}
+      .stayPhotoCountBadge{position:absolute;right:12px;bottom:12px;z-index:3;display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 8px;border:1px solid rgba(255,255,255,.23);border-radius:999px;background:rgba(7,20,12,.58);color:#fff;font-size:7px;font-weight:900;backdrop-filter:blur(9px)}
+      @media(max-width:680px){
+        .stayPhotoGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .stayGalleryEditor{padding:12px}
+      }
       .offerFormError{padding:10px 12px;border:1px solid #efd1cc;border-radius:12px;background:#fff1ee;color:#9b3d32;font-size:9px;font-weight:800}
       .offerModalActions{display:flex;justify-content:flex-end;gap:9px;padding-top:3px}
       .offerModalActions button{min-height:42px;padding:0 15px;border-radius:12px;font-size:8px;font-weight:900;cursor:pointer}
