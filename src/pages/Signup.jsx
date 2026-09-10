@@ -324,7 +324,6 @@ export default function Signup() {
 
   const [avatarFile, setAvatarFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
-  const [videoFile, setVideoFile] = useState(null);
 
   function updateField(name, value) {
     setForm((prev) => ({
@@ -513,16 +512,6 @@ export default function Signup() {
       folder: "cover",
     });
 
-    const uploadedVideoUrl =
-      role === "host"
-        ? await uploadProfileFile({
-            bucket: "profile-videos",
-            userId,
-            file: videoFile,
-            folder: "video",
-          })
-        : null;
-
     const { error: profileError } = await supabase
       .from("profiles")
       .update({
@@ -546,8 +535,7 @@ export default function Signup() {
             : "",
         promo_video_url:
           role === "host"
-            ? uploadedVideoUrl ||
-              form.promo_video_url.trim()
+            ? form.promo_video_url.trim()
             : "",
         activities: form.activities,
         host_purposes: role === "host" ? form.host_purposes : [],
@@ -1075,15 +1063,6 @@ export default function Signup() {
                       </div>
                     </label>
                   </div>
-
-                  <FileUpload
-                    label="Ili otpremi promo video"
-                    description="MP4, MOV ili WEBM format"
-                    accept="video/*"
-                    file={videoFile}
-                    onChange={setVideoFile}
-                    icon="video"
-                  />
                 </div>
               )}
 

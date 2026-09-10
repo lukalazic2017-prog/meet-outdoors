@@ -51,6 +51,23 @@ function Icon({ name, size = 18 }) {
         <path d="M4 6h16M7 12h10M10 18h4" />
       </>
     ),
+    euro: (
+      <>
+        <path d="M18 7.5A6.5 6.5 0 1 0 18 16.5" />
+        <path d="M4 10h9M4 14h8" />
+      </>
+    ),
+    sort: (
+      <>
+        <path d="M8 6h11M8 12h8M8 18h5" />
+        <path d="m4 5-2 2 2 2M2 7h4" />
+      </>
+    ),
+    spark: (
+      <>
+        <path d="m12 3 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z" />
+      </>
+    ),
   };
 
   return (
@@ -321,6 +338,12 @@ export default function Stays() {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
   const [guests, setGuests] = useState("");
+  const [location, setLocation] = useState("all");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [priceMode, setPriceMode] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedStay, setSelectedStay] = useState(null);
 
   useEffect(() => {
@@ -385,15 +408,78 @@ export default function Stays() {
     [stays]
   );
 
+
+  const locations = useMemo(
+    () => [...new Set(stays.map((item) => item.location).filter(Boolean))].sort(),
+    [stays]
+  );
+
+  const quickFilters = [
+    { label: "Brvnare", key: "type", value: "Brvnara" },
+    { label: "Kamp", key: "type", value: "Kamp" },
+    { label: "Glamping", key: "type", value: "Glamping" },
+    { label: "Do 50 €", key: "maxPrice", value: "50" },
+    { label: "4+ gosta", key: "guests", value: "4" },
+    { label: "Cena na upit", key: "priceMode", value: "request" },
+  ];
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (query.trim()) count += 1;
+    if (type !== "all") count += 1;
+    if (guests) count += 1;
+    if (location !== "all") count += 1;
+    if (minPrice) count += 1;
+    if (maxPrice) count += 1;
+    if (priceMode !== "all") count += 1;
+    return count;
+  }, [query, type, guests, location, minPrice, maxPrice, priceMode]);
+
+  function clearFilters() {
+    setQuery("");
+    setType("all");
+    setGuests("");
+    setLocation("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setPriceMode("all");
+    setSortBy("newest");
+  }
+
+  function applyQuickFilter(filter) {
+    if (filter.key === "type") setType(filter.value);
+    if (filter.key === "maxPrice") setMaxPrice(filter.value);
+    if (filter.key === "guests") setGuests(filter.value);
+    if (filter.key === "priceMode") setPriceMode(filter.value);
+  }
+
   const filtered = useMemo(() => {
     const term = query.trim().toLocaleLowerCase("sr");
 
-    return stays.filter((item) => {
+    const result = stays.filter((item) => {
       const matchesType = type === "all" || item.type === type;
       const matchesGuests =
         !guests ||
         !item.max_guests ||
         Number(item.max_guests) >= Number(guests);
+
+      const matchesLocation =
+        location === "all" || item.location === location;
+
+      const itemPrice = Number(item.price_per_night || 0);
+      const hasNumericPrice =
+        Number.isFinite(itemPrice) && itemPrice > 0 && !item.price_on_request;
+
+      const matchesMinPrice =
+        !minPrice || !hasNumericPrice || itemPrice >= Number(minPrice);
+
+      const matchesMaxPrice =
+        !maxPrice || !hasNumericPrice || itemPrice <= Number(maxPrice);
+
+      const matchesPriceMode =
+        priceMode === "all" ||
+        (priceMode === "request" && item.price_on_request) ||
+        (priceMode === "fixed" && !item.price_on_request);
 
       const haystack = [
         item.title,
@@ -401,74 +487,217 @@ export default function Stays() {
         item.type,
         item.description,
         item.profiles?.full_name,
+        item.profiles?.username,
+        item.profiles?.city,
+        item.profiles?.country,
       ]
         .filter(Boolean)
         .join(" ")
         .toLocaleLowerCase("sr");
 
-      return matchesType && matchesGuests && (!term || haystack.includes(term));
+      return (
+        matchesType &&
+        matchesGuests &&
+        matchesLocation &&
+        matchesMinPrice &&
+        matchesMaxPrice &&
+        matchesPriceMode &&
+        (!term || haystack.includes(term))
+      );
     });
-  }, [stays, query, type, guests]);
+
+    return [...result].sort((a, b) => {
+      if (sortBy === "price_asc") {
+        const ap = a.price_on_request ? Number.POSITIVE_INFINITY : Number(a.price_per_night || 0);
+        const bp = b.price_on_request ? Number.POSITIVE_INFINITY : Number(b.price_per_night || 0);
+        return ap - bp;
+      }
+
+      if (sortBy === "price_desc") {
+        const ap = a.price_on_request ? -1 : Number(a.price_per_night || 0);
+        const bp = b.price_on_request ? -1 : Number(b.price_per_night || 0);
+        return bp - ap;
+      }
+
+      if (sortBy === "guests_desc") {
+        return Number(b.max_guests || 0) - Number(a.max_guests || 0);
+      }
+
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+  }, [
+    stays,
+    query,
+    type,
+    guests,
+    location,
+    minPrice,
+    maxPrice,
+    priceMode,
+    sortBy,
+  ]);
 
   return (
     <>
       <StaysStyles />
 
       <main className="staysPage">
-        <section className="staysHero">
+        <section className="staysHero staysHeroV4">
           <div className="staysHeroCopy">
             <span className="staysKicker">
               <Icon name="home" size={15} />
               SMEŠTAJ U PRIRODI
             </span>
-            <h1>Prespavaj bliže onome zbog čega si došao.</h1>
+            <h1>Pronađi svoje mesto u prirodi.</h1>
             <p>
-              Brvnare, kampovi, glamping i kuće u prirodi. Bez komplikovanog
-              booking sistema — pronađeš, pošalješ upit i dogovoriš se sa domaćinom.
+              Brvnare, kampovi, glamping i kuće van grada — filtriraj po lokaciji,
+              ceni i broju gostiju, pa pošalji upit direktno domaćinu.
             </p>
           </div>
 
           <div className="staysHeroStats">
-            <strong>{stays.length}</strong>
-            <span>aktivnih smeštaja</span>
+            <strong>{filtered.length}</strong>
+            <span>trenutno dostupnih</span>
           </div>
         </section>
 
-        <section className="staysFilterBar">
-          <label className="staysSearch">
-            <Icon name="search" size={17} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tara, brvnara, kamp..."
-            />
-          </label>
+        <section className="staysQuickFilters" aria-label="Brzi filteri">
+          {quickFilters.map((filter) => {
+            const isActive =
+              (filter.key === "type" && type === filter.value) ||
+              (filter.key === "maxPrice" && maxPrice === filter.value) ||
+              (filter.key === "guests" && guests === filter.value) ||
+              (filter.key === "priceMode" && priceMode === filter.value);
 
-          <label className="staysCompactFilter">
-            <Icon name="filter" size={15} />
-            <select value={type} onChange={(e) => setType(e.target.value)}>
-              <option value="all">Svi tipovi</option>
-              {types.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
-          </label>
+            return (
+              <button
+                key={`${filter.key}-${filter.value}`}
+                type="button"
+                className={isActive ? "active" : ""}
+                onClick={() => applyQuickFilter(filter)}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </section>
 
-          <label className="staysCompactFilter">
-            <Icon name="users" size={15} />
-            <input
-              type="number"
-              min="1"
-              max="100"
-              value={guests}
-              onChange={(e) => setGuests(e.target.value)}
-              placeholder="Broj gostiju"
-            />
-          </label>
+        <section className="staysFilterShell">
+          <div className="staysFilterPrimary">
+            <label className="staysSearch staysSearchV4">
+              <Icon name="search" size={17} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Tara, brvnara, kamp, domaćin..."
+              />
+            </label>
 
-          <span className="staysResultCount">
-            {filtered.length} {filtered.length === 1 ? "rezultat" : "rezultata"}
-          </span>
+            <button
+              type="button"
+              className={`staysAdvancedToggle ${filtersOpen ? "active" : ""}`}
+              onClick={() => setFiltersOpen((value) => !value)}
+            >
+              <Icon name="filter" size={16} />
+              Filteri
+              {activeFiltersCount > 0 && <span>{activeFiltersCount}</span>}
+            </button>
+
+            <label className="staysSort">
+              <Icon name="sort" size={15} />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="newest">Najnovije</option>
+                <option value="price_asc">Cena: niža prvo</option>
+                <option value="price_desc">Cena: viša prvo</option>
+                <option value="guests_desc">Najveći kapacitet</option>
+              </select>
+            </label>
+          </div>
+
+          {filtersOpen && (
+            <div className="staysAdvancedPanel">
+              <label>
+                <span>Tip smeštaja</span>
+                <select value={type} onChange={(e) => setType(e.target.value)}>
+                  <option value="all">Svi tipovi</option>
+                  {types.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Lokacija</span>
+                <select value={location} onChange={(e) => setLocation(e.target.value)}>
+                  <option value="all">Sve lokacije</option>
+                  {locations.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Broj gostiju</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={guests}
+                  onChange={(e) => setGuests(e.target.value)}
+                  placeholder="npr. 4"
+                />
+              </label>
+
+              <label>
+                <span>Minimalna cena</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  placeholder="€"
+                />
+              </label>
+
+              <label>
+                <span>Maksimalna cena</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  placeholder="€"
+                />
+              </label>
+
+              <label>
+                <span>Način cene</span>
+                <select value={priceMode} onChange={(e) => setPriceMode(e.target.value)}>
+                  <option value="all">Sve cene</option>
+                  <option value="fixed">Fiksna cena</option>
+                  <option value="request">Cena na upit</option>
+                </select>
+              </label>
+
+              <div className="staysAdvancedActions">
+                <button type="button" onClick={clearFilters}>Obriši sve</button>
+                <button type="button" className="primary" onClick={() => setFiltersOpen(false)}>
+                  Prikaži {filtered.length}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="staysResultsMeta">
+            <span>
+              <strong>{filtered.length}</strong>{" "}
+              {filtered.length === 1 ? "smeštaj" : "smeštaja"} odgovara pretrazi
+            </span>
+
+            {activeFiltersCount > 0 && (
+              <button type="button" onClick={clearFilters}>Obriši filtere</button>
+            )}
+          </div>
         </section>
 
         {loading ? (
@@ -1199,6 +1428,380 @@ function StaysStyles() {
       @media(max-width:420px){
         .staysHero h1{font-size:31px}
         .stayDiscoveryCard{flex-basis:86vw}
+      }
+
+
+      /* =========================================================
+         STAYS V4 — DISCOVERY MARKETPLACE
+         ========================================================= */
+
+      .staysHeroV4{
+        padding-top:14px;
+        padding-bottom:10px;
+      }
+
+      .staysQuickFilters,
+      .staysFilterShell{
+        width:min(1420px,100%);
+        margin-inline:auto;
+      }
+
+      .staysQuickFilters{
+        display:flex;
+        gap:7px;
+        overflow-x:auto;
+        padding:2px 1px 9px;
+        scrollbar-width:none;
+      }
+
+      .staysQuickFilters::-webkit-scrollbar{display:none}
+
+      .staysQuickFilters button{
+        flex:0 0 auto;
+        min-height:34px;
+        padding:0 12px;
+        border:1px solid #dfe7dc;
+        border-radius:999px;
+        background:#fff;
+        color:#5f7066;
+        font:inherit;
+        font-size:9px;
+        font-weight:850;
+        cursor:pointer;
+        transition:.2s ease;
+      }
+
+      .staysQuickFilters button:hover,
+      .staysQuickFilters button.active{
+        border-color:#9dbd9f;
+        background:#eaf4e6;
+        color:#23462d;
+      }
+
+      .staysFilterShell{
+        position:sticky;
+        top:74px;
+        z-index:30;
+        padding:7px;
+        border:1px solid rgba(201,214,198,.92);
+        border-radius:16px;
+        background:rgba(255,255,255,.91);
+        box-shadow:0 16px 38px rgba(29,48,35,.08);
+        backdrop-filter:blur(18px);
+      }
+
+      .staysFilterPrimary{
+        display:grid;
+        grid-template-columns:minmax(280px,1fr) auto auto;
+        gap:7px;
+        align-items:center;
+      }
+
+      .staysSearchV4{
+        min-height:42px;
+      }
+
+      .staysAdvancedToggle,
+      .staysSort{
+        min-height:42px;
+        border:1px solid #e1e8df;
+        border-radius:11px;
+        background:#f8faf7;
+        color:#51655a;
+      }
+
+      .staysAdvancedToggle{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:7px;
+        padding:0 13px;
+        font:inherit;
+        font-size:9px;
+        font-weight:900;
+        cursor:pointer;
+      }
+
+      .staysAdvancedToggle.active{
+        border-color:#a4c2a7;
+        background:#edf6e9;
+        color:#24462d;
+      }
+
+      .staysAdvancedToggle span{
+        display:grid;
+        place-items:center;
+        min-width:20px;
+        height:20px;
+        padding:0 5px;
+        border-radius:999px;
+        background:#183a27;
+        color:#fff;
+        font-size:8px;
+      }
+
+      .staysSort{
+        display:flex;
+        align-items:center;
+        gap:6px;
+        padding:0 10px;
+      }
+
+      .staysSort select{
+        min-width:150px;
+        border:0;
+        outline:0;
+        background:transparent;
+        color:#2c4333;
+        font:inherit;
+        font-size:9px;
+        font-weight:800;
+      }
+
+      .staysAdvancedPanel{
+        display:grid;
+        grid-template-columns:repeat(6,minmax(0,1fr));
+        gap:8px;
+        margin-top:8px;
+        padding:10px;
+        border-top:1px solid #edf1eb;
+        background:#fbfcfa;
+        border-radius:12px;
+      }
+
+      .staysAdvancedPanel label{
+        display:grid;
+        gap:6px;
+      }
+
+      .staysAdvancedPanel label>span{
+        color:#738178;
+        font-size:8px;
+        font-weight:850;
+      }
+
+      .staysAdvancedPanel input,
+      .staysAdvancedPanel select{
+        width:100%;
+        min-height:39px;
+        padding:0 10px;
+        border:1px solid #dde6da;
+        border-radius:10px;
+        outline:0;
+        background:#fff;
+        color:#223b2a;
+        font:inherit;
+        font-size:9px;
+        font-weight:750;
+      }
+
+      .staysAdvancedActions{
+        grid-column:1/-1;
+        display:flex;
+        justify-content:flex-end;
+        gap:7px;
+        padding-top:2px;
+      }
+
+      .staysAdvancedActions button,
+      .staysResultsMeta button{
+        min-height:34px;
+        padding:0 11px;
+        border:1px solid #dce5d8;
+        border-radius:9px;
+        background:#fff;
+        color:#607067;
+        font:inherit;
+        font-size:8px;
+        font-weight:850;
+        cursor:pointer;
+      }
+
+      .staysAdvancedActions .primary{
+        border-color:#183a27;
+        background:#183a27;
+        color:#fff;
+      }
+
+      .staysResultsMeta{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        padding:7px 4px 1px;
+        color:#7c8a80;
+        font-size:8px;
+        font-weight:750;
+      }
+
+      .staysResultsMeta strong{
+        color:#27432f;
+      }
+
+      .stayDiscoveryMedia{
+        height:210px;
+      }
+
+      .stayDiscoveryHero h2{
+        font-size:19px;
+      }
+
+      .stayDiscoveryMeta span{
+        font-size:9px;
+      }
+
+      .stayDiscoveryMeta strong{
+        font-size:11px;
+      }
+
+      .stayDiscoveryBody>p{
+        min-height:36px;
+        font-size:9px;
+      }
+
+      .stayDiscoveryHost strong{
+        font-size:10px;
+      }
+
+      .stayDiscoveryFooter>button{
+        min-height:36px;
+        font-size:9px;
+      }
+
+      @media(max-width:1100px){
+        .staysAdvancedPanel{
+          grid-template-columns:repeat(3,minmax(0,1fr));
+        }
+      }
+
+      @media(max-width:760px){
+        .staysHeroV4{
+          padding:12px 8px 9px;
+        }
+
+        .staysHeroV4 h1{
+          font-size:34px;
+        }
+
+        .staysQuickFilters{
+          padding:2px 8px 9px;
+        }
+
+        .staysFilterShell{
+          top:66px;
+          margin-inline:6px;
+          width:calc(100% - 12px);
+          padding:6px;
+          border-radius:14px;
+        }
+
+        .staysFilterPrimary{
+          grid-template-columns:1fr auto;
+        }
+
+        .staysSearchV4{
+          grid-column:1/-1;
+        }
+
+        .staysSort{
+          min-width:0;
+        }
+
+        .staysSort select{
+          min-width:0;
+          width:118px;
+        }
+
+        .staysAdvancedPanel{
+          position:fixed;
+          right:0;
+          bottom:0;
+          left:0;
+          z-index:6000;
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:9px;
+          max-height:78dvh;
+          overflow:auto;
+          margin:0;
+          padding:18px 14px calc(18px + env(safe-area-inset-bottom));
+          border:0;
+          border-radius:22px 22px 0 0;
+          background:#fff;
+          box-shadow:0 -24px 70px rgba(0,0,0,.20);
+        }
+
+        .staysAdvancedPanel::before{
+          content:"Filteri smeštaja";
+          grid-column:1/-1;
+          color:#1f3b28;
+          font-size:18px;
+          font-weight:950;
+          letter-spacing:-.03em;
+        }
+
+        .staysAdvancedPanel label>span{
+          font-size:9px;
+        }
+
+        .staysAdvancedActions{
+          position:sticky;
+          bottom:0;
+          grid-column:1/-1;
+          padding-top:8px;
+          padding-bottom:2px;
+          background:#fff;
+        }
+
+        .staysAdvancedActions button{
+          flex:1;
+          min-height:42px;
+        }
+
+        .staysResultsMeta{
+          padding:7px 3px 1px;
+        }
+
+        .staysGrid{
+          display:grid !important;
+          grid-template-columns:1fr !important;
+          gap:11px !important;
+          overflow:visible !important;
+          padding:12px 0 0 !important;
+        }
+
+        .stayDiscoveryCard{
+          width:100%;
+          max-width:none !important;
+          flex:none !important;
+        }
+
+        .stayDiscoveryMedia{
+          height:220px;
+        }
+
+        .stayDiscoveryHero h2{
+          font-size:20px;
+        }
+
+        .stayDiscoveryBody{
+          padding:12px;
+        }
+
+        .stayDiscoveryBody>p{
+          font-size:9.5px;
+        }
+      }
+
+      @media(max-width:460px){
+        .staysAdvancedPanel{
+          grid-template-columns:1fr;
+        }
+
+        .staysAdvancedPanel::before,
+        .staysAdvancedActions{
+          grid-column:1;
+        }
       }
 
     `}</style>

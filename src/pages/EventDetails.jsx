@@ -459,6 +459,30 @@ export default function EventDetails() {
   }, [loadEvent]);
 
   useEffect(() => {
+    if (!event?.id || !profile?.id) return undefined;
+
+    const refreshRegistration = () => {
+      void loadParticipants(event.id, event.host_id);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshRegistration();
+      }
+    };
+
+    window.addEventListener("focus", refreshRegistration);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const intervalId = window.setInterval(refreshRegistration, 10000);
+
+    return () => {
+      window.removeEventListener("focus", refreshRegistration);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [event?.id, event?.host_id, profile?.id, loadParticipants]);
+
+  useEffect(() => {
     if (!event?.id) return undefined;
 
     const participantsChannel = supabase
@@ -6463,6 +6487,65 @@ function EventDetailsStyles() {
         .eventChatButton {
           min-height: 42px;
         }
+      }
+
+
+      /* EventDetails V7 fixes */
+      .eventChatBackdrop {
+        z-index: 5000 !important;
+      }
+
+      .eventChatModal {
+        z-index: 5001 !important;
+      }
+
+      @media (max-width: 700px) {
+        .eventChatBackdrop {
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 5000 !important;
+          width: 100vw !important;
+          height: 100dvh !important;
+          min-height: 100dvh !important;
+          padding: 0 !important;
+          background: #f7f9f5 !important;
+          backdrop-filter: none !important;
+        }
+
+        .eventChatModal {
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 5001 !important;
+          width: 100vw !important;
+          max-width: none !important;
+          height: 100dvh !important;
+          min-height: 100dvh !important;
+          max-height: 100dvh !important;
+          margin: 0 !important;
+          border: 0 !important;
+          border-radius: 0 !important;
+        }
+      }
+
+      .eventGalleryCoverBadge img {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        filter: none !important;
+      }
+
+      .eventGalleryGrid img {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        filter: none !important;
+      }
+
+      .eventGalleryZoom img {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        filter: none !important;
       }
 
     `}</style>
