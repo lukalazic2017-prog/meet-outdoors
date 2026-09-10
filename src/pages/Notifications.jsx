@@ -90,6 +90,12 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
       </>
     ),
     check: <path d="m5 12 4 4L19 6" />,
+    x: (
+      <>
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
+      </>
+    ),
   };
 
   return (
@@ -160,12 +166,73 @@ function notificationMeta(notification) {
     .join(" ")
     .toLowerCase();
 
+  if (notification.type === "event_application_confirmed") {
+    return {
+      icon: "check",
+      label: "Prijava potvrđena",
+      tone: "success",
+      actionLabel: "Otvori avanturu",
+      priority: "status",
+    };
+  }
+
+  if (notification.type === "event_application_rejected") {
+    return {
+      icon: "x",
+      label: "Prijava odbijena",
+      tone: "danger",
+      actionLabel: "Otvori avanturu",
+      priority: "status",
+    };
+  }
+
+  if (notification.type === "event_application_cancelled") {
+    return {
+      icon: "x",
+      label: "Prijava otkazana",
+      tone: "neutral",
+      actionLabel: "Otvori avanturu",
+      priority: "status",
+    };
+  }
+
+  if (notification.type === "event_joined") {
+    return {
+      icon: "users",
+      label: "Nova prijava",
+      tone: "purple",
+      actionLabel: "Pregledaj prijavu",
+      priority: "action",
+    };
+  }
+
+  if (notification.type === "event_chat_message") {
+    return {
+      icon: "message",
+      label: "Grupni chat",
+      tone: "blue",
+      actionLabel: "Otvori chat",
+      priority: "action",
+    };
+  }
+
+  if (notification.type === "event_comment") {
+    return {
+      icon: "message",
+      label: "Novi komentar",
+      tone: "blue",
+      actionLabel: "Otvori avanturu",
+      priority: "info",
+    };
+  }
+
   if (notification.type === "adventure_demand") {
     return {
       icon: "sparkle",
       label: "Nova potražnja",
       tone: "adventure",
       actionLabel: "Otvori potražnju",
+      priority: "action",
     };
   }
 
@@ -175,6 +242,7 @@ function notificationMeta(notification) {
       label: "Nova ponuda",
       tone: "offer",
       actionLabel: "Pogledaj ponudu",
+      priority: "action",
     };
   }
 
@@ -184,6 +252,7 @@ function notificationMeta(notification) {
       label: "Ponuda prihvaćena",
       tone: "success",
       actionLabel: null,
+      priority: "status",
     };
   }
 
@@ -299,11 +368,12 @@ function NotificationCard({
             notification.adventure_intent_id
           ? `/host/demand/${notification.adventure_intent_id}`
 
-          : notification.event_id
-            ? `/event/${notification.event_id}`
+          : notification.type === "event_chat_message" &&
+              notification.event_id
+            ? `/event/${notification.event_id}?chat=1`
 
-            : notification.package_id
-              ? `/package/${notification.package_id}`
+            : notification.event_id
+              ? `/event/${notification.event_id}`
 
               : null;
 
@@ -333,6 +403,12 @@ function NotificationCard({
         <div className="notificationMeta">
           <div className="metaLeft">
             <span>{meta.label}</span>
+            {meta.priority === "action" && (
+              <b className="priorityBadge action">Akcija</b>
+            )}
+            {meta.priority === "status" && (
+              <b className="priorityBadge status">Status</b>
+            )}
             {unread && <em>Novo</em>}
           </div>
 
@@ -379,6 +455,7 @@ function NotificationCard({
     "notificationCard",
     unread ? "unread" : "read",
     isAdventure ? "adventureCard" : "",
+    meta.priority ? `priority-${meta.priority}` : "",
     ageClass,
   ]
     .filter(Boolean)
@@ -440,8 +517,7 @@ export default function Notifications() {
   const [markingAll, setMarkingAll] =
     useState(false);
   const [filter, setFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [visibleCount, setVisibleCount] = useState(8);
 
   const loadNotifications = useCallback(async () => {
     if (!profile?.id) {
@@ -688,68 +764,152 @@ export default function Notifications() {
   }, [profile?.id]);
 
   useEffect(() => {
-    function syncPageSize() {
-      const width = window.innerWidth;
-
-      if (width <= 480) {
-        setPageSize(4);
-      } else if (width <= 760) {
-        setPageSize(4);
-      } else {
-        setPageSize(8);
-      }
-    }
-
-    syncPageSize();
-    window.addEventListener("resize", syncPageSize);
-
-    return () => {
-      window.removeEventListener("resize", syncPageSize);
-    };
-  }, []);
-
-  useEffect(() => {
-    setPage(1);
+    setVisibleCount(8);
   }, [filter]);
 
+  const eventApplicationTypes = useMemo(
+    () => [
+      "event_joined",
+      "event_application_confirmed",
+      "event_application_rejected",
+      "event_application_cancelled",
+    ],
+    []
+  );
+
+  const chatTypes = useMemo(
+    () => ["event_chat_message"],
+    []
+  );
+
+  const agentTypes = useMemo(
+    () => [
+      "adventure_demand",
+      "adventure_offer",
+      "adventure_offer_accepted",
+      "adventure_offer_rejected",
+    ],
+    []
+  );
+
+  const interactionTypes = useMemo(
+    () => ["event_comment", "comment", "review", "interest"],
+    []
+  );
+
+  const categoryCounts = useMemo(() => {
+    const matchesInteraction = (notification) => {
+      const searchable = [
+        notification.type,
+        notification.title,
+        notification.message,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return (
+        interactionTypes.includes(notification.type) ||
+        searchable.includes("comment") ||
+        searchable.includes("komentar") ||
+        searchable.includes("review") ||
+        searchable.includes("recenz") ||
+        searchable.includes("interest") ||
+        searchable.includes("zainteres")
+      );
+    };
+
+    return {
+      personal: notifications.filter(
+        (notification) =>
+          notification.type === "event_application_confirmed" ||
+          notification.type === "event_application_rejected" ||
+          notification.type === "adventure_offer" ||
+          notification.type === "adventure_offer_accepted" ||
+          notification.type === "adventure_offer_rejected"
+      ).length,
+      applications: notifications.filter((notification) =>
+        eventApplicationTypes.includes(notification.type)
+      ).length,
+      messages: notifications.filter((notification) =>
+        chatTypes.includes(notification.type)
+      ).length,
+      agent: notifications.filter((notification) =>
+        agentTypes.includes(notification.type)
+      ).length,
+      interactions: notifications.filter(matchesInteraction).length,
+    };
+  }, [notifications, eventApplicationTypes, chatTypes, agentTypes, interactionTypes]);
+
   const filteredNotifications = useMemo(() => {
-    if (filter === "unread") {
+    if (filter === "personal") {
       return notifications.filter(
-        (notification) => notification.is_read !== true
+        (notification) =>
+          notification.type === "event_application_confirmed" ||
+          notification.type === "event_application_rejected" ||
+          notification.type === "adventure_offer" ||
+          notification.type === "adventure_offer_accepted" ||
+          notification.type === "adventure_offer_rejected"
       );
     }
 
-    if (filter === "adventure") {
+    if (filter === "applications") {
       return notifications.filter((notification) =>
-        [
-          "adventure_demand",
-          "adventure_offer",
-          "adventure_offer_accepted",
-          "adventure_offer_rejected",
-        ].includes(notification.type)
+        eventApplicationTypes.includes(notification.type)
       );
+    }
+
+    if (filter === "messages") {
+      return notifications.filter((notification) =>
+        chatTypes.includes(notification.type)
+      );
+    }
+
+    if (filter === "agent") {
+      return notifications.filter((notification) =>
+        agentTypes.includes(notification.type)
+      );
+    }
+
+    if (filter === "interactions") {
+      return notifications.filter((notification) => {
+        const searchable = [
+          notification.type,
+          notification.title,
+          notification.message,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return (
+          interactionTypes.includes(notification.type) ||
+          searchable.includes("comment") ||
+          searchable.includes("komentar") ||
+          searchable.includes("review") ||
+          searchable.includes("recenz") ||
+          searchable.includes("interest") ||
+          searchable.includes("zainteres")
+        );
+      });
     }
 
     return notifications;
-  }, [notifications, filter]);
+  }, [
+    notifications,
+    filter,
+    eventApplicationTypes,
+    chatTypes,
+    agentTypes,
+    interactionTypes,
+  ]);
 
-  const pageCount = useMemo(
-    () => Math.max(1, Math.ceil(filteredNotifications.length / pageSize)),
-    [filteredNotifications.length, pageSize]
+  const visibleNotifications = useMemo(
+    () => filteredNotifications.slice(0, visibleCount),
+    [filteredNotifications, visibleCount]
   );
 
-  const paginatedNotifications = useMemo(() => {
-    const safePage = Math.min(page, pageCount);
-    const startIndex = (safePage - 1) * pageSize;
-
-    return filteredNotifications.slice(startIndex, startIndex + pageSize);
-  }, [filteredNotifications, page, pageCount, pageSize]);
-
-  useEffect(() => {
-    if (page > pageCount) {
-      setPage(pageCount);
-    }
-  }, [page, pageCount]);
+  const hasMore = visibleCount < filteredNotifications.length;
 
   const unreadCount = useMemo(
     () =>
@@ -776,16 +936,11 @@ export default function Notifications() {
               Centar aktivnosti
             </span>
 
-            <h1>
-              Tvoja
-              <br />
-              obaveštenja.
-            </h1>
+            <h1>Obaveštenja.</h1>
 
             <p>
-              Sve što traži tvoju pažnju na jednom mestu —
-              rezervacije, poruke, outdoor potražnje, ponude
-              i važne aktivnosti na tvom MeetOutdoors nalogu.
+              Prijave, grupne poruke, odgovori domaćina, Agent i važne aktivnosti —
+              sve na jednom mestu.
             </p>
           </div>
 
@@ -822,11 +977,10 @@ export default function Notifications() {
                 Aktivnost naloga
               </span>
 
-              <h2>Najnovije promene</h2>
+              <h2>Aktivnosti koje su važne</h2>
 
               <p>
-                Najvažnije prvo. Sve ostalo uredno,
-                hronološki i bez buke.
+                Statusi i stvari koje traže tvoju akciju su odmah prepoznatljivi.
               </p>
             </div>
 
@@ -874,29 +1028,47 @@ export default function Notifications() {
 
               <button
                 type="button"
-                className={filter === "unread" ? "active" : ""}
-                onClick={() => setFilter("unread")}
+                className={filter === "personal" ? "active" : ""}
+                onClick={() => setFilter("personal")}
               >
-                Nepročitano
-                <span>{unreadCount}</span>
+                Za mene
+                <span>{categoryCounts.personal}</span>
               </button>
 
               <button
                 type="button"
-                className={filter === "adventure" ? "active" : ""}
-                onClick={() => setFilter("adventure")}
+                className={filter === "applications" ? "active" : ""}
+                onClick={() => setFilter("applications")}
               >
-                Agent & ponude
-                <span>
-                  {notifications.filter((notification) =>
-                    [
-                      "adventure_demand",
-                      "adventure_offer",
-                      "adventure_offer_accepted",
-                      "adventure_offer_rejected",
-                    ].includes(notification.type)
-                  ).length}
-                </span>
+                Prijave
+                <span>{categoryCounts.applications}</span>
+              </button>
+
+              <button
+                type="button"
+                className={filter === "messages" ? "active" : ""}
+                onClick={() => setFilter("messages")}
+              >
+                Poruke
+                <span>{categoryCounts.messages}</span>
+              </button>
+
+              <button
+                type="button"
+                className={filter === "agent" ? "active" : ""}
+                onClick={() => setFilter("agent")}
+              >
+                Agent
+                <span>{categoryCounts.agent}</span>
+              </button>
+
+              <button
+                type="button"
+                className={filter === "interactions" ? "active" : ""}
+                onClick={() => setFilter("interactions")}
+              >
+                Interakcije
+                <span>{categoryCounts.interactions}</span>
               </button>
             </div>
           )}
@@ -970,7 +1142,7 @@ export default function Notifications() {
               </p>
 
               <Link to="/events">
-                Istraži događaje
+                Istraži avanture
                 <Icon
                   name="arrowRight"
                   size={16}
@@ -991,7 +1163,7 @@ export default function Notifications() {
           ) : (
             <div className="notificationViewport">
               <div className="notificationGrid">
-                {paginatedNotifications.map((notification) => (
+                {visibleNotifications.map((notification) => (
                   <NotificationCard
                     key={notification.id}
                     notification={notification}
@@ -1000,111 +1172,28 @@ export default function Notifications() {
                 ))}
               </div>
 
-              {pageCount > 1 && (
-                <div
-                  className="paginationBar"
-                  aria-label="Stranice obaveštenja"
-                >
+              {hasMore && (
+                <div className="loadMoreBar">
                   <button
                     type="button"
                     onClick={() =>
-                      setPage((current) => Math.max(1, current - 1))
+                      setVisibleCount((current) => current + 8)
                     }
-                    disabled={page === 1}
                   >
-                    Prethodna
-                  </button>
-
-                  <span>
-                    {page} / {pageCount}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPage((current) =>
-                        Math.min(pageCount, current + 1)
-                      )
-                    }
-                    disabled={page === pageCount}
-                  >
-                    Sledeća
+                    Učitaj još
+                    <span>
+                      {Math.min(
+                        8,
+                        filteredNotifications.length - visibleCount
+                      )}{" "}
+                      novih
+                    </span>
                   </button>
                 </div>
               )}
             </div>
           )}
 
-          <section className="infoSection">
-            <div>
-              <span className="sectionKicker">
-                Ostani u toku
-              </span>
-
-              <h2>
-                Važne aktivnosti, bez suvišne buke.
-              </h2>
-
-              <p>
-                MeetOutdoors obaveštenja su komandni centar
-                za ono što zahteva tvoju akciju — od rezervacije
-                do nove potražnje ili ponude.
-              </p>
-            </div>
-
-            <div className="benefits">
-              <article>
-                <span>
-                  <Icon
-                    name="users"
-                    size={20}
-                  />
-                </span>
-
-                <div>
-                  <strong>Rezervacije</strong>
-                  <small>
-                    Prati nove zahteve i aktivnosti
-                    učesnika.
-                  </small>
-                </div>
-              </article>
-
-              <article>
-                <span>
-                  <Icon
-                    name="message"
-                    size={20}
-                  />
-                </span>
-
-                <div>
-                  <strong>Interakcije</strong>
-                  <small>
-                    Vidi komentare, recenzije i
-                    interesovanja.
-                  </small>
-                </div>
-              </article>
-
-              <article>
-                <span>
-                  <Icon
-                    name="shield"
-                    size={20}
-                  />
-                </span>
-
-                <div>
-                  <strong>Outdoor potražnje</strong>
-                  <small>
-                    Hostovi dobijaju realnu tražnju, a korisnici
-                    ponude koje mogu da prihvate ili odbiju.
-                  </small>
-                </div>
-              </article>
-            </div>
-          </section>
         </section>
       </main>
     </>
@@ -2797,6 +2886,442 @@ function NotificationsStyles() {
           scroll-behavior: auto !important;
         }
       }
+
+      /* =========================================================
+         NOTIFICATIONS — COMMAND CENTER V6
+         Premium, compact, readable, action-first.
+         ========================================================= */
+
+      html,
+      body {
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      .notificationsPage {
+        height: auto;
+        min-height: 100svh;
+        overflow: visible;
+        padding: 72px 14px 30px;
+        display: block;
+      }
+
+      .hero {
+        min-height: 0;
+        height: auto;
+        padding: 18px 20px;
+        border-radius: 20px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+      }
+
+      .heroContent {
+        padding: 0;
+      }
+
+      .hero h1 {
+        margin: 7px 0 0;
+        font-size: clamp(36px, 4.2vw, 56px);
+        line-height: .95;
+        letter-spacing: -.055em;
+      }
+
+      .heroContent p {
+        display: block;
+        margin: 8px 0 0;
+        max-width: 560px;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .stats {
+        grid-template-columns: repeat(3, minmax(92px, 108px));
+      }
+
+      .stats span {
+        font-size: 8px;
+        letter-spacing: .06em;
+      }
+
+      .content {
+        width: min(1180px, 100%);
+        height: auto;
+        overflow: visible;
+        margin: 10px auto 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .toolbar {
+        min-height: 54px;
+        padding: 8px 10px;
+      }
+
+      .sectionKicker {
+        font-size: 9px;
+      }
+
+      .toolbar h2 {
+        margin-top: 3px;
+        font-size: clamp(20px, 2.5vw, 28px);
+      }
+
+      .toolbar p {
+        display: block;
+        margin-top: 4px;
+        font-size: 10px;
+      }
+
+      .toolbarActions > button {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 10px;
+      }
+
+      .filterBar {
+        display: flex;
+        grid-template-columns: none;
+        width: 100%;
+        min-height: 45px;
+        padding: 5px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+        scroll-snap-type: x proximity;
+      }
+
+      .filterBar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .filterBar button {
+        flex: 0 0 auto;
+        min-height: 34px;
+        padding: 0 12px;
+        font-size: 10px;
+        scroll-snap-align: start;
+        white-space: nowrap;
+      }
+
+      .filterBar button span {
+        min-width: 22px;
+        height: 22px;
+        font-size: 8px;
+      }
+
+      .notificationViewport {
+        overflow: visible;
+      }
+
+      .notificationGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+      }
+
+      .notificationCard {
+        min-height: 128px;
+        max-height: none;
+        padding: 13px 14px;
+        grid-template-columns: 46px minmax(0,1fr);
+        gap: 12px;
+        overflow: hidden;
+        border-radius: 16px;
+      }
+
+      .notificationCard.priority-action.unread {
+        border-color: rgba(139, 170, 91, .65);
+        box-shadow:
+          0 12px 28px rgba(66, 103, 53, .10),
+          inset 0 1px 0 rgba(255,255,255,.9);
+      }
+
+      .notificationCard.priority-status {
+        background:
+          linear-gradient(135deg, rgba(250,252,248,.98), rgba(255,255,255,.98));
+      }
+
+      .notificationIcon {
+        width: 46px;
+        height: 46px;
+        border-radius: 13px;
+      }
+
+      .notificationIcon.danger {
+        background: #fae8e6;
+        color: #a4473f;
+      }
+
+      .metaLeft {
+        gap: 5px;
+      }
+
+      .metaLeft > span {
+        max-width: 190px;
+        font-size: 9px;
+      }
+
+      .metaLeft > em {
+        padding: 3px 6px;
+        font-size: 7px;
+      }
+
+      .priorityBadge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 18px;
+        padding: 0 6px;
+        border-radius: 999px;
+        font-size: 7px;
+        font-weight: 900;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+      }
+
+      .priorityBadge.action {
+        background: #173e29;
+        color: #dff2bf;
+      }
+
+      .priorityBadge.status {
+        background: #e9eee8;
+        color: #617067;
+      }
+
+      .notificationMeta small {
+        font-size: 9px;
+      }
+
+      .notificationBody h3 {
+        margin-top: 6px;
+        font-size: 16px;
+        line-height: 1.2;
+      }
+
+      .notificationBody p {
+        margin-top: 5px;
+        -webkit-line-clamp: 2;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .notificationBottom {
+        margin-top: 9px;
+        padding-top: 8px;
+      }
+
+      .readState {
+        min-height: 22px;
+        padding: 0 8px;
+        font-size: 7.5px;
+      }
+
+      .detailAction {
+        font-size: 9px;
+      }
+
+      .loadMoreBar {
+        display: flex;
+        justify-content: center;
+        padding: 8px 0 2px;
+      }
+
+      .loadMoreBar button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid #d3ded0;
+        border-radius: 11px;
+        background: rgba(255,255,255,.86);
+        color: #3e5748;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 900;
+        box-shadow: 0 7px 20px rgba(31,51,38,.04);
+      }
+
+      .loadMoreBar button:hover {
+        border-color: #b9cab4;
+        background: #fff;
+      }
+
+      .loadMoreBar button span {
+        color: #839087;
+        font-size: 8px;
+        font-weight: 800;
+      }
+
+      .paginationBar,
+      .infoSection {
+        display: none !important;
+      }
+
+      @media (max-width: 760px) {
+        .notificationsPage {
+          padding: 62px 8px 22px;
+        }
+
+        .hero {
+          padding: 13px 14px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 10px;
+          border-radius: 17px;
+        }
+
+        .hero h1 {
+          font-size: clamp(29px, 8vw, 36px);
+        }
+
+        .heroContent p {
+          display: none;
+        }
+
+        .stats {
+          grid-template-columns: repeat(3, 66px);
+          gap: 5px;
+        }
+
+        .stats span {
+          font-size: 6px;
+        }
+
+        .content {
+          margin-top: 7px;
+        }
+
+        .toolbar {
+          min-height: 46px;
+          padding: 6px 7px;
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .toolbar .sectionKicker,
+        .toolbar p {
+          display: none;
+        }
+
+        .toolbar h2 {
+          margin: 0;
+          font-size: 16px;
+        }
+
+        .toolbarActions {
+          width: auto;
+          margin-left: auto;
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .toolbarActions > button {
+          width: auto;
+          min-height: 32px;
+          padding: 0 9px;
+          font-size: 8px;
+        }
+
+        .filterBar {
+          width: 100%;
+        }
+
+        .filterBar button {
+          flex: 0 0 auto;
+          min-height: 32px;
+          padding: 0 9px;
+          font-size: 9px;
+        }
+
+        .notificationGrid {
+          grid-template-columns: 1fr;
+          gap: 7px;
+        }
+
+        .notificationCard {
+          min-height: 118px;
+          grid-template-columns: 43px minmax(0,1fr);
+          padding: 11px 12px;
+          gap: 10px;
+        }
+
+        .notificationIcon {
+          width: 43px;
+          height: 43px;
+        }
+
+        .metaLeft > span {
+          max-width: 145px;
+          font-size: 8.5px;
+        }
+
+        .notificationMeta small {
+          font-size: 8.5px;
+        }
+
+        .notificationBody h3 {
+          font-size: 15px;
+        }
+
+        .notificationBody p {
+          font-size: 10.5px;
+        }
+
+        .readState {
+          font-size: 7px;
+        }
+
+        .detailAction {
+          font-size: 8.5px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .hero {
+          grid-template-columns: minmax(0,1fr);
+        }
+
+        .stats {
+          grid-template-columns: repeat(3, minmax(0,1fr));
+          width: 100%;
+        }
+
+        .stats article {
+          padding: 7px 8px;
+        }
+
+        .stats strong {
+          font-size: 15px;
+        }
+
+        .stats span {
+          font-size: 6px;
+        }
+
+        .toolbarActions .markAllButton {
+          padding: 0 8px;
+        }
+
+        .notificationMeta {
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .notificationBottom {
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .notificationBottomRight {
+          justify-content: flex-start;
+        }
+
+        .detailAction {
+          margin-left: auto;
+        }
+      }
+
     `}</style>
   );
 }
