@@ -739,18 +739,25 @@ export default function EventDetails() {
     try {
       setConfirmingParticipantId(registrationId);
 
-      const { error: confirmError } = await supabase
+      const { data: confirmedRow, error: confirmError } = await supabase
         .from("event_interested")
         .update({ status: "confirmed" })
         .eq("id", registrationId)
-        .eq("event_id", event.id);
+        .eq("event_id", event.id)
+        .eq("user_id", registration.user_id)
+        .select("id, user_id, event_id, status")
+        .single();
 
       if (confirmError) throw confirmError;
+
+      if (!confirmedRow || confirmedRow.status !== "confirmed") {
+        throw new Error("Supabase nije sačuvao status potvrđene prijave.");
+      }
 
       setParticipants((current) =>
         current.map((item) =>
           item.id === registrationId
-            ? { ...item, status: "confirmed" }
+            ? { ...item, status: confirmedRow.status }
             : item
         )
       );
@@ -776,6 +783,7 @@ export default function EventDetails() {
         }
       }
 
+      await loadParticipants(event.id, event.host_id);
       setActionMessage("Prijava je potvrđena i korisnik je obavešten.");
     } catch (confirmError) {
       console.error("Greška pri potvrdi prijave:", confirmError);
@@ -803,18 +811,25 @@ export default function EventDetails() {
     try {
       setRejectingParticipantId(registrationId);
 
-      const { error: rejectError } = await supabase
+      const { data: rejectedRow, error: rejectError } = await supabase
         .from("event_interested")
         .update({ status: "rejected" })
         .eq("id", registrationId)
-        .eq("event_id", event.id);
+        .eq("event_id", event.id)
+        .eq("user_id", registration.user_id)
+        .select("id, user_id, event_id, status")
+        .single();
 
       if (rejectError) throw rejectError;
+
+      if (!rejectedRow || rejectedRow.status !== "rejected") {
+        throw new Error("Supabase nije sačuvao status odbijene prijave.");
+      }
 
       setParticipants((current) =>
         current.map((item) =>
           item.id === registrationId
-            ? { ...item, status: "rejected" }
+            ? { ...item, status: rejectedRow.status }
             : item
         )
       );
@@ -840,6 +855,7 @@ export default function EventDetails() {
         }
       }
 
+      await loadParticipants(event.id, event.host_id);
       setActionMessage("Prijava je odbijena i korisnik je obavešten.");
     } catch (rejectError) {
       console.error("Greška pri odbijanju prijave:", rejectError);
@@ -2488,13 +2504,7 @@ export default function EventDetails() {
                       alt={`${event.title} — fotografija ${index + 1}`}
                       draggable="false"
                     />
-
-                    <span className="eventGalleryZoom">
-                      <Icon name="eye" size={15} />
-                      Otvori
-                    </span>
-
-                    {index === 0 && (
+{index === 0 && (
                       <span className="eventGalleryCoverBadge">
                         Naslovna
                       </span>
@@ -5416,11 +5426,8 @@ function EventDetailsStyles() {
       }
 
       .eventGalleryGrid .eventGalleryItem::after{
-        content:"";
-        position:absolute;
-        inset:0;
-        background:linear-gradient(180deg,rgba(4,18,9,0) 48%,rgba(4,18,9,.58) 100%);
-        pointer-events:none;
+        content:none !important;
+        display:none !important;
       }
 
       .eventGalleryGrid .eventGalleryItem:hover img{
@@ -5428,21 +5435,7 @@ function EventDetailsStyles() {
       }
 
       .eventGalleryZoom{
-        position:absolute;
-        right:9px;
-        bottom:9px;
-        z-index:2;
-        display:inline-flex;
-        align-items:center;
-        gap:5px;
-        min-height:29px;
-        padding:0 9px;
-        border-radius:9px;
-        background:rgba(255,255,255,.92);
-        color:#173d27;
-        font-size:10px;
-        font-weight:900;
-        backdrop-filter:blur(8px);
+        display:none !important;
       }
 
       .eventGalleryCoverBadge{
@@ -5709,10 +5702,7 @@ function EventDetailsStyles() {
           max-width:320px;
           height:190px;
         }
-
-        .eventGalleryZoom{
-          font-size:10px;
-        }
+        .eventGalleryZoom{ display:none !important; }
 
         .eventGallerySwipeHint{
           font-size:10px;
@@ -6546,6 +6536,34 @@ function EventDetailsStyles() {
         opacity: 1 !important;
         visibility: visible !important;
         filter: none !important;
+      }
+
+
+      /* FINAL GALLERY VISIBILITY FIX */
+      .eventGalleryGrid .eventGalleryItem{
+        background:#e9efe9 !important;
+      }
+
+      .eventGalleryGrid .eventGalleryItem::after,
+      .eventGalleryZoom{
+        display:none !important;
+        content:none !important;
+      }
+
+      .eventGalleryGrid .eventGalleryItem > img{
+        position:relative !important;
+        z-index:1 !important;
+        display:block !important;
+        width:100% !important;
+        height:100% !important;
+        object-fit:cover !important;
+        opacity:1 !important;
+        visibility:visible !important;
+        filter:none !important;
+      }
+
+      .eventGalleryCoverBadge{
+        z-index:2 !important;
       }
 
     `}</style>
