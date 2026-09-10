@@ -746,12 +746,12 @@ export default function EventDetails() {
         .eq("event_id", event.id)
         .eq("user_id", registration.user_id)
         .select("id, user_id, event_id, status")
-        .single();
+        .maybeSingle();
 
       if (confirmError) throw confirmError;
 
       if (!confirmedRow || confirmedRow.status !== "confirmed") {
-        throw new Error("Supabase nije sačuvao status potvrđene prijave.");
+        throw new Error("Potvrda nije sačuvana u bazi. Proveri UPDATE RLS policy za event_interested.");
       }
 
       setParticipants((current) =>
@@ -818,12 +818,12 @@ export default function EventDetails() {
         .eq("event_id", event.id)
         .eq("user_id", registration.user_id)
         .select("id, user_id, event_id, status")
-        .single();
+        .maybeSingle();
 
       if (rejectError) throw rejectError;
 
       if (!rejectedRow || rejectedRow.status !== "rejected") {
-        throw new Error("Supabase nije sačuvao status odbijene prijave.");
+        throw new Error("Odbijanje nije sačuvano u bazi. Proveri UPDATE RLS policy za event_interested.");
       }
 
       setParticipants((current) =>
