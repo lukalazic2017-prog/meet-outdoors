@@ -24,6 +24,33 @@ const ACTIVITIES = [
   "Boat rides",
 ];
 
+const HOST_PURPOSES = [
+  {
+    value: "adventures",
+    title: "Avanture",
+    description: "Organizujem outdoor avanture i događaje.",
+    icon: "activity",
+  },
+  {
+    value: "accommodation",
+    title: "Smeštaj",
+    description: "Nudim smeštaj gostima i učesnicima.",
+    icon: "building",
+  },
+  {
+    value: "service",
+    title: "Usluge",
+    description: "Nudim vodiče, prevoz, instrukcije ili druge usluge.",
+    icon: "shield",
+  },
+  {
+    value: "rental",
+    title: "Iznajmljivanje",
+    description: "Iznajmljujem opremu, vozila ili outdoor rekvizite.",
+    icon: "save",
+  },
+];
+
 const FALLBACK_AVATAR =
   "https://api.dicebear.com/8.x/initials/svg?seed=MeetOutdoors";
 
@@ -428,6 +455,7 @@ export default function EditProfile() {
     website_url: "",
     promo_video_url: "",
     activities: [],
+    host_purposes: [],
   });
 
   const loadProfileFromContext =
@@ -464,6 +492,9 @@ export default function EditProfile() {
           profile.activities
         )
           ? profile.activities
+          : [],
+        host_purposes: Array.isArray(profile.host_purposes)
+          ? profile.host_purposes
           : [],
       });
 
@@ -546,6 +577,27 @@ export default function EditProfile() {
           : [...currentActivities, activity],
       };
     });
+  }
+
+  function toggleHostPurpose(purpose) {
+    setForm((current) => {
+      const currentPurposes = Array.isArray(current.host_purposes)
+        ? current.host_purposes
+        : [];
+
+      const exists = currentPurposes.includes(purpose);
+
+      return {
+        ...current,
+        host_purposes: exists
+          ? currentPurposes.filter((item) => item !== purpose)
+          : [...currentPurposes, purpose],
+      };
+    });
+
+    if (error) {
+      setError("");
+    }
   }
 
   async function saveProfile(event) {
@@ -671,6 +723,9 @@ export default function EditProfile() {
           publicLocationData?.latitude ?? null;
         updatePayload.longitude =
           publicLocationData?.longitude ?? null;
+        updatePayload.host_purposes = Array.isArray(form.host_purposes)
+          ? form.host_purposes
+          : [];
       }
 
       const { error: updateError } =
@@ -681,6 +736,42 @@ export default function EditProfile() {
 
       if (updateError) {
         throw updateError;
+      }
+
+      if (isHost) {
+        const capabilityMap = {
+          adventures: "adventure",
+          accommodation: "accommodation",
+          service: "service",
+          rental: "rental",
+        };
+
+        const declaredCapabilities = (form.host_purposes || [])
+          .map((purpose) => capabilityMap[purpose])
+          .filter(Boolean);
+
+        const serviceAreas = [
+          form.city.trim(),
+          form.country.trim(),
+          cleanPublicLocation,
+        ].filter(Boolean);
+
+        const { error: capabilityError } = await supabase
+          .from("host_agent_capabilities")
+          .upsert(
+            {
+              host_id: userId,
+              capabilities: declaredCapabilities,
+              activities: form.activities,
+              service_areas: [...new Set(serviceAreas)],
+              accepts_custom_requests: true,
+            },
+            { onConflict: "host_id" }
+          );
+
+        if (capabilityError) {
+          throw capabilityError;
+        }
       }
 
       await reloadAuth();
@@ -1048,6 +1139,63 @@ export default function EditProfile() {
                   />
                 </div>
               </section>
+
+              {isHost && (
+                <section className="formSection hostPurposeSection">
+                  <div className="formSectionHeading">
+                    <span>
+                      <Icon name="activity" size={19} />
+                    </span>
+
+                    <div>
+                      <small>Ponuda domaćina</small>
+                      <h2>Šta nudiš?</h2>
+                      <p>
+                        Izaberi sve kategorije koje tvoj profil može da ponudi.
+                        Na osnovu ovoga gradi se tvoj Host profil i Agent zna za
+                        koje zahteve može da te pronađe.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="hostPurposeGrid">
+                    {HOST_PURPOSES.map((purpose) => {
+                      const selected = form.host_purposes.includes(purpose.value);
+
+                      return (
+                        <button
+                          key={purpose.value}
+                          type="button"
+                          className={
+                            selected
+                              ? "hostPurposeCard selected"
+                              : "hostPurposeCard"
+                          }
+                          onClick={() => toggleHostPurpose(purpose.value)}
+                          aria-pressed={selected}
+                        >
+                          <span className="hostPurposeIcon">
+                            <Icon name={purpose.icon} size={20} />
+                          </span>
+
+                          <span className="hostPurposeCopy">
+                            <strong>{purpose.title}</strong>
+                            <small>{purpose.description}</small>
+                          </span>
+
+                          <span className="hostPurposeCheck">
+                            {selected && <Icon name="check" size={15} />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="hostPurposeHint">
+                    Možeš izabrati jednu ili više opcija i promeniti ih kasnije.
+                  </p>
+                </section>
+              )}
 
               {isHost && (
                 <section className="formSection hostFormSection">
@@ -1681,6 +1829,113 @@ function EditProfileStyles() {
 
       .mapLocationBoxContent .editField {
         margin: 0;
+      }
+
+      .hostPurposeSection {
+        background:
+          linear-gradient(
+            145deg,
+            rgba(242, 248, 235, 0.96),
+            rgba(255, 255, 255, 0.84)
+          );
+      }
+
+      .hostPurposeGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .hostPurposeCard {
+        position: relative;
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) 28px;
+        align-items: center;
+        gap: 11px;
+        min-width: 0;
+        min-height: 92px;
+        padding: 14px;
+        border: 1px solid #d9e3d4;
+        border-radius: 18px;
+        background: #fbfcf9;
+        color: #304438;
+        text-align: left;
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+
+      .hostPurposeCard:hover {
+        border-color: #a8bd94;
+        background: #f7faf3;
+        transform: translateY(-1px);
+      }
+
+      .hostPurposeCard.selected {
+        border-color: #779b5c;
+        background:
+          linear-gradient(145deg, #eef6e6, #f9fcf6);
+        box-shadow: 0 8px 24px rgba(77, 111, 60, 0.08);
+      }
+
+      .hostPurposeIcon,
+      .hostPurposeCheck {
+        display: grid;
+        place-items: center;
+      }
+
+      .hostPurposeIcon {
+        width: 42px;
+        height: 42px;
+        border-radius: 13px;
+        background: #e7f0dc;
+        color: #5b7842;
+      }
+
+      .hostPurposeCard.selected .hostPurposeIcon {
+        background: #dceccb;
+        color: #45682f;
+      }
+
+      .hostPurposeCopy {
+        min-width: 0;
+      }
+
+      .hostPurposeCopy strong,
+      .hostPurposeCopy small {
+        display: block;
+      }
+
+      .hostPurposeCopy strong {
+        font-size: 11px;
+        color: #31473a;
+      }
+
+      .hostPurposeCopy small {
+        margin-top: 5px;
+        color: #89948c;
+        font-size: 8px;
+        line-height: 1.45;
+      }
+
+      .hostPurposeCheck {
+        width: 27px;
+        height: 27px;
+        border: 1px solid #d8e2d3;
+        border-radius: 9px;
+        background: white;
+        color: #4f7337;
+      }
+
+      .hostPurposeCard.selected .hostPurposeCheck {
+        border-color: #8faa77;
+        background: #dff0cf;
+      }
+
+      .hostPurposeHint {
+        margin: 12px 0 0;
+        color: #8a958d;
+        font-size: 8px;
+        line-height: 1.5;
       }
 
       .hostFormSection {
@@ -2579,6 +2834,18 @@ function EditProfileStyles() {
           transition: none !important;
         }
       }
+      @media (max-width: 760px) {
+        .hostPurposeGrid {
+          grid-template-columns: 1fr;
+        }
+
+        .hostPurposeCard {
+          min-height: 82px;
+          padding: 12px;
+        }
+
+      }
+
     `}</style>
   );
 }

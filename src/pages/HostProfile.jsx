@@ -1985,8 +1985,13 @@ export default function HostProfile() {
     setOfferModalMode("create");
   };
 
-  const openCreateOffer = () => {
+  const openCreateOffer = (offerType = "service") => {
     resetOfferEditor();
+    setOfferForm((current) => ({
+      ...current,
+      offer_type: offerType === "rental" ? "rental" : "service",
+      category: "",
+    }));
     setOfferModalOpen(true);
   };
 
@@ -2679,6 +2684,8 @@ export default function HostProfile() {
   const isLegacyHost = hostPurposes.length === 0;
   const isAdventureHost = isLegacyHost || hostPurposes.includes("adventures");
   const isAccommodationHost = hostPurposes.includes("accommodation");
+  const isServiceHost = hostPurposes.includes("service");
+  const isRentalHost = hostPurposes.includes("rental");
 
   const activeEvents = events.filter(
     (item) =>
@@ -2719,66 +2726,73 @@ export default function HostProfile() {
     (item) => inferOfferType(item) === "rental"
   );
 
-  const contentTabs = [
+  const allContentTabs = [
     {
       id: "adventures",
+      purpose: "adventures",
       label: "Avanture",
+      eyebrow: "DOŽIVLJAJI",
       icon: "route",
       count: activeEvents.length,
+      image: activeEvents[0]?.cover_url || profile.cover_url || FALLBACK_COVER,
     },
     {
       id: "accommodation",
+      purpose: "accommodation",
       label: "Smeštaj",
+      eyebrow: "BORAVAK",
       icon: "home",
       count: accommodations.length,
+      image: accommodations[0]?.cover_url || profile.cover_url || FALLBACK_COVER,
     },
     {
       id: "services",
+      purpose: "service",
       label: "Usluge",
+      eyebrow: "PODRŠKA",
       icon: "sparkle",
       count: serviceOffers.length,
+      image: serviceOffers[0]?.cover_url || profile.cover_url || FALLBACK_COVER,
     },
     {
       id: "rentals",
+      purpose: "rental",
       label: "Iznajmljivanje",
+      eyebrow: "OPREMA",
       icon: "package",
       count: rentalOffers.length,
+      image: rentalOffers[0]?.cover_url || profile.cover_url || FALLBACK_COVER,
     },
-  ].filter((tab) => tab.count > 0);
+  ];
+
+  const declaredContentTabs = allContentTabs.filter((tab) => {
+    if (isLegacyHost) {
+      return tab.id === "adventures" || tab.count > 0;
+    }
+
+    return hostPurposes.includes(tab.purpose);
+  });
+
+  const publicContentTabs = allContentTabs.filter((tab) => tab.count > 0);
+
+  // Vlasnik vidi ono što je označio da nudi, posetilac samo stvarno objavljen sadržaj.
+  const contentTabs = isOwnProfile ? declaredContentTabs : publicContentTabs;
 
   const hasMultipleContentSections = contentTabs.length > 1;
   const singleContentSection =
     contentTabs.length === 1 ? contentTabs[0].id : null;
 
-  const profileTabs = hasMultipleContentSections
-    ? [
-        {
-          id: "overview",
-          label: "Pregled",
-          icon: "compass",
-        },
-        ...contentTabs,
-      ]
-    : [];
+  const selectedContentTab =
+    activeProfileTab !== "overview" &&
+    contentTabs.some((tab) => tab.id === activeProfileTab)
+      ? activeProfileTab
+      : contentTabs[0]?.id || null;
 
-  const showOverview =
-    !hasMultipleContentSections || activeProfileTab === "overview";
-
-  const showAdventures = hasMultipleContentSections
-    ? activeProfileTab === "adventures"
-    : singleContentSection === "adventures";
-
-  const showAccommodation = hasMultipleContentSections
-    ? activeProfileTab === "accommodation"
-    : singleContentSection === "accommodation";
-
-  const showServices = hasMultipleContentSections
-    ? activeProfileTab === "services"
-    : singleContentSection === "services";
-
-  const showRentals = hasMultipleContentSections
-    ? activeProfileTab === "rentals"
-    : singleContentSection === "rentals";
+  const showOverview = true;
+  const showAdventures = selectedContentTab === "adventures";
+  const showAccommodation = selectedContentTab === "accommodation";
+  const showServices = selectedContentTab === "services";
+  const showRentals = selectedContentTab === "rentals";
 
   return (
     <>
@@ -2962,29 +2976,62 @@ export default function HostProfile() {
         </section>
 
         {hasMultipleContentSections && (
-          <nav className="hostProfileTabs" aria-label="Sekcije host profila">
-            <div className="hostProfileTabsInner">
-              {profileTabs.map((tab) => (
+          <section className="hostCategoryShowcase" aria-label="Šta domaćin nudi">
+            <div className="hostCategoryShowcaseHead">
+              <div>
+                <span>ŠTA OVAJ DOMAĆIN NUDI</span>
+                <h2>Izaberi deo ponude</h2>
+              </div>
+              <p>Prevuci kartice horizontalno i otvori kategoriju koja te zanima.</p>
+            </div>
+
+            <div className="hostCategoryRail">
+              {contentTabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   className={
-                    activeProfileTab === tab.id
-                      ? "hostProfileTab active"
-                      : "hostProfileTab"
+                    selectedContentTab === tab.id
+                      ? "hostCategoryCard active"
+                      : "hostCategoryCard"
                   }
                   onClick={() => setActiveProfileTab(tab.id)}
-                  aria-pressed={activeProfileTab === tab.id}
+                  aria-pressed={selectedContentTab === tab.id}
                 >
-                  <Icon name={tab.icon} size={18} />
-                  <span>{tab.label}</span>
+                  <img src={tab.image} alt="" />
+                  <span className="hostCategoryShade" />
+
+                  <span className="hostCategoryIcon">
+                    <Icon name={tab.icon} size={18} />
+                  </span>
+
+                  <span className="hostCategoryCopy">
+                    <small>{tab.eyebrow}</small>
+                    <strong>{tab.label}</strong>
+                    <em>
+                      {tab.count > 0
+                        ? `${tab.count} ${tab.count === 1 ? "ponuda" : "ponude"}`
+                        : isOwnProfile
+                          ? "Spremno za dodavanje"
+                          : ""}
+                    </em>
+                  </span>
+
+                  <span className="hostCategoryArrow">
+                    <Icon name="arrowRight" size={16} />
+                  </span>
                 </button>
               ))}
             </div>
-          </nav>
+
+            <div className="hostCategorySwipeHint">
+              <span>Prevuci za ostale kategorije</span>
+              <Icon name="arrowRight" size={14} />
+            </div>
+          </section>
         )}
 
-          <div className="profileContent">
+          <div className={`profileContent ${singleContentSection ? "singlePurposeProfile" : ""}`}>
             {showOverview && (
               <>
             <div className="mainGrid">
@@ -3470,7 +3517,7 @@ export default function HostProfile() {
               </section>
             )}
 
-            {showServices && serviceOffers.length > 0 && (
+            {showServices && (serviceOffers.length > 0 || (isOwnProfile && isServiceHost)) && (
               <section
                 id="services"
                 className="listingSection offersSection"
@@ -3484,11 +3531,11 @@ export default function HostProfile() {
                     </p>
                   </div>
 
-                  {isOwnProfile && (
+                  {isOwnProfile && isServiceHost && (
                     <button
                       type="button"
                       className="sectionAction offerAddButton"
-                      onClick={openCreateOffer}
+                      onClick={() => openCreateOffer("service")}
                     >
                       <Icon name="plus" size={16} />
                       Dodaj uslugu
@@ -3504,7 +3551,7 @@ export default function HostProfile() {
                     onDelete={deleteOffer}
                     onContact={() => setContactModalOpen(true)}
                   />
-                ) : (
+                ) : serviceOffers.length > 1 ? (
                   <div className="offerRailShell">
                     <div className="offerSwipeRail" aria-label="Usluge domaćina">
                       {serviceOffers.map((item) => (
@@ -3524,11 +3571,21 @@ export default function HostProfile() {
                       <Icon name="arrowRight" size={14} />
                     </div>
                   </div>
-                )}
+                ) : isOwnProfile && isServiceHost ? (
+                  <div className="emptyListing compactEmpty">
+                    <span><Icon name="sparkle" size={27} /></span>
+                    <h3>Dodaj prvu uslugu.</h3>
+                    <p>Predstavi uslugu koju ljudi mogu direktno da dogovore sa tobom.</p>
+                    <button type="button" onClick={() => openCreateOffer("service")}>
+                      <Icon name="plus" size={15} />
+                      Dodaj uslugu
+                    </button>
+                  </div>
+                ) : null}
               </section>
             )}
 
-            {showRentals && rentalOffers.length > 0 && (
+            {showRentals && (rentalOffers.length > 0 || (isOwnProfile && isRentalHost)) && (
               <section
                 id="rentals"
                 className="listingSection offersSection"
@@ -3542,11 +3599,11 @@ export default function HostProfile() {
                     </p>
                   </div>
 
-                  {isOwnProfile && (
+                  {isOwnProfile && isRentalHost && (
                     <button
                       type="button"
                       className="sectionAction offerAddButton"
-                      onClick={openCreateOffer}
+                      onClick={() => openCreateOffer("rental")}
                     >
                       <Icon name="plus" size={16} />
                       Dodaj iznajmljivanje
@@ -3562,7 +3619,7 @@ export default function HostProfile() {
                     onDelete={deleteOffer}
                     onContact={() => setContactModalOpen(true)}
                   />
-                ) : (
+                ) : rentalOffers.length > 1 ? (
                   <div className="offerRailShell">
                     <div className="offerSwipeRail" aria-label="Iznajmljivanje domaćina">
                       {rentalOffers.map((item) => (
@@ -3582,7 +3639,17 @@ export default function HostProfile() {
                       <Icon name="arrowRight" size={14} />
                     </div>
                   </div>
-                )}
+                ) : isOwnProfile && isRentalHost ? (
+                  <div className="emptyListing compactEmpty">
+                    <span><Icon name="package" size={27} /></span>
+                    <h3>Dodaj prvo iznajmljivanje.</h3>
+                    <p>Dodaj opremu ili vozilo koje korisnici mogu direktno da iznajme od tebe.</p>
+                    <button type="button" onClick={() => openCreateOffer("rental")}>
+                      <Icon name="plus" size={15} />
+                      Dodaj iznajmljivanje
+                    </button>
+                  </div>
+                ) : null}
               </section>
             )}
 
@@ -3607,7 +3674,7 @@ export default function HostProfile() {
                   </p>
                 </div>
 
-                {isOwnProfile && (
+                {isOwnProfile && isAdventureHost && (
                   <Link
                     to="/create-event"
                     className="sectionAction"
@@ -7581,6 +7648,250 @@ function HostProfileStyles() {
         }
 
         .hostLeaflet{height:330px !important}
+      }
+
+
+      .hostCategoryShowcase {
+        width: min(1240px, calc(100% - 40px));
+        margin: 22px auto 0;
+      }
+
+      .hostCategoryShowcaseHead {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 14px;
+      }
+
+      .hostCategoryShowcaseHead > div > span {
+        display: block;
+        color: #7d965f;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: .14em;
+      }
+
+      .hostCategoryShowcaseHead h2 {
+        margin: 6px 0 0;
+        color: #1f3429;
+        font-size: clamp(25px, 3vw, 38px);
+        line-height: 1;
+        letter-spacing: -.045em;
+      }
+
+      .hostCategoryShowcaseHead p {
+        max-width: 420px;
+        margin: 0;
+        color: #7f8a83;
+        font-size: 10px;
+        line-height: 1.55;
+        text-align: right;
+      }
+
+      .hostCategoryRail {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding: 2px 2px 8px;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .hostCategoryRail::-webkit-scrollbar {
+        display: none;
+      }
+
+      .hostCategoryCard {
+        position: relative;
+        flex: 0 0 min(360px, 32vw);
+        min-width: 280px;
+        height: 180px;
+        overflow: hidden;
+        padding: 0;
+        border: 1px solid rgba(30, 55, 41, .10);
+        border-radius: 23px;
+        background: #173426;
+        color: white;
+        text-align: left;
+        cursor: pointer;
+        scroll-snap-align: start;
+        box-shadow: 0 13px 35px rgba(25, 49, 34, .08);
+        transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+      }
+
+      .hostCategoryCard:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 42px rgba(25, 49, 34, .13);
+      }
+
+      .hostCategoryCard.active {
+        border-color: rgba(111, 151, 80, .72);
+        box-shadow:
+          0 0 0 3px rgba(126, 163, 95, .10),
+          0 18px 42px rgba(25, 49, 34, .13);
+      }
+
+      .hostCategoryCard > img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .hostCategoryShade {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, rgba(7, 25, 14, .88), rgba(7, 25, 14, .32) 72%, rgba(7, 25, 14, .18)),
+          linear-gradient(180deg, rgba(0,0,0,.02), rgba(5,20,11,.45));
+      }
+
+      .hostCategoryIcon {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(255,255,255,.17);
+        border-radius: 12px;
+        background: rgba(255,255,255,.10);
+        color: #d8f3b0;
+        backdrop-filter: blur(10px);
+      }
+
+      .hostCategoryCopy {
+        position: absolute;
+        left: 16px;
+        right: 48px;
+        bottom: 15px;
+        display: block;
+      }
+
+      .hostCategoryCopy small,
+      .hostCategoryCopy strong,
+      .hostCategoryCopy em {
+        display: block;
+      }
+
+      .hostCategoryCopy small {
+        color: rgba(225, 244, 216, .64);
+        font-size: 7px;
+        font-weight: 900;
+        letter-spacing: .13em;
+      }
+
+      .hostCategoryCopy strong {
+        margin-top: 4px;
+        color: white;
+        font-size: 24px;
+        line-height: 1;
+        letter-spacing: -.045em;
+      }
+
+      .hostCategoryCopy em {
+        margin-top: 7px;
+        color: rgba(255,255,255,.65);
+        font-size: 8px;
+        font-style: normal;
+        font-weight: 750;
+      }
+
+      .hostCategoryArrow {
+        position: absolute;
+        right: 14px;
+        bottom: 15px;
+        display: grid;
+        place-items: center;
+        width: 31px;
+        height: 31px;
+        border-radius: 10px;
+        background: rgba(216, 243, 176, .13);
+        color: #d8f3b0;
+      }
+
+      .hostCategorySwipeHint {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        margin-top: 6px;
+        color: #8a958d;
+        font-size: 8px;
+        font-weight: 800;
+      }
+
+      .singlePurposeProfile .listingSection {
+        margin-top: 24px;
+      }
+
+      .singlePurposeProfile .singleFeature {
+        min-height: 470px;
+      }
+
+      .singlePurposeProfile .singleFeatureVisual {
+        min-height: 470px;
+      }
+
+      .singlePurposeProfile .singleFeatureContent {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: clamp(24px, 4vw, 46px);
+      }
+
+      @media (max-width: 760px) {
+        .hostCategoryShowcase {
+          width: 100%;
+          margin-top: 16px;
+          padding-left: 16px;
+        }
+
+        .hostCategoryShowcaseHead {
+          align-items: flex-start;
+          padding-right: 16px;
+          margin-bottom: 10px;
+        }
+
+        .hostCategoryShowcaseHead h2 {
+          font-size: 24px;
+        }
+
+        .hostCategoryShowcaseHead p {
+          display: none;
+        }
+
+        .hostCategoryRail {
+          gap: 9px;
+          padding-right: 16px;
+        }
+
+        .hostCategoryCard {
+          flex-basis: 78vw;
+          min-width: 250px;
+          max-width: 330px;
+          height: 150px;
+          border-radius: 18px;
+        }
+
+        .hostCategoryCopy strong {
+          font-size: 21px;
+        }
+
+        .hostCategorySwipeHint {
+          justify-content: flex-start;
+          padding-right: 16px;
+        }
+
+        .singlePurposeProfile .singleFeature,
+        .singlePurposeProfile .singleFeatureVisual {
+          min-height: 0;
+        }
       }
 
     `}
