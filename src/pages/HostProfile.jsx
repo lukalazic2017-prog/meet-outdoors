@@ -1619,7 +1619,7 @@ export default function HostProfile() {
   const [offerError, setOfferError] = useState("");
 
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [activeProfileTab, setActiveProfileTab] = useState("overview");
+  const [activeProfileTab] = useState("overview");
 
   const emptyStayForm = {
     title: "",
