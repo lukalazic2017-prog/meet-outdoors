@@ -1619,7 +1619,6 @@ export default function HostProfile() {
   const [offerError, setOfferError] = useState("");
 
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [activeProfileTab] = useState("overview");
 
   const emptyStayForm = {
     title: "",
@@ -2790,17 +2789,14 @@ export default function HostProfile() {
   const singleContentSection =
     contentTabs.length === 1 ? contentTabs[0].id : null;
 
-  const selectedContentTab =
-    activeProfileTab !== "overview" &&
-    contentTabs.some((tab) => tab.id === activeProfileTab)
-      ? activeProfileTab
-      : contentTabs[0]?.id || null;
-
+  // Kartice iznad služe kao direktne akcije / prečice.
+  // Sadržaj ispod se više NE menja klikom na karticu:
+  // prikazujemo sve kategorije koje host stvarno nudi / ima objavljene.
   const showOverview = true;
-  const showAdventures = selectedContentTab === "adventures";
-  const showAccommodation = selectedContentTab === "accommodation";
-  const showServices = selectedContentTab === "services";
-  const showRentals = selectedContentTab === "rentals";
+  const showAdventures = contentTabs.some((tab) => tab.id === "adventures");
+  const showAccommodation = contentTabs.some((tab) => tab.id === "accommodation");
+  const showServices = contentTabs.some((tab) => tab.id === "services");
+  const showRentals = contentTabs.some((tab) => tab.id === "rentals");
 
   const handleCategoryCardClick = (tab) => {
     if (!tab) return;

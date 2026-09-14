@@ -47,6 +47,26 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="M16 3v4M8 3v4M3 10h18" />
       </>
     ),
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+        <path d="M9 20v-6h6v6" />
+      </>
+    ),
+    tool: (
+      <>
+        <path d="M14.7 6.3a4 4 0 0 0-5 5L3 18l3 3 6.7-6.7a4 4 0 0 0 5-5l-2.3 2.3-3-3 2.3-2.3Z" />
+      </>
+    ),
+    package: (
+      <>
+        <path d="m12 3 8 4-8 4-8-4 8-4Z" />
+        <path d="m4 7 8 4 8-4" />
+        <path d="M4 7v10l8 4 8-4V7" />
+        <path d="M12 11v10" />
+      </>
+    ),
     users: (
       <>
         <circle cx="9" cy="8" r="3" />
@@ -206,12 +226,33 @@ export default function Navbar() {
     { to: "/agent", label: "Agent", icon: "sparkle" },
     { to: "/explore", label: "Mapa", icon: "map" },
     { to: "/events", label: "Avanture", icon: "calendar" },
+    { to: "/stays", label: "Smeštaj", icon: "home" },
+    { to: "/hosts?offer=service", label: "Usluge", icon: "tool" },
+    { to: "/hosts?offer=rental", label: "Iznajmljivanje", icon: "package" },
     { to: "/hosts", label: "Domaćini", icon: "users" },
   ];
 
   function isActive(path) {
     if (path === "/") return location.pathname === "/";
-    return location.pathname.startsWith(path);
+
+    const [pathname, query = ""] = path.split("?");
+
+    if (location.pathname !== pathname && !location.pathname.startsWith(`${pathname}/`)) {
+      return false;
+    }
+
+    if (!query) {
+      // /hosts should not appear active while a specific offer filter nav item is active.
+      if (pathname === "/hosts" && new URLSearchParams(location.search).get("offer")) {
+        return false;
+      }
+      return true;
+    }
+
+    const wanted = new URLSearchParams(query);
+    const current = new URLSearchParams(location.search);
+
+    return [...wanted.entries()].every(([key, value]) => current.get(key) === value);
   }
 
   if (hideNavbar) return null;

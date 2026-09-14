@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 const FALLBACK_AVATAR =
@@ -292,6 +292,7 @@ function HostCard({ host }) {
 }
 
 export default function Hosts() {
+  const location = useLocation();
   const [hosts, setHosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -299,7 +300,9 @@ export default function Hosts() {
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [activityFilter, setActivityFilter] = useState("");
-  const [offerFilter, setOfferFilter] = useState("");
+  const [offerFilter, setOfferFilter] = useState(
+    () => new URLSearchParams(window.location.search).get("offer") || ""
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(9);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -307,6 +310,16 @@ export default function Hosts() {
   useEffect(() => {
     loadHosts();
   }, []);
+
+  useEffect(() => {
+    const queryOffer = new URLSearchParams(location.search).get("offer") || "";
+    setOfferFilter(queryOffer);
+    setPage(1);
+
+    if (queryOffer) {
+      setMobileFiltersOpen(true);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     function syncPageSize() {
