@@ -8,6 +8,29 @@ const FALLBACK_AVATAR =
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=85";
 
+
+function offerLabel(type) {
+  const labels = {
+    adventure: "Avanture",
+    accommodation: "Smeštaj",
+    service: "Usluge",
+    rental: "Iznajmljivanje",
+  };
+
+  return labels[type] || type;
+}
+
+function getHostOfferTypes(host) {
+  const types = [];
+
+  if (Number(host?.adventures_count || 0) > 0) types.push("adventure");
+  if (Number(host?.accommodations_count || 0) > 0) types.push("accommodation");
+  if (Number(host?.services_count || 0) > 0) types.push("service");
+  if (Number(host?.rentals_count || 0) > 0) types.push("rental");
+
+  return types;
+}
+
 function Icon({
   name,
   size = 20,
@@ -140,7 +163,7 @@ function LoadingState() {
 
           <h1>Učitavanje domaćina</h1>
 
-          <p>Pronalazimo organizatore outdoor avantura.</p>
+          <p>Pronalazimo outdoor domaćine i njihove ponude.</p>
         </div>
       </main>
     </>
@@ -163,7 +186,7 @@ function HostCard({ host }) {
     ? host.bio.length > 130
       ? `${host.bio.slice(0, 130)}...`
       : host.bio
-    : "Ovaj domaćin još nije dodao opis svog iskustva i avantura.";
+    : "Ovaj domaćin još nije dodao opis svog iskustva i ponude.";
 
   return (
     <article className="hostCard">
@@ -181,12 +204,9 @@ function HostCard({ host }) {
         <div className="hostMediaShade" />
 
         <div className="hostMediaTop">
-          <span className={host.is_verified ? "hostStatus verified" : "hostStatus"}>
-            <Icon
-              name={host.is_verified ? "verified" : "shield"}
-              size={14}
-            />
-            {host.is_verified ? "Verifikovan host" : "MeetOutdoors host"}
+          <span className="hostStatus">
+            <Icon name="shield" size={14} />
+            MeetOutdoors host
           </span>
 
           <span className="hostMediaArrow">
@@ -204,11 +224,6 @@ function HostCard({ host }) {
               alt={displayName}
               className="hostAvatar"
             />
-            {host.is_verified && (
-              <span className="avatarVerified">
-                <Icon name="check" size={12} strokeWidth={3} />
-              </span>
-            )}
           </Link>
 
           <div className="hostIdentityText">
@@ -243,6 +258,17 @@ function HostCard({ host }) {
           )}
         </div>
 
+
+        {getHostOfferTypes(host).length > 0 && (
+          <div className="hostOfferTypes">
+            {getHostOfferTypes(host).map((type) => (
+              <span key={type} className={`hostOfferType ${type}`}>
+                {offerLabel(type)}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="hostCardFooter">
           <div className="hostTrust">
             <span className="hostTrustIcon">
@@ -250,7 +276,7 @@ function HostCard({ host }) {
             </span>
 
             <div>
-              <strong>Outdoor organizator</strong>
+              <strong>Outdoor domaćin</strong>
               <small>Profil na MeetOutdoors</small>
             </div>
           </div>
@@ -273,9 +299,10 @@ export default function Hosts() {
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [activityFilter, setActivityFilter] = useState("");
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [offerFilter, setOfferFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(9);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
     loadHosts();
@@ -285,12 +312,10 @@ export default function Hosts() {
     function syncPageSize() {
       const width = window.innerWidth;
 
-      if (width <= 580) {
+      if (width <= 760) {
         setPageSize(6);
-      } else if (width <= 1080) {
-        setPageSize(8);
       } else {
-        setPageSize(12);
+        setPageSize(9);
       }
     }
 
@@ -307,17 +332,72 @@ export default function Hosts() {
     setError("");
 
     try {
-      const { data, error: hostsError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("role", "host")
-        .order("created_at", { ascending: false });
+      const [
+        hostsResult,
+        eventsResult,
+        accommodationsResult,
+        offersResult,
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("role", "host")
+          .order("created_at", { ascending: false }),
 
-      if (hostsError) {
-        throw hostsError;
-      }
+        supabase
+          .from("events")
+          .select("id, host_id, is_active")
+          .eq("is_active", true),
 
-      setHosts(data || []);
+        supabase
+          .from("host_accommodations")
+          .select("id, host_id, is_active")
+          .eq("is_active", true),
+
+        supabase
+          .from("host_offers")
+          .select("id, host_id, offer_type, is_active")
+          .eq("is_active", true),
+      ]);
+
+      if (hostsResult.error) throw hostsResult.error;
+
+      const events = eventsResult.error ? [] : eventsResult.data || [];
+      const accommodations = accommodationsResult.error
+        ? []
+        : accommodationsResult.data || [];
+      const offers = offersResult.error ? [] : offersResult.data || [];
+
+      const enrichedHosts = (hostsResult.data || []).map((host) => {
+        const hostEvents = events.filter((item) => item.host_id === host.id);
+        const hostAccommodations = accommodations.filter(
+          (item) => item.host_id === host.id
+        );
+        const hostOffers = offers.filter((item) => item.host_id === host.id);
+
+        const services = hostOffers.filter(
+          (item) => String(item.offer_type || "").toLowerCase() !== "rental"
+        );
+
+        const rentals = hostOffers.filter(
+          (item) => String(item.offer_type || "").toLowerCase() === "rental"
+        );
+
+        return {
+          ...host,
+          adventures_count: hostEvents.length,
+          accommodations_count: hostAccommodations.length,
+          services_count: services.length,
+          rentals_count: rentals.length,
+          total_active_offers:
+            hostEvents.length +
+            hostAccommodations.length +
+            services.length +
+            rentals.length,
+        };
+      });
+
+      setHosts(enrichedHosts);
     } catch (err) {
       console.error("Greška pri učitavanju domaćina:", err);
 
@@ -407,14 +487,15 @@ export default function Hosts() {
         !activityFilter ||
         hostActivities.includes(activityFilter);
 
-      const matchesVerified =
-        !verifiedOnly || Boolean(host.is_verified);
+      const matchesOffer =
+        !offerFilter ||
+        getHostOfferTypes(host).includes(offerFilter);
 
       return (
         matchesSearch &&
         matchesLocation &&
         matchesActivity &&
-        matchesVerified
+        matchesOffer
       );
     });
   }, [
@@ -422,12 +503,12 @@ export default function Hosts() {
     search,
     locationFilter,
     activityFilter,
-    verifiedOnly,
+    offerFilter,
   ]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, locationFilter, activityFilter, verifiedOnly]);
+  }, [search, locationFilter, activityFilter, offerFilter]);
 
   const pageCount = useMemo(
     () => Math.max(1, Math.ceil(filteredHosts.length / pageSize)),
@@ -447,8 +528,13 @@ export default function Hosts() {
     }
   }, [page, pageCount]);
 
-  const verifiedCount = useMemo(
-    () => hosts.filter((host) => host.is_verified).length,
+
+  const activeOffersCount = useMemo(
+    () =>
+      hosts.reduce(
+        (total, host) => total + Number(host.total_active_offers || 0),
+        0
+      ),
     [hosts]
   );
 
@@ -456,13 +542,13 @@ export default function Hosts() {
     search.trim() ||
     locationFilter ||
     activityFilter ||
-    verifiedOnly;
+    offerFilter;
 
   function clearFilters() {
     setSearch("");
     setLocationFilter("");
     setActivityFilter("");
-    setVerifiedOnly(false);
+    setOfferFilter("");
   }
 
   if (loading) {
@@ -490,8 +576,7 @@ export default function Hosts() {
             </h1>
 
             <p>
-              Pronađi organizatore koji kreiraju događaje, ture i
-              outdoor iskustva na lokacijama koje želiš da istražiš.
+              Pronađi domaćine, pogledaj njihove avanture, smeštaj i usluge — pa ih kontaktiraj direktno.
             </p>
           </div>
 
@@ -502,19 +587,14 @@ export default function Hosts() {
             </article>
 
             <article>
-              <strong>{verifiedCount}</strong>
-              <span>verifikovanih profila</span>
-            </article>
-
-            <article>
-              <strong>{activities.length}</strong>
-              <span>outdoor aktivnosti</span>
+              <strong>{activeOffersCount}</strong>
+              <span>aktivnih ponuda</span>
             </article>
           </div>
         </section>
 
         <section className="hostsContent">
-          <div className="hostsFilters">
+          <div className={`hostsFilters ${mobileFiltersOpen ? "mobileOpen" : ""}`}>
             <div className="searchField">
               <Icon name="search" size={19} />
 
@@ -537,6 +617,17 @@ export default function Hosts() {
                 </button>
               )}
             </div>
+
+            <button
+              type="button"
+              className="mobileFilterToggle"
+              onClick={() => setMobileFiltersOpen((current) => !current)}
+              aria-expanded={mobileFiltersOpen}
+            >
+              <Icon name="filter" size={16} />
+              <span>{mobileFiltersOpen ? "Sakrij filtere" : "Filteri"}</span>
+              {hasFilters && <strong>•</strong>}
+            </button>
 
             <div className="filterField">
               <Icon name="mapPin" size={17} />
@@ -576,23 +667,22 @@ export default function Hosts() {
               </select>
             </div>
 
-            <label className="verifiedFilter">
-              <input
-                type="checkbox"
-                checked={verifiedOnly}
+            <div className="filterField">
+              <Icon name="filter" size={17} />
+
+              <select
+                value={offerFilter}
                 onChange={(event) =>
-                  setVerifiedOnly(event.target.checked)
+                  setOfferFilter(event.target.value)
                 }
-              />
-
-              <span className="verifiedCheckbox">
-                {verifiedOnly && (
-                  <Icon name="verified" size={15} />
-                )}
-              </span>
-
-              Samo verifikovani
-            </label>
+              >
+                <option value="">Sve ponude</option>
+                <option value="adventure">Avanture</option>
+                <option value="accommodation">Smeštaj</option>
+                <option value="service">Usluge</option>
+                <option value="rental">Iznajmljivanje</option>
+              </select>
+            </div>
 
             {hasFilters && (
               <button
@@ -623,7 +713,7 @@ export default function Hosts() {
           <div className="hostsSectionHeader">
             <div>
               <span className="sectionKicker">
-                Outdoor organizatori
+                Outdoor domaćini
               </span>
 
               <h2>
@@ -633,8 +723,12 @@ export default function Hosts() {
               </h2>
 
               <p>
-                Prikazano {filteredHosts.length} od {hosts.length}{" "}
-                domaćina.
+                Prikazano {filteredHosts.length} od {hosts.length} domaćina ·{" "}
+                {filteredHosts.reduce(
+                  (total, host) =>
+                    total + Number(host.total_active_offers || 0),
+                  0
+                )} aktivnih ponuda.
               </p>
             </div>
 
@@ -726,27 +820,11 @@ export default function Hosts() {
               </h2>
 
               <p>
-                Pregledaj profil, opis, aktivnosti i ponude domaćina
-                pre nego što se prijaviš za događaj ili rezervišeš
-                paket.
+                Pregledaj profil, aktivnosti, ponude i javne informacije domaćina pre nego što ga kontaktiraš direktno.
               </p>
             </div>
 
             <div className="trustCards">
-              <article>
-                <span>
-                  <Icon name="verified" size={21} />
-                </span>
-
-                <div>
-                  <strong>Verifikovani profili</strong>
-
-                  <small>
-                    Jasno označeni domaćini koji su prošli proveru
-                    platforme.
-                  </small>
-                </div>
-              </article>
 
               <article>
                 <span>
@@ -757,8 +835,7 @@ export default function Hosts() {
                   <strong>Relevantno iskustvo</strong>
 
                   <small>
-                    Pregledaj aktivnosti i avanture koje domaćin
-                    organizuje.
+                    Pregledaj aktivnosti i ponude koje domaćin trenutno ima.
                   </small>
                 </div>
               </article>
@@ -787,12 +864,11 @@ export default function Hosts() {
               </span>
 
               <h2>
-                Predstavi svoje avanture novoj zajednici.
+                Predstavi svoje outdoor ponude novoj zajednici.
               </h2>
 
               <p>
-                Kreiraj host profil, objavi događaje i pakete i poveži
-                se sa ljudima koji žele više vremena u prirodi.
+                Kreiraj host profil, objavi svoje outdoor ponude i omogući ljudima da te pronađu i kontaktiraju direktno.
               </p>
             </div>
 
@@ -3084,6 +3160,1276 @@ function HostsStyles() {
         .hostsHero{min-height:270px}
         .hostsHeroContent h1{font-size:31px}
         .hostCard{flex-basis:86vw}
+      }
+
+
+      /* CATALOG HOST DIRECTORY */
+      .hostOfferTypes{
+        display:flex;
+        flex-wrap:wrap;
+        gap:5px;
+        margin-top:9px;
+      }
+
+      .hostOfferType{
+        display:inline-flex;
+        align-items:center;
+        min-height:24px;
+        padding:0 8px;
+        border:1px solid #dce5d8;
+        border-radius:999px;
+        background:#fff;
+        color:#5d6e63;
+        font-size:6px;
+        font-weight:900;
+      }
+
+      .hostOfferType.adventure{
+        background:#edf5e7;
+        color:#587441;
+      }
+
+      .hostOfferType.accommodation{
+        background:#f0f4ea;
+        color:#4f6756;
+      }
+
+      .hostOfferType.service{
+        background:#f5f3ea;
+        color:#796d47;
+      }
+
+      .hostOfferType.rental{
+        background:#eef3f2;
+        color:#526b67;
+      }
+
+      .hostsFilters{
+        grid-template-columns:
+          minmax(240px,1.4fr)
+          minmax(145px,.62fr)
+          minmax(145px,.62fr)
+          minmax(145px,.62fr)
+          auto
+          auto;
+      }
+
+      @media(max-width:1080px){
+        .hostsFilters{
+          grid-template-columns:repeat(2,minmax(0,1fr));
+        }
+      }
+
+      @media(max-width:760px){
+        .hostsFilters{
+          display:flex;
+        }
+      }
+
+
+
+      /* =========================================================
+         MEETOUTDOORS SIGNATURE UI — premium visual system
+         Visual treatment only. Data/filter/routing logic unchanged.
+         ========================================================= */
+
+      :root {
+        --mo-bg: #eef1ea;
+        --mo-paper: rgba(255,255,255,.88);
+        --mo-paper-solid: #f9faf6;
+        --mo-ink: #14231a;
+        --mo-muted: #758078;
+        --mo-deep: #07140c;
+        --mo-green: #c8f79d;
+        --mo-green-2: #a8dc7c;
+        --mo-line: rgba(18,42,26,.085);
+        --mo-shadow-sm: 0 12px 34px rgba(26,52,34,.08);
+        --mo-shadow-md: 0 22px 60px rgba(22,47,31,.12);
+        --mo-shadow-lg: 0 36px 100px rgba(17,43,27,.18);
+      }
+
+      .hostsPage,
+      .eventsPage {
+        background:
+          radial-gradient(circle at 9% 3%, rgba(176,214,137,.17), transparent 24%),
+          radial-gradient(circle at 94% 30%, rgba(73,118,79,.10), transparent 23%),
+          linear-gradient(180deg, #f1f4ed 0%, #ecefe8 100%);
+      }
+
+      .heroKicker {
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(255,255,255,.075);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+        backdrop-filter: blur(18px) saturate(130%);
+        -webkit-backdrop-filter: blur(18px) saturate(130%);
+      }
+
+      .heroKicker > span {
+        background: #d6ffae;
+        box-shadow:
+          0 0 0 5px rgba(205,255,166,.09),
+          0 0 22px rgba(205,255,166,.35);
+      }
+
+      .sectionKicker {
+        letter-spacing: .13em !important;
+        font-weight: 900 !important;
+      }
+
+      .searchField,
+      .filterField {
+        border-color: rgba(28,51,35,.08);
+        background: rgba(248,250,246,.88);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+      }
+
+      .searchField:hover,
+      .filterField:hover {
+        border-color: rgba(72,112,79,.17);
+        background: #fff;
+      }
+
+      .searchField:focus-within,
+      .filterField:focus-within {
+        border-color: rgba(93,135,93,.44);
+        background: #fff;
+        box-shadow:
+          0 0 0 4px rgba(116,157,104,.085),
+          0 10px 28px rgba(31,60,40,.07);
+      }
+
+      .clearFilters {
+        transition:
+          transform .18s ease,
+          border-color .18s ease,
+          box-shadow .18s ease;
+      }
+
+      .clearFilters:hover {
+        transform: translateY(-1px);
+        border-color: rgba(163,77,64,.28);
+        box-shadow: 0 10px 25px rgba(130,60,50,.08);
+      }
+
+      .hostsSectionHeader h2,
+      .eventsSectionHeader h2,
+      .trustIntro h2,
+      .hostsCta h2,
+      .eventsCta h2 {
+        letter-spacing: -.055em !important;
+        text-wrap: balance;
+      }
+
+      .hostsPagination button,
+      .eventsPagination button {
+        border: 1px solid rgba(28,51,35,.09);
+        background: rgba(255,255,255,.76);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.65);
+        transition:
+          transform .18s ease,
+          box-shadow .18s ease,
+          background .18s ease;
+      }
+
+      .hostsPagination button:not(:disabled):hover,
+      .eventsPagination button:not(:disabled):hover {
+        transform: translateY(-1px);
+        background: #fff;
+        box-shadow: 0 10px 26px rgba(30,57,39,.09);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hostCard,
+        .eventCard,
+        .hostMedia img,
+        .eventImage,
+        .viewHostButton,
+        .eventArrow {
+          transition: none !important;
+        }
+      }
+
+      /* ========================= HOSTS — SIGNATURE ========================= */
+
+      .hostsPage {
+        padding-top: 104px;
+      }
+
+      .hostsHero {
+        min-height: 650px;
+        border-radius: 38px;
+        box-shadow:
+          0 40px 110px rgba(20,47,29,.22),
+          inset 0 1px 0 rgba(255,255,255,.05);
+      }
+
+      .hostsHero::before {
+        filter: saturate(.91) contrast(1.03);
+      }
+
+      .hostsHeroOverlay {
+        background:
+          radial-gradient(circle at 76% 16%, rgba(202,255,166,.10), transparent 29%),
+          linear-gradient(180deg, rgba(3,13,7,.18) 0%, rgba(3,13,7,.26) 34%, rgba(3,13,7,.82) 78%, rgba(3,13,7,.97) 100%),
+          linear-gradient(90deg, rgba(3,13,7,.65), rgba(3,13,7,.08) 72%);
+      }
+
+      .hostsHeroContent {
+        max-width: 930px;
+        padding-bottom: 62px;
+      }
+
+      .hostsHeroContent h1 {
+        max-width: 930px;
+        font-size: clamp(58px, 7.6vw, 102px);
+        font-weight: 790;
+        line-height: .91;
+        letter-spacing: -.075em;
+        text-shadow: 0 18px 55px rgba(0,0,0,.24);
+      }
+
+      .hostsHeroContent p {
+        max-width: 600px;
+        color: rgba(255,255,255,.70);
+        font-size: 15.5px;
+        line-height: 1.72;
+      }
+
+      .heroStats {
+        gap: 0;
+        padding-top: 18px;
+        border-top-color: rgba(255,255,255,.13);
+      }
+
+      .heroStats article {
+        position: relative;
+        padding: 4px 24px 2px 0;
+      }
+
+      .heroStats article:not(:first-child) {
+        padding-left: 24px;
+      }
+
+      .heroStats article:not(:first-child)::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 4px;
+        bottom: 4px;
+        width: 1px;
+        background: rgba(255,255,255,.10);
+      }
+
+      .heroStats strong {
+        font-size: 29px;
+        font-weight: 800;
+      }
+
+      .heroStats span {
+        color: rgba(255,255,255,.50);
+      }
+
+      .hostsFilters {
+        margin-top: -37px;
+        padding: 10px;
+        border: 1px solid rgba(23,50,31,.075);
+        border-radius: 25px;
+        background: rgba(250,252,248,.86);
+        box-shadow:
+          0 28px 70px rgba(24,51,32,.13),
+          inset 0 1px 0 rgba(255,255,255,.78);
+        backdrop-filter: blur(24px) saturate(135%);
+        -webkit-backdrop-filter: blur(24px) saturate(135%);
+      }
+
+      .verifiedFilter {
+        border-color: rgba(28,51,35,.08);
+        background: rgba(248,250,246,.88);
+        transition: .18s ease;
+      }
+
+      .verifiedFilter:hover {
+        border-color: rgba(72,112,79,.18);
+        background: #fff;
+      }
+
+      .verifiedCheckbox {
+        border-color: rgba(45,72,52,.15);
+        border-radius: 8px;
+      }
+
+      .verifiedFilter input:checked + .verifiedCheckbox {
+        border-color: #bee991;
+        background: linear-gradient(180deg,#d8ffb5,#bde88f);
+        box-shadow: 0 5px 14px rgba(108,153,77,.16);
+      }
+
+      .hostsSectionHeader {
+        margin-top: 72px;
+        align-items: center;
+      }
+
+      .hostsSectionHeader h2 {
+        margin-top: 8px;
+        font-size: clamp(34px, 4vw, 56px);
+        font-weight: 790;
+        line-height: .98;
+      }
+
+      .hostsSectionHeader p {
+        color: #7a857d;
+      }
+
+      .hostResultCount {
+        min-width: 54px;
+        height: 54px;
+        border: 1px solid rgba(26,51,34,.08);
+        border-radius: 18px;
+        background: rgba(255,255,255,.78);
+        box-shadow:
+          0 14px 34px rgba(27,54,36,.08),
+          inset 0 1px 0 rgba(255,255,255,.8);
+      }
+
+      .hostsGrid {
+        gap: 22px;
+      }
+
+      .hostCard {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(25,51,33,.075);
+        border-radius: 27px;
+        background: rgba(255,255,255,.88);
+        box-shadow:
+          0 14px 38px rgba(31,58,39,.075),
+          inset 0 1px 0 rgba(255,255,255,.75);
+        transition:
+          transform .32s cubic-bezier(.2,.8,.2,1),
+          box-shadow .32s ease,
+          border-color .32s ease;
+      }
+
+      .hostCard:hover {
+        transform: translateY(-7px);
+        border-color: rgba(82,127,83,.17);
+        box-shadow:
+          0 30px 70px rgba(24,54,34,.15),
+          inset 0 1px 0 rgba(255,255,255,.82);
+      }
+
+      .hostMedia {
+        min-height: 250px;
+        overflow: hidden;
+      }
+
+      .hostCoverImage {
+        transition: transform .75s cubic-bezier(.2,.8,.2,1);
+      }
+
+      .hostCard:hover .hostCoverImage {
+        transform: scale(1.045);
+      }
+
+      .hostMediaShade {
+        background:
+          linear-gradient(180deg, rgba(3,13,7,.04) 18%, rgba(3,13,7,.15) 55%, rgba(3,13,7,.72) 100%),
+          linear-gradient(90deg, rgba(3,13,7,.22), transparent 60%);
+      }
+
+      .hostStatus {
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(5,16,10,.42);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+        backdrop-filter: blur(14px);
+      }
+
+      .hostStatus.verified {
+        border-color: rgba(211,255,180,.28);
+        background: rgba(32,67,34,.48);
+        color: #dcffc5;
+      }
+
+      .hostMediaArrow {
+        border: 1px solid rgba(255,255,255,.16);
+        background: rgba(255,255,255,.09);
+        backdrop-filter: blur(14px);
+        transition: transform .22s ease, background .22s ease;
+      }
+
+      .hostCard:hover .hostMediaArrow {
+        transform: translateX(3px);
+        background: rgba(255,255,255,.15);
+      }
+
+      .hostCardBody {
+        padding: 0 21px 21px;
+      }
+
+      .hostAvatarWrap {
+        border: 5px solid rgba(255,255,255,.96);
+        box-shadow:
+          0 12px 28px rgba(21,50,31,.16),
+          0 0 0 1px rgba(21,50,31,.055);
+      }
+
+      .avatarVerified {
+        background: linear-gradient(180deg,#dcffbd,#b8e889);
+        box-shadow: 0 5px 15px rgba(75,122,57,.18);
+      }
+
+      .hostIdentityText h2 {
+        font-weight: 790;
+        letter-spacing: -.035em;
+      }
+
+      .hostBio {
+        color: #69756e;
+        line-height: 1.68;
+      }
+
+      .hostActivities span,
+      .hostOfferType {
+        border-color: rgba(29,56,37,.07);
+        background: #f4f6f1;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+      }
+
+      .hostOfferType {
+        font-weight: 850;
+      }
+
+      .hostCardFooter {
+        margin-top: 19px;
+        padding-top: 17px;
+        border-top-color: rgba(28,52,35,.07);
+      }
+
+      .hostTrustIcon {
+        background:
+          linear-gradient(180deg, rgba(203,242,166,.28), rgba(203,242,166,.13));
+        color: #365a35;
+      }
+
+      .viewHostButton {
+        border: 1px solid rgba(18,44,27,.08);
+        background: #11241a;
+        color: #fff !important;
+        box-shadow:
+          0 10px 26px rgba(17,44,27,.15),
+          inset 0 1px 0 rgba(255,255,255,.06);
+        transition:
+          transform .18s ease,
+          background .18s ease,
+          box-shadow .18s ease;
+      }
+
+      .viewHostButton:hover {
+        transform: translateY(-1px);
+        background: #183122;
+        box-shadow: 0 14px 30px rgba(17,44,27,.20);
+      }
+
+      .hostsTrustSection {
+        border: 1px solid rgba(23,50,31,.075);
+        border-radius: 32px;
+        background:
+          radial-gradient(circle at 88% 10%, rgba(195,233,157,.19), transparent 33%),
+          rgba(255,255,255,.64);
+        box-shadow:
+          0 24px 65px rgba(25,53,34,.08),
+          inset 0 1px 0 rgba(255,255,255,.76);
+        backdrop-filter: blur(15px);
+      }
+
+      .trustCards article {
+        border-color: rgba(26,52,34,.07);
+        background: rgba(255,255,255,.70);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+      }
+
+      .trustCards article > span {
+        background: linear-gradient(180deg,#e5ffd0,#d1f0b6);
+        box-shadow: 0 10px 22px rgba(80,126,65,.10);
+      }
+
+      .hostsCta {
+        overflow: hidden;
+        position: relative;
+        border: 1px solid rgba(255,255,255,.06);
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 80% 0%, rgba(201,255,170,.12), transparent 34%),
+          linear-gradient(135deg,#09170f 0%,#10271a 58%,#0a1b12 100%);
+        box-shadow: 0 32px 85px rgba(14,39,24,.18);
+      }
+
+      .hostsCta::after {
+        content: "";
+        position: absolute;
+        width: 240px;
+        height: 240px;
+        right: -80px;
+        bottom: -110px;
+        border: 1px solid rgba(213,255,186,.09);
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 42px rgba(213,255,186,.025),
+          0 0 0 88px rgba(213,255,186,.015);
+        pointer-events: none;
+      }
+
+      .hostsCta > a {
+        background: linear-gradient(180deg,#ddffc2,#bde891);
+        color: #112116 !important;
+        box-shadow: 0 15px 34px rgba(119,167,82,.18);
+      }
+
+      @media (max-width: 760px) {
+        .hostsPage {
+          padding: 78px 12px 64px;
+        }
+
+        .hostsHero {
+          min-height: 560px;
+          padding: 22px;
+          border-radius: 26px;
+        }
+
+        .hostsHeroContent {
+          padding: 86px 0 32px;
+        }
+
+        .hostsHeroContent h1 {
+          font-size: clamp(46px, 15vw, 70px);
+        }
+
+        .heroStats article {
+          padding-right: 12px;
+        }
+
+        .heroStats article:not(:first-child) {
+          padding-left: 12px;
+        }
+
+        .hostsFilters {
+          margin: -22px 8px 0;
+          border-radius: 20px;
+        }
+
+        .hostsSectionHeader {
+          margin-top: 54px;
+        }
+
+        .hostCard {
+          border-radius: 23px;
+        }
+
+        .hostMedia {
+          min-height: 230px;
+        }
+
+        .hostsTrustSection,
+        .hostsCta {
+          border-radius: 26px;
+        }
+      }
+
+
+
+      /* =========================================================
+         MOBILE COMPACT — less scroll, clearer hierarchy
+         ========================================================= */
+      @media (max-width: 760px) {
+        .hostsPage {
+          padding: 66px 10px 42px !important;
+        }
+
+        .hostsHero {
+          min-height: 360px !important;
+          padding: 18px !important;
+          border-radius: 22px !important;
+        }
+
+        .hostsHeroContent {
+          max-width: 100% !important;
+          padding: 42px 0 20px !important;
+        }
+
+        .heroKicker {
+          padding: 7px 10px !important;
+          font-size: 8px !important;
+          letter-spacing: .08em !important;
+        }
+
+        .hostsHeroContent h1 {
+          margin-top: 16px !important;
+          font-size: clamp(38px, 12vw, 52px) !important;
+          line-height: .95 !important;
+          letter-spacing: -.065em !important;
+        }
+
+        .hostsHeroContent p {
+          margin-top: 14px !important;
+          max-width: 95% !important;
+          font-size: 12px !important;
+          line-height: 1.55 !important;
+        }
+
+        .heroStats {
+          grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+          padding-top: 14px !important;
+          gap: 0 !important;
+        }
+
+        .heroStats article {
+          padding: 2px 10px 0 0 !important;
+        }
+
+        .heroStats article:not(:first-child) {
+          padding-left: 12px !important;
+        }
+
+        .heroStats strong {
+          font-size: 22px !important;
+        }
+
+        .heroStats span {
+          margin-top: 3px !important;
+          font-size: 7px !important;
+          letter-spacing: .05em !important;
+        }
+
+        .hostsFilters {
+          grid-template-columns: 1fr 1fr !important;
+          gap: 7px !important;
+          margin: 10px 0 0 !important;
+          padding: 8px !important;
+          border-radius: 16px !important;
+          box-shadow: 0 10px 28px rgba(24,51,32,.08) !important;
+        }
+
+        .searchField {
+          grid-column: 1 / -1 !important;
+        }
+
+        .searchField,
+        .filterField {
+          min-height: 44px !important;
+          padding: 0 11px !important;
+          border-radius: 11px !important;
+          gap: 7px !important;
+        }
+
+        .searchField input,
+        .filterField select {
+          min-height: 42px !important;
+          font-size: 10px !important;
+        }
+
+        .clearFilters {
+          grid-column: 1 / -1 !important;
+          min-height: 40px !important;
+          border-radius: 10px !important;
+          font-size: 8px !important;
+        }
+
+        .hostsSectionHeader {
+          margin: 34px 2px 14px !important;
+          align-items: flex-end !important;
+        }
+
+        .sectionKicker {
+          font-size: 7px !important;
+        }
+
+        .hostsSectionHeader h2 {
+          margin-top: 5px !important;
+          font-size: 28px !important;
+        }
+
+        .hostsSectionHeader p {
+          margin-top: 7px !important;
+          font-size: 9px !important;
+        }
+
+        .hostResultCount {
+          min-width: 42px !important;
+          height: 42px !important;
+          border-radius: 13px !important;
+          font-size: 10px !important;
+        }
+
+        .hostsGrid {
+          grid-template-columns: 1fr !important;
+          gap: 12px !important;
+        }
+
+        .hostCard {
+          display: grid !important;
+          grid-template-columns: 118px minmax(0,1fr) !important;
+          min-height: 154px !important;
+          border-radius: 18px !important;
+        }
+
+        .hostMedia {
+          min-height: 154px !important;
+          height: 100% !important;
+          border-radius: 0 !important;
+        }
+
+        .hostMediaTop {
+          inset: 9px 8px auto 8px !important;
+        }
+
+        .hostStatus {
+          padding: 6px 7px !important;
+          font-size: 6.5px !important;
+        }
+
+        .hostMediaArrow {
+          display: none !important;
+        }
+
+        .hostCardBody {
+          min-width: 0 !important;
+          padding: 12px 12px 11px !important;
+        }
+
+        .hostIdentity {
+          min-height: 0 !important;
+          gap: 8px !important;
+        }
+
+        .hostAvatarWrap {
+          width: 38px !important;
+          height: 38px !important;
+          min-width: 38px !important;
+          margin-top: 0 !important;
+          border-width: 3px !important;
+        }
+
+        .hostIdentityText h2 {
+          font-size: 15px !important;
+          line-height: 1.05 !important;
+        }
+
+        .hostIdentityText > span {
+          margin-top: 2px !important;
+          font-size: 8px !important;
+        }
+
+        .hostIdentityLocation {
+          margin-top: 4px !important;
+          gap: 4px !important;
+          font-size: 8px !important;
+        }
+
+        .hostBio {
+          display: -webkit-box !important;
+          -webkit-line-clamp: 2 !important;
+          -webkit-box-orient: vertical !important;
+          overflow: hidden !important;
+          margin: 9px 0 0 !important;
+          font-size: 9px !important;
+          line-height: 1.45 !important;
+        }
+
+        .hostActivities {
+          margin-top: 8px !important;
+          gap: 5px !important;
+        }
+
+        .hostActivities span {
+          padding: 5px 7px !important;
+          border-radius: 999px !important;
+          font-size: 6.5px !important;
+        }
+
+        .hostActivities span:nth-child(n+3) {
+          display: none !important;
+        }
+
+        .hostOfferTypes {
+          margin-top: 7px !important;
+          gap: 4px !important;
+        }
+
+        .hostOfferType {
+          padding: 4px 6px !important;
+          font-size: 6px !important;
+        }
+
+        .hostCardFooter {
+          margin-top: 9px !important;
+          padding-top: 8px !important;
+        }
+
+        .hostTrust {
+          display: none !important;
+        }
+
+        .viewHostButton {
+          margin-left: auto !important;
+          min-height: 34px !important;
+          padding: 0 10px !important;
+          border-radius: 10px !important;
+          font-size: 8px !important;
+        }
+
+        .hostsTrustSection {
+          margin-top: 40px !important;
+          padding: 20px 16px !important;
+          border-radius: 20px !important;
+        }
+
+        .trustIntro h2 {
+          font-size: 26px !important;
+        }
+
+        .trustIntro p {
+          font-size: 10px !important;
+          line-height: 1.55 !important;
+        }
+
+        .trustCards {
+          grid-template-columns: 1fr !important;
+          gap: 8px !important;
+          margin-top: 16px !important;
+        }
+
+        .trustCards article {
+          padding: 12px !important;
+          border-radius: 14px !important;
+        }
+
+        .trustCards article > span {
+          width: 36px !important;
+          height: 36px !important;
+          border-radius: 11px !important;
+        }
+
+        .hostsCta {
+          margin-top: 38px !important;
+          padding: 22px 16px !important;
+          border-radius: 20px !important;
+        }
+
+        .hostsCta h2 {
+          font-size: 27px !important;
+        }
+
+        .hostsCta p {
+          font-size: 10px !important;
+          line-height: 1.55 !important;
+        }
+
+        .hostsCta > a {
+          min-height: 42px !important;
+          padding: 0 13px !important;
+          font-size: 8px !important;
+        }
+      }
+
+
+
+      /* =========================================================
+         MOBILE PAGED GRID V2
+         6 cards per page on phone, 9 on larger screens.
+         No horizontal swipe for filters or cards.
+         ========================================================= */
+
+      .mobileFilterToggle {
+        display: none;
+      }
+
+      @media (max-width: 760px) {
+        .hostsPage {
+          padding: 64px 10px 38px !important;
+          overflow-x: hidden !important;
+        }
+
+        .hostsHero {
+          min-height: 310px !important;
+          padding: 16px !important;
+          border-radius: 20px !important;
+        }
+
+        .hostsHeroContent {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          max-width: 100% !important;
+          padding: 34px 0 14px !important;
+          text-align: center !important;
+        }
+
+        .heroKicker {
+          margin-inline: auto !important;
+          padding: 6px 9px !important;
+          font-size: 7.5px !important;
+        }
+
+        .hostsHeroContent h1 {
+          margin: 13px auto 0 !important;
+          max-width: 320px !important;
+          font-size: clamp(35px, 10.8vw, 46px) !important;
+          line-height: .95 !important;
+          text-align: center !important;
+        }
+
+        .hostsHeroContent p {
+          margin: 11px auto 0 !important;
+          max-width: 310px !important;
+          font-size: 10.5px !important;
+          line-height: 1.45 !important;
+          text-align: center !important;
+        }
+
+        .heroStats {
+          width: 100% !important;
+          max-width: 320px !important;
+          margin: 0 auto !important;
+          grid-template-columns: repeat(2,1fr) !important;
+          padding-top: 12px !important;
+          text-align: center !important;
+        }
+
+        .heroStats article,
+        .heroStats article:not(:first-child) {
+          padding: 1px 8px !important;
+        }
+
+        .heroStats strong {
+          font-size: 19px !important;
+        }
+
+        .heroStats span {
+          font-size: 6.2px !important;
+        }
+
+        .hostsFilters {
+          display: grid !important;
+          grid-template-columns: 1fr auto !important;
+          gap: 7px !important;
+          margin: 10px 0 0 !important;
+          padding: 7px !important;
+          border-radius: 15px !important;
+          overflow: visible !important;
+          overflow-x: visible !important;
+          white-space: normal !important;
+        }
+
+        .hostsFilters .searchField {
+          grid-column: 1 !important;
+          min-width: 0 !important;
+        }
+
+        .mobileFilterToggle {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 6px !important;
+          min-width: 82px !important;
+          min-height: 42px !important;
+          padding: 0 10px !important;
+          border: 1px solid rgba(32,58,39,.09) !important;
+          border-radius: 11px !important;
+          background: #10241a !important;
+          color: white !important;
+          font-size: 8px !important;
+          font-weight: 850 !important;
+          cursor: pointer !important;
+        }
+
+        .mobileFilterToggle strong {
+          color: #caff9f !important;
+          font-size: 13px !important;
+          line-height: 1 !important;
+        }
+
+        .hostsFilters > .filterField,
+        .hostsFilters > .clearFilters {
+          display: none !important;
+        }
+
+        .hostsFilters.mobileOpen {
+          grid-template-columns: 1fr 1fr !important;
+        }
+
+        .hostsFilters.mobileOpen .searchField {
+          grid-column: 1 / -1 !important;
+        }
+
+        .hostsFilters.mobileOpen .mobileFilterToggle {
+          grid-column: 1 / -1 !important;
+          min-height: 38px !important;
+          background: #eef3eb !important;
+          color: #24402d !important;
+        }
+
+        .hostsFilters.mobileOpen > .filterField {
+          display: flex !important;
+          min-width: 0 !important;
+          width: 100% !important;
+          min-height: 42px !important;
+          padding: 0 9px !important;
+          border-radius: 10px !important;
+        }
+
+        .hostsFilters.mobileOpen > .clearFilters {
+          display: inline-flex !important;
+          grid-column: 1 / -1 !important;
+          min-height: 37px !important;
+        }
+
+        .searchField {
+          min-height: 42px !important;
+          border-radius: 11px !important;
+        }
+
+        .searchField input,
+        .filterField select {
+          min-height: 40px !important;
+          font-size: 9px !important;
+        }
+
+        .hostsSectionHeader {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 9px !important;
+          margin: 30px 0 13px !important;
+          text-align: center !important;
+        }
+
+        .hostsSectionHeader > div {
+          width: 100% !important;
+          text-align: center !important;
+        }
+
+        .hostsSectionHeader h2 {
+          margin: 4px auto 0 !important;
+          font-size: 26px !important;
+          line-height: 1 !important;
+          text-align: center !important;
+        }
+
+        .hostsSectionHeader p {
+          margin: 6px auto 0 !important;
+          font-size: 8.5px !important;
+          text-align: center !important;
+        }
+
+        .hostResultCount {
+          min-width: 40px !important;
+          height: 34px !important;
+          padding: 0 10px !important;
+          border-radius: 11px !important;
+        }
+
+        .hostsGrid {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+          gap: 9px !important;
+          width: 100% !important;
+          overflow: visible !important;
+          overflow-x: visible !important;
+          scroll-snap-type: none !important;
+        }
+
+        .hostsGrid > * {
+          min-width: 0 !important;
+          width: auto !important;
+          scroll-snap-align: none !important;
+        }
+
+        .hostCard {
+          display: block !important;
+          min-height: 0 !important;
+          border-radius: 15px !important;
+          overflow: hidden !important;
+        }
+
+        .hostMedia {
+          display: block !important;
+          height: 104px !important;
+          min-height: 104px !important;
+        }
+
+        .hostMediaTop {
+          inset: 7px 7px auto 7px !important;
+        }
+
+        .hostStatus {
+          padding: 4px 6px !important;
+          font-size: 5.5px !important;
+          gap: 3px !important;
+        }
+
+        .hostStatus svg {
+          width: 10px !important;
+          height: 10px !important;
+        }
+
+        .hostCardBody {
+          padding: 9px !important;
+          text-align: center !important;
+        }
+
+        .hostIdentity {
+          display: block !important;
+          text-align: center !important;
+        }
+
+        .hostAvatarWrap {
+          width: 38px !important;
+          height: 38px !important;
+          min-width: 38px !important;
+          margin: -26px auto 5px !important;
+          border-width: 3px !important;
+        }
+
+        .hostIdentityText {
+          min-width: 0 !important;
+          text-align: center !important;
+        }
+
+        .hostIdentityText h2 {
+          margin: 0 auto !important;
+          font-size: 13px !important;
+          line-height: 1.05 !important;
+          text-align: center !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+        }
+
+        .hostIdentityText > span {
+          display: block !important;
+          font-size: 6.8px !important;
+          text-align: center !important;
+        }
+
+        .hostIdentityLocation {
+          justify-content: center !important;
+          margin-top: 4px !important;
+          font-size: 7px !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+        }
+
+        .hostBio {
+          display: none !important;
+        }
+
+        .hostActivities {
+          justify-content: center !important;
+          margin-top: 7px !important;
+          gap: 4px !important;
+        }
+
+        .hostActivities span {
+          max-width: 100% !important;
+          padding: 4px 6px !important;
+          font-size: 5.8px !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+        }
+
+        .hostActivities span:nth-child(n+2) {
+          display: none !important;
+        }
+
+        .hostOfferTypes {
+          justify-content: center !important;
+          margin-top: 5px !important;
+          gap: 3px !important;
+        }
+
+        .hostOfferType {
+          padding: 3px 5px !important;
+          font-size: 5.3px !important;
+        }
+
+        .hostOfferType:nth-child(n+3) {
+          display: none !important;
+        }
+
+        .hostCardFooter {
+          justify-content: center !important;
+          margin-top: 7px !important;
+          padding-top: 7px !important;
+        }
+
+        .hostTrust {
+          display: none !important;
+        }
+
+        .viewHostButton {
+          width: 100% !important;
+          min-height: 30px !important;
+          justify-content: center !important;
+          margin: 0 !important;
+          padding: 0 8px !important;
+          border-radius: 8px !important;
+          font-size: 7px !important;
+        }
+
+        .hostsPagination {
+          margin-top: 18px !important;
+          gap: 8px !important;
+          justify-content: center !important;
+        }
+
+        .hostsPagination button {
+          min-height: 36px !important;
+          padding: 0 11px !important;
+          border-radius: 10px !important;
+          font-size: 7px !important;
+        }
+
+        .hostsPagination span {
+          font-size: 8px !important;
+        }
+
+        .hostsTrustSection,
+        .hostsCta {
+          text-align: center !important;
+        }
+
+        .trustIntro,
+        .trustIntro h2,
+        .trustIntro p,
+        .hostsCta > div,
+        .hostsCta h2,
+        .hostsCta p {
+          text-align: center !important;
+        }
+
+        .hostsCta > a {
+          margin-inline: auto !important;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .hostsGrid {
+          gap: 7px !important;
+        }
+
+        .hostMedia {
+          height: 96px !important;
+          min-height: 96px !important;
+        }
+
+        .hostCardBody {
+          padding: 8px !important;
+        }
+
+        .hostIdentityText h2 {
+          font-size: 12px !important;
+        }
       }
 
     `}</style>

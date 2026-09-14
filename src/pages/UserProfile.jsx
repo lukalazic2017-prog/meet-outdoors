@@ -555,57 +555,14 @@ export default function UserProfile() {
     return Array.from(unique.values());
   }, [checkins]);
 
-  const categoryCollections = useMemo(() => {
-    const map = new Map();
 
-    visitedPlaces.forEach((place) => {
-      const category =
-        place.place_categories?.name ||
-        "Outdoor";
-
-      map.set(
-        category,
-        (map.get(category) || 0) + 1
-      );
-    });
-
-    return Array.from(map.entries())
-      .map(([name, count]) => ({
-        name,
-        count,
-      }))
-      .sort(
-        (a, b) => b.count - a.count
-      );
-  }, [visitedPlaces]);
 
   const level = useMemo(
     () => getLevel(visitedPlaces.length),
     [visitedPlaces.length]
   );
 
-  const levelProgress = useMemo(() => {
-    if (!level.next) return 100;
 
-    const range =
-      level.max - level.min;
-
-    const progressed =
-      visitedPlaces.length - level.min;
-
-    return Math.max(
-      0,
-      Math.min(
-        100,
-        (progressed / range) * 100
-      )
-    );
-  }, [
-    level.max,
-    level.min,
-    level.next,
-    visitedPlaces.length,
-  ]);
 
   const mapPlaces = useMemo(
     () =>
@@ -637,72 +594,7 @@ export default function UserProfile() {
     [checkins]
   );
 
-  const achievements = useMemo(() => {
-    const items = [];
 
-    if (checkins.length >= 1) {
-      items.push({
-        icon: "mapPin",
-        title: "Prvi trag",
-        text: "Prvi GPS check-in",
-      });
-    }
-
-    if (photos.length >= 1) {
-      items.push({
-        icon: "camera",
-        title: "Prvi kadar",
-        text: "Prva community fotografija",
-      });
-    }
-
-    if (visitedPlaces.length >= 10) {
-      items.push({
-        icon: "route",
-        title: "10 mesta",
-        text: "Počinje ozbiljna mapa",
-      });
-    }
-
-    if (visitedPlaces.length >= 25) {
-      items.push({
-        icon: "compass",
-        title: "Pathfinder",
-        text: "25 različitih mesta",
-      });
-    }
-
-    if (checkins.length >= 50) {
-      items.push({
-        icon: "verified",
-        title: "GPS veteran",
-        text: "50 potvrđenih check-inova",
-      });
-    }
-
-    if (savedPlaces.length >= 20) {
-      items.push({
-        icon: "heart",
-        title: "Bucket list",
-        text: "20 sačuvanih mesta",
-      });
-    }
-
-    if (items.length === 0) {
-      items.push({
-        icon: "sparkle",
-        title: "Početak",
-        text: "Prvi bedž čeka prvi trag",
-      });
-    }
-
-    return items.slice(0, 6);
-  }, [
-    checkins.length,
-    photos.length,
-    savedPlaces.length,
-    visitedPlaces.length,
-  ]);
 
   if (loading) {
     return <LoadingState />;
@@ -802,35 +694,14 @@ export default function UserProfile() {
               Outdoor Passport
             </span>
 
-            <h1>
-              Tvoja mapa.
-              <br />
-              Tvoja priča.
-            </h1>
+            <h1>{displayName}</h1>
 
             <p>
-              GPS potvrđena mesta, fotografije,
-              kolekcije i outdoor tragovi jednog
-              MeetOutdoors člana.
+              Outdoor profil sa stvarno posećenim mestima, GPS check-inovima,
+              fotografijama i sačuvanim lokacijama.
             </p>
           </div>
 
-          <div className="userPassportLevelStamp">
-            <Icon
-              name="trophy"
-              size={22}
-            />
-
-            <div>
-              <small>
-                CURRENT LEVEL
-              </small>
-
-              <strong>
-                {level.name}
-              </strong>
-            </div>
-          </div>
         </section>
 
         <section className="userPassportContent">
@@ -857,7 +728,7 @@ export default function UserProfile() {
               <div className="userPassportIdentityCopy">
                 <div className="userPassportBadges">
                   <span className="memberBadge">
-                    Outdoor member
+                    Outdoor profil
                   </span>
 
                   <span className="levelBadge">
@@ -982,46 +853,7 @@ export default function UserProfile() {
             </article>
           </section>
 
-          <section className="userPassportLevel">
-            <div>
-              <span className="userPassportSectionLabel">
-                Outdoor level
-              </span>
 
-              <h3>{level.name}</h3>
-
-              <p>
-                {level.next
-                  ? `${Math.max(
-                      0,
-                      level.max -
-                        visitedPlaces.length
-                    )} novih mesta do nivoa ${level.next}.`
-                  : "Najviši Outdoor Passport nivo je otključan."}
-              </p>
-            </div>
-
-            <div className="levelProgress">
-              <div>
-                <span
-                  style={{
-                    width: `${levelProgress}%`,
-                  }}
-                />
-              </div>
-
-              <footer>
-                <span>
-                  {visitedPlaces.length} mesta
-                </span>
-
-                <strong>
-                  {level.next ||
-                    "LEGEND"}
-                </strong>
-              </footer>
-            </div>
-          </section>
 
           <div className="userPassportGrid">
             <section className="userPassportPanel mapPanel">
@@ -1032,7 +864,7 @@ export default function UserProfile() {
                   </span>
 
                   <h3>
-                    Mesta koja je stvarno obišao/la.
+                    Moja mapa
                   </h3>
 
                   <p>
@@ -1151,106 +983,9 @@ export default function UserProfile() {
             </aside>
           </div>
 
-          <section className="userPassportPanel collectionsPanel">
-            <div className="panelHeader">
-              <div>
-                <span className="userPassportSectionLabel">
-                  Kolekcije
-                </span>
 
-                <h3>
-                  Šta najviše istražuje.
-                </h3>
-              </div>
 
-              <span className="panelIcon">
-                <Icon
-                  name="grid"
-                  size={21}
-                />
-              </span>
-            </div>
 
-            {categoryCollections.length >
-            0 ? (
-              <div className="collectionsGrid">
-                {categoryCollections
-                  .slice(0, 8)
-                  .map((item) => (
-                    <article key={item.name}>
-                      <span>
-                        <Icon
-                          name="mapPin"
-                          size={17}
-                        />
-                      </span>
-
-                      <div>
-                        <strong>
-                          {item.name}
-                        </strong>
-
-                        <small>
-                          {item.count}{" "}
-                          {item.count === 1
-                            ? "mesto"
-                            : "mesta"}
-                        </small>
-                      </div>
-                    </article>
-                  ))}
-              </div>
-            ) : (
-              <div className="passportEmpty">
-                Kolekcije će se pojaviti
-                nakon GPS check-inova.
-              </div>
-            )}
-          </section>
-
-          <section className="userPassportPanel badgesPanel">
-            <div className="panelHeader">
-              <div>
-                <span className="userPassportSectionLabel">
-                  Bedževi
-                </span>
-
-                <h3>
-                  Mali dokazi velikih tragova.
-                </h3>
-              </div>
-
-              <span className="panelIcon">
-                <Icon
-                  name="trophy"
-                  size={21}
-                />
-              </span>
-            </div>
-
-            <div className="achievementsGrid">
-              {achievements.map(
-                (item) => (
-                  <article key={item.title}>
-                    <span>
-                      <Icon
-                        name={item.icon}
-                        size={20}
-                      />
-                    </span>
-
-                    <strong>
-                      {item.title}
-                    </strong>
-
-                    <small>
-                      {item.text}
-                    </small>
-                  </article>
-                )
-              )}
-            </div>
-          </section>
 
           <section className="userPassportPanel galleryPanel">
             <div className="panelHeader">
@@ -1407,16 +1142,15 @@ export default function UserProfile() {
           <section className="timelineSection">
             <div className="timelineIntro">
               <span className="userPassportSectionLabel">
-                Timeline
+                Poslednje posete
               </span>
 
               <h3>
-                Poslednji outdoor tragovi.
+                Poslednja posećena mesta.
               </h3>
 
               <p>
-                Hronologija javnih GPS
-                potvrđenih poseta.
+                Javni GPS potvrđeni check-inovi.
               </p>
             </div>
 
@@ -2252,6 +1986,447 @@ function UserProfileStyles() {
           scroll-behavior:auto!important
         }
       }
+
+      /* =========================================================
+         USER PROFILE V2 — CLEAN OUTDOOR PASSPORT
+         Map-first, identity-first, less gamification.
+         ========================================================= */
+
+      .userPassportPage{
+        padding:82px 24px 64px!important;
+        background:
+          radial-gradient(circle at 8% 0%,rgba(54,96,67,.08),transparent 28rem),
+          #f3f5f1!important;
+      }
+
+      .userPassportHero{
+        width:min(1240px,100%)!important;
+        min-height:360px!important;
+        padding:28px!important;
+        border-radius:32px!important;
+        background-position:center!important;
+        box-shadow:0 24px 70px rgba(22,48,31,.14)!important;
+      }
+
+      .userPassportHero::before,
+      .userPassportHeroGlow{
+        display:none!important;
+      }
+
+      .userPassportHeroCopy{
+        max-width:680px!important;
+        padding-top:100px!important;
+      }
+
+      .userPassportEyebrow{
+        padding:7px 10px!important;
+        border-radius:999px!important;
+        font-size:8px!important;
+      }
+
+      .userPassportHeroCopy h1{
+        margin:16px 0 0!important;
+        font-size:clamp(42px,6vw,72px)!important;
+        line-height:.95!important;
+        letter-spacing:-.06em!important;
+      }
+
+      .userPassportHeroCopy p{
+        max-width:560px!important;
+        margin-top:16px!important;
+        font-size:12px!important;
+        line-height:1.65!important;
+      }
+
+      .userPassportContent{
+        width:min(1160px,100%)!important;
+        margin:-54px auto 0!important;
+      }
+
+      .userPassportIdentityCard{
+        align-items:center!important;
+        padding:22px!important;
+        border-radius:24px!important;
+        background:rgba(255,255,255,.96)!important;
+        box-shadow:0 18px 48px rgba(28,49,35,.09)!important;
+      }
+
+      .userPassportIdentity{
+        align-items:center!important;
+        gap:18px!important;
+      }
+
+      .userPassportAvatar{
+        width:112px!important;
+        height:112px!important;
+        border-radius:28px!important;
+      }
+
+      .userPassportAvatarBadge{
+        width:34px!important;
+        height:34px!important;
+        right:-4px!important;
+        bottom:4px!important;
+      }
+
+      .userPassportIdentityCopy{
+        padding-bottom:0!important;
+      }
+
+      .userPassportIdentityCopy h2{
+        margin-top:9px!important;
+        font-size:clamp(28px,4vw,42px)!important;
+      }
+
+      .userPassportUsername{
+        margin-top:5px!important;
+      }
+
+      .userPassportLocation{
+        margin-top:8px!important;
+      }
+
+      .userPassportStats{
+        grid-template-columns:repeat(4,minmax(0,1fr))!important;
+        gap:9px!important;
+        margin-top:14px!important;
+      }
+
+      .userPassportStats article{
+        grid-template-columns:40px minmax(0,1fr)!important;
+        gap:9px!important;
+        padding:11px!important;
+        border-radius:15px!important;
+        background:#fff!important;
+        box-shadow:none!important;
+      }
+
+      .statIcon{
+        width:40px!important;
+        height:40px!important;
+        border-radius:12px!important;
+      }
+
+      .userPassportStats strong{
+        font-size:19px!important;
+      }
+
+      .userPassportStats article>div>span{
+        font-size:6.5px!important;
+      }
+
+      .userPassportGrid{
+        grid-template-columns:minmax(0,1.45fr) minmax(280px,.55fr)!important;
+        gap:14px!important;
+        margin-top:16px!important;
+      }
+
+      .userPassportPanel,
+      .communityCard,
+      .timelineSection{
+        border:1px solid #dfe5df!important;
+        border-radius:22px!important;
+        background:#fff!important;
+        box-shadow:none!important;
+      }
+
+      .userPassportPanel{
+        padding:22px!important;
+      }
+
+      .panelHeader h3,
+      .communityCard h3,
+      .timelineIntro h3{
+        font-size:22px!important;
+      }
+
+      .panelIcon{
+        width:40px!important;
+        height:40px!important;
+        border-radius:12px!important;
+      }
+
+      .userPassportMap{
+        height:430px!important;
+        margin-top:15px!important;
+        border-radius:18px!important;
+      }
+
+      .aboutPanel{
+        min-height:100%!important;
+      }
+
+      .userPassportBio{
+        margin-top:20px!important;
+        font-size:11px!important;
+        line-height:1.75!important;
+      }
+
+      .userPassportActivities{
+        margin-top:22px!important;
+        padding-top:18px!important;
+      }
+
+      .activityChips{
+        gap:6px!important;
+      }
+
+      .activityChips span{
+        padding:7px 10px!important;
+        border-radius:999px!important;
+        font-size:7.5px!important;
+      }
+
+      .galleryPanel,
+      .savedPanel{
+        margin-top:16px!important;
+      }
+
+      .userPassportGallery{
+        gap:8px!important;
+        margin-top:15px!important;
+      }
+
+      .userPassportGallery button{
+        height:190px!important;
+        border-radius:14px!important;
+      }
+
+      .userPassportGallery button.featured{
+        height:388px!important;
+      }
+
+      .savedGrid{
+        grid-template-columns:repeat(4,minmax(0,1fr))!important;
+        gap:9px!important;
+        margin-top:15px!important;
+      }
+
+      .savedGrid a{
+        border-radius:14px!important;
+      }
+
+      .savedGrid img{
+        height:120px!important;
+      }
+
+      .timelineSection{
+        grid-template-columns:minmax(190px,.32fr) minmax(0,.68fr)!important;
+        gap:20px!important;
+        margin-top:16px!important;
+        padding:22px!important;
+      }
+
+      .timelineList>a{
+        padding:9px!important;
+        border-radius:12px!important;
+      }
+
+      .communityCard{
+        margin-top:16px!important;
+        padding:24px!important;
+      }
+
+      /* Hide legacy gamification if stale markup survives. */
+      .userPassportLevel,
+      .collectionsPanel,
+      .badgesPanel,
+      .userPassportLevelStamp{
+        display:none!important;
+      }
+
+      @media(max-width:900px){
+        .userPassportGrid{
+          grid-template-columns:1fr!important;
+        }
+
+        .userPassportStats{
+          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        }
+
+        .savedGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        }
+
+        .timelineSection{
+          grid-template-columns:1fr!important;
+        }
+      }
+
+      @media(max-width:680px){
+        .userPassportPage{
+          padding:68px 10px 36px!important;
+        }
+
+        .userPassportHero{
+          min-height:285px!important;
+          padding:18px!important;
+          border-radius:24px!important;
+        }
+
+        .userPassportHeroTop{
+          gap:10px!important;
+        }
+
+        .userPassportBrand{
+          font-size:11px!important;
+        }
+
+        .userPassportBrand>span{
+          width:36px!important;
+          height:36px!important;
+          border-radius:11px!important;
+        }
+
+        .userPassportExploreLink{
+          min-height:38px!important;
+          padding:0 10px!important;
+          font-size:8px!important;
+        }
+
+        .userPassportHeroCopy{
+          padding-top:72px!important;
+        }
+
+        .userPassportHeroCopy h1{
+          font-size:40px!important;
+        }
+
+        .userPassportHeroCopy p{
+          max-width:92%!important;
+          font-size:10px!important;
+        }
+
+        .userPassportContent{
+          margin-top:-34px!important;
+        }
+
+        .userPassportIdentityCard{
+          padding:15px!important;
+          border-radius:19px!important;
+          align-items:flex-start!important;
+        }
+
+        .userPassportIdentity{
+          align-items:flex-start!important;
+          gap:12px!important;
+        }
+
+        .userPassportAvatar{
+          width:78px!important;
+          height:78px!important;
+          border-width:4px!important;
+          border-radius:20px!important;
+        }
+
+        .userPassportAvatarBadge{
+          width:27px!important;
+          height:27px!important;
+          border-width:3px!important;
+        }
+
+        .userPassportIdentityCopy h2{
+          font-size:26px!important;
+        }
+
+        .userPassportBadges{
+          gap:5px!important;
+        }
+
+        .memberBadge,
+        .levelBadge{
+          min-height:24px!important;
+          padding:0 7px!important;
+          font-size:6.5px!important;
+        }
+
+        .userPassportEdit{
+          min-height:38px!important;
+          padding:0 10px!important;
+          font-size:8px!important;
+        }
+
+        .userPassportStats{
+          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+          gap:7px!important;
+          margin-top:10px!important;
+        }
+
+        .userPassportStats article{
+          grid-template-columns:34px minmax(0,1fr)!important;
+          padding:9px!important;
+          border-radius:13px!important;
+        }
+
+        .statIcon{
+          width:34px!important;
+          height:34px!important;
+          border-radius:10px!important;
+        }
+
+        .userPassportStats strong{
+          font-size:17px!important;
+        }
+
+        .userPassportGrid{
+          gap:10px!important;
+          margin-top:10px!important;
+        }
+
+        .userPassportPanel{
+          padding:16px!important;
+          border-radius:18px!important;
+        }
+
+        .userPassportMap{
+          height:320px!important;
+          border-radius:15px!important;
+        }
+
+        .panelHeader h3,
+        .communityCard h3,
+        .timelineIntro h3{
+          font-size:19px!important;
+        }
+
+        .galleryPanel,
+        .savedPanel,
+        .timelineSection,
+        .communityCard{
+          margin-top:10px!important;
+        }
+
+        .userPassportGallery{
+          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        }
+
+        .userPassportGallery button,
+        .userPassportGallery button.featured{
+          grid-column:auto!important;
+          grid-row:auto!important;
+          height:150px!important;
+        }
+
+        .savedGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        }
+
+        .savedGrid img{
+          height:100px!important;
+        }
+
+        .timelineSection{
+          padding:16px!important;
+        }
+
+        .communityCard{
+          padding:18px!important;
+          gap:16px!important;
+          align-items:flex-start!important;
+          flex-direction:column!important;
+        }
+      }
+
     `}</style>
   );
 }

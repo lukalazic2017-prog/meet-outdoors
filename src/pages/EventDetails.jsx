@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import ShareSheet from "../components/ShareSheet";
@@ -72,12 +72,6 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
     heart: (
       <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
     ),
-    chatBubble: (
-      <>
-        <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
-        <path d="M8 9h8M8 13h5" />
-      </>
-    ),
     message: (
       <>
         <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
@@ -85,9 +79,7 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
       </>
     ),
     phone: (
-      <>
-        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92Z" />
-      </>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92Z" />
     ),
     arrowRight: (
       <>
@@ -132,15 +124,24 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
         <path d="m6 6 12 12" />
       </>
     ),
-    bolt: (
-      <>
-        <path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z" />
-      </>
-    ),
+    bolt: <path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z" />,
     eye: (
       <>
         <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
         <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+    globe: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
+      </>
+    ),
+    instagram: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r=".7" fill="currentColor" stroke="none" />
       </>
     ),
   };
@@ -180,28 +181,31 @@ function formatDate(value) {
   }).format(date);
 }
 
-function formatChatTime(value) {
+function normalizeExternalUrl(value) {
   if (!value) return "";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+  const trimmed = String(value).trim();
+  if (!trimmed) return "";
 
-  const today = new Date();
-  const sameDay =
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
 
-  return new Intl.DateTimeFormat("sr-Latn-RS", {
-    ...(sameDay
-      ? {}
-      : {
-          day: "2-digit",
-          month: "short",
-        }),
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+function normalizeInstagramUrl(value) {
+  if (!value) return "";
+
+  const trimmed = String(value).trim();
+  if (!trimmed) return "";
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const username = trimmed
+    .replace(/^@/, "")
+    .replace(/^instagram\.com\//i, "")
+    .replace(/^www\.instagram\.com\//i, "")
+    .split(/[/?#]/)[0];
+
+  return username ? `https://instagram.com/${username}` : "";
 }
 
 function LoadingState() {
@@ -222,20 +226,11 @@ function LoadingState() {
 
 export default function EventDetails() {
   const { id } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { profile } = useAuth();
 
   const [event, setEvent] = useState(null);
   const [host, setHost] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const [participants, setParticipants] = useState([]);
-  const [joined, setJoined] = useState(false);
-  const [joinLoading, setJoinLoading] = useState(false);
-  const [confirmingParticipantId, setConfirmingParticipantId] = useState(null);
-  const [rejectingParticipantId, setRejectingParticipantId] = useState(null);
-  const [finishModalOpen, setFinishModalOpen] = useState(false);
-  const [finishLoading, setFinishLoading] = useState(false);
 
   const [comments, setComments] = useState([]);
   const [commentBody, setCommentBody] = useState("");
@@ -244,13 +239,8 @@ export default function EventDetails() {
   const [error, setError] = useState("");
   const [actionMessage, setActionMessage] = useState("");
 
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatSending, setChatSending] = useState(false);
-  const [chatBody, setChatBody] = useState("");
-  const chatEndRef = useRef(null);
-
+  const [contactOpen, setContactOpen] = useState(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const lightboxTouchStartX = useRef(null);
@@ -274,10 +264,7 @@ export default function EventDetails() {
       .order("created_at", { ascending: false });
 
     if (commentsError) {
-      console.error(
-        "Greška pri učitavanju komentara:",
-        commentsError
-      );
+      console.error("Greška pri učitavanju komentara:", commentsError);
       setComments([]);
       return;
     }
@@ -285,111 +272,11 @@ export default function EventDetails() {
     setComments(data || []);
   }, []);
 
-  const loadParticipants = useCallback(
-    async (eventId, hostId = null) => {
-      const participantFields =
-        profile?.id && hostId && profile.id === hostId
-          ? "id, user_id, created_at, full_name, phone, status"
-          : "id, user_id, created_at, full_name, status";
-
-      const {
-        data: interestRows,
-        error: interestError,
-      } = await supabase
-        .from("event_interested")
-        .select(participantFields)
-        .eq("event_id", eventId)
-        .order("created_at", { ascending: true });
-
-      if (interestError) {
-        console.error(
-          "Greška pri učitavanju učesnika:",
-          interestError
-        );
-        setParticipants([]);
-        setJoined(false);
-        return;
-      }
-
-      const rows = interestRows || [];
-      const userIds = rows
-        .map((row) => row.user_id)
-        .filter(Boolean);
-
-      if (!userIds.length) {
-        setParticipants([]);
-        setJoined(false);
-        return;
-      }
-
-      const {
-        data: profilesData,
-        error: profilesError,
-      } = await supabase
-        .from("profiles")
-        .select(
-          "id, role, username, full_name, avatar_url"
-        )
-        .in("id", userIds);
-
-      if (profilesError) {
-        console.error(
-          "Greška pri učitavanju profila učesnika:",
-          profilesError
-        );
-        setParticipants(
-          rows.map((row) => ({
-            ...row,
-            profile: null,
-          }))
-        );
-        setJoined(
-          Boolean(
-            profile?.id &&
-              rows.some(
-                (row) =>
-                  row.user_id === profile.id &&
-                  row.status !== "rejected"
-              )
-          )
-        );
-        return;
-      }
-
-      const profileMap = new Map(
-        (profilesData || []).map((item) => [
-          item.id,
-          item,
-        ])
-      );
-
-      const merged = rows.map((row) => ({
-        ...row,
-        profile: profileMap.get(row.user_id) || null,
-      }));
-
-      setParticipants(merged);
-      setJoined(
-        Boolean(
-          profile?.id &&
-            merged.some(
-              (row) =>
-                row.user_id === profile.id &&
-                row.status !== "rejected"
-            )
-        )
-      );
-    },
-    [profile?.id]
-  );
-
   const loadEvent = useCallback(async () => {
     if (!id) {
       setEvent(null);
       setHost(null);
       setComments([]);
-      setParticipants([]);
-      setJoined(false);
       setError("ID avanture nije dostupan.");
       setLoading(false);
       return;
@@ -406,10 +293,7 @@ export default function EventDetails() {
         .single();
 
       if (eventError || !data) {
-        throw (
-          eventError ||
-          new Error("Avantura nije pronađena.")
-        );
+        throw eventError || new Error("Avantura nije pronađena.");
       }
 
       setEvent(data);
@@ -418,11 +302,10 @@ export default function EventDetails() {
         supabase
           .from("profiles")
           .select(
-            "id, username, full_name, avatar_url, role"
+            "id, username, full_name, avatar_url, role, phone, instagram_url, website_url"
           )
           .eq("id", data.host_id)
           .single(),
-        loadParticipants(data.id, data.host_id),
         loadComments(data.id),
       ]);
 
@@ -435,16 +318,11 @@ export default function EventDetails() {
 
       setHost(hostResult.data || null);
     } catch (loadError) {
-      console.error(
-        "Greška pri učitavanju događaja:",
-        loadError
-      );
+      console.error("Greška pri učitavanju događaja:", loadError);
 
       setEvent(null);
       setHost(null);
       setComments([]);
-      setParticipants([]);
-      setJoined(false);
       setError(
         loadError?.message ||
           "Avanturu trenutno nije moguće učitati."
@@ -452,54 +330,14 @@ export default function EventDetails() {
     } finally {
       setLoading(false);
     }
-  }, [id, loadComments, loadParticipants]);
+  }, [id, loadComments]);
 
   useEffect(() => {
     void loadEvent();
   }, [loadEvent]);
 
   useEffect(() => {
-    if (!event?.id || !profile?.id) return undefined;
-
-    const refreshRegistration = () => {
-      void loadParticipants(event.id, event.host_id);
-    };
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        refreshRegistration();
-      }
-    };
-
-    window.addEventListener("focus", refreshRegistration);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    const intervalId = window.setInterval(refreshRegistration, 10000);
-
-    return () => {
-      window.removeEventListener("focus", refreshRegistration);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.clearInterval(intervalId);
-    };
-  }, [event?.id, event?.host_id, profile?.id, loadParticipants]);
-
-  useEffect(() => {
     if (!event?.id) return undefined;
-
-    const participantsChannel = supabase
-      .channel(`event-participants-${event.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "event_interested",
-          filter: `event_id=eq.${event.id}`,
-        },
-        () => {
-          void loadParticipants(event.id, event.host_id);
-        }
-      )
-      .subscribe();
 
     const commentsChannel = supabase
       .channel(`event-comments-${event.id}`)
@@ -518,10 +356,9 @@ export default function EventDetails() {
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(participantsChannel);
       void supabase.removeChannel(commentsChannel);
     };
-  }, [event?.id, event?.host_id, loadComments, loadParticipants]);
+  }, [event?.id, loadComments]);
 
   useEffect(() => {
     if (!actionMessage) return undefined;
@@ -534,385 +371,6 @@ export default function EventDetails() {
       window.clearTimeout(timer);
     };
   }, [actionMessage]);
-
-  async function submitJoin() {
-    if (!profile?.id || !event?.id) return;
-
-    if (
-      event.status === "completed" ||
-      event.status === "cancelled" ||
-      event.is_active === false
-    ) {
-      alert("Ova avantura je završena i više ne prima prijave.");
-      return;
-    }
-
-    if (profile.id === event.host_id) {
-      alert("Ti si organizator ove avanture.");
-      return;
-    }
-
-    const currentCount = participants.filter(
-      (item) => item.status !== "rejected"
-    ).length;
-    const capacity = Number(event.capacity || 0);
-
-    if (capacity > 0 && currentCount >= capacity) {
-      alert("Avantura je popunjena.");
-      return;
-    }
-
-    try {
-      setJoinLoading(true);
-      setActionMessage("");
-
-      let insertedRow = null;
-
-      if (currentRegistrationRejected && currentRegistration?.id) {
-        const { data: updatedRow, error: updateError } = await supabase
-          .from("event_interested")
-          .update({
-            full_name: profile.full_name || profile.username || "Korisnik",
-            phone: null,
-            status: "pending",
-          })
-          .eq("id", currentRegistration.id)
-          .eq("event_id", event.id)
-          .eq("user_id", profile.id)
-          .select("id, user_id, created_at, full_name, phone, status")
-          .single();
-
-        if (updateError) throw updateError;
-        insertedRow = updatedRow;
-      } else {
-        const { data: newRow, error: insertError } = await supabase
-          .from("event_interested")
-          .insert({
-            event_id: event.id,
-            user_id: profile.id,
-            full_name: profile.full_name || profile.username || "Korisnik",
-            phone: null,
-            status: "pending",
-          })
-          .select("id, user_id, created_at, full_name, phone, status")
-          .single();
-
-        if (insertError) throw insertError;
-        insertedRow = newRow;
-      }
-
-      setJoined(true);
-
-      const optimisticParticipant = {
-        id: insertedRow?.id || `optimistic-${profile.id}`,
-        user_id: profile.id,
-        created_at: insertedRow?.created_at || new Date().toISOString(),
-        full_name:
-          insertedRow?.full_name ||
-          profile.full_name ||
-          profile.username ||
-          "Korisnik",
-        phone: null,
-        status: insertedRow?.status || "pending",
-        profile: {
-          id: profile.id,
-          role: profile.role,
-          username: profile.username,
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
-        },
-      };
-
-      setParticipants((current) => {
-        const existingIndex = current.findIndex(
-          (item) => item.user_id === profile.id
-        );
-
-        if (existingIndex === -1) {
-          return [...current, optimisticParticipant];
-        }
-
-        return current.map((item, index) =>
-          index === existingIndex ? optimisticParticipant : item
-        );
-      });
-
-      setActionMessage("Prijava je poslata. Grupni chat je otključan.");
-
-      if (event.host_id !== profile.id) {
-        const newCount = currentCount + 1;
-        const displayName =
-          profile.full_name || profile.username || "Korisnik";
-
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            user_id: event.host_id,
-            from_user_id: profile.id,
-            event_id: event.id,
-            type: "event_joined",
-            title: "Nova prijava na avanturu",
-            message: `${displayName} se prijavio/la za avanturu: ${event.title}. Trenutno je prijavljeno ${newCount} ${
-              newCount === 1 ? "učesnik" : "učesnika"
-            }.`,
-            is_read: false,
-          });
-
-        if (notificationError) {
-          console.error("Obaveštenje nije poslato:", notificationError);
-        }
-      }
-
-      void loadParticipants(event.id, event.host_id);
-    } catch (joinError) {
-      console.error("Greška pri prijavi na avanturu:", joinError);
-      alert(joinError?.message || "Prijavu trenutno nije moguće poslati.");
-    } finally {
-      setJoinLoading(false);
-    }
-  }
-
-  async function cancelJoin() {
-    if (!profile?.id || !event?.id || !joined) return;
-
-    try {
-      setJoinLoading(true);
-      setActionMessage("");
-
-      const { error: deleteError } = await supabase
-        .from("event_interested")
-        .delete()
-        .eq("event_id", event.id)
-        .eq("user_id", profile.id);
-
-      if (deleteError) throw deleteError;
-
-      setJoined(false);
-      setParticipants((current) =>
-        current.filter((item) => item.user_id !== profile.id)
-      );
-
-      if (event.host_id !== profile.id) {
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            user_id: event.host_id,
-            from_user_id: profile.id,
-            event_id: event.id,
-            type: "event_application_cancelled",
-            title: "Prijava je otkazana",
-            message: `${
-              profile.full_name || profile.username || "Korisnik"
-            } je otkazao/la prijavu za avanturu: ${event.title}.`,
-            is_read: false,
-          });
-
-        if (notificationError) {
-          console.error(
-            "Obaveštenje o otkazivanju nije poslato:",
-            notificationError
-          );
-        }
-      }
-
-      setActionMessage("Prijava je otkazana.");
-    } catch (joinError) {
-      console.error("Greška pri otkazivanju prijave:", joinError);
-      alert(joinError?.message || "Prijavu trenutno nije moguće otkazati.");
-    } finally {
-      setJoinLoading(false);
-    }
-  }
-
-  async function confirmParticipant(registrationId) {
-    if (!profile?.id || profile.id !== event?.host_id) return;
-
-    const registration = participants.find(
-      (item) => item.id === registrationId
-    );
-
-    if (!registration) {
-      alert("Prijava više nije dostupna. Osveži stranicu i pokušaj ponovo.");
-      return;
-    }
-
-    try {
-      setConfirmingParticipantId(registrationId);
-
-      const { data: confirmedRow, error: confirmError } = await supabase
-        .from("event_interested")
-        .update({ status: "confirmed" })
-        .eq("id", registrationId)
-        .eq("event_id", event.id)
-        .eq("user_id", registration.user_id)
-        .select("id, user_id, event_id, status")
-        .maybeSingle();
-
-      if (confirmError) throw confirmError;
-
-      if (!confirmedRow || confirmedRow.status !== "confirmed") {
-        throw new Error("Potvrda nije sačuvana u bazi. Proveri UPDATE RLS policy za event_interested.");
-      }
-
-      setParticipants((current) =>
-        current.map((item) =>
-          item.id === registrationId
-            ? { ...item, status: confirmedRow.status }
-            : item
-        )
-      );
-
-      if (registration.user_id && registration.user_id !== profile.id) {
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            user_id: registration.user_id,
-            from_user_id: profile.id,
-            event_id: event.id,
-            type: "event_application_confirmed",
-            title: "Prijava je potvrđena",
-            message: `Domaćin je prihvatio tvoju prijavu za avanturu: ${event.title}.`,
-            is_read: false,
-          });
-
-        if (notificationError) {
-          console.error(
-            "Obaveštenje korisniku nije poslato:",
-            notificationError
-          );
-        }
-      }
-
-      await loadParticipants(event.id, event.host_id);
-      setActionMessage("Prijava je potvrđena i korisnik je obavešten.");
-    } catch (confirmError) {
-      console.error("Greška pri potvrdi prijave:", confirmError);
-      alert(
-        confirmError?.message ||
-          "Prijavu trenutno nije moguće potvrditi."
-      );
-    } finally {
-      setConfirmingParticipantId(null);
-    }
-  }
-
-  async function rejectParticipant(registrationId) {
-    if (!profile?.id || profile.id !== event?.host_id) return;
-
-    const registration = participants.find(
-      (item) => item.id === registrationId
-    );
-
-    if (!registration) {
-      alert("Prijava više nije dostupna. Osveži stranicu i pokušaj ponovo.");
-      return;
-    }
-
-    try {
-      setRejectingParticipantId(registrationId);
-
-      const { data: rejectedRow, error: rejectError } = await supabase
-        .from("event_interested")
-        .update({ status: "rejected" })
-        .eq("id", registrationId)
-        .eq("event_id", event.id)
-        .eq("user_id", registration.user_id)
-        .select("id, user_id, event_id, status")
-        .maybeSingle();
-
-      if (rejectError) throw rejectError;
-
-      if (!rejectedRow || rejectedRow.status !== "rejected") {
-        throw new Error("Odbijanje nije sačuvano u bazi. Proveri UPDATE RLS policy za event_interested.");
-      }
-
-      setParticipants((current) =>
-        current.map((item) =>
-          item.id === registrationId
-            ? { ...item, status: rejectedRow.status }
-            : item
-        )
-      );
-
-      if (registration.user_id && registration.user_id !== profile.id) {
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            user_id: registration.user_id,
-            from_user_id: profile.id,
-            event_id: event.id,
-            type: "event_application_rejected",
-            title: "Prijava nije prihvaćena",
-            message: `Domaćin trenutno nije u mogućnosti da potvrdi tvoju prijavu za avanturu: ${event.title}.`,
-            is_read: false,
-          });
-
-        if (notificationError) {
-          console.error(
-            "Obaveštenje o odbijanju nije poslato:",
-            notificationError
-          );
-        }
-      }
-
-      await loadParticipants(event.id, event.host_id);
-      setActionMessage("Prijava je odbijena i korisnik je obavešten.");
-    } catch (rejectError) {
-      console.error("Greška pri odbijanju prijave:", rejectError);
-      alert(
-        rejectError?.message ||
-          "Prijavu trenutno nije moguće odbiti."
-      );
-    } finally {
-      setRejectingParticipantId(null);
-    }
-  }
-
-  async function finishEvent(showOnProfile) {
-    if (!profile?.id || !event?.id || profile.id !== event.host_id) return;
-
-    try {
-      setFinishLoading(true);
-      setActionMessage("");
-
-      const completedAt = new Date().toISOString();
-      const { data: updatedEvent, error: finishError } = await supabase
-        .from("events")
-        .update({
-          status: "completed",
-          is_active: false,
-          show_on_profile: showOnProfile,
-          completed_at: completedAt,
-          updated_at: completedAt,
-        })
-        .eq("id", event.id)
-        .eq("host_id", profile.id)
-        .select("*")
-        .single();
-
-      if (finishError) throw finishError;
-
-      setEvent(updatedEvent || {
-        ...event,
-        status: "completed",
-        is_active: false,
-        show_on_profile: showOnProfile,
-        completed_at: completedAt,
-        updated_at: completedAt,
-      });
-      setFinishModalOpen(false);
-      setActionMessage(
-        showOnProfile
-          ? "Avantura je završena i sačuvana u portfoliju."
-          : "Avantura je završena bez prikaza na profilu."
-      );
-    } catch (finishError) {
-      console.error("Greška pri završavanju avanture:", finishError);
-      alert(finishError?.message || "Avanturu trenutno nije moguće završiti.");
-    } finally {
-      setFinishLoading(false);
-    }
-  }
 
   async function submitComment() {
     if (!profile?.id) {
@@ -946,29 +404,22 @@ export default function EventDetails() {
       await loadComments(event.id);
 
       if (event.host_id !== profile.id) {
-        const { error: notificationError } =
-          await supabase
-            .from("notifications")
-            .insert({
-              user_id: event.host_id,
-              from_user_id: profile.id,
-              event_id: event.id,
-              type: "event_comment",
-              title: "Novi komentar",
-              message: `${
-                profile.full_name ||
-                profile.username
-              } je komentarisao/la avanturu: ${
-                event.title
-              }`,
-              is_read: false,
-            });
+        const { error: notificationError } = await supabase
+          .from("notifications")
+          .insert({
+            user_id: event.host_id,
+            from_user_id: profile.id,
+            event_id: event.id,
+            type: "event_comment",
+            title: "Novi komentar",
+            message: `${
+              profile.full_name || profile.username || "Korisnik"
+            } je komentarisao/la avanturu: ${event.title}`,
+            is_read: false,
+          });
 
         if (notificationError) {
-          console.error(
-            "Obaveštenje nije poslato:",
-            notificationError
-          );
+          console.error("Obaveštenje nije poslato:", notificationError);
         }
       }
     } catch (commentError) {
@@ -997,10 +448,14 @@ export default function EventDetails() {
   const eventPhotos = useMemo(
     () =>
       Array.from(
-        new Set([
-          event?.cover_url,
-          ...(Array.isArray(event?.gallery_urls) ? event.gallery_urls : []),
-        ].filter(Boolean))
+        new Set(
+          [
+            event?.cover_url,
+            ...(Array.isArray(event?.gallery_urls)
+              ? event.gallery_urls
+              : []),
+          ].filter(Boolean)
+        )
       ).slice(0, 8),
     [event?.cover_url, event?.gallery_urls]
   );
@@ -1104,7 +559,6 @@ export default function EventDetails() {
     }
 
     const distance = endX - startX;
-
     if (Math.abs(distance) < 45) return;
 
     if (distance < 0) {
@@ -1122,342 +576,25 @@ export default function EventDetails() {
     ? event.included_items.filter(Boolean)
     : [];
 
-  const activeParticipants = useMemo(
-    () => participants.filter((item) => item.status !== "rejected"),
-    [participants]
-  );
-
-  const pendingParticipants = useMemo(
-    () => participants.filter((item) => item.status === "pending"),
-    [participants]
-  );
-
-  const confirmedParticipants = useMemo(
-    () => participants.filter((item) => item.status === "confirmed"),
-    [participants]
-  );
-
-  const rejectedParticipants = useMemo(
-    () => participants.filter((item) => item.status === "rejected"),
-    [participants]
-  );
-
-  const participantCount = activeParticipants.length;
-  const pendingCount = pendingParticipants.length;
-  const confirmedCount = confirmedParticipants.length;
-  const rejectedCount = rejectedParticipants.length;
-
   const capacity = Number(event?.capacity || 0);
-
-  // Pending prijave privremeno rezervišu mesto dok ih host ne obradi.
-  // Odbijene prijave više ne zauzimaju kapacitet.
-  const remainingPlaces =
-    capacity > 0
-      ? Math.max(capacity - participantCount, 0)
-      : null;
-
-  const isFull =
-    capacity > 0 &&
-    participantCount >= capacity;
-
-  const isCompleted = event?.status === "completed";
-  const registrationsClosed =
-    isCompleted ||
-    event?.status === "cancelled" ||
-    event?.is_active === false;
-
-  const canJoin =
-    Boolean(profile?.id) &&
-    profile?.id !== event?.host_id &&
-    !registrationsClosed;
-
-  const canViewAllParticipants =
-    Boolean(profile?.id) &&
-    profile?.id === event?.host_id;
-
-  const visibleParticipants =
-    activeParticipants.slice(0, 8);
-
-  const currentRegistration = profile?.id
-    ? participants.find((item) => item.user_id === profile.id)
-    : null;
-
-  const currentRegistrationStatus = currentRegistration?.status || null;
-  const currentRegistrationPending = currentRegistrationStatus === "pending";
-  const currentRegistrationConfirmed = currentRegistrationStatus === "confirmed";
-  const currentRegistrationRejected = currentRegistrationStatus === "rejected";
-
-  const canAccessGroupChat = Boolean(
+  const minParticipants = Number(event?.min_participants || 0);
+  const isHost = Boolean(
     profile?.id &&
-      event?.id &&
-      (
-        profile.id === event.host_id ||
-        currentRegistrationPending ||
-        currentRegistrationConfirmed
-      )
+      event?.host_id &&
+      profile.id === event.host_id
   );
 
-  const loadChatMessages = useCallback(async () => {
-    if (!profile?.id || !event?.id) {
-      setChatMessages([]);
-      return;
-    }
+  const phoneHref = host?.phone
+    ? `tel:${String(host.phone).replace(/[^\d+]/g, "")}`
+    : "";
 
-    setChatLoading(true);
+  const instagramHref = normalizeInstagramUrl(host?.instagram_url);
+  const websiteHref = normalizeExternalUrl(host?.website_url);
+  const hasDirectContact = Boolean(phoneHref || instagramHref || websiteHref);
 
-    try {
-      const { data, error: chatError } = await supabase
-        .from("event_chat_messages")
-        .select(`
-          id,
-          event_id,
-          user_id,
-          body,
-          created_at,
-          profiles:user_id (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq("event_id", event.id)
-        .order("created_at", { ascending: true })
-        .limit(300);
-
-      if (chatError) throw chatError;
-      setChatMessages(data || []);
-    } catch (chatError) {
-      console.error("Greška pri učitavanju grupnog chata:", chatError);
-      setChatMessages([]);
-    } finally {
-      setChatLoading(false);
-    }
-  }, [profile?.id, event?.id]);
-
-  const openGroupChat = useCallback(() => {
-    if (!profile?.id) {
-      alert("Moraš prvo da se prijaviš.");
-      return;
-    }
-
-    if (!canAccessGroupChat) {
-      alert("Grupni chat je dostupan organizatoru i prijavljenim učesnicima.");
-      return;
-    }
-
-    setChatOpen(true);
-    void loadChatMessages();
-  }, [profile?.id, canAccessGroupChat, loadChatMessages]);
-
-  useEffect(() => {
-    if (
-      searchParams.get("chat") !== "1" ||
-      !canAccessGroupChat ||
-      chatOpen
-    ) {
-      return;
-    }
-
-    setChatOpen(true);
-    void loadChatMessages();
-
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("chat");
-    setSearchParams(nextParams, { replace: true });
-  }, [
-    searchParams,
-    setSearchParams,
-    canAccessGroupChat,
-    chatOpen,
-    loadChatMessages,
-  ]);
-
-  const sendChatMessage = useCallback(async () => {
-    const body = chatBody.trim();
-
-    if (!body || !profile?.id || !event?.id || !canAccessGroupChat) {
-      return;
-    }
-
-    try {
-      setChatSending(true);
-
-      const { data: insertedMessage, error: sendError } = await supabase
-        .from("event_chat_messages")
-        .insert({
-          event_id: event.id,
-          user_id: profile.id,
-          body,
-        })
-        .select("id, event_id, user_id, body, created_at")
-        .single();
-
-      if (sendError) throw sendError;
-
-      setChatBody("");
-
-      if (insertedMessage) {
-        setChatMessages((current) => {
-          if (current.some((item) => item.id === insertedMessage.id)) {
-            return current;
-          }
-
-          return [
-            ...current,
-            {
-              ...insertedMessage,
-              profiles: {
-                id: profile.id,
-                username: profile.username,
-                full_name: profile.full_name,
-                avatar_url: profile.avatar_url,
-              },
-            },
-          ];
-        });
-      }
-
-      const senderName =
-        profile.full_name || profile.username || "Učesnik";
-
-      const activeRecipientIds = Array.from(
-        new Set([
-          event.host_id,
-          ...participants
-            .filter((item) => item.status !== "rejected")
-            .map((item) => item.user_id),
-        ])
-      ).filter((userId) => userId && userId !== profile.id);
-
-      if (activeRecipientIds.length > 0) {
-        const preview =
-          body.length > 140 ? `${body.slice(0, 137)}...` : body;
-
-        const rows = activeRecipientIds.map((userId) => ({
-          user_id: userId,
-          from_user_id: profile.id,
-          event_id: event.id,
-          type: "event_chat_message",
-          title: `Nova poruka · ${event.title}`,
-          message: `${senderName}: ${preview}`,
-          is_read: false,
-        }));
-
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert(rows);
-
-        if (notificationError) {
-          console.error(
-            "Chat obaveštenja nisu poslata:",
-            notificationError
-          );
-        }
-      }
-    } catch (sendError) {
-      console.error("Greška pri slanju poruke:", sendError);
-      alert(sendError?.message || "Poruku trenutno nije moguće poslati.");
-    } finally {
-      setChatSending(false);
-    }
-  }, [
-    chatBody,
-    profile?.id,
-    profile?.username,
-    profile?.full_name,
-    profile?.avatar_url,
-    event?.id,
-    event?.host_id,
-    event?.title,
-    canAccessGroupChat,
-    participants,
-  ]);
-
-  useEffect(() => {
-    if (!chatOpen || !canAccessGroupChat || !event?.id) return undefined;
-
-    void loadChatMessages();
-
-    const channel = supabase
-      .channel(`event-chat-${event.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "event_chat_messages",
-          filter: `event_id=eq.${event.id}`,
-        },
-        (payload) => {
-          const rawMessage = payload.new;
-
-          setChatMessages((current) => {
-            if (current.some((item) => item.id === rawMessage.id)) {
-              return current;
-            }
-
-            return [
-              ...current,
-              {
-                ...rawMessage,
-                profiles:
-                  rawMessage.user_id === profile.id
-                    ? {
-                        id: profile.id,
-                        username: profile.username,
-                        full_name: profile.full_name,
-                        avatar_url: profile.avatar_url,
-                      }
-                    : null,
-              },
-            ];
-          });
-
-          if (rawMessage.user_id !== profile.id) {
-            window.setTimeout(() => {
-              void loadChatMessages();
-            }, 150);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [
-    chatOpen,
-    canAccessGroupChat,
-    event?.id,
-    loadChatMessages,
-    profile?.id,
-    profile?.username,
-    profile?.full_name,
-    profile?.avatar_url,
-  ]);
-
-  useEffect(() => {
-    if (!chatOpen) return;
-
-    const timer = window.setTimeout(() => {
-      chatEndRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
-    }, 80);
-
-    return () => window.clearTimeout(timer);
-  }, [chatOpen, chatMessages.length]);
-
-  useEffect(() => {
-    if (!canAccessGroupChat && chatOpen) {
-      setChatOpen(false);
-      setChatMessages([]);
-      setChatBody("");
-    }
-  }, [canAccessGroupChat, chatOpen]);
-
+  const hostProfileHref = host?.username
+    ? `/h/${host.username}`
+    : "";
 
   if (loading) {
     return <LoadingState />;
@@ -1507,7 +644,7 @@ export default function EventDetails() {
         title={`${event.title}${event.location ? ` – ${event.location}` : ""}`}
         description={
           event.description?.slice(0, 155) ||
-          `Pridruži se avanturi ${event.title} na MeetOutdoors. Pogledaj datum, lokaciju, organizatora, cenu i detalje prijave.`
+          `Istraži avanturu ${event.title} na MeetOutdoors-u. Pogledaj lokaciju, termin, cenu, organizatora i kontakt podatke.`
         }
         canonicalPath={`/event/${event.id}`}
         image={eventPhotos[0] || FALLBACK_COVER}
@@ -1520,12 +657,9 @@ export default function EventDetails() {
           image: eventPhotos.length ? eventPhotos : undefined,
           startDate: event.start_date || undefined,
           endDate: event.end_date || undefined,
-          eventStatus: isCompleted
-            ? "https://schema.org/EventCompleted"
-            : event.status === "cancelled"
-            ? "https://schema.org/EventCancelled"
-            : "https://schema.org/EventScheduled",
-          eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+          eventStatus: "https://schema.org/EventScheduled",
+          eventAttendanceMode:
+            "https://schema.org/OfflineEventAttendanceMode",
           location: {
             "@type": "Place",
             name: event.location || event.title,
@@ -1538,7 +672,10 @@ export default function EventDetails() {
           organizer: host
             ? {
                 "@type": "Organization",
-                name: host.full_name || host.username || "MeetOutdoors host",
+                name:
+                  host.full_name ||
+                  host.username ||
+                  "MeetOutdoors host",
                 url: host.username
                   ? `https://www.meetoutdoors.app/h/${host.username}`
                   : undefined,
@@ -1549,9 +686,7 @@ export default function EventDetails() {
             url: `https://www.meetoutdoors.app/event/${event.id}`,
             price: Number(event.price || 0),
             priceCurrency: "EUR",
-            availability: isFull
-              ? "https://schema.org/SoldOut"
-              : "https://schema.org/InStock",
+            availability: "https://schema.org/InStock",
           },
           url: `https://www.meetoutdoors.app/event/${event.id}`,
         }}
@@ -1569,13 +704,13 @@ export default function EventDetails() {
           </div>
         )}
 
-        {finishModalOpen && (
+        {contactOpen && host && (
           <div
             className="eventFinishModalBackdrop"
             role="presentation"
             onMouseDown={(mouseEvent) => {
-              if (mouseEvent.target === mouseEvent.currentTarget && !finishLoading) {
-                setFinishModalOpen(false);
+              if (mouseEvent.target === mouseEvent.currentTarget) {
+                setContactOpen(false);
               }
             }}
           >
@@ -1583,239 +718,103 @@ export default function EventDetails() {
               className="eventFinishModal"
               role="dialog"
               aria-modal="true"
-              aria-labelledby="eventFinishModalTitle"
+              aria-labelledby="eventContactModalTitle"
             >
               <button
                 type="button"
                 className="eventFinishModalClose"
-                onClick={() => setFinishModalOpen(false)}
-                disabled={finishLoading}
-                aria-label="Zatvori"
+                onClick={() => setContactOpen(false)}
+                aria-label="Zatvori kontakt"
               >
                 <Icon name="x" size={18} />
               </button>
 
-              <span className="eventFinishModalKicker">ZAVRŠETAK AVANTURE</span>
-              <h2 id="eventFinishModalTitle">Sačuvaj iskustvo.</h2>
+              <span className="eventFinishModalKicker">
+                DIREKTAN KONTAKT
+              </span>
+              <h2 id="eventContactModalTitle">
+                Kontaktiraj domaćina.
+              </h2>
               <p className="eventFinishModalIntro">
-                Avantura više neće primati nove prijave. Možeš da je ostaviš na profilu kao deo svog portfolija.
+                MeetOutdoors prikazuje ponudu i povezuje te direktno sa domaćinom.
+                Dalji dogovor, dostupnost i komunikacija odvijaju se van MeetOutdoors-a.
               </p>
 
               <div className="eventFinishChoices">
-                <button
-                  type="button"
-                  className="eventFinishChoice primary"
-                  onClick={() => void finishEvent(true)}
-                  disabled={finishLoading}
-                >
-                  <span className="eventFinishChoiceIcon">
-                    <Icon name="check" size={19} />
-                  </span>
-                  <span>
-                    <strong>{finishLoading ? "Čuvanje..." : "Završi i prikaži na profilu"}</strong>
-                    <small>Avantura ostaje vidljiva u sekciji Održane avanture.</small>
-                  </span>
-                  <Icon name="arrowRight" size={17} />
-                </button>
-
-                <button
-                  type="button"
-                  className="eventFinishChoice"
-                  onClick={() => void finishEvent(false)}
-                  disabled={finishLoading}
-                >
-                  <span className="eventFinishChoiceIcon muted">
-                    <Icon name="eye" size={19} />
-                  </span>
-                  <span>
-                    <strong>Završi bez prikaza</strong>
-                    <small>Avantura se završava, ali se ne prikazuje javno na profilu.</small>
-                  </span>
-                  <Icon name="arrowRight" size={17} />
-                </button>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {chatOpen && canAccessGroupChat && (
-          <div
-            className="eventChatBackdrop"
-            role="presentation"
-            onMouseDown={(mouseEvent) => {
-              if (mouseEvent.target === mouseEvent.currentTarget) {
-                setChatOpen(false);
-              }
-            }}
-          >
-            <section
-              className="eventChatModal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="eventChatTitle"
-            >
-              <header className="eventChatHeader">
-                <div>
-                  <span className="eventChatKicker">GRUPNI CHAT AVANTURE</span>
-                  <h2 id="eventChatTitle">{event.title}</h2>
-                  <p>
-                    <Icon name="users" size={14} />
-                    {participantCount + 1} članova · organizator + prijavljeni
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="eventChatClose"
-                  onClick={() => setChatOpen(false)}
-                  aria-label="Zatvori grupni chat"
-                >
-                  <Icon name="x" size={19} />
-                </button>
-              </header>
-
-              <div className="eventChatMemberStrip">
-                <div className="eventChatMember hostMember">
-                  <img
-                    src={host?.avatar_url || FALLBACK_AVATAR}
-                    alt={host?.full_name || host?.username || "Organizator"}
-                  />
-                  <span>
-                    <strong>{host?.full_name || host?.username || "Organizator"}</strong>
-                    <small>ORGANIZATOR</small>
-                  </span>
-                </div>
-
-                {activeParticipants.slice(0, 7).map((participant) => {
-                  const participantProfile = participant.profile;
-                  return (
-                    <div className="eventChatMember" key={participant.id}>
-                      <img
-                        src={participantProfile?.avatar_url || FALLBACK_AVATAR}
-                        alt={
-                          participantProfile?.full_name ||
-                          participantProfile?.username ||
-                          participant.full_name ||
-                          "Učesnik"
-                        }
-                      />
-                      <span>
-                        <strong>
-                          {participantProfile?.full_name ||
-                            participantProfile?.username ||
-                            participant.full_name ||
-                            "Učesnik"}
-                        </strong>
-                        <small>
-                          {participant.status === "confirmed"
-                            ? "POTVRĐEN"
-                            : "PRIJAVLJEN"}
-                        </small>
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="eventChatMessages">
-                {chatLoading ? (
-                  <div className="eventChatEmpty">
-                    <span className="eventLoader" />
-                    <strong>Učitavanje razgovora...</strong>
-                  </div>
-                ) : chatMessages.length === 0 ? (
-                  <div className="eventChatEmpty">
-                    <span className="eventChatEmptyIcon">
-                      <Icon name="chatBubble" size={25} />
+                {phoneHref && (
+                  <a
+                    className="eventFinishChoice primary"
+                    href={phoneHref}
+                    onClick={() => setContactOpen(false)}
+                  >
+                    <span className="eventFinishChoiceIcon">
+                      <Icon name="phone" size={19} />
                     </span>
-                    <strong>Još nema poruka.</strong>
-                    <p>
-                      {profile.id === event.host_id
-                        ? "Pošalji prvu poruku ekipi — vreme okupljanja, oprema ili važne informacije."
-                        : "Napiši nešto ekipi ili postavi pitanje organizatoru."}
-                    </p>
-                  </div>
-                ) : (
-                  chatMessages.map((message) => {
-                    const sender = message.profiles;
-                    const isOwn = message.user_id === profile.id;
-                    const isHostMessage = message.user_id === event.host_id;
-                    const senderName =
-                      sender?.full_name ||
-                      sender?.username ||
-                      (isOwn
-                        ? profile.full_name || profile.username
-                        : "Učesnik");
-
-                    return (
-                      <article
-                        key={message.id}
-                        className={`eventChatMessage ${isOwn ? "own" : ""} ${
-                          isHostMessage ? "hostMessage" : ""
-                        }`}
-                      >
-                        {!isOwn && (
-                          <img
-                            className="eventChatMessageAvatar"
-                            src={sender?.avatar_url || FALLBACK_AVATAR}
-                            alt={senderName}
-                          />
-                        )}
-
-                        <div className="eventChatBubble">
-                          <div className="eventChatMessageMeta">
-                            <strong>{isOwn ? "Ti" : senderName}</strong>
-                            {isHostMessage && (
-                              <span>ORGANIZATOR</span>
-                            )}
-                            <small>{formatChatTime(message.created_at)}</small>
-                          </div>
-                          <p>{message.body}</p>
-                        </div>
-                      </article>
-                    );
-                  })
+                    <span>
+                      <strong>Pozovi domaćina</strong>
+                      <small>{host.phone}</small>
+                    </span>
+                    <Icon name="arrowRight" size={17} />
+                  </a>
                 )}
 
-                <div ref={chatEndRef} />
+                {instagramHref && (
+                  <a
+                    className="eventFinishChoice"
+                    href={instagramHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setContactOpen(false)}
+                  >
+                    <span className="eventFinishChoiceIcon muted">
+                      <Icon name="instagram" size={19} />
+                    </span>
+                    <span>
+                      <strong>Instagram</strong>
+                      <small>Otvori profil domaćina</small>
+                    </span>
+                    <Icon name="arrowRight" size={17} />
+                  </a>
+                )}
+
+                {websiteHref && (
+                  <a
+                    className="eventFinishChoice"
+                    href={websiteHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setContactOpen(false)}
+                  >
+                    <span className="eventFinishChoiceIcon muted">
+                      <Icon name="globe" size={19} />
+                    </span>
+                    <span>
+                      <strong>Website</strong>
+                      <small>Poseti sajt domaćina</small>
+                    </span>
+                    <Icon name="arrowRight" size={17} />
+                  </a>
+                )}
+
+                {hostProfileHref && (
+                  <Link
+                    className="eventFinishChoice"
+                    to={hostProfileHref}
+                    onClick={() => setContactOpen(false)}
+                  >
+                    <span className="eventFinishChoiceIcon muted">
+                      <Icon name="eye" size={19} />
+                    </span>
+                    <span>
+                      <strong>Profil domaćina</strong>
+                      <small>
+                        Avanture, smeštaj, recenzije i informacije
+                      </small>
+                    </span>
+                    <Icon name="arrowRight" size={17} />
+                  </Link>
+                )}
               </div>
-
-              <form
-                className="eventChatComposer"
-                onSubmit={(submitEvent) => {
-                  submitEvent.preventDefault();
-                  void sendChatMessage();
-                }}
-              >
-                <textarea
-                  value={chatBody}
-                  onChange={(changeEvent) => setChatBody(changeEvent.target.value)}
-                  placeholder={
-                    profile.id === event.host_id
-                      ? "Poruka svim prijavljenim učesnicima..."
-                      : "Napiši poruku grupi..."
-                  }
-                  rows={1}
-                  maxLength={2000}
-                  onKeyDown={(keyboardEvent) => {
-                    if (
-                      keyboardEvent.key === "Enter" &&
-                      !keyboardEvent.shiftKey
-                    ) {
-                      keyboardEvent.preventDefault();
-                      void sendChatMessage();
-                    }
-                  }}
-                />
-
-                <button
-                  type="submit"
-                  disabled={chatSending || !chatBody.trim()}
-                >
-                  <Icon name="arrowRight" size={18} />
-                  <span>{chatSending ? "Slanje..." : "Pošalji"}</span>
-                </button>
-              </form>
             </section>
           </div>
         )}
@@ -1829,35 +828,31 @@ export default function EventDetails() {
                 closeLightbox();
               }
             }}
+            onTouchStart={handleLightboxTouchStart}
+            onTouchEnd={handleLightboxTouchEnd}
           >
             <section
               className="eventLightbox"
               role="dialog"
               aria-modal="true"
-              aria-label={`Fotografija ${lightboxIndex + 1} od ${eventPhotos.length}`}
-              onTouchStart={handleLightboxTouchStart}
-              onTouchEnd={handleLightboxTouchEnd}
+              aria-label={`Fotografija ${lightboxIndex + 1} od ${
+                eventPhotos.length
+              }`}
             >
-              <div className="eventLightboxTopbar">
-                <span className="eventLightboxCounter">
-                  {lightboxIndex + 1} / {eventPhotos.length}
-                </span>
-
-                <button
-                  type="button"
-                  className="eventLightboxClose"
-                  onClick={closeLightbox}
-                  aria-label="Zatvori galeriju"
-                >
-                  <Icon name="x" size={20} />
-                </button>
-              </div>
+              <button
+                type="button"
+                className="eventLightboxClose"
+                onClick={closeLightbox}
+                aria-label="Zatvori galeriju"
+              >
+                <Icon name="x" size={22} />
+              </button>
 
               <div className="eventLightboxStage">
                 {eventPhotos.length > 1 && (
                   <button
                     type="button"
-                    className="eventLightboxNav previous"
+                    className="eventLightboxArrow previous"
                     onClick={showPreviousPhoto}
                     aria-label="Prethodna fotografija"
                   >
@@ -1867,14 +862,16 @@ export default function EventDetails() {
 
                 <img
                   src={eventPhotos[lightboxIndex]}
-                  alt={`${event.title} — fotografija ${lightboxIndex + 1}`}
+                  alt={`${event.title} — fotografija ${
+                    lightboxIndex + 1
+                  }`}
                   draggable="false"
                 />
 
                 {eventPhotos.length > 1 && (
                   <button
                     type="button"
-                    className="eventLightboxNav next"
+                    className="eventLightboxArrow next"
                     onClick={showNextPhoto}
                     aria-label="Sledeća fotografija"
                   >
@@ -1884,12 +881,17 @@ export default function EventDetails() {
               </div>
 
               {eventPhotos.length > 1 && (
-                <div className="eventLightboxThumbs" aria-label="Fotografije avanture">
+                <div
+                  className="eventLightboxThumbs"
+                  aria-label="Fotografije avanture"
+                >
                   {eventPhotos.map((url, index) => (
                     <button
                       type="button"
                       key={`${url}-${index}`}
-                      className={index === lightboxIndex ? "active" : ""}
+                      className={
+                        index === lightboxIndex ? "active" : ""
+                      }
                       onClick={() => setLightboxIndex(index)}
                       aria-label={`Otvori fotografiju ${index + 1}`}
                     >
@@ -1926,7 +928,7 @@ export default function EventDetails() {
           <div className="eventHeroCopy">
             <span className="eventEyebrow">
               <span />
-              {isCompleted ? "Održana MeetOutdoors avantura" : "Otvorena MeetOutdoors avantura"}
+              MeetOutdoors avantura
             </span>
 
             <h1>{event.title}</h1>
@@ -1948,81 +950,68 @@ export default function EventDetails() {
 
             <div className="eventHeroJoinLine">
               <span className="eventHeroLiveDot" />
-
               <strong>
-                {confirmedCount}{" "}
-                {confirmedCount === 1
-                  ? "potvrđen učesnik"
-                  : "potvrđenih učesnika"}
+                Kontaktiraj domaćina za dostupnost
               </strong>
-
-              {capacity > 0 && (
-                <small>
-                  · {remainingPlaces} mesta preostalo
-                </small>
-              )}
             </div>
           </div>
 
-          <div className="eventHeroStats">
-            <article>
-              <span>Cena</span>
-              <strong>€{event.price || 0}</strong>
-            </article>
-
-            <article>
-              <span>Prijavljeno</span>
-              <strong>
-                {confirmedCount}
-                {capacity > 0
-                  ? ` / ${capacity}`
-                  : ""}
-              </strong>
-            </article>
-
-            <article>
-              <span>Početak</span>
-              <strong>
-                {formatDate(event.start_date)}
-              </strong>
-            </article>
-
-            <article>
-              <span>Status</span>
-              <strong>
-                {isCompleted ? "Završeno" : isFull ? "Popunjeno" : "Otvoreno"}
-              </strong>
-            </article>
-          </div>
         </section>
 
         <section className="eventContent">
+          <section className="eventDecisionStrip" aria-label="Najvažnije informacije">
+            <article>
+              <span className="eventDecisionIcon"><Icon name="mapPin" size={18} /></span>
+              <div>
+                <small>Lokacija</small>
+                <strong>{location}</strong>
+              </div>
+            </article>
+
+            <article>
+              <span className="eventDecisionIcon"><Icon name="users" size={18} /></span>
+              <div>
+                <small>Broj osoba</small>
+                <strong>
+                  {minParticipants > 0 && capacity > 0
+                    ? `${minParticipants}–${capacity}`
+                    : capacity > 0
+                    ? `Do ${capacity}`
+                    : "Po dogovoru"}
+                </strong>
+              </div>
+            </article>
+
+            <article>
+              <span className="eventDecisionIcon"><Icon name="calendar" size={18} /></span>
+              <div>
+                <small>Termin</small>
+                <strong>{formatDate(event.start_date)}</strong>
+              </div>
+            </article>
+
+            <article>
+              <span className="eventDecisionIcon"><Icon name="sparkle" size={18} /></span>
+              <div>
+                <small>Cena</small>
+                <strong>€{event.price || 0}</strong>
+              </div>
+            </article>
+          </section>
+
           <div className="eventActionBar">
             <div className="eventActionLeft">
               <span className="eventActionLabel">
-                Prijava na avanturu
+                Direktan kontakt
               </span>
 
               <strong>
-                {isCompleted
-                  ? "Avantura je završena i više ne prima nove prijave."
-                  : currentRegistrationConfirmed
-                  ? "Tvoje mesto je potvrđeno."
-                  : currentRegistrationPending
-                  ? "Prijava je poslata i čeka potvrdu domaćina."
-                  : currentRegistrationRejected
-                  ? "Prethodna prijava nije prihvaćena. Možeš poslati novu prijavu."
-                  : isFull
-                  ? "Avantura je trenutno popunjena."
-                  : "Prijavi se jednim klikom i uđi u grupni chat."}
+                Zanima te ova avantura? Javi se domaćinu direktno.
               </strong>
 
               <small>
-                {isCompleted
-                  ? `${confirmedCount} potvrđenih učesnika.`
-                  : capacity > 0
-                  ? `${confirmedCount} potvrđeno · ${pendingCount} čeka · ${remainingPlaces} slobodno.`
-                  : `${confirmedCount} potvrđeno · ${pendingCount} čeka potvrdu.`}
+                MeetOutdoors služi za pronalazak ponude i direktan kontakt.
+                Dalji dogovor i komunikacija odvijaju se van platforme.
               </small>
             </div>
 
@@ -2032,426 +1021,29 @@ export default function EventDetails() {
                 title={event.title || "Outdoor avantura"}
                 image={eventPhotos[0] || FALLBACK_COVER}
                 location={location}
-                subtitle={`${formatDate(event.start_date)} · €${event.price || 0}`}
+                subtitle={`${formatDate(event.start_date)} · €${
+                  event.price || 0
+                }`}
                 url={`https://www.meetoutdoors.app/event/${event.id}`}
                 triggerClassName="eventShareButton"
                 triggerEyebrow="PODELI"
                 triggerLabel="Avantura"
               />
 
-              {canJoin && !joined && (
+              {!isHost && (
                 <button
                   type="button"
                   className="eventJoinButton"
-                  onClick={() => void submitJoin()}
-                  disabled={joinLoading || isFull}
+                  onClick={() => setContactOpen(true)}
+                  disabled={!host}
                 >
-                  <Icon name="bolt" size={18} />
-                  {joinLoading
-                    ? "Čuvanje..."
-                    : isFull
-                    ? "Popunjeno"
-                    : currentRegistrationRejected
-                    ? "Pošalji novu prijavu"
-                    : "Prijavi se"}
+                  <Icon name="phone" size={18} />
+                  Kontaktiraj domaćina
                 </button>
               )}
 
-              {joined && (
-                <div
-                  className={`eventRegistrationBadge ${
-                    currentRegistrationConfirmed ? "confirmed" : "pending"
-                  }`}
-                  role="status"
-                >
-                  <Icon
-                    name={currentRegistrationConfirmed ? "check" : "clock"}
-                    size={17}
-                  />
-                  <span>
-                    <small>Status prijave</small>
-                    <strong>
-                      {currentRegistrationConfirmed
-                        ? "Mesto potvrđeno"
-                        : "Čeka potvrdu"}
-                    </strong>
-                  </span>
-                </div>
-              )}
-
-              {canAccessGroupChat && (
-                <button
-                  type="button"
-                  className="eventChatButton"
-                  onClick={openGroupChat}
-                >
-                  <Icon name="chatBubble" size={17} />
-                  Grupni chat
-                  <span>{participantCount + 1}</span>
-                </button>
-              )}
-
-              {joined && !registrationsClosed && (
-                <button
-                  type="button"
-                  className="eventLeaveButton"
-                  onClick={cancelJoin}
-                  disabled={joinLoading}
-                >
-                  <Icon name="x" size={16} />
-                  Otkaži prijavu
-                </button>
-              )}
-
-              {canViewAllParticipants && !registrationsClosed && (
-                <button
-                  type="button"
-                  className="eventFinishButton"
-                  onClick={() => setFinishModalOpen(true)}
-                  disabled={finishLoading}
-                >
-                  <Icon name="check" size={17} />
-                  Završi avanturu
-                </button>
-              )}
-
-              {canViewAllParticipants && (
-                <button
-                  type="button"
-                  className="eventHostParticipantsButton"
-                  onClick={() =>
-                    document
-                      .getElementById("participants")
-                      ?.scrollIntoView({
-                        behavior: "smooth",
-                      })
-                  }
-                >
-                  <Icon name="users" size={17} />
-                  Učesnici
-                </button>
-              )}
             </div>
           </div>
-
-          {!canViewAllParticipants &&
-            (currentRegistrationConfirmed ||
-              currentRegistrationPending ||
-              currentRegistrationRejected) && (
-              <section
-                className={`eventMyRegistrationPanel ${
-                  currentRegistrationConfirmed
-                    ? "confirmed"
-                    : currentRegistrationRejected
-                    ? "rejected"
-                    : "pending"
-                }`}
-              >
-                <span className="eventMyRegistrationIcon">
-                  <Icon
-                    name={
-                      currentRegistrationConfirmed
-                        ? "check"
-                        : currentRegistrationRejected
-                        ? "x"
-                        : "clock"
-                    }
-                    size={22}
-                  />
-                </span>
-
-                <div>
-                  <span className="eventSectionLabel">Tvoja prijava</span>
-                  <strong>
-                    {currentRegistrationConfirmed
-                      ? "Tvoje mesto je potvrđeno."
-                      : currentRegistrationRejected
-                      ? "Prijava nije prihvaćena."
-                      : "Čeka potvrdu domaćina."}
-                  </strong>
-                  <small>
-                    {currentRegistrationConfirmed
-                      ? "Domaćin je prihvatio tvoju prijavu. Sve detalje možete dogovoriti u grupnom chatu."
-                      : currentRegistrationRejected
-                      ? "Mesto nije rezervisano. Ako se okolnosti promene, možeš poslati novu prijavu."
-                      : "Tvoja prijava privremeno čuva mesto dok domaćin ne odgovori."}
-                  </small>
-                </div>
-              </section>
-            )}
-
-          <section
-            className="eventParticipantsPanel"
-            id="participants"
-          >
-            <div className="eventParticipantsHeader">
-              <div>
-                <span className="eventSectionLabel">
-                  Prijavljeni učesnici
-                </span>
-
-                <h2>
-                  Pogledaj ko se prijavio.
-                </h2>
-
-                <p>
-                  Profili prijavljenih su vidljivi zajednici. Dogovor sa organizatorom i ekipom ide kroz grupni chat avanture.
-                </p>
-              </div>
-
-              <div className="eventParticipantCount">
-                <span>
-                  <Icon name="users" size={18} />
-                </span>
-
-                <div>
-                  <strong>{participantCount}</strong>
-                  <small>
-                    {capacity > 0
-                      ? `${confirmedCount} potvrđeno · ${pendingCount} čeka`
-                      : `${confirmedCount} potvrđeno · ${pendingCount} čeka`}
-                  </small>
-                </div>
-              </div>
-            </div>
-
-            {participantCount === 0 ? (
-              <div className="eventParticipantsEmpty">
-                <span>
-                  <Icon name="users" size={25} />
-                </span>
-
-                <div>
-                  <strong>
-                    Još nema prijavljenih učesnika.
-                  </strong>
-
-                  <small>
-                    Budi prvi koji će se pridružiti.
-                  </small>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="eventAvatarStack">
-                  {visibleParticipants.map((item) => {
-                    const participant = item.profile;
-                    const target =
-                      participant?.role === "host"
-                        ? `/h/${participant.username}`
-                        : `/u/${participant?.username}`;
-
-                    return participant?.username ? (
-                      <Link
-                        key={item.id}
-                        to={target}
-                        className="eventParticipantAvatar"
-                        title={
-                          participant.full_name ||
-                          participant.username
-                        }
-                      >
-                        <img
-                          src={
-                            participant.avatar_url ||
-                            FALLBACK_AVATAR
-                          }
-                          alt={
-                            participant.full_name ||
-                            participant.username
-                          }
-                        />
-                      </Link>
-                    ) : (
-                      <span
-                        key={item.id}
-                        className="eventParticipantAvatar"
-                      >
-                        <img
-                          src={FALLBACK_AVATAR}
-                          alt="Učesnik"
-                        />
-                      </span>
-                    );
-                  })}
-
-                  {participantCount >
-                    visibleParticipants.length && (
-                    <span className="eventParticipantMore">
-                      +
-                      {participantCount -
-                        visibleParticipants.length}
-                    </span>
-                  )}
-                </div>
-
-                <div className="eventParticipantNames">
-                  {visibleParticipants
-                    .slice(0, 4)
-                    .map((item) => {
-                      const participant = item.profile;
-
-                      return (
-                        <span key={item.id}>
-                          {participant?.full_name ||
-                            participant?.username ||
-                            "Učesnik"}
-                        </span>
-                      );
-                    })}
-
-                  {participantCount > 4 && (
-                    <small>
-                      i još {participantCount - 4}
-                    </small>
-                  )}
-                </div>
-
-                {canViewAllParticipants && (
-                  <div className="eventHostRegistrationSummary">
-                    <span className="confirmed">
-                      <strong>{confirmedCount}</strong>
-                      potvrđeno
-                    </span>
-                    <span className="pending">
-                      <strong>{pendingCount}</strong>
-                      čeka
-                    </span>
-                    {rejectedCount > 0 && (
-                      <span className="rejected">
-                        <strong>{rejectedCount}</strong>
-                        odbijeno
-                      </span>
-                    )}
-                    {capacity > 0 && (
-                      <span>
-                        <strong>{remainingPlaces}</strong>
-                        slobodno
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {canViewAllParticipants && (
-                  <div className="eventHostParticipantList">
-                    {participants.map((item) => {
-                      const participant = item.profile;
-                      const target =
-                        participant?.role === "host"
-                          ? `/h/${participant.username}`
-                          : `/u/${participant?.username}`;
-
-                      return (
-                        <article key={item.id}>
-                          <img
-                            src={
-                              participant?.avatar_url ||
-                              FALLBACK_AVATAR
-                            }
-                            alt={
-                              participant?.full_name ||
-                              participant?.username ||
-                              "Učesnik"
-                            }
-                          />
-
-                          <div className="eventHostParticipantIdentity">
-                            <strong>
-                              {item.full_name ||
-                                participant?.full_name ||
-                                participant?.username ||
-                                "Učesnik"}
-                            </strong>
-
-                            <small>
-                              {participant?.username
-                                ? `@${participant.username}`
-                                : "MeetOutdoors korisnik"}
-                            </small>
-
-                            <span
-                              className={`eventRegistrationStatus ${
-                                item.status === "confirmed"
-                                  ? "confirmed"
-                                  : item.status === "rejected"
-                                  ? "rejected"
-                                  : "pending"
-                              }`}
-                            >
-                              {item.status === "confirmed"
-                                ? "Potvrđeno"
-                                : item.status === "rejected"
-                                ? "Odbijeno"
-                                : "Čeka potvrdu"}
-                            </span>
-                          </div>
-
-                          <div className="eventHostParticipantActions">
-                            {item.phone ? (
-                              <a
-                                href={`tel:${item.phone.replace(/\s+/g, "")}`}
-                                className="eventParticipantPhone"
-                              >
-                                <Icon name="phone" size={15} />
-                                {item.phone}
-                              </a>
-                            ) : (
-                              <span className="eventParticipantPhone missing">
-                                Bez broja telefona
-                              </span>
-                            )}
-
-                            <div className="eventParticipantActionRow">
-                              {participant?.username && (
-                                <Link to={target}>
-                                  <Icon name="eye" size={15} />
-                                  Profil
-                                </Link>
-                              )}
-
-                              {item.status === "pending" && (
-                                <>
-                                  <button
-                                    type="button"
-                                    className="eventConfirmParticipantButton"
-                                    onClick={() => confirmParticipant(item.id)}
-                                    disabled={
-                                      confirmingParticipantId === item.id ||
-                                      rejectingParticipantId === item.id
-                                    }
-                                  >
-                                    <Icon name="check" size={15} />
-                                    {confirmingParticipantId === item.id
-                                      ? "Potvrđivanje..."
-                                      : "Potvrdi"}
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    className="eventRejectParticipantButton"
-                                    onClick={() => rejectParticipant(item.id)}
-                                    disabled={
-                                      confirmingParticipantId === item.id ||
-                                      rejectingParticipantId === item.id
-                                    }
-                                  >
-                                    <Icon name="x" size={15} />
-                                    {rejectingParticipantId === item.id
-                                      ? "Odbijanje..."
-                                      : "Odbij"}
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </section>
 
           {eventPhotos.length > 1 && (
             <section className="eventPanel eventGalleryPanel">
@@ -2497,14 +1089,16 @@ export default function EventDetails() {
                       index === 0 ? "featured" : ""
                     }`}
                     onClick={() => openLightbox(index)}
-                    aria-label={`Otvori fotografiju ${index + 1} od ${eventPhotos.length}`}
+                    aria-label={`Otvori fotografiju ${index + 1} od ${
+                      eventPhotos.length
+                    }`}
                   >
                     <img
                       src={url}
                       alt={`${event.title} — fotografija ${index + 1}`}
                       draggable="false"
                     />
-{index === 0 && (
+                    {index === 0 && (
                       <span className="eventGalleryCoverBadge">
                         Naslovna
                       </span>
@@ -2525,14 +1119,40 @@ export default function EventDetails() {
                 <div className="eventSectionHeader">
                   <div>
                     <span>O avanturi</span>
-                    <h2>Detalji avanture.</h2>
+                    <h2>Sve što treba da znaš.</h2>
                   </div>
                 </div>
 
-                <p className="eventDescription">
-                  {event.description ||
-                    "Opis još nije dodat."}
-                </p>
+                <div
+                  className={`eventDescriptionWrap ${
+                    descriptionExpanded ? "expanded" : ""
+                  }`}
+                >
+                  <p className="eventDescription">
+                    {event.description || "Opis još nije dodat."}
+                  </p>
+
+                  {!descriptionExpanded && event.description && (
+                    <span className="eventDescriptionFade" aria-hidden="true" />
+                  )}
+                </div>
+
+                {event.description && (
+                  <button
+                    type="button"
+                    className="eventDescriptionToggle"
+                    onClick={() =>
+                      setDescriptionExpanded((current) => !current)
+                    }
+                    aria-expanded={descriptionExpanded}
+                  >
+                    {descriptionExpanded ? "Prikaži manje" : "Prikaži ceo opis"}
+                    <Icon
+                      name={descriptionExpanded ? "arrowLeft" : "arrowRight"}
+                      size={15}
+                    />
+                  </button>
+                )}
               </section>
 
               {includedItems.length > 0 && (
@@ -2559,48 +1179,53 @@ export default function EventDetails() {
                 <div className="eventSectionHeader">
                   <div>
                     <span>Vreme avanture</span>
-                    <h2>{event.start_date ? "Planiraj unapred." : "Termin po dogovoru."}</h2>
+                    <h2>
+                      {event.start_date
+                        ? "Planiraj unapred."
+                        : "Termin po dogovoru."}
+                    </h2>
                   </div>
                 </div>
 
                 <div className="eventTimeline">
-                  <article>
-                    <span className="eventTimelineIcon">
-                      <Icon
-                        name="calendar"
-                        size={20}
-                      />
-                    </span>
+                  {!event.start_date && !event.end_date ? (
+                    <article className="eventTimelineAgreement">
+                      <span className="eventTimelineIcon">
+                        <Icon name="calendar" size={20} />
+                      </span>
 
-                    <div>
-                      <small>Početak</small>
-                      <strong>
-                        {formatDate(
-                          event.start_date
-                        )}
-                      </strong>
-                    </div>
-                  </article>
+                      <div>
+                        <small>Termin</small>
+                        <strong>Po dogovoru sa domaćinom</strong>
+                      </div>
+                    </article>
+                  ) : (
+                    <>
+                      <article>
+                        <span className="eventTimelineIcon">
+                          <Icon name="calendar" size={20} />
+                        </span>
 
-                  <span className="eventTimelineLine" />
+                        <div>
+                          <small>Početak</small>
+                          <strong>{formatDate(event.start_date)}</strong>
+                        </div>
+                      </article>
 
-                  <article>
-                    <span className="eventTimelineIcon">
-                      <Icon
-                        name="clock"
-                        size={20}
-                      />
-                    </span>
+                      <span className="eventTimelineLine" />
 
-                    <div>
-                      <small>Kraj</small>
-                      <strong>
-                        {formatDate(
-                          event.end_date
-                        )}
-                      </strong>
-                    </div>
-                  </article>
+                      <article>
+                        <span className="eventTimelineIcon">
+                          <Icon name="clock" size={20} />
+                        </span>
+
+                        <div>
+                          <small>Kraj</small>
+                          <strong>{formatDate(event.end_date)}</strong>
+                        </div>
+                      </article>
+                    </>
+                  )}
                 </div>
               </section>
             </div>
@@ -2609,50 +1234,63 @@ export default function EventDetails() {
               {host && (
                 <section className="eventPanel eventHostCard">
                   <span className="eventPanelKicker">
-                    Organizator
+                    Domaćin
                   </span>
 
-                  <Link
-                    to={`/h/${host.username}`}
-                    className="eventHostProfile"
-                  >
-                    <img
-                      src={
-                        host.avatar_url ||
-                        FALLBACK_AVATAR
-                      }
-                      alt={
-                        host.full_name ||
-                        host.username
-                      }
-                    />
+                  {host.username ? (
+                    <Link
+                      to={`/h/${host.username}`}
+                      className="eventHostProfile"
+                    >
+                      <img
+                        src={host.avatar_url || FALLBACK_AVATAR}
+                        alt={host.full_name || host.username}
+                      />
 
-                    <div>
-                      <strong>
-                        {host.full_name ||
-                          host.username}
-                      </strong>
-                      <span>
-                        @{host.username}
-                      </span>
+                      <div>
+                        <strong>
+                          {host.full_name || host.username}
+                        </strong>
+                        <span>@{host.username}</span>
+                      </div>
+
+                      <Icon name="arrowRight" size={16} />
+                    </Link>
+                  ) : (
+                    <div className="eventHostProfile">
+                      <img
+                        src={host.avatar_url || FALLBACK_AVATAR}
+                        alt={host.full_name || "Domaćin"}
+                      />
+                      <div>
+                        <strong>{host.full_name || "Domaćin"}</strong>
+                        <span>MeetOutdoors host</span>
+                      </div>
                     </div>
-
-                    <Icon
-                      name="arrowRight"
-                      size={16}
-                    />
-                  </Link>
+                  )}
 
                   <p>
-                    Otvori profil organizatora za više
-                    avantura i informacija.
+                    Pogledaj profil domaćina, njegove avanture, smeštaj,
+                    recenzije i informacije.
                   </p>
+
+                  {!isHost && (
+                    <button
+                      type="button"
+                      className="eventJoinButton"
+                      onClick={() => setContactOpen(true)}
+                      disabled={!hasDirectContact && !hostProfileHref}
+                    >
+                      <Icon name="phone" size={17} />
+                      Kontaktiraj domaćina
+                    </button>
+                  )}
                 </section>
               )}
 
               <section className="eventPanel eventFactsCard">
                 <span className="eventPanelKicker">
-                  Brzi pregled
+                  Na prvi pogled
                 </span>
 
                 <div className="eventFacts">
@@ -2669,40 +1307,35 @@ export default function EventDetails() {
                     <Icon name="users" size={18} />
 
                     <div>
-                      <span>Prijavljeno</span>
+                      <span>Minimalan broj</span>
                       <strong>
-                        {participantCount}
-                        {capacity > 0
-                          ? ` / ${capacity}`
-                          : ""}
+                        {minParticipants > 0
+                          ? `${minParticipants} osoba`
+                          : "Nije navedeno"}
                       </strong>
                     </div>
                   </article>
 
                   <article>
-                    <Icon name="bolt" size={18} />
+                    <Icon name="users" size={18} />
 
                     <div>
-                      <span>Status prijava</span>
+                      <span>Maksimalan broj</span>
                       <strong>
-                        {isFull
-                          ? "Popunjeno"
-                          : "Otvoreno"}
+                        {capacity > 0
+                          ? `${capacity} osoba`
+                          : "Po dogovoru"}
                       </strong>
                     </div>
                   </article>
 
+
                   <article>
-                    <Icon
-                      name="sparkle"
-                      size={18}
-                    />
+                    <Icon name="sparkle" size={18} />
 
                     <div>
                       <span>Cena</span>
-                      <strong>
-                        €{event.price || 0}
-                      </strong>
+                      <strong>€{event.price || 0}</strong>
                     </div>
                   </article>
                 </div>
@@ -2725,9 +1358,7 @@ export default function EventDetails() {
                 placeholder="Postavi pitanje ili napiši komentar..."
                 value={commentBody}
                 onChange={(changeEvent) =>
-                  setCommentBody(
-                    changeEvent.target.value
-                  )
+                  setCommentBody(changeEvent.target.value)
                 }
               />
 
@@ -2751,7 +1382,6 @@ export default function EventDetails() {
               ) : (
                 comments.map((comment) => {
                   const user = comment.profiles;
-
                   const userUrl =
                     user?.role === "host"
                       ? `/h/${user.username}`
@@ -2762,32 +1392,38 @@ export default function EventDetails() {
                       className="eventComment"
                       key={comment.id}
                     >
-                      <Link to={userUrl}>
+                      {user?.username ? (
+                        <Link to={userUrl}>
+                          <img
+                            src={user?.avatar_url || FALLBACK_AVATAR}
+                            alt={
+                              user?.full_name ||
+                              user?.username ||
+                              "Korisnik"
+                            }
+                          />
+                        </Link>
+                      ) : (
                         <img
-                          src={
-                            user?.avatar_url ||
-                            FALLBACK_AVATAR
-                          }
-                          alt={
-                            user?.full_name ||
-                            user?.username ||
-                            "Korisnik"
-                          }
+                          src={FALLBACK_AVATAR}
+                          alt="Korisnik"
                         />
-                      </Link>
+                      )}
 
                       <div>
                         <div className="eventCommentTop">
-                          <Link to={userUrl}>
-                            {user?.full_name ||
-                              user?.username ||
-                              "Nepoznat korisnik"}
-                          </Link>
+                          {user?.username ? (
+                            <Link to={userUrl}>
+                              {user?.full_name ||
+                                user?.username ||
+                                "Nepoznat korisnik"}
+                            </Link>
+                          ) : (
+                            <strong>Nepoznat korisnik</strong>
+                          )}
 
                           <small>
-                            {formatDate(
-                              comment.created_at
-                            )}
+                            {formatDate(comment.created_at)}
                           </small>
                         </div>
 
@@ -2807,13 +1443,12 @@ export default function EventDetails() {
               </span>
 
               <h2>
-                Pronađi sledeću avanturu koja odgovara
-                tvom tempu.
+                Pronađi sledeću avanturu koja odgovara tvom tempu.
               </h2>
 
               <p>
-                Istraži MeetOutdoors zajednicu i pronađi
-                nova okupljanja na otvorenom.
+                Istraži MeetOutdoors, pronađi iskustvo koje ti odgovara
+                i poveži se direktno sa domaćinom.
               </p>
             </div>
 
@@ -2920,74 +1555,6 @@ function EventDetailsStyles() {
         font-size: 10px;
         line-height: 1.5;
       }
-
-      .eventJoinModalBackdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 6000;
-        display: grid;
-        place-items: center;
-        padding: 22px;
-        background: rgba(8, 24, 15, 0.58);
-        backdrop-filter: blur(12px);
-      }
-
-      .eventJoinModal {
-        position: relative;
-        width: min(500px, 100%);
-        padding: 30px;
-        border: 1px solid rgba(215, 229, 211, 0.92);
-        border-radius: 28px;
-        background: #fbfdf9;
-        box-shadow: 0 32px 90px rgba(8, 30, 17, 0.32);
-      }
-
-      .eventJoinModalClose {
-        position: absolute;
-        top: 18px;
-        right: 18px;
-        display: grid;
-        place-items: center;
-        width: 38px;
-        height: 38px;
-        padding: 0;
-        border: 1px solid #dbe5d8;
-        border-radius: 12px;
-        background: #f4f7f1;
-        color: #4d6355;
-        cursor: pointer;
-      }
-
-      .eventJoinModalKicker {
-        color: #6f914e;
-        font-size: 9px;
-        font-weight: 950;
-        letter-spacing: 0.11em;
-      }
-
-      .eventJoinModal h2 {
-        margin: 8px 48px 0 0;
-        color: #203229;
-        font-size: clamp(28px, 5vw, 42px);
-        line-height: 0.98;
-        letter-spacing: -0.045em;
-      }
-
-      .eventJoinModalIntro {
-        max-width: 420px;
-        margin: 14px 0 22px;
-        color: #718078;
-        font-size: 12px;
-        line-height: 1.65;
-      }
-
-      .eventJoinField { display: block; margin-top: 14px; }
-      .eventJoinField > span { display:block; margin-bottom:7px; color:#43584b; font-size:10px; font-weight:900; }
-      .eventJoinField input { width:100%; min-height:52px; padding:0 15px; border:1px solid #d6e1d3; border-radius:14px; outline:none; background:white; color:#203229; font-size:13px; transition:.18s ease; }
-      .eventJoinField input:focus { border-color:#7da868; box-shadow:0 0 0 4px rgba(125,168,104,.12); }
-      .eventJoinSubmit { display:inline-flex; align-items:center; justify-content:center; gap:9px; width:100%; min-height:54px; margin-top:20px; padding:0 18px; border:1px solid #173b27; border-radius:15px; background:#173b27; color:white; font-size:11px; font-weight:950; cursor:pointer; box-shadow:0 14px 30px rgba(23,59,39,.18); }
-      .eventJoinSubmit:disabled, .eventJoinModalClose:disabled { cursor:not-allowed; opacity:.62; }
-      .eventJoinPrivacy { display:block; margin-top:12px; color:#8a958d; font-size:9px; line-height:1.55; text-align:center; }
 
 
       .eventFinishModalBackdrop {
@@ -3240,6 +1807,68 @@ function EventDetailsStyles() {
         margin: 18px auto 0;
       }
 
+      .eventDecisionStrip {
+        width: min(1180px, calc(100% - 48px));
+        margin: -46px auto 28px;
+        position: relative;
+        z-index: 20;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid rgba(214, 226, 210, 0.92);
+        border-radius: 24px;
+        background: rgba(252, 254, 250, 0.94);
+        box-shadow: 0 24px 60px rgba(22, 54, 35, 0.14);
+        backdrop-filter: blur(20px);
+      }
+
+      .eventDecisionStrip article {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 18px 20px;
+        border-right: 1px solid #e3eae0;
+      }
+
+      .eventDecisionStrip article:last-child { border-right: 0; }
+
+      .eventDecisionIcon {
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: #edf5e8;
+        color: #527641;
+      }
+
+      .eventDecisionStrip div { min-width: 0; }
+
+      .eventDecisionStrip small,
+      .eventDecisionStrip strong {
+        display: block;
+      }
+
+      .eventDecisionStrip small {
+        margin-bottom: 4px;
+        color: #8b978e;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .eventDecisionStrip strong {
+        overflow: hidden;
+        color: #263b2d;
+        font-size: 11px;
+        font-weight: 950;
+        line-height: 1.35;
+        text-overflow: ellipsis;
+      }
+
       .eventActionBar {
         display: flex;
         align-items: center;
@@ -3399,49 +2028,9 @@ function EventDetailsStyles() {
         font-size: 9px;
       }
 
-      .eventParticipantsPanel {
-        margin-top: 18px;
-        padding: 28px;
-        border: 1px solid #d6e1d3;
-        border-radius: 28px;
-        background:
-          radial-gradient(
-            circle at 94% 0%,
-            rgba(186, 255, 158, 0.09),
-            transparent 28%
-          ),
-          linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.88),
-            rgba(239, 246, 234, 0.84)
-          );
-        box-shadow:
-          0 16px 42px rgba(31, 51, 38, 0.06);
-      }
 
-      .eventParticipantsHeader {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 24px;
-      }
 
-      .eventParticipantsHeader h2,
-      .eventExploreCard h2 {
-        margin: 8px 0 0;
-        color: #263d31;
-        font-size: clamp(28px, 4vw, 43px);
-        line-height: 1;
-        letter-spacing: -0.055em;
-      }
 
-      .eventParticipantsHeader p {
-        max-width: 620px;
-        margin: 10px 0 0;
-        color: #7e8981;
-        font-size: 10px;
-        line-height: 1.65;
-      }
 
       .eventParticipantCount {
         display: flex;
@@ -3551,42 +2140,10 @@ function EventDetailsStyles() {
         font-size: 9px;
       }
 
-      .eventParticipantsEmpty {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-top: 20px;
-        padding: 16px;
-        border: 1px dashed #cbd8c7;
-        border-radius: 17px;
-        background: rgba(255, 255, 255, 0.58);
-      }
 
-      .eventParticipantsEmpty > span {
-        display: grid;
-        place-items: center;
-        width: 48px;
-        height: 48px;
-        border-radius: 15px;
-        background: #e7f0dc;
-        color: #608047;
-      }
 
-      .eventParticipantsEmpty strong,
-      .eventParticipantsEmpty small {
-        display: block;
-      }
 
-      .eventParticipantsEmpty strong {
-        color: #3d5144;
-        font-size: 10px;
-      }
 
-      .eventParticipantsEmpty small {
-        margin-top: 4px;
-        color: #89938c;
-        font-size: 8px;
-      }
 
       .eventHostParticipantList {
         display: grid;
@@ -4378,29 +2935,9 @@ function EventDetailsStyles() {
         border-radius:10px;
       }
 
-      .eventParticipantsPanel{
-        margin-top:9px;
-        padding:14px;
-        border-radius:17px;
-      }
 
-      .eventParticipantsHeader{
-        align-items:center;
-        gap:12px;
-      }
 
-      .eventParticipantsHeader h2,
-      .eventExploreCard h2{
-        margin-top:4px;
-        font-size:clamp(20px,2.5vw,28px);
-      }
 
-      .eventParticipantsHeader p{
-        max-width:700px;
-        margin-top:5px;
-        font-size:7px;
-        line-height:1.4;
-      }
 
       .eventSectionLabel{font-size:6px}
 
@@ -4446,11 +2983,6 @@ function EventDetailsStyles() {
       .eventParticipantNames span::after{margin-left:7px}
       .eventParticipantNames small{font-size:7px}
 
-      .eventParticipantsEmpty{
-        margin-top:9px;
-        padding:10px;
-        border-radius:11px;
-      }
 
       .eventHostParticipantList{
         grid-template-columns:repeat(2,minmax(0,1fr));
@@ -5028,29 +3560,9 @@ function EventDetailsStyles() {
         border-radius:10px;
       }
 
-      .eventParticipantsPanel,
-      .eventPanel,
-      .eventExploreCard{
-        margin-top:8px;
-        padding:13px;
-        border-radius:15px;
-      }
 
-      .eventParticipantsHeader{
-        gap:10px;
-      }
 
-      .eventParticipantsHeader h2,
-      .eventSectionHeader h2,
-      .eventExploreCard h2{
-        font-size:clamp(19px,2vw,25px);
-      }
 
-      .eventParticipantsHeader p{
-        max-width:650px;
-        margin-top:4px;
-        font-size:7.5px;
-      }
 
       .eventParticipantCount{
         padding:8px 10px;
@@ -5627,10 +4139,6 @@ function EventDetailsStyles() {
       }
 
       .eventActionLeft small,
-      .eventParticipantsHeader p{
-        font-size:11px;
-        line-height:1.45;
-      }
 
       .eventShareButton,
       .eventJoinButton,
@@ -6069,365 +4577,49 @@ function EventDetailsStyles() {
          Access = host OR active event_interested registration.
          ========================================================= */
 
-      .eventChatButton {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        min-height: 44px;
-        padding: 0 14px;
-        border: 1px solid rgba(57, 104, 70, .22);
-        border-radius: 14px;
-        background: linear-gradient(135deg, #eef6e8, #f8fbf5);
-        color: #29553a;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 900;
-        box-shadow: 0 8px 22px rgba(38, 76, 49, .06);
-      }
 
-      .eventChatButton > span {
-        display: grid;
-        place-items: center;
-        min-width: 23px;
-        height: 23px;
-        padding: 0 6px;
-        border-radius: 999px;
-        background: #1f5034;
-        color: #fff;
-        font-size: 9px;
-      }
 
-      .eventChatBackdrop {
-        position: fixed;
-        z-index: 2400;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        padding: 24px;
-        background: rgba(8, 21, 13, .66);
-        backdrop-filter: blur(10px);
-      }
 
-      .eventChatModal {
-        width: min(860px, 100%);
-        height: min(760px, calc(100svh - 48px));
-        min-height: 500px;
-        display: grid;
-        grid-template-rows: auto auto minmax(0, 1fr) auto;
-        overflow: hidden;
-        border: 1px solid rgba(255,255,255,.42);
-        border-radius: 26px;
-        background: #f7f9f5;
-        box-shadow: 0 34px 110px rgba(4, 17, 9, .34);
-      }
 
-      .eventChatHeader {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 18px;
-        padding: 18px 20px 15px;
-        color: #fff;
-        background:
-          radial-gradient(circle at 88% 0%, rgba(206, 240, 164, .16), transparent 30%),
-          linear-gradient(135deg, #0c291b 0%, #16442d 55%, #2c6243 100%);
-      }
 
-      .eventChatKicker {
-        color: #c9ee9e;
-        font-size: 8px;
-        font-weight: 950;
-        letter-spacing: .12em;
-      }
 
-      .eventChatHeader h2 {
-        margin: 6px 0 0;
-        max-width: 680px;
-        font-size: clamp(22px, 3vw, 34px);
-        line-height: 1;
-        letter-spacing: -.04em;
-      }
 
-      .eventChatHeader p {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin: 8px 0 0;
-        color: rgba(255,255,255,.62);
-        font-size: 10px;
-      }
 
-      .eventChatClose {
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        width: 38px;
-        height: 38px;
-        border: 1px solid rgba(255,255,255,.12);
-        border-radius: 12px;
-        background: rgba(255,255,255,.08);
-        color: #fff;
-        cursor: pointer;
-      }
 
-      .eventChatMemberStrip {
-        display: flex;
-        gap: 8px;
-        padding: 9px 12px;
-        overflow-x: auto;
-        border-bottom: 1px solid #dde6da;
-        background: rgba(255,255,255,.88);
-        scrollbar-width: none;
-      }
 
-      .eventChatMemberStrip::-webkit-scrollbar {
-        display: none;
-      }
 
-      .eventChatMember {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        flex: 0 0 auto;
-        min-width: 138px;
-        padding: 7px 9px;
-        border: 1px solid #e0e6dd;
-        border-radius: 13px;
-        background: #f7f9f5;
-      }
 
-      .eventChatMember.hostMember {
-        border-color: #bfd1af;
-        background: #edf5e7;
-      }
 
-      .eventChatMember img {
-        width: 31px;
-        height: 31px;
-        flex: 0 0 auto;
-        object-fit: cover;
-        border-radius: 50%;
-      }
 
-      .eventChatMember span {
-        min-width: 0;
-      }
 
-      .eventChatMember strong,
-      .eventChatMember small {
-        display: block;
-      }
 
-      .eventChatMember strong {
-        max-width: 105px;
-        overflow: hidden;
-        color: #34483b;
-        font-size: 9px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
 
-      .eventChatMember small {
-        margin-top: 3px;
-        color: #819087;
-        font-size: 6px;
-        font-weight: 900;
-        letter-spacing: .06em;
-      }
 
-      .eventChatMember.hostMember small {
-        color: #5b7b42;
-      }
 
-      .eventChatMessages {
-        min-height: 0;
-        overflow-y: auto;
-        padding: 18px;
-        background:
-          radial-gradient(circle at 10% 0%, rgba(174,210,139,.08), transparent 26%),
-          #f3f6f1;
-      }
 
-      .eventChatMessage {
-        display: flex;
-        align-items: flex-end;
-        gap: 8px;
-        margin: 0 0 11px;
-      }
 
-      .eventChatMessage.own {
-        justify-content: flex-end;
-      }
 
-      .eventChatMessageAvatar {
-        width: 31px;
-        height: 31px;
-        flex: 0 0 auto;
-        object-fit: cover;
-        border-radius: 50%;
-        box-shadow: 0 0 0 2px #fff;
-      }
 
-      .eventChatBubble {
-        width: fit-content;
-        max-width: min(72%, 570px);
-        padding: 10px 12px;
-        border: 1px solid #dce4d8;
-        border-radius: 16px 16px 16px 5px;
-        background: #fff;
-        box-shadow: 0 6px 18px rgba(34,57,41,.045);
-      }
 
-      .eventChatMessage.own .eventChatBubble {
-        border-color: #275b3c;
-        border-radius: 16px 16px 5px 16px;
-        background: linear-gradient(135deg, #123d28, #286044);
-        color: #fff;
-      }
 
-      .eventChatMessage.hostMessage:not(.own) .eventChatBubble {
-        border-color: #b9d0a6;
-        background: #f1f7ea;
-      }
 
-      .eventChatMessageMeta {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 4px;
-      }
 
-      .eventChatMessageMeta strong {
-        color: #46604f;
-        font-size: 9px;
-      }
 
-      .eventChatMessage.own .eventChatMessageMeta strong {
-        color: #d9efcc;
-      }
 
-      .eventChatMessageMeta span {
-        padding: 3px 5px;
-        border-radius: 999px;
-        background: #1c4c31;
-        color: #dff3bd;
-        font-size: 6px;
-        font-weight: 950;
-        letter-spacing: .06em;
-      }
 
-      .eventChatMessage.own .eventChatMessageMeta span {
-        background: rgba(255,255,255,.12);
-        color: #e7f7d5;
-      }
 
-      .eventChatMessageMeta small {
-        margin-left: auto;
-        color: #97a19b;
-        font-size: 7px;
-      }
 
-      .eventChatMessage.own .eventChatMessageMeta small {
-        color: rgba(255,255,255,.55);
-      }
 
-      .eventChatBubble p {
-        margin: 0;
-        color: #4c5d52;
-        font-size: 12px;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-      }
 
-      .eventChatMessage.own .eventChatBubble p {
-        color: #fff;
-      }
 
-      .eventChatEmpty {
-        min-height: 100%;
-        display: grid;
-        place-items: center;
-        align-content: center;
-        padding: 28px;
-        color: #506258;
-        text-align: center;
-      }
 
-      .eventChatEmptyIcon {
-        display: grid;
-        place-items: center;
-        width: 58px;
-        height: 58px;
-        margin-bottom: 11px;
-        border-radius: 18px;
-        background: #e5efdd;
-        color: #55783f;
-      }
 
-      .eventChatEmpty strong {
-        font-size: 16px;
-      }
 
-      .eventChatEmpty p {
-        max-width: 430px;
-        margin: 6px auto 0;
-        color: #859087;
-        font-size: 10px;
-        line-height: 1.55;
-      }
 
-      .eventChatComposer {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 8px;
-        padding: 11px 12px;
-        border-top: 1px solid #dbe4d8;
-        background: rgba(255,255,255,.96);
-      }
 
-      .eventChatComposer textarea {
-        width: 100%;
-        min-height: 43px;
-        max-height: 120px;
-        resize: none;
-        padding: 12px 13px;
-        border: 1px solid #d7e0d4;
-        border-radius: 13px;
-        outline: none;
-        background: #f8faf7;
-        color: #304238;
-        font: inherit;
-        font-size: 12px;
-        line-height: 1.45;
-      }
 
-      .eventChatComposer textarea:focus {
-        border-color: #8eae78;
-        box-shadow: 0 0 0 3px rgba(114,155,84,.10);
-      }
 
-      .eventChatComposer button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        min-width: 104px;
-        border: 0;
-        border-radius: 13px;
-        background: linear-gradient(135deg, #153d28, #2c6546);
-        color: #fff;
-        cursor: pointer;
-        font-size: 10px;
-        font-weight: 900;
-      }
 
-      .eventChatComposer button:disabled {
-        cursor: default;
-        opacity: .45;
-      }
 
       @media (max-width: 700px) {
         .eventChatBackdrop {
@@ -6481,13 +4673,7 @@ function EventDetailsStyles() {
 
 
       /* EventDetails V7 fixes */
-      .eventChatBackdrop {
-        z-index: 5000 !important;
-      }
 
-      .eventChatModal {
-        z-index: 5001 !important;
-      }
 
       @media (max-width: 700px) {
         .eventChatBackdrop {
@@ -6564,6 +4750,425 @@ function EventDetailsStyles() {
 
       .eventGalleryCoverBadge{
         z-index:2 !important;
+      }
+
+      /* NEW DIRECT-CONTACT FLOW */
+      a.eventFinishChoice {
+        text-decoration: none;
+      }
+
+      .eventHostCard .eventJoinButton {
+        width: 100%;
+        margin-top: 14px;
+      }
+
+
+      .eventContent {
+        position: relative;
+      }
+
+      .eventPanel {
+        border-color: rgba(211, 223, 207, .94);
+        box-shadow: 0 16px 44px rgba(30, 57, 39, .055);
+      }
+
+      .eventPanel:hover {
+        border-color: rgba(184, 205, 176, .96);
+      }
+
+      .eventHostCard {
+        position: sticky;
+        top: 104px;
+        overflow: hidden;
+      }
+
+      .eventHostCard::before {
+        position: absolute;
+        inset: 0 0 auto;
+        height: 4px;
+        background: linear-gradient(90deg, #7ea666, #b6d69e);
+        content: "";
+      }
+
+      .eventActionBar {
+        box-shadow: 0 20px 52px rgba(25, 55, 36, .08);
+      }
+
+      .eventJoinButton {
+        min-height: 54px;
+        box-shadow: 0 12px 28px rgba(23, 59, 39, .16);
+      }
+
+      .eventJoinButton:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 34px rgba(23, 59, 39, .21);
+      }
+
+      .eventDescription {
+        max-width: 780px;
+        font-size: 13px;
+        line-height: 1.85;
+      }
+
+      @media (max-width: 900px) {
+        .eventDecisionStrip {
+          width: calc(100% - 24px);
+          margin-top: -26px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .eventDecisionStrip article:nth-child(2) { border-right: 0; }
+        .eventDecisionStrip article:nth-child(-n+2) { border-bottom: 1px solid #e3eae0; }
+
+        .eventHostCard {
+          position: relative;
+          top: auto;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .eventDecisionStrip {
+          margin-bottom: 18px;
+          border-radius: 19px;
+        }
+
+        .eventDecisionStrip article {
+          gap: 9px;
+          padding: 13px 12px;
+        }
+
+        .eventDecisionIcon {
+          width: 36px;
+          height: 36px;
+          border-radius: 11px;
+        }
+
+        .eventDecisionStrip strong {
+          font-size: 9px;
+        }
+      }
+
+
+      /* =========================================================
+         EVENT DETAILS — PREMIUM POLISH
+         Visual-only layer. Existing JSX / logic remains unchanged.
+         ========================================================= */
+
+      .eventPage {
+        background:
+          radial-gradient(circle at 8% 3%, rgba(177, 211, 139, .16), transparent 25%),
+          radial-gradient(circle at 92% 27%, rgba(64, 106, 75, .08), transparent 22%),
+          #edf1e9;
+      }
+
+      .eventHero {
+        border: 1px solid rgba(255,255,255,.10);
+        box-shadow:
+          0 34px 90px rgba(22, 48, 32, .18),
+          0 1px 0 rgba(255,255,255,.08) inset;
+      }
+
+      .eventHero::before {
+        background:
+          linear-gradient(90deg, rgba(5,18,11,.38) 0%, rgba(5,18,11,.08) 62%, rgba(5,18,11,.04) 100%),
+          linear-gradient(180deg, rgba(5,18,11,.02) 30%, rgba(5,18,11,.66) 100%);
+      }
+
+      .eventHeroCopy h1 {
+        max-width: 980px;
+        text-wrap: balance;
+        text-shadow: 0 3px 28px rgba(0,0,0,.18);
+      }
+
+      .eventActivityChips span {
+        background: rgba(19, 37, 26, .34);
+        border-color: rgba(255,255,255,.25);
+        box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      }
+
+      .eventHeroStats {
+        border-color: rgba(255,255,255,.14);
+        background: rgba(12,31,20,.44);
+        box-shadow: 0 18px 44px rgba(0,0,0,.12);
+        backdrop-filter: blur(18px);
+      }
+
+      .eventDecisionStrip {
+        box-shadow: 0 22px 54px rgba(22,54,35,.11);
+      }
+
+      .eventDecisionStrip article {
+        min-height: 78px;
+      }
+
+      .eventActionBar {
+        border-color: rgba(197, 213, 191, .92);
+        background:
+          linear-gradient(135deg, rgba(250,253,247,.98), rgba(241,247,237,.98));
+        box-shadow: 0 16px 38px rgba(25,55,36,.065);
+      }
+
+      .eventActionLeft strong {
+        color: #20372a;
+      }
+
+      .eventJoinButton {
+        border: 1px solid rgba(255,255,255,.08);
+        background: linear-gradient(135deg, #294f35, #173b27);
+        box-shadow: 0 12px 28px rgba(23,59,39,.18);
+      }
+
+      .eventJoinButton:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px rgba(23,59,39,.23);
+      }
+
+      .eventPanel {
+        border-color: rgba(207, 219, 202, .88);
+        background: rgba(251,253,249,.90);
+        box-shadow: 0 12px 34px rgba(29,55,38,.045);
+      }
+
+      .eventGalleryPanel {
+        overflow: hidden;
+      }
+
+      .eventGalleryItem {
+        box-shadow: 0 10px 26px rgba(25,49,33,.08);
+      }
+
+      .eventGalleryItem img {
+        transition: transform .45s cubic-bezier(.2,.7,.2,1);
+      }
+
+      .eventGalleryItem:hover img {
+        transform: scale(1.025);
+      }
+
+      .eventSectionHeader h2 {
+        color: #203229;
+        letter-spacing: -.035em;
+      }
+
+      .eventDescription {
+        max-width: 820px;
+        color: #596b60;
+        font-size: 13px;
+        line-height: 1.9;
+      }
+
+      .eventIncludedList article {
+        background: rgba(247,250,244,.82);
+        transition: border-color .2s ease, transform .2s ease, background .2s ease;
+      }
+
+      .eventIncludedList article:hover {
+        transform: translateX(2px);
+        border-color: #c7d9bf;
+        background: #fbfdf9;
+      }
+
+      .eventHostCard {
+        overflow: hidden;
+        border-color: rgba(190,208,183,.92);
+        box-shadow: 0 18px 44px rgba(24,53,34,.075);
+      }
+
+      .eventHostCard::before {
+        height: 3px;
+        background: linear-gradient(90deg, #7ca360, #b5d596);
+      }
+
+      .eventHostProfile {
+        border-radius: 16px;
+        transition: background .2s ease, transform .2s ease;
+      }
+
+      .eventHostProfile:hover {
+        background: #f2f7ee;
+        transform: translateY(-1px);
+      }
+
+      .eventFactsCard {
+        background:
+          linear-gradient(145deg, rgba(250,252,248,.96), rgba(244,248,241,.96));
+      }
+
+      .eventCommentsSection {
+        margin-top: 2px;
+      }
+
+      .eventCommentForm textarea {
+        background: #f7faf5;
+        transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+      }
+
+      .eventCommentForm textarea:focus {
+        outline: none;
+        border-color: #9dbb8c;
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(126,166,102,.10);
+      }
+
+      .eventExploreCard {
+        box-shadow: 0 24px 60px rgba(19,48,30,.13);
+      }
+
+      @media (max-width: 900px) {
+        .eventHero {
+          box-shadow: 0 24px 58px rgba(22,48,32,.16);
+        }
+
+        .eventHeroCopy h1 {
+          text-wrap: pretty;
+        }
+
+        .eventPanel {
+          box-shadow: 0 9px 26px rgba(29,55,38,.04);
+        }
+      }
+
+      @media (max-width: 560px) {
+        .eventPage {
+          padding-left: 12px;
+          padding-right: 12px;
+        }
+
+        .eventHero {
+          border-radius: 27px;
+        }
+
+        .eventDecisionStrip {
+          border-radius: 21px;
+        }
+
+        .eventActionBar,
+        .eventPanel {
+          border-radius: 20px;
+        }
+
+        .eventDescription {
+          font-size: 12px;
+          line-height: 1.82;
+        }
+      }
+
+
+      .eventDescriptionWrap {
+        position: relative;
+        max-height: 8.3em;
+        overflow: hidden;
+        transition: max-height .35s ease;
+      }
+
+      .eventDescriptionWrap.expanded {
+        max-height: 2000px;
+      }
+
+      .eventDescriptionWrap .eventDescription {
+        margin-bottom: 0;
+      }
+
+      .eventDescriptionFade {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 54px;
+        background: linear-gradient(
+          180deg,
+          rgba(251, 253, 249, 0),
+          rgba(251, 253, 249, .97) 78%
+        );
+        pointer-events: none;
+      }
+
+      .eventDescriptionToggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 38px;
+        margin-top: 12px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #4f733f;
+        font-size: 10px;
+        font-weight: 900;
+        cursor: pointer;
+        transition: color .18s ease, transform .18s ease;
+      }
+
+      .eventDescriptionToggle:hover {
+        color: #2f5b36;
+        transform: translateX(2px);
+      }
+
+      .eventDescriptionWrap.expanded + .eventDescriptionToggle:hover {
+        transform: translateX(-2px);
+      }
+
+      @media (max-width: 560px) {
+        .eventDescriptionWrap {
+          max-height: 7.6em;
+        }
+
+        .eventDescriptionFade {
+          height: 48px;
+        }
+
+        .eventDescriptionToggle {
+          margin-top: 10px;
+          font-size: 9px;
+        }
+      }
+
+
+      /* Compact included-experience card */
+      .eventIncludedList {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .eventIncludedList article {
+        flex: 0 1 auto;
+        width: auto;
+        min-height: 38px;
+        padding: 8px 11px;
+        gap: 7px;
+        border-radius: 12px;
+      }
+
+      .eventIncludedList article > span {
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        font-size: 10px;
+      }
+
+      .eventIncludedList article strong {
+        font-size: 9px;
+        white-space: nowrap;
+      }
+
+      .eventTimelineAgreement {
+        width: 100%;
+      }
+
+      @media (max-width: 560px) {
+        .eventIncludedList {
+          gap: 7px;
+        }
+
+        .eventIncludedList article {
+          min-height: 36px;
+          padding: 7px 10px;
+        }
+
+        .eventIncludedList article strong {
+          font-size: 8.5px;
+        }
       }
 
     `}</style>

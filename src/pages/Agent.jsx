@@ -4,9 +4,9 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
 const EXAMPLES = [
-  "U subotu nas dvoje iz Beograda, imamo auto, do 8.000 RSD ukupno, nešto lagano u prirodi.",
-  "Sledećeg vikenda bih na rafting sa 3 drugara, do 70€ po osobi.",
-  "Hoću jednodnevni izlet oko Niša, bez previše hodanja, idem sa detetom.",
+  "Sledećeg vikenda nas četvoro hoće rafting na Tari, treba nam i smeštaj.",
+  "Idemo sa detetom na Kopaonik, treba nam lagana aktivnost i smeštaj za dve noći.",
+  "Treba mi host oko Niša koji organizuje planinarenje i može da obezbedi opremu.",
 ];
 
 const ACTIVITY_LABELS = {
@@ -186,12 +186,6 @@ function Icon({ name, size = 20, strokeWidth = 1.9 }) {
         <path d="M8 18h3a4 4 0 0 0 4-4v-4a4 4 0 0 1 3-4" />
       </>
     ),
-    package: (
-      <>
-        <path d="m12 3 8 4-8 4-8-4 8-4Z" />
-        <path d="m4 7 8 4 8-4M4 12l8 4 8-4M4 17l8 4 8-4" />
-      </>
-    ),
     event: (
       <>
         <rect x="3" y="5" width="18" height="16" rx="2" />
@@ -292,9 +286,7 @@ export default function Agent() {
 
   const [prompt, setPrompt] = useState("");
   const [intent, setIntent] = useState(null);
-  const [inventory, setInventory] = useState(null);
-  const [ranking, setRanking] = useState(null);
-  const [rankingError, setRankingError] = useState("");
+  const [hostResults, setHostResults] = useState(null);
 
   const [thinking, setThinking] = useState(false);
   const [sendingDemand, setSendingDemand] = useState(false);
@@ -325,32 +317,9 @@ export default function Agent() {
     return start || end;
   }, [intent]);
 
-  const events = useMemo(() => inventory?.events || [], [inventory?.events]);
-  const accommodations = useMemo(
-    () => inventory?.accommodations || [],
-    [inventory?.accommodations]
-  );
-  const hasInventory = events.length > 0 || accommodations.length > 0;
-  const recommendations = useMemo(
-    () => ranking?.recommendations || [],
-    [ranking?.recommendations]
-  );
-  const hasGoodMatch = Boolean(ranking?.has_good_match);
+  const hosts = useMemo(() => hostResults?.hosts || [], [hostResults?.hosts]);
+  const hasHosts = hosts.length > 0;
 
-  const rankedItems = useMemo(() => {
-    return recommendations
-      .map((rec) => {
-        const source =
-          rec.type === "accommodation"
-            ? accommodations.find(
-                (item) => String(item.accommodation_id) === String(rec.id)
-              )
-            : events.find((item) => String(item.event_id) === String(rec.id));
-
-        return source ? { ...rec, source } : null;
-      })
-      .filter(Boolean);
-  }, [recommendations, events, accommodations]);
 
   const canSearch = prompt.trim().length >= 4 && !thinking;
 
@@ -360,72 +329,57 @@ export default function Agent() {
       [field]: value,
     }));
     setError("");
-    setRanking(null);
-    setRankingError("");
+    setHostResults(null);
   }
 
-  async function rankInventoryWithAI(currentIntent, currentInventory, session) {
-    const candidateCount =
-      (currentInventory?.events?.length || 0) +
-      (currentInventory?.accommodations?.length || 0);
+  function inferHostNeeds(currentIntent, rawPrompt = "") {
+    const intentType = currentIntent?.intent_type || "adventure";
+    const text = `${rawPrompt} ${currentIntent?.assistant_summary || ""}`.toLowerCase();
 
-    if (!candidateCount) {
-      setRanking({
-        recommendations: [],
-        has_good_match: false,
-        best_score: 0,
-        assistant_message:
-          "Trenutno nema gotove ponude koja dovoljno dobro odgovara tvojoj želji.",
-      });
-      setRankingError("");
-      return;
-    }
+    const needsAccommodation =
+      intentType === "accommodation" ||
+      intentType === "mixed" ||
+      /smeštaj|smestaj|noćenj|nocenj|apartman|vikendic|hotel|hostel|kamp/.test(text);
 
-    try {
-      const { data: rankingData, error: rankError } =
-        await supabase.functions.invoke("meetoutdoors-agent", {
-          body: {
-            mode: "rank",
-            intent: currentIntent,
-            inventory: {
-              events: currentInventory?.events || [],
-              accommodations: currentInventory?.accommodations || [],
-            },
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
+    const needsRental =
+      /iznajm|rent|oprem|bicikl|bike|kajak|ski|skije|snowboard|šator|sator/.test(text);
 
-      if (rankError) {
-        const message = await getFunctionErrorMessage(
-          rankError,
-          "AI rangiranje trenutno nije dostupno."
-        );
-        throw new Error(message);
-      }
+    const needsService =
+      /uslug|vodič|vodic|transfer|prevoz|instruktor|fotograf|organizacij/.test(text);
 
-      if (!rankingData?.success) {
-        throw new Error(
-          rankingData?.error || "Agent nije uspeo da rangira rezultate."
-        );
-      }
+    return {
+      adventure: intentType !== "accommodation",
+      accommodation: needsAccommodation,
+      service: needsService,
+      rental: needsRental,
+    };
+  }
 
-      setRanking({
-        recommendations: rankingData.recommendations || [],
-        has_good_match: Boolean(rankingData.has_good_match),
-        best_score: Number(rankingData.best_score) || 0,
-        assistant_message: rankingData.assistant_message || "",
-      });
-      setRankingError("");
-    } catch (rankErr) {
-      console.error("AI ranking error:", rankErr);
-      setRanking(null);
-      setRankingError(
-        rankErr?.message ||
-          "Reality Engine je pronašao opcije, ali AI rangiranje trenutno nije dostupno."
-      );
-    }
+  async function searchHosts(currentIntent, rawPrompt = "") {
+    const needs = inferHostNeeds(currentIntent, rawPrompt);
+
+    const { data, error: rpcError } = await supabase.rpc("search_agent_hosts", {
+      p_activity: normalizeActivity(currentIntent?.activity) || null,
+      p_location_text: currentIntent?.location_text || null,
+      p_needs_adventure: needs.adventure,
+      p_needs_accommodation: needs.accommodation,
+      p_needs_service: needs.service,
+      p_needs_rental: needs.rental,
+      p_people_count: Number(currentIntent?.people_count) || 1,
+      p_limit: 8,
+    });
+
+    if (rpcError) throw rpcError;
+
+    const normalized = data || {
+      success: true,
+      hosts: [],
+      count: 0,
+      query: { needs },
+    };
+
+    setHostResults(normalized);
+    return normalized;
   }
 
   async function searchWithAI(event) {
@@ -436,9 +390,7 @@ export default function Agent() {
     setError("");
     setSentResult(null);
     setIntent(null);
-    setInventory(null);
-    setRanking(null);
-    setRankingError("");
+    setHostResults(null);
 
     try {
       const {
@@ -544,37 +496,7 @@ export default function Agent() {
         console.error("Outdoor DNA learning error:", dnaError);
       }
 
-      const { data: inventoryData, error: inventoryError } = await supabase.rpc(
-        "search_adventure_inventory",
-        {
-          p_activity: normalizeActivity(parsed.activity) || null,
-          p_location_text: parsed.location_text || null,
-          p_start_date: parsed.start_date || null,
-          p_end_date: parsed.end_date || null,
-          p_people_count: Number(parsed.people_count) || 1,
-          p_budget_per_person:
-            parsed.budget_per_person === null ||
-            parsed.budget_per_person === undefined
-              ? null
-              : Number(parsed.budget_per_person),
-          p_currency: parsed.currency || "RSD",
-          p_difficulty: parsed.difficulty || null,
-          p_intent_type: parsed.intent_type || "adventure",
-        }
-      );
-
-      if (inventoryError) throw inventoryError;
-
-      const normalizedInventory =
-        inventoryData || {
-          events: [],
-          accommodations: [],
-          counts: { events: 0, accommodations: 0 },
-          has_existing_inventory: false,
-        };
-
-      setInventory(normalizedInventory);
-      await rankInventoryWithAI(parsed, normalizedInventory, session);
+      await searchHosts(parsed, prompt.trim());
     } catch (err) {
       console.error("MeetOutdoors Agent error:", err);
       setError(
@@ -586,8 +508,8 @@ export default function Agent() {
     }
   }
 
-  async function rerunInventory() {
-    if (!intent?.intent_type) {
+  async function rerunHostSearch() {
+    if (!intent) {
       setError("Agent još nema dovoljno informacija za novu pretragu.");
       return;
     }
@@ -596,49 +518,11 @@ export default function Agent() {
     setError("");
 
     try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.user) {
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      const { data, error: rpcError } = await supabase.rpc(
-        "search_adventure_inventory",
-        {
-          p_activity: normalizeActivity(intent.activity) || null,
-          p_location_text: intent.location_text || null,
-          p_start_date: intent.start_date || null,
-          p_end_date: intent.end_date || null,
-          p_people_count: Number(intent.people_count) || 1,
-          p_budget_per_person:
-            intent.budget_per_person === null ||
-            intent.budget_per_person === undefined ||
-            intent.budget_per_person === ""
-              ? null
-              : Number(intent.budget_per_person),
-          p_currency: intent.currency || "RSD",
-          p_difficulty: intent.difficulty || null,
-          p_intent_type: intent.intent_type || "adventure",
-        }
-      );
-
-      if (rpcError) throw rpcError;
-      const normalizedInventory = data || {
-        events: [],
-        accommodations: [],
-        counts: { events: 0, accommodations: 0 },
-        has_existing_inventory: false,
-      };
-      setInventory(normalizedInventory);
-      await rankInventoryWithAI(intent, normalizedInventory, session);
+      await searchHosts(intent, prompt.trim());
       setShowEdit(false);
     } catch (err) {
-      console.error("Inventory refresh error:", err);
-      setError(err?.message || "Nismo uspeli da osvežimo rezultate.");
+      console.error("Host Engine refresh error:", err);
+      setError(err?.message || "Nismo uspeli da osvežimo domaćine.");
     } finally {
       setThinking(false);
     }
@@ -698,9 +582,7 @@ export default function Agent() {
   function resetAgent() {
     setPrompt("");
     setIntent(null);
-    setInventory(null);
-    setRanking(null);
-    setRankingError("");
+    setHostResults(null);
     setSentResult(null);
     setError("");
     setShowEdit(false);
@@ -746,14 +628,14 @@ export default function Agent() {
             </div>
 
             <h1>
-              Gde želiš da ideš?
-              <span>Opiši avanturu.</span>
+              Reci šta želiš.
+              <span>Agent nalazi ko to može.</span>
             </h1>
 
             <p>
-              Reci Agentu šta želiš. Proveriće stvarne avanture i smeštaj,
-              izdvojiti najbolje opcije i, ako ništa ne odgovara, aktivirati
-              relevantne domaćine.
+              Ne pretražuješ katalog. Opiši plan, društvo, lokaciju i šta ti
+              treba — Agent pronalazi relevantne domaćine i, kada treba,
+              šalje im zahtev da naprave Event baš za tvoju potrebu.
             </p>
           </header>
 
@@ -785,7 +667,7 @@ export default function Agent() {
                   <div className="ai-composer-meta">
                     <span>
                       <Icon name="shield" size={14} />
-                      AI razume, Reality Engine proverava
+                      AI razume, Host Engine povezuje
                     </span>
                     <small>{prompt.length}/3000</small>
                   </div>
@@ -826,12 +708,20 @@ export default function Agent() {
 
           {thinking && !intent && (
             <section className="ai-thinking ai-rise">
-              <div className="ai-thinking-orb">
+              <div className="ai-thinking-orb ai-agent-alive">
+                <span className="agent-wave wave-one" />
+                <span className="agent-wave wave-two" />
+                <span className="agent-wave wave-three" />
+                <span className="agent-compass-line line-a" />
+                <span className="agent-compass-line line-b" />
                 <span className="ring ring-one" />
                 <span className="ring ring-two" />
                 <span className="core">
                   <Icon name="sparkles" size={25} />
                 </span>
+                <span className="agent-particle particle-a" />
+                <span className="agent-particle particle-b" />
+                <span className="agent-particle particle-c" />
               </div>
 
               <div className="ai-thinking-copy">
@@ -849,7 +739,7 @@ export default function Agent() {
                   </span>
                   <span>
                     <span className="mini-loader" />
-                    Reality Engine
+                    Host Engine
                   </span>
                   <span>Najbolje opcije</span>
                 </div>
@@ -1064,18 +954,18 @@ export default function Agent() {
                       <button
                         type="button"
                         className="ai-refresh"
-                        onClick={rerunInventory}
+                        onClick={rerunHostSearch}
                         disabled={thinking}
                       >
                         {thinking ? (
                           <>
                             <span className="button-loader" />
-                            Proveravam ponovo...
+                            Tražim domaćine...
                           </>
                         ) : (
                           <>
                             <Icon name="retry" size={16} />
-                            Osveži rezultate
+                            Osveži domaćine
                           </>
                         )}
                       </button>
@@ -1088,264 +978,113 @@ export default function Agent() {
                     <div>
                       <span className="ai-section-label">
                         <Icon name="route" size={14} />
-                        REALITY ENGINE
+                        HOST ENGINE
                       </span>
                       <h2>
-                        {hasGoodMatch
-                          ? "Agent je izdvojio najbolje."
-                          : hasInventory
-                            ? "Postoje opcije — ali bez forsiranja."
-                            : "Nema dovoljno dobre gotove opcije."}
+                        {hasHosts
+                          ? "Najbolji domaćini za tvoj plan."
+                          : "Nisam pronašao dovoljno dobar direktan match."}
                       </h2>
                       <p>
-                        {ranking?.assistant_message ||
-                          (hasInventory
-                            ? "Reality Engine je našao stvarne opcije, a Agent ih proverava prema tvojoj želji."
-                            : "Neću ti izmišljati preporuke. Trenutno nema odgovarajuće aktivne ponude u bazi.")}
+                        {hasHosts
+                          ? "Agent je uporedio lokaciju, aktivnost i ono što svaki domaćin može da ponudi."
+                          : "Neću izmišljati rezultat. Možeš odmah poslati konkretan zahtev relevantnim domaćinima."}
                       </p>
                     </div>
 
-                    <div className={`ai-engine-status ${hasInventory ? "found" : ""}`}>
+                    <div className={`ai-engine-status ${hasHosts ? "found" : ""}`}>
                       <span />
-                      {hasGoodMatch
-                        ? `${ranking?.best_score || 0}% najbolji match`
-                        : hasInventory
-                          ? `${events.length + accommodations.length} kandidata`
-                          : "Custom match"}
+                      {hasHosts
+                        ? `${hosts.length} ${hosts.length === 1 ? "domaćin" : "domaćina"}`
+                        : "Custom request"}
                     </div>
                   </div>
 
-                  {rankingError && hasInventory && (
-                    <div className="ai-ranking-note">
-                      <Icon name="sparkles" size={15} />
-                      <span>
-                        <strong>Reality Engine radi normalno.</strong>
-                        {rankingError}
-                      </span>
-                    </div>
-                  )}
+                  {hasHosts ? (
+                    <div className="ai-host-results">
+                      {hosts.map((host, index) => {
+                        const capabilities = host.capabilities || [];
+                        const capabilityLabels = {
+                          adventure: "Avanture",
+                          accommodation: "Smeštaj",
+                          service: "Usluge",
+                          rental: "Iznajmljivanje",
+                        };
 
-                  {rankedItems.length > 0 && (
-                    <div className="ai-curated-section">
-                      <div className="ai-curated-heading">
-                        <div>
-                          <span className="ai-section-label">
-                            <Icon name="sparkles" size={14} />
-                            AI CURATED
-                          </span>
-                          <h3>Najbolji izbor za tvoj zahtev</h3>
-                        </div>
-                        <span className={`ai-confidence ${hasGoodMatch ? "strong" : "soft"}`}>
-                          {hasGoodMatch ? "Jak match" : "Mogući match"}
-                        </span>
-                      </div>
-
-                      <div className="ai-curated-grid">
-                        {rankedItems.map((rec, index) => {
-                          const item = rec.source;
-                          const isAccommodation = rec.type === "accommodation";
-                          const image = item.cover_url;
-                          const location = item.location || item.country;
-                          const eventPrice = !isAccommodation
-                            ? formatMoney(item.price, item.currency || "RSD")
-                            : null;
-                          const accommodationPrice = isAccommodation
-                            ? item.price_on_request
-                              ? "Cena na upit"
-                              : item.price_per_night !== null &&
-                                  item.price_per_night !== undefined
-                                ? `${Number(item.price_per_night).toLocaleString("sr-RS")} / noć`
-                                : "Cena na upit"
-                            : null;
-
-                          const cardContent = (
-                            <>
-                              <div
-                                className="ai-curated-cover"
-                                style={
-                                  image
-                                    ? {
-                                        backgroundImage: `linear-gradient(180deg, rgba(4,18,11,.02), rgba(4,18,11,.78)), url("${image}")`,
-                                      }
-                                    : undefined
-                                }
-                              >
-                                {!image && (
-                                  <Icon
-                                    name={isAccommodation ? "home" : "calendar"}
-                                    size={34}
-                                  />
-                                )}
-                                <span className="ai-rank-number">0{index + 1}</span>
-                                <div
-                                  className="ai-score-orb"
-                                  style={{
-                                    "--score": `${Math.max(
-                                      0,
-                                      Math.min(100, Number(rec.score) || 0)
-                                    ) * 3.6}deg`,
-                                  }}
-                                >
-                                  <span>{rec.score}</span>
-                                  <small>match</small>
+                        return (
+                          <article
+                            key={host.host_id}
+                            className="ai-host-card"
+                            style={{ "--host-delay": `${index * 70}ms` }}
+                          >
+                            <div className="ai-host-cover">
+                              {host.cover_url ? (
+                                <img src={host.cover_url} alt="" />
+                              ) : (
+                                <div className="ai-host-cover-fallback">
+                                  <Icon name="mountain" size={28} />
                                 </div>
-                              </div>
+                              )}
+                            </div>
 
-                              <div className="ai-curated-body">
-                                <div className="ai-curated-meta">
-                                  <span>{isAccommodation ? "Smeštaj" : "Avantura"}</span>
-                                  {location && <span>{location}</span>}
+                            <div className="ai-host-card-body">
+                              <div className="ai-host-identity">
+                                <div className="ai-host-avatar">
+                                  {host.avatar_url ? (
+                                    <img
+                                      src={host.avatar_url}
+                                      alt={host.full_name || host.username || "Domaćin"}
+                                    />
+                                  ) : (
+                                    <span>
+                                      {(host.full_name || host.username || "H")
+                                        .trim()
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                    </span>
+                                  )}
                                 </div>
-                                <h4>{item.title}</h4>
-                                <p>{rec.reason}</p>
-                                <div className="ai-curated-bottom">
-                                  <strong>
-                                    {isAccommodation
-                                      ? accommodationPrice
-                                      : eventPrice || "Cena na upit"}
-                                  </strong>
+
+                                <div>
+                                  <strong>{host.full_name || host.username || "Outdoor domaćin"}</strong>
                                   <span>
-                                    {isAccommodation
-                                      ? "Pronađen smeštaj"
-                                      : "Pogledaj avanturu"}{" "}
-                                    {!isAccommodation && (
-                                      <Icon name="arrow" size={14} />
-                                    )}
+                                    {[host.city, host.country].filter(Boolean).join(", ") ||
+                                      host.public_location ||
+                                      "MeetOutdoors domaćin"}
                                   </span>
                                 </div>
                               </div>
-                            </>
-                          );
 
-                          return isAccommodation ? (
-                            <div
-                              key={`${rec.type}-${rec.id}`}
-                              className={`ai-curated-card ${index === 0 ? "is-top" : ""}`}
-                              style={{ "--rank-delay": `${index * 80}ms` }}
-                            >
-                              {cardContent}
-                            </div>
-                          ) : (
-                            <Link
-                              to={`/event/${item.event_id}`}
-                              key={`${rec.type}-${rec.id}`}
-                              className={`ai-curated-card ${index === 0 ? "is-top" : ""}`}
-                              style={{ "--rank-delay": `${index * 80}ms` }}
-                            >
-                              {cardContent}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                              {host.covers_everything && (
+                                <div className="ai-host-best">
+                                  <Icon name="check" size={13} />
+                                  Može da pokrije ceo tvoj plan
+                                </div>
+                              )}
 
-                  {accommodations.length > 0 && (
-                    <div className="ai-result-section">
-                      <div className="ai-result-title">
-                        <Icon name="home" size={16} />
-                        {rankedItems.length > 0
-                          ? "Sav pronađeni smeštaj"
-                          : "Smeštaj"}
-                      </div>
-
-                      <div className="ai-cards">
-                        {accommodations.slice(0, 6).map((item, index) => (
-                          <div
-                            key={item.accommodation_id}
-                            className="ai-match-card"
-                            style={{ "--delay": `${index * 60}ms` }}
-                          >
-                            <div
-                              className="ai-match-cover"
-                              style={
-                                item.cover_url
-                                  ? {
-                                      backgroundImage: `linear-gradient(180deg, rgba(7,24,15,.02), rgba(7,24,15,.58)), url("${item.cover_url}")`,
-                                    }
-                                  : undefined
-                              }
-                            >
-                              {!item.cover_url && <Icon name="home" size={30} />}
-                              <span className="ai-score">Smeštaj</span>
-                            </div>
-
-                            <div className="ai-match-body">
-                              <div className="ai-match-meta">
-                                <span>{item.type || "Smeštaj"}</span>
-                                {item.location && <span>{item.location}</span>}
+                              <div className="ai-host-capabilities">
+                                {capabilities.map((capability) => (
+                                  <span key={capability}>
+                                    {capabilityLabels[capability] || capability}
+                                  </span>
+                                ))}
                               </div>
 
-                              <h3>{item.title}</h3>
+                              {host.bio && <p className="ai-host-bio">{host.bio}</p>}
 
-                              <div className="ai-match-bottom">
-                                <strong>
-                                  {item.price_on_request
-                                    ? "Cena na upit"
-                                    : item.price_per_night !== null &&
-                                        item.price_per_night !== undefined
-                                      ? `${Number(item.price_per_night).toLocaleString("sr-RS")} / noć`
-                                      : "Cena na upit"}
-                                </strong>
-                                <span>
-                                  {item.max_guests
-                                    ? `Do ${item.max_guests} gostiju`
-                                    : "MeetOutdoors smeštaj"}
-                                </span>
-                              </div>
+                              <Link
+                                to={`/h/${host.username}`}
+                                className="ai-host-profile-link"
+                              >
+                                Pogledaj domaćina
+                                <Icon name="arrow" size={15} />
+                              </Link>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <Link to="/stays" className="ai-refresh">
-                        <Icon name="home" size={16} />
-                        Pogledaj sve smeštaje
-                      </Link>
+                          </article>
+                        );
+                      })}
                     </div>
-                  )}
-
-                  {events.length > 0 && (
-                    <div className="ai-result-section">
-                      <div className="ai-result-title">
-                        <Icon name="event" size={16} />
-                        {rankedItems.length > 0 ? "Sve pronađene avanture" : "Avanture"}
-                      </div>
-
-                      <div className="ai-event-list">
-                        {events.slice(0, 6).map((item) => (
-                          <Link
-                            to={`/event/${item.event_id}`}
-                            key={item.event_id}
-                            className="ai-event-row"
-                          >
-                            <span className="ai-event-icon">
-                              <Icon name="calendar" size={18} />
-                            </span>
-
-                            <div className="ai-event-copy">
-                              <small>
-                                {item.location || item.country || "Outdoor"}
-                              </small>
-                              <strong>{item.title}</strong>
-                              <span>
-                                {item.start_date
-                                  ? new Intl.DateTimeFormat("sr-Latn-RS", {
-                                      day: "2-digit",
-                                      month: "short",
-                                    }).format(new Date(item.start_date))
-                                  : "Termin po dogovoru"}
-                              </span>
-                            </div>
-
-                            <Icon name="chevron" size={16} />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!hasInventory && (
+                  ) : (
                     <div className="ai-empty-visual">
                       <div className="ai-empty-orbit">
                         <span className="orbit orbit-a" />
@@ -1356,11 +1095,10 @@ export default function Agent() {
                       </div>
 
                       <div>
-                        <strong>Tu Agent postaje tržište.</strong>
+                        <strong>Tu Agent radi ono što katalog ne može.</strong>
                         <p>
-                          Umesto da završi pretragu sa “nema rezultata”,
-                          MeetOutdoors može da pošalje tvoj konkretan zahtev
-                          relevantnim domaćinima.
+                          Pošalji svoj plan relevantnim domaćinima. Oni mogu da
+                          naprave Event baš prema tvom zahtevu.
                         </p>
                       </div>
                     </div>
@@ -1375,32 +1113,20 @@ export default function Agent() {
                     {intent.intent_type === "accommodation" ? "SMEŠTAJ" : "CUSTOM MATCH"}
                   </span>
 
-                  <h2>
-                    {intent.intent_type === "accommodation"
-                      ? "Treba ti još opcija za smeštaj?"
-                      : hasGoodMatch
-                        ? "Nešto je baš dobro. Hoćeš custom?"
-                        : hasInventory
-                          ? "Nijedna nije dovoljno jaka?"
-                          : "Da aktiviram domaćine?"}
-                  </h2>
+                  <h2>Pronađimo domaćina za tvoj plan.</h2>
 
                   <p>
-                    {intent.intent_type === "accommodation"
-                      ? "Agent je proverio aktivni smeštaj. Ako nema dovoljno dobre opcije, može da pošalje tvoju potražnju relevantnim domaćinima."
-                      : hasGoodMatch
-                        ? "Imaš dobar postojeći izbor. Ako želiš nešto još preciznije, Agent može da otvori privatnu potražnju prema relevantnim domaćinima."
-                        : hasInventory
-                          ? "Našao sam kandidate, ali ne želim da ih proglasim idealnim. Možemo odmah tražiti ponudu skrojenu baš za tebe."
-                          : "Relevantni outdoor domaćini dobiće anonimnu potražnju i moći će da ti pošalju konkretnu ponudu."}
+                    Agent razume šta ti treba i aktivira relevantne domaćine. Ako
+                    nema gotovog rešenja, domaćin može da napravi Event baš prema
+                    tvom zahtevu.
                   </p>
 
                   <div className="ai-privacy-box">
                     <Icon name="shield" size={17} />
                     <div>
-                      <strong>Identitet ostaje privatan.</strong>
+                      <strong>Zahtev ide samo relevantnim domaćinima.</strong>
                       <span>
-                        Domaćini ne vide ko si dok ne prihvatiš neku ponudu.
+                        Agent bira domaćine prema aktivnosti, lokaciji i mogućnostima.
                       </span>
                     </div>
                   </div>
@@ -1423,31 +1149,11 @@ export default function Agent() {
                       </>
                     ) : (
                       <>
-                        <span>
-                          {intent.intent_type === "accommodation"
-                            ? hasInventory
-                              ? "Traži još opcija od domaćina"
-                              : "Pošalji potražnju za smeštaj"
-                            : intent.intent_type === "mixed"
-                              ? hasInventory
-                                ? "Traži custom avanturu + smeštaj"
-                                : "Pošalji potražnju za oba"
-                              : hasGoodMatch
-                                ? "Ipak traži custom ponude"
-                                : hasInventory
-                                  ? "Traži bolju custom opciju"
-                                  : "Pošalji potražnju hostovima"}
-                        </span>
+                        <span>Pošalji zahtev relevantnim domaćinima</span>
                         <Icon name="send" size={17} />
                       </>
                     )}
                   </button>
-
-                  {intent.intent_type === "accommodation" && (
-                    <Link to="/stays" className="ai-new-search">
-                      Pogledaj sve smeštaje
-                    </Link>
-                  )}
 
                   <button
                     type="button"
@@ -1465,12 +1171,12 @@ export default function Agent() {
                     <i />
                     <div>
                       <span>02</span>
-                      <p>Reality Engine proverava</p>
+                      <p>Host Engine povezuje</p>
                     </div>
                     <i />
                     <div>
                       <span>03</span>
-                      <p>AI rangira ili hostovi stvaraju</p>
+                      <p>Hostovi odgovaraju Eventom</p>
                     </div>
                   </div>
                 </div>
@@ -1494,8 +1200,8 @@ export default function Agent() {
 
               <p>
                 Tvoja potražnja je sačuvana. Relevantni domaćini sada mogu da
-                naprave konkretnu ponudu, a ti ćeš dobiti obaveštenje čim neka
-                stigne.
+                odgovore na zahtev i naprave Event prema tvojoj potrebi. Dobićeš
+                obaveštenje kada se pojavi odgovor.
               </p>
 
               <div className="ai-sent-stat">
@@ -1545,12 +1251,12 @@ export default function Agent() {
               <div>
                 <span>02</span>
                 <strong>Agent proverava stvarnost</strong>
-                <p>Avanture i smeštaj dolaze iz stvarne MeetOutdoors baze.</p>
+                <p>Agent traži domaćine prema onome što stvarno nude i rade.</p>
               </div>
               <div>
                 <span>03</span>
                 <strong>Ako ne postoji — stvaramo</strong>
-                <p>Relevantni hostovi mogu da naprave ponudu za tvoj zahtev.</p>
+                <p>Relevantni hostovi mogu da naprave Event za tvoj zahtev.</p>
               </div>
             </section>
           )}
@@ -4077,6 +3783,171 @@ function Styles() {
       }
 
       /* TABLET */
+
+      .ai-host-results {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .ai-host-card {
+        overflow: hidden;
+        min-width: 0;
+        border: 1px solid rgba(214, 239, 209, .11);
+        border-radius: 22px;
+        background: rgba(255,255,255,.045);
+        box-shadow: 0 18px 50px rgba(0,0,0,.16);
+        animation: hostCardIn .52s ease both;
+        animation-delay: var(--host-delay, 0ms);
+      }
+
+      .ai-host-cover {
+        height: 118px;
+        overflow: hidden;
+        background: rgba(184,240,123,.06);
+      }
+
+      .ai-host-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .ai-host-cover-fallback {
+        display: grid;
+        place-items: center;
+        width: 100%;
+        height: 100%;
+        color: var(--green);
+        background:
+          radial-gradient(circle at 70% 10%, rgba(184,240,123,.13), transparent 36%),
+          linear-gradient(135deg, rgba(255,255,255,.05), transparent);
+      }
+
+      .ai-host-card-body {
+        padding: 14px;
+      }
+
+      .ai-host-identity {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .ai-host-avatar {
+        display: grid;
+        place-items: center;
+        flex: 0 0 42px;
+        width: 42px;
+        height: 42px;
+        overflow: hidden;
+        border: 1px solid rgba(205,241,174,.16);
+        border-radius: 14px;
+        background: rgba(184,240,123,.09);
+        color: var(--green);
+        font-size: 14px;
+        font-weight: 950;
+      }
+
+      .ai-host-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .ai-host-identity > div:last-child {
+        min-width: 0;
+      }
+
+      .ai-host-identity strong,
+      .ai-host-identity span {
+        display: block;
+      }
+
+      .ai-host-identity strong {
+        overflow: hidden;
+        color: #f4f9f1;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .ai-host-identity span {
+        margin-top: 3px;
+        color: rgba(229,239,229,.48);
+        font-size: 9px;
+      }
+
+      .ai-host-best {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 12px;
+        padding: 6px 8px;
+        border: 1px solid rgba(184,240,123,.16);
+        border-radius: 999px;
+        background: rgba(184,240,123,.075);
+        color: var(--green);
+        font-size: 8px;
+        font-weight: 900;
+      }
+
+      .ai-host-capabilities {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+      }
+
+      .ai-host-capabilities span {
+        padding: 5px 7px;
+        border: 1px solid rgba(230,242,226,.08);
+        border-radius: 999px;
+        background: rgba(255,255,255,.035);
+        color: rgba(235,244,232,.68);
+        font-size: 8px;
+        font-weight: 800;
+      }
+
+      .ai-host-bio {
+        display: -webkit-box;
+        overflow: hidden;
+        margin: 10px 0 0;
+        color: rgba(229,239,229,.48);
+        font-size: 9px;
+        line-height: 1.55;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .ai-host-profile-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 38px;
+        margin-top: 12px;
+        padding: 0 11px;
+        border-radius: 11px;
+        background: rgba(184,240,123,.10);
+        color: #d9f7bd;
+        text-decoration: none;
+        font-size: 9px;
+        font-weight: 900;
+        transition: .2s ease;
+      }
+
+      .ai-host-profile-link:hover {
+        background: rgba(184,240,123,.15);
+        transform: translateY(-1px);
+      }
+
+      @keyframes hostCardIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
       @media (max-width: 1020px) {
         .ai-result-layout {
           grid-template-columns: 1fr;
@@ -4549,6 +4420,446 @@ function Styles() {
           scroll-behavior: auto !important;
         }
       }
+
+
+      /* =========================================================
+         HOST-FIRST AGENT — PRODUCT + MOTION PASS
+         ========================================================= */
+      .ai-host-first-bridge {
+        position: relative;
+        overflow: hidden;
+        margin-top: 20px;
+        padding: 24px;
+        border: 1px solid rgba(190,239,151,.14);
+        border-radius: 26px;
+        background:
+          radial-gradient(circle at 12% 0%, rgba(184,240,123,.11), transparent 28%),
+          linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.025));
+      }
+
+      .ai-host-first-bridge::after {
+        content: "";
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        right: -70px;
+        bottom: -95px;
+        border: 1px solid rgba(184,240,123,.12);
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 26px rgba(184,240,123,.025),
+          0 0 0 52px rgba(184,240,123,.018);
+        pointer-events: none;
+      }
+
+      .ai-host-orbit {
+        position: relative;
+        width: 74px;
+        height: 74px;
+        margin-bottom: 20px;
+      }
+
+      .host-orbit-ring,
+      .host-orbit-core {
+        position: absolute;
+        inset: 50% auto auto 50%;
+        transform: translate(-50%,-50%);
+        border-radius: 50%;
+      }
+
+      .host-orbit-ring {
+        border: 1px solid rgba(184,240,123,.22);
+      }
+
+      .host-orbit-ring.ring-a {
+        width: 72px;
+        height: 72px;
+        animation: hostOrbitSpin 8s linear infinite;
+      }
+
+      .host-orbit-ring.ring-a::after {
+        content: "";
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        top: 5px;
+        left: 13px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 18px rgba(184,240,123,.8);
+      }
+
+      .host-orbit-ring.ring-b {
+        width: 52px;
+        height: 52px;
+        border-style: dashed;
+        animation: hostOrbitSpin 11s linear infinite reverse;
+      }
+
+      .host-orbit-core {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        color: #07170f;
+        background: linear-gradient(145deg,#d7ffad,#9ee16e);
+        box-shadow: 0 8px 28px rgba(150,220,101,.24);
+      }
+
+      .ai-host-bridge-copy {
+        position: relative;
+        z-index: 2;
+        max-width: 680px;
+      }
+
+      .ai-host-bridge-copy h3 {
+        margin: 9px 0 8px;
+        font-size: clamp(23px,3vw,34px);
+        line-height: 1.02;
+        letter-spacing: -.045em;
+      }
+
+      .ai-host-bridge-copy p {
+        margin: 0;
+        max-width: 650px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .ai-capability-row {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+      }
+
+      .ai-capability-row span {
+        padding: 8px 11px;
+        border: 1px solid rgba(214,239,209,.10);
+        border-radius: 999px;
+        color: rgba(243,248,242,.78);
+        background: rgba(255,255,255,.035);
+        font-size: 11px;
+        font-weight: 760;
+      }
+
+      .ai-agent-alive {
+        isolation: isolate;
+      }
+
+      .agent-wave {
+        position: absolute;
+        inset: 50% auto auto 50%;
+        width: 76px;
+        height: 76px;
+        border: 1px solid rgba(184,240,123,.22);
+        border-radius: 50%;
+        transform: translate(-50%,-50%);
+        opacity: 0;
+        animation: agentSignal 2.7s ease-out infinite;
+      }
+
+      .agent-wave.wave-two { animation-delay: .9s; }
+      .agent-wave.wave-three { animation-delay: 1.8s; }
+
+      .agent-compass-line {
+        position: absolute;
+        inset: 50% auto auto 50%;
+        width: 108px;
+        height: 1px;
+        transform-origin: 0 50%;
+        background: linear-gradient(90deg, rgba(184,240,123,.5), transparent);
+        opacity: .32;
+        z-index: -1;
+      }
+
+      .agent-compass-line.line-a {
+        animation: agentRadar 5.2s linear infinite;
+      }
+
+      .agent-compass-line.line-b {
+        animation: agentRadar 7.4s linear infinite reverse;
+      }
+
+      .agent-particle {
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #caff9f;
+        box-shadow: 0 0 14px rgba(202,255,159,.75);
+        animation: agentParticle 2.8s ease-in-out infinite;
+      }
+
+      .particle-a { top: 13%; left: 70%; }
+      .particle-b { top: 72%; left: 18%; animation-delay: -.9s; }
+      .particle-c { top: 76%; left: 78%; animation-delay: -1.7s; }
+
+      .ai-thinking-copy h2 {
+        animation: softTextBreath 2.4s ease-in-out infinite;
+      }
+
+      .ai-composer:focus-within {
+        border-color: rgba(184,240,123,.26);
+        box-shadow:
+          0 30px 90px rgba(0,0,0,.24),
+          0 0 0 1px rgba(184,240,123,.045),
+          0 0 48px rgba(141,210,96,.055);
+      }
+
+      .ai-composer:focus-within .ai-agent-mark {
+        animation: composerAlive 2.2s ease-in-out infinite;
+      }
+
+      @keyframes agentSignal {
+        0% { transform: translate(-50%,-50%) scale(.52); opacity: .5; }
+        70% { opacity: .12; }
+        100% { transform: translate(-50%,-50%) scale(1.8); opacity: 0; }
+      }
+
+      @keyframes agentRadar {
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes agentParticle {
+        0%,100% { transform: translateY(0) scale(.8); opacity: .3; }
+        50% { transform: translateY(-8px) scale(1.15); opacity: 1; }
+      }
+
+      @keyframes hostOrbitSpin {
+        to { transform: translate(-50%,-50%) rotate(360deg); }
+      }
+
+      @keyframes softTextBreath {
+        0%,100% { opacity: .88; }
+        50% { opacity: 1; }
+      }
+
+      @keyframes composerAlive {
+        0%,100% { box-shadow: 0 0 0 0 rgba(184,240,123,0); }
+        50% { box-shadow: 0 0 0 7px rgba(184,240,123,.055); }
+      }
+
+      @media (max-width: 720px) {
+        .ai-page {
+          padding: 82px 12px 44px;
+        }
+
+        .ai-hero {
+          margin: 0 auto 24px;
+          text-align: center;
+        }
+
+        .ai-kicker {
+          justify-content: center;
+        }
+
+        .ai-hero h1 {
+          margin-inline: auto;
+          font-size: clamp(38px,12vw,54px);
+          line-height: .94;
+        }
+
+        .ai-hero p {
+          margin-inline: auto;
+          max-width: 340px;
+          font-size: 12px;
+          line-height: 1.55;
+        }
+
+        .ai-composer-wrap {
+          margin-top: 0;
+        }
+
+        .ai-composer {
+          padding: 14px;
+          border-radius: 20px;
+        }
+
+        .ai-composer textarea {
+          min-height: 112px;
+          font-size: 14px;
+          line-height: 1.55;
+        }
+
+        .ai-composer-bottom {
+          gap: 10px;
+        }
+
+        .ai-primary {
+          min-height: 46px;
+        }
+
+        .ai-example-list {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 7px;
+        }
+
+        .ai-example-list button {
+          width: 100%;
+          min-height: 42px;
+          text-align: left;
+        }
+
+        .ai-thinking {
+          min-height: 290px;
+          padding: 24px 18px;
+          border-radius: 22px;
+          text-align: center;
+        }
+
+        .ai-thinking-orb {
+          margin-inline: auto;
+        }
+
+        .ai-thinking-steps {
+          justify-content: center;
+        }
+
+        .ai-understood,
+        .ai-inventory,
+        .ai-action-sticky {
+          border-radius: 20px;
+        }
+
+        .ai-understood-head,
+        .ai-inventory-head {
+          text-align: center;
+        }
+
+        .ai-section-label {
+          justify-content: center;
+        }
+
+        .ai-pills {
+          justify-content: center;
+        }
+
+        .ai-host-first-bridge {
+          padding: 19px 15px;
+          border-radius: 20px;
+          text-align: center;
+        }
+
+        .ai-host-orbit {
+          margin: 0 auto 16px;
+        }
+
+        .ai-capability-row {
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .ai-capability-row span {
+          padding: 7px 9px;
+          font-size: 9px;
+        }
+
+        .ai-action-panel,
+        .ai-action-sticky {
+          text-align: center;
+        }
+
+        .ai-privacy-box {
+          text-align: left;
+        }
+
+        .ai-flow-mini {
+          justify-content: center;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .agent-wave,
+        .agent-compass-line,
+        .agent-particle,
+        .host-orbit-ring,
+        .ai-thinking-copy h2,
+        .ai-composer:focus-within .ai-agent-mark {
+          animation: none !important;
+        }
+      }
+
+
+      @media (max-width: 760px) {
+        .ai-host-results {
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+
+        .ai-host-cover {
+          height: 88px;
+        }
+
+        .ai-host-card {
+          border-radius: 16px;
+        }
+
+        .ai-host-card-body {
+          padding: 10px;
+        }
+
+        .ai-host-avatar {
+          flex-basis: 34px;
+          width: 34px;
+          height: 34px;
+          border-radius: 11px;
+        }
+
+        .ai-host-identity {
+          gap: 7px;
+        }
+
+        .ai-host-identity strong {
+          font-size: 10px;
+        }
+
+        .ai-host-identity span,
+        .ai-host-bio {
+          font-size: 7px;
+        }
+
+        .ai-host-best {
+          margin-top: 8px;
+          padding: 5px 6px;
+          font-size: 7px;
+        }
+
+        .ai-host-capabilities {
+          gap: 4px;
+          margin-top: 7px;
+        }
+
+        .ai-host-capabilities span {
+          padding: 4px 5px;
+          font-size: 7px;
+        }
+
+        .ai-host-bio {
+          -webkit-line-clamp: 1;
+        }
+
+        .ai-host-profile-link {
+          min-height: 34px;
+          margin-top: 8px;
+          padding: 0 8px;
+          font-size: 8px;
+        }
+      }
+
+      @media (max-width: 430px) {
+        .ai-host-results {
+          grid-template-columns: 1fr;
+        }
+
+        .ai-host-cover {
+          height: 108px;
+        }
+      }
+
     `}</style>
   );
 }

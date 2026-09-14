@@ -641,9 +641,9 @@ export default function PlaceDetails() {
           });
 
           setNotice(
-            `GPS VERIFIED ✓ ${Math.round(
+            `Poseta potvrđena ✓ Nalaziš se ${Math.round(
               result?.distance_m || 0
-            )} m od lokacije.`
+            )} m od označene lokacije. Mesto je dodato u tvoj Outdoor Passport.`
           );
 
           await Promise.all([
@@ -817,51 +817,6 @@ export default function PlaceDetails() {
   if (loading) {
     return (
       <>
-      <SeoHead
-  title={`${place.name}${place.region ? ` – ${place.region}` : ""}`}
-  description={
-    place.short_description ||
-    place.description?.slice(0, 155) ||
-    `Istraži ${place.name} na MeetOutdoors. Pogledaj lokaciju, pristup, fotografije, savete i informacije za posetu.`
-  }
-  canonicalPath={`/mesta/${place.slug}`}
-  image={photos[0]?.image_url || place.cover_url || FALLBACK_COVER}
-  type="article"
-  structuredData={{
-    "@context": "https://schema.org",
-    "@type": "TouristAttraction",
-    name: place.name,
-    description:
-      place.short_description ||
-      place.description ||
-      undefined,
-    image:
-      photos[0]?.image_url ||
-      place.cover_url ||
-      undefined,
-    url: `https://www.meetoutdoors.app/mesta/${place.slug}`,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality:
-        place.locality || place.municipality || undefined,
-      addressRegion: place.region || undefined,
-      addressCountry: place.country_code || "RS",
-    },
-    geo:
-      place.location_precision === "exact" &&
-      place.latitude &&
-      place.longitude
-        ? {
-            "@type": "GeoCoordinates",
-            latitude: Number(place.latitude),
-            longitude: Number(place.longitude),
-          }
-        : undefined,
-  }}
-/>
-
-<DetailsStyles />
-
         <DetailsStyles />
 
         <main className="detailState">
@@ -871,7 +826,7 @@ export default function PlaceDetails() {
 
           <small>MEETOUTDOORS</small>
           <strong>Učitavanje mesta...</strong>
-          <p>Fotografije, tragovi i community podaci stižu.</p>
+          <p>Pripremamo lokaciju i podatke za posetu.</p>
         </main>
       </>
     );
@@ -905,6 +860,49 @@ export default function PlaceDetails() {
 
   return (
     <>
+      <SeoHead
+        title={`${place.name}${place.region ? ` – ${place.region}` : ""}`}
+        description={
+          place.short_description ||
+          place.description?.slice(0, 155) ||
+          `Istraži ${place.name} na MeetOutdoors. Pogledaj lokaciju, pristup, fotografije i informacije za posetu.`
+        }
+        canonicalPath={`/mesta/${place.slug}`}
+        image={photos[0]?.image_url || place.cover_url || FALLBACK_COVER}
+        type="article"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "TouristAttraction",
+          name: place.name,
+          description:
+            place.short_description ||
+            place.description ||
+            undefined,
+          image:
+            photos[0]?.image_url ||
+            place.cover_url ||
+            undefined,
+          url: `https://www.meetoutdoors.app/mesta/${place.slug}`,
+          address: {
+            "@type": "PostalAddress",
+            addressLocality:
+              place.locality || place.municipality || undefined,
+            addressRegion: place.region || undefined,
+            addressCountry: place.country_code || "RS",
+          },
+          geo:
+            place.location_precision === "exact" &&
+            place.latitude &&
+            place.longitude
+              ? {
+                  "@type": "GeoCoordinates",
+                  latitude: Number(place.latitude),
+                  longitude: Number(place.longitude),
+                }
+              : undefined,
+        }}
+      />
+
       <DetailsStyles />
 
       <main className="detailPage">
@@ -1104,20 +1102,22 @@ export default function PlaceDetails() {
               <div>
                 <small>
                   {pendingHere
-                    ? "OFFLINE GPS SAČUVAN"
-                    : "GPS VERIFIED VISIT"}
+                    ? "SAČUVANO OFFLINE"
+                    : myCheckin
+                      ? "POSETA POTVRĐENA"
+                      : "CHECK-IN"}
                 </small>
 
                 <strong>
                   {pendingHere
-                    ? `Zabeleženo ${formatDate(
+                    ? `Check-in je sačuvan ${formatDate(
                         pendingHere.device_timestamp
-                      )}. Poslaćemo automatski čim se internet vrati.`
+                      )} i biće poslat kada se internet vrati.`
                     : myCheckin
-                      ? `Poslednji check-in ${formatDate(
+                      ? `GPS potvrđeno · ${formatDate(
                           myCheckin.created_at
                         )}`
-                      : "Dođi na lokaciju i potvrdi da si stvarno bio/la ovde."}
+                      : "Na lokaciji si? Potvrdi posetu GPS-om jednim dodirom."}
                 </strong>
               </div>
             </div>
@@ -1152,7 +1152,11 @@ export default function PlaceDetails() {
                     ? "offlinePrimary"
                     : "primary"
                 }
-                disabled={checkingIn}
+                disabled={
+                  checkingIn ||
+                  Boolean(myCheckin) ||
+                  Boolean(pendingHere)
+                }
                 onClick={checkIn}
               >
                 <span>
@@ -1171,12 +1175,14 @@ export default function PlaceDetails() {
 
                   <strong>
                     {checkingIn
-                      ? "GPS provera..."
+                      ? "Proveravamo GPS..."
                       : pendingHere
                         ? "Čeka internet"
-                        : online
-                          ? "Čekiraj se"
-                          : "Offline check-in"}
+                        : myCheckin
+                          ? "Poseta potvrđena ✓"
+                          : online
+                            ? "Potvrdi posetu"
+                            : "Sačuvaj offline"}
                   </strong>
                 </div>
               </button>
@@ -1273,8 +1279,24 @@ export default function PlaceDetails() {
               </span>
 
               <div>
-                <strong>Gotovo</strong>
+                <strong>
+                  {myCheckin && !pendingHere
+                    ? "Poseta potvrđena"
+                    : pendingHere
+                      ? "Sačuvano offline"
+                      : "Gotovo"}
+                </strong>
                 <p>{notice}</p>
+
+                {myCheckin && profile?.username && !pendingHere && (
+                  <Link
+                    to={`/u/${profile.username}`}
+                    className="detailPassportLink"
+                  >
+                    Pogledaj moj Outdoor Passport
+                    <Icon name="arrowRight" size={14} />
+                  </Link>
+                )}
               </div>
             </div>
           )}
@@ -1922,6 +1944,181 @@ function DetailsStyles() {
           scroll-behavior:auto!important
         }
       }
+
+      /* =========================================================
+         PLACE DETAILS V2 — CHECK-IN FIRST / CLEAN PREMIUM
+         ========================================================= */
+
+      .detailActionDock{
+        grid-template-columns:minmax(250px,.72fr) minmax(0,1.28fr)!important;
+        padding:10px!important;
+        border:1px solid rgba(27,63,42,.10)!important;
+        border-radius:20px!important;
+        background:rgba(255,255,255,.96)!important;
+        box-shadow:0 18px 46px rgba(22,48,31,.08)!important;
+      }
+
+      .detailActionLead{
+        grid-template-columns:42px minmax(0,1fr)!important;
+        gap:10px!important;
+        padding:6px 9px!important;
+      }
+
+      .detailActionIcon{
+        width:42px!important;
+        height:42px!important;
+        border-radius:13px!important;
+      }
+
+      .detailActionLead small{
+        font-size:6px!important;
+        letter-spacing:.09em!important;
+      }
+
+      .detailActionLead strong{
+        margin-top:3px!important;
+        color:#506158!important;
+        font-size:8px!important;
+        line-height:1.45!important;
+      }
+
+      .detailActionButtons{
+        grid-template-columns:.78fr 1.25fr .9fr!important;
+        gap:7px!important;
+      }
+
+      .detailActionButtons button{
+        min-height:52px!important;
+        border-radius:13px!important;
+      }
+
+      .detailActionButtons button.primary,
+      .detailActionButtons button.offlinePrimary{
+        box-shadow:0 10px 24px rgba(23,59,39,.13)!important;
+      }
+
+      .detailActionButtons button.primary:disabled,
+      .detailActionButtons button.offlinePrimary:disabled{
+        opacity:1!important;
+        cursor:default!important;
+      }
+
+      .detailActionButtons button.primary:disabled{
+        background:linear-gradient(145deg,#24553a,#173b27)!important;
+      }
+
+      .detailMessage.success{
+        position:relative!important;
+        overflow:hidden!important;
+        border-color:#cfe1d1!important;
+        background:linear-gradient(135deg,#f8fcf7,#edf6ee)!important;
+      }
+
+      .detailMessage.success::after{
+        content:"";
+        position:absolute;
+        top:-50px;
+        right:-45px;
+        width:120px;
+        height:120px;
+        border-radius:50%;
+        background:rgba(92,145,87,.07);
+        pointer-events:none;
+      }
+
+      .detailPassportLink{
+        position:relative;
+        z-index:2;
+        display:inline-flex!important;
+        align-items:center;
+        gap:6px;
+        margin-top:8px;
+        color:#245238!important;
+        font-size:8px;
+        font-weight:900;
+      }
+
+      .detailPassportLink:hover{
+        text-decoration:underline;
+      }
+
+      /* The owner-only remove action should not distort the main visitor CTA row. */
+      .detailActionButtons .danger{
+        grid-column:1 / -1!important;
+        min-height:40px!important;
+      }
+
+      @media(max-width:760px){
+        .detailPage{
+          padding-left:10px!important;
+          padding-right:10px!important;
+        }
+
+        .detailActionDock{
+          display:block!important;
+          padding:10px!important;
+          border-radius:18px!important;
+        }
+
+        .detailActionLead{
+          margin-bottom:8px!important;
+          padding:4px 3px 9px!important;
+          border-bottom:1px solid #edf1ed!important;
+        }
+
+        .detailActionButtons{
+          display:grid!important;
+          grid-template-columns:1fr 1.35fr!important;
+          gap:7px!important;
+        }
+
+        .detailActionButtons button{
+          min-height:50px!important;
+          padding:7px!important;
+        }
+
+        .detailActionButtons button.accent{
+          grid-column:1 / -1!important;
+          min-height:44px!important;
+        }
+
+        .detailActionButtons .danger{
+          grid-column:1 / -1!important;
+        }
+
+        .detailMessage{
+          border-radius:16px!important;
+        }
+
+        .detailPassportLink{
+          font-size:7.5px!important;
+        }
+      }
+
+      @media(max-width:430px){
+        .detailActionButtons{
+          grid-template-columns:.9fr 1.1fr!important;
+        }
+
+        .detailActionButtons button{
+          grid-template-columns:31px minmax(0,1fr)!important;
+          gap:6px!important;
+        }
+
+        .detailActionButtons button>span{
+          width:31px!important;
+          height:31px!important;
+        }
+
+        .detailActionButtons button small{
+          font-size:5px!important;
+        }
+
+        .detailActionButtons button strong{
+          font-size:7px!important;
+        }
+      }
+
     `}</style>
   );
 }

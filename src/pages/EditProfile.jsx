@@ -30,6 +30,54 @@ const FALLBACK_AVATAR =
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1800&q=85";
 
+async function geocodePublicLocation(value, country = "") {
+  const cleanValue = String(value || "").trim();
+  const cleanCountry = String(country || "").trim();
+
+  if (!cleanValue) return null;
+
+  const query = [cleanValue, cleanCountry]
+    .filter(Boolean)
+    .join(", ");
+
+  const params = new URLSearchParams({
+    q: query,
+    format: "jsonv2",
+    limit: "1",
+    addressdetails: "1",
+    "accept-language": "sr,en",
+  });
+
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+    {
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Lokacija trenutno ne može da se proveri. Pokušaj ponovo."
+    );
+  }
+
+  const results = await response.json();
+  const match = Array.isArray(results) ? results[0] : null;
+
+  if (!match?.lat || !match?.lon) {
+    throw new Error(
+      "Nismo pronašli ovu lokaciju. Unesi grad ili precizniju adresu."
+    );
+  }
+
+  return {
+    latitude: Number(match.lat),
+    longitude: Number(match.lon),
+  };
+}
+
 function Icon({
   name,
   size = 20,
@@ -371,6 +419,7 @@ export default function EditProfile() {
     username: "",
     city: "",
     country: "",
+    public_location: "",
     avatar_url: "",
     cover_url: "",
     bio: "",
@@ -400,6 +449,7 @@ export default function EditProfile() {
         username: profile.username || "",
         city: profile.city || "",
         country: profile.country || "",
+        public_location: profile.public_location || "",
         avatar_url: profile.avatar_url || "",
         cover_url: profile.cover_url || "",
         bio: profile.bio || "",
@@ -573,6 +623,27 @@ export default function EditProfile() {
 
       const isHost = form.role === "host";
 
+      let publicLocationData = null;
+      const cleanPublicLocation = form.public_location.trim();
+
+      if (isHost && cleanPublicLocation) {
+        const locationChanged =
+          cleanPublicLocation !==
+            String(profile?.public_location || "").trim() ||
+          profile?.latitude == null ||
+          profile?.longitude == null;
+
+        publicLocationData = locationChanged
+          ? await geocodePublicLocation(
+              cleanPublicLocation,
+              form.country
+            )
+          : {
+              latitude: Number(profile.latitude),
+              longitude: Number(profile.longitude),
+            };
+      }
+
       const updatePayload = {
         full_name: form.full_name.trim(),
         username: cleanUsername,
@@ -594,6 +665,12 @@ export default function EditProfile() {
         updatePayload.promo_video_url =
           uploadedVideoUrl ||
           form.promo_video_url.trim();
+        updatePayload.public_location =
+          cleanPublicLocation || null;
+        updatePayload.latitude =
+          publicLocationData?.latitude ?? null;
+        updatePayload.longitude =
+          publicLocationData?.longitude ?? null;
       }
 
       const { error: updateError } =
@@ -995,6 +1072,25 @@ export default function EditProfile() {
                         saznaju više o tvojoj
                         organizaciji.
                       </p>
+                    </div>
+                  </div>
+
+                  <div className="mapLocationBox">
+                    <div className="mapLocationBoxIcon">
+                      <Icon name="mapPin" size={19} />
+                    </div>
+
+                    <div className="mapLocationBoxContent">
+                      <FormField
+                        label="Javna lokacija na mapi"
+                        name="public_location"
+                        value={form.public_location}
+                        onChange={updateField}
+                        placeholder="npr. Prokuplje ili Jug Bogdanova 15, Prokuplje"
+                        icon="mapPin"
+                        autoComplete="street-address"
+                        hint="Opciono. Unesite lokaciju ako želite da se vaš profil pojavi na MeetOutdoors mapi. Što preciznije unesete lokaciju, preciznije će biti prikazan marker. Lokacija koju unesete biće javno vidljiva."
+                      />
                     </div>
                   </div>
 
@@ -1554,6 +1650,37 @@ function EditProfileStyles() {
           rgba(255, 255, 255, 0.79);
         box-shadow:
           0 12px 34px rgba(31, 51, 38, 0.045);
+      }
+
+      .mapLocationBox {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+        margin-bottom: 18px;
+        padding: 14px;
+        border: 1px solid rgba(95, 194, 120, 0.22);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(95, 194, 120, 0.08), rgba(255,255,255,0.5));
+      }
+
+      .mapLocationBoxIcon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        color: #2f6b43;
+        background: rgba(95, 194, 120, 0.12);
+        border: 1px solid rgba(95, 194, 120, 0.2);
+      }
+
+      .mapLocationBoxContent {
+        min-width: 0;
+      }
+
+      .mapLocationBoxContent .editField {
+        margin: 0;
       }
 
       .hostFormSection {
@@ -2236,6 +2363,211 @@ function EditProfileStyles() {
           align-items: flex-start;
           text-align: left;
         }
+      }
+
+
+      /* ===== MeetOutdoors Premium UI refresh ===== */
+      .editProfilePage{
+        padding:112px 24px 70px;
+        background:
+          radial-gradient(circle at 8% 5%,rgba(190,226,144,.28),transparent 25%),
+          radial-gradient(circle at 94% 25%,rgba(70,118,79,.12),transparent 24%),
+          linear-gradient(145deg,#edf3e9,#f7f9f5 52%,#e8efe6);
+      }
+
+      .editProfileShell{
+        width:min(1240px,100%);
+        grid-template-columns:330px minmax(0,1fr);
+        gap:18px;
+        overflow:visible;
+        border:0;
+        border-radius:0;
+        background:transparent;
+        box-shadow:none;
+        align-items:start;
+      }
+
+      .profilePreview{
+        position:sticky;
+        top:104px;
+        overflow:hidden;
+        border:1px solid rgba(255,255,255,.16);
+        border-radius:28px;
+        background:#0e2b1b;
+        box-shadow:0 26px 70px rgba(23,49,31,.18);
+      }
+
+      .previewCover{height:225px}
+      .previewRoleBadge{
+        top:15px;right:15px;min-height:32px;padding:0 10px;
+        border-radius:999px;font-size:7px;background:rgba(8,29,18,.28)
+      }
+      .previewContent{padding:0 22px 24px}
+      .previewAvatar{
+        width:92px;height:92px;margin-top:-46px;
+        border:4px solid #0e2b1b;border-radius:25px
+      }
+      .previewKicker{margin-top:15px;font-size:7px}
+      .previewContent h2{margin-top:7px;font-size:30px}
+      .previewUsername{margin-top:6px;font-size:9px}
+      .previewLocation{margin-top:14px;font-size:9px}
+      .previewBio{
+        display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;
+        overflow:hidden;margin-top:14px;font-size:9px;line-height:1.65
+      }
+      .previewActivities{gap:6px;margin-top:15px}
+      .previewActivities span{min-height:26px;padding:0 8px;font-size:7px}
+      .previewNotice{margin-top:18px;padding:11px;border-radius:14px}
+      .previewNotice > span{width:29px;height:29px}
+      .previewNotice p{font-size:7.5px}
+
+      .editProfileContent{
+        padding:30px;
+        border:1px solid rgba(45,73,53,.08);
+        border-radius:28px;
+        background:rgba(255,255,255,.80);
+        box-shadow:0 26px 70px rgba(33,57,41,.09);
+        backdrop-filter:blur(20px);
+      }
+
+      .editProfileHeader{margin-bottom:22px;padding:4px 4px 0}
+      .editKicker{font-size:8px}
+      .editProfileHeader h1{margin-top:8px;font-size:clamp(38px,4.5vw,58px)}
+      .editProfileHeader p{margin-top:12px;font-size:10px}
+      .accountType{min-height:36px;border-radius:999px;font-size:8px}
+
+      .editProfileForm{gap:14px}
+      .formSection{
+        padding:20px;border-radius:21px;
+        background:rgba(255,255,255,.88);
+        box-shadow:0 9px 28px rgba(27,54,35,.035)
+      }
+      .hostFormSection{
+        border-color:#d5e3cd;
+        background:
+          radial-gradient(circle at 100% 0%,rgba(205,238,160,.17),transparent 28%),
+          linear-gradient(145deg,#f6faf2,#fff)
+      }
+      .formSectionHeading{gap:11px;margin-bottom:16px}
+      .formSectionHeading > span{width:36px;height:36px;border-radius:11px}
+      .formSectionHeading small{font-size:7px}
+      .formSectionHeading h2{font-size:18px}
+      .formSectionHeading p{font-size:8px}
+
+      .editFieldsGrid,.uploadGrid{gap:11px}
+      .editField{gap:6px}
+      .fullWidthField{margin-top:11px}
+      .editFieldLabel{font-size:8px}
+      .editInputWrapper input{min-height:47px;border-radius:13px;font-size:10px}
+      .editTextareaWrapper textarea{min-height:112px;border-radius:14px;font-size:10px}
+      .fieldHint{font-size:7px}
+      .characterCount{font-size:6px}
+
+      .uploadField{padding:12px;border-radius:16px}
+      .uploadFieldHeader{margin-bottom:9px}
+      .uploadFieldIcon{width:32px;height:32px;border-radius:10px}
+      .uploadFieldHeader strong{font-size:9px}
+      .uploadFieldHeader small{font-size:7px}
+      .uploadDropzone{min-height:70px;padding:10px;border-radius:13px}
+      .uploadCircle{width:36px;height:36px;border-radius:11px}
+      .uploadCopy strong{font-size:8px}
+      .uploadCopy small{font-size:6.5px}
+      .removeUpload{font-size:7px}
+      .singleUpload{max-width:430px;margin-top:11px}
+
+      .activityGrid{gap:7px}
+      .activityButton{min-height:39px;padding:0 9px;border-radius:11px;font-size:8px}
+      .activityCheck{width:18px;height:18px}
+      .selectedActivitiesCount{font-size:7px}
+
+      .formActions{
+        position:sticky;z-index:10;bottom:12px;
+        padding:10px;border:1px solid rgba(213,224,209,.84);border-radius:17px;
+        background:rgba(251,253,249,.90);
+        box-shadow:0 14px 38px rgba(27,52,35,.13);
+        backdrop-filter:blur(18px)
+      }
+      .cancelButton,.saveButton{min-height:44px;border-radius:12px;font-size:9px}
+      .saveButton{background:linear-gradient(180deg,#204b34,#173a27)}
+
+      @media(max-width:860px){
+        .editProfilePage{padding:94px 16px 60px}
+        .editProfileShell{display:block}
+        .profilePreview{
+          position:relative;top:auto;display:grid;
+          grid-template-columns:240px minmax(0,1fr);
+          margin-bottom:14px;border-radius:24px
+        }
+        .previewCover{height:100%;min-height:245px}
+        .previewContent{padding:23px}
+        .previewAvatar{
+          width:78px;height:78px;margin-top:0;
+          border:3px solid rgba(255,255,255,.12);border-radius:21px
+        }
+        .previewNotice{display:none}
+      }
+
+      @media(max-width:680px){
+        .editProfilePage{padding:76px 0 92px;background:#f1f5ee}
+        .editProfileShell{width:100%}
+        .profilePreview{
+          display:block;margin:0 12px 12px;border-radius:23px;
+          box-shadow:0 17px 45px rgba(23,49,31,.14)
+        }
+        .previewCover{height:142px;min-height:0}
+        .previewRoleBadge{top:10px;right:10px;min-height:27px;font-size:6px}
+        .previewContent{
+          display:grid;grid-template-columns:64px minmax(0,1fr);
+          column-gap:12px;padding:0 14px 15px
+        }
+        .previewAvatar{
+          grid-row:1 / span 5;width:64px;height:64px;margin-top:-31px;
+          border:3px solid #0e2b1b;border-radius:18px
+        }
+        .previewKicker{margin-top:10px;font-size:5.5px}
+        .previewContent h2{margin-top:4px;font-size:22px}
+        .previewUsername{margin-top:3px;font-size:7px}
+        .previewLocation{margin-top:7px;font-size:7px}
+        .previewBio,.previewActivities,.previewNotice{display:none}
+
+        .editProfileContent{
+          padding:18px 12px 28px;border:0;border-radius:0;
+          background:transparent;box-shadow:none;backdrop-filter:none
+        }
+        .editProfileHeader{margin-bottom:14px;padding:0 2px}
+        .editProfileHeader h1{font-size:37px}
+        .editProfileHeader p{max-width:320px;margin-top:9px;font-size:8px}
+        .accountType{display:none}
+        .editProfileForm{gap:10px}
+        .formSection{padding:15px;border-radius:18px}
+        .formSectionHeading{gap:9px;margin-bottom:12px}
+        .formSectionHeading > span{width:32px;height:32px;border-radius:10px}
+        .formSectionHeading h2{font-size:16px}
+        .formSectionHeading p{font-size:7px}
+
+        .editFieldsGrid,.uploadGrid{grid-template-columns:1fr;gap:9px}
+        .editInputWrapper input{min-height:45px;font-size:9.5px}
+        .editTextareaWrapper textarea{min-height:100px;font-size:9.5px}
+        .uploadDropzone{min-height:62px}
+        .activityGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+        .activityButton{min-height:38px;font-size:7.5px}
+
+        .formActions{
+          position:fixed;left:10px;right:10px;
+          bottom:calc(10px + env(safe-area-inset-bottom));
+          z-index:50;padding:8px;border-radius:15px
+        }
+        .cancelButton{flex:0 0 92px}
+        .saveButton{flex:1;min-width:0}
+      }
+
+      @media(max-width:420px){
+        .profilePreview{margin-left:8px;margin-right:8px}
+        .editProfileContent{padding-left:9px;padding-right:9px}
+        .editProfileHeader h1{font-size:33px}
+        .formSection{padding:13px;border-radius:17px}
+        .cancelButton{flex-basis:82px;padding:0 11px}
+        .saveButton{padding:0 12px;font-size:8px}
       }
 
       @media (prefers-reduced-motion: reduce) {

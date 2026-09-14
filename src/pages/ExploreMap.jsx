@@ -22,6 +22,57 @@ const SERBIA_CENTER = [44.0165, 21.0059];
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1400&auto=format&fit=crop";
 
+const MAP_FILTERS = [
+  { id: "places", label: "Mesta" },
+  { id: "hosts", label: "Hostovi" },
+  { id: "adventures", label: "Avanture" },
+  { id: "accommodation", label: "Smeštaj" },
+  { id: "services", label: "Usluge" },
+  { id: "rental", label: "Iznajmljivanje" },
+];
+
+const SERVICE_CATEGORIES = [
+  "Vodič",
+  "Instruktor",
+  "Prevoz / transfer",
+  "Fotografija / video",
+  "Organizacija / team building",
+  "Servis / podrška",
+  "Ostalo",
+];
+
+const RENTAL_CATEGORIES = [
+  "Bicikli / e-bike",
+  "Kajak / SUP",
+  "Čamac",
+  "Quad / ATV",
+  "Ski / snowboard oprema",
+  "Kamp oprema",
+  "Planinarska oprema",
+  "Penjačka / via ferrata oprema",
+  "Ostalo",
+];
+
+const LEGACY_ADVENTURE_OFFER_CATEGORIES = new Set([
+  "Planinarenje",
+  "Rafting",
+  "Kajak / SUP",
+  "Biciklizam / MTB",
+  "Off-road",
+  "Kampovanje",
+  "Penjanje / Via ferrata",
+  "Speleologija",
+]);
+
+function inferOfferType(offer) {
+  if (offer?.offer_type) return offer.offer_type;
+
+  const category = String(offer?.category || "").trim();
+  if (category === "Iznajmljivanje opreme") return "rental";
+  if (LEGACY_ADVENTURE_OFFER_CATEGORIES.has(category)) return "adventure";
+  return "service";
+}
+
 function Icon({ name, size = 20, strokeWidth = 2 }) {
   const icons = {
     search: (
@@ -155,7 +206,6 @@ function getPlaceImage(place) {
 }
 
 function makePlaceMarker(place, active) {
-  const count = Number(place.visitors_count || 0);
   const image = escapeHtml(getPlaceImage(place));
   const name = escapeHtml(place.name || "Outdoor mesto");
   const category = escapeHtml(
@@ -164,42 +214,66 @@ function makePlaceMarker(place, active) {
 
   if (!active) {
     return L.divIcon({
-      className: "moStickerMarkerShell",
+      className: "moSimplePlaceMarkerShell",
       html: `
-        <div class="moStickerMarker">
-          <span class="moStickerDot"></span>
-          <strong>${category}</strong>
-          ${count > 0 ? `<b>${count > 99 ? "99+" : count}</b>` : ""}
+        <div class="moSimplePlaceMarker">
+          <span></span>
           <i></i>
         </div>
       `,
-      iconSize: [94, 44],
-      iconAnchor: [47, 40],
+      iconSize: [34, 42],
+      iconAnchor: [17, 38],
     });
   }
 
   return L.divIcon({
-    className: "moExpandedMarkerShell",
+    className: "moActivePlaceMarkerShell",
     html: `
-      <div class="moExpandedMarker">
-        <div class="moExpandedHalo"></div>
-        <div class="moExpandedCard">
+      <div class="moActivePlaceMarker">
+        <div class="moActivePlacePhoto">
           <img src="${image}" alt="" />
-          <div class="moExpandedShade"></div>
-          <div class="moExpandedTop">
-            <span>${category}</span>
-            ${count > 0 ? `<b>${count > 99 ? "99+" : count}</b>` : ""}
-          </div>
-          <div class="moExpandedBottom">
-            <strong>${name}</strong>
-            <small>Tapni karticu ispod za detalje</small>
-          </div>
+          <div class="moActivePlaceShade"></div>
+          <span>${category}</span>
+          <strong>${name}</strong>
         </div>
-        <span class="moExpandedTip"></span>
+        <i></i>
       </div>
     `,
-    iconSize: [146, 156],
-    iconAnchor: [73, 148],
+    iconSize: [132, 126],
+    iconAnchor: [66, 120],
+  });
+}
+
+function makeHostMarker(host, active) {
+  const name = escapeHtml(
+    host?.full_name || host?.username || "Outdoor host"
+  );
+  const initial = escapeHtml(
+    (host?.full_name || host?.username || "H")
+      .trim()
+      .charAt(0)
+      .toUpperCase() || "H"
+  );
+
+  const avatar = host?.map_image_url
+    ? escapeHtml(host.map_image_url)
+    : "";
+
+  return L.divIcon({
+    className: active
+      ? "moSimpleHostMarkerShell active"
+      : "moSimpleHostMarkerShell",
+    html: `
+      <div class="moSimpleHostMarker">
+        <span class="moSimpleHostAvatar">
+          ${avatar ? `<img src="${avatar}" alt="" />` : `<b>${initial}</b>`}
+        </span>
+        ${active ? `<strong>${name}</strong>` : ""}
+        <i></i>
+      </div>
+    `,
+    iconSize: active ? [150, 58] : [48, 54],
+    iconAnchor: active ? [30, 52] : [24, 48],
   });
 }
 
@@ -338,10 +412,18 @@ export default function ExploreMap() {
   const { profile } = useAuth();
 
   const [places, setPlaces] = useState([]);
+  const [hosts, setHosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("all");
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
+  const [selectedHostId, setSelectedHostId] = useState(null);
+  const [activeFilters, setActiveFilters] = useState([
+    "places",
+    "hosts",
+  ]);
+  const [serviceCategories, setServiceCategories] = useState([]);
+  const [rentalCategories, setRentalCategories] = useState([]);
   const [resultsOpen, setResultsOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(true);
   const [locateRequest, setLocateRequest] = useState(1);
@@ -443,6 +525,154 @@ export default function ExploreMap() {
     );
   }, []);
 
+  const loadHosts = useCallback(async () => {
+    const { data: hostRows, error: hostError } = await supabase
+      .from("profiles")
+      .select(`
+        id,
+        username,
+        full_name,
+        avatar_url,
+        city,
+        country,
+        public_location,
+        latitude,
+        longitude
+      `)
+      .eq("role", "host")
+      .not("latitude", "is", null)
+      .not("longitude", "is", null);
+
+    if (hostError) {
+      console.error("Explore hosts:", hostError);
+      setHosts([]);
+      return;
+    }
+
+    const hostIds = (hostRows || []).map((host) => host.id);
+
+    if (hostIds.length === 0) {
+      setHosts([]);
+      return;
+    }
+
+    const [eventsResult, accommodationsResult, offersResult] =
+      await Promise.all([
+        supabase
+          .from("events")
+          .select("host_id, cover_url")
+          .in("host_id", hostIds),
+        supabase
+          .from("host_accommodations")
+          .select("host_id, cover_url")
+          .in("host_id", hostIds)
+          .eq("is_active", true),
+        supabase
+          .from("host_offers")
+          .select("host_id, offer_type, category, cover_url")
+          .in("host_id", hostIds)
+          .eq("is_active", true),
+      ]);
+
+    if (eventsResult.error) {
+      console.warn("Explore host adventures:", eventsResult.error);
+    }
+    if (accommodationsResult.error) {
+      console.warn(
+        "Explore host accommodation:",
+        accommodationsResult.error
+      );
+    }
+    if (offersResult.error) {
+      console.warn("Explore host offers:", offersResult.error);
+    }
+
+    const adventureHosts = new Set(
+      (eventsResult.data || [])
+        .map((row) => row.host_id)
+        .filter(Boolean)
+    );
+    const accommodationHosts = new Set(
+      (accommodationsResult.data || [])
+        .map((row) => row.host_id)
+        .filter(Boolean)
+    );
+    const serviceHosts = new Set();
+    const rentalHosts = new Set();
+    const serviceCategoriesByHost = new Map();
+    const rentalCategoriesByHost = new Map();
+    const mapImageByHost = new Map();
+
+    (eventsResult.data || []).forEach((event) => {
+      if (event?.host_id && event?.cover_url && !mapImageByHost.has(event.host_id)) {
+        mapImageByHost.set(event.host_id, event.cover_url);
+      }
+    });
+
+    (accommodationsResult.data || []).forEach((stay) => {
+      if (stay?.host_id && stay?.cover_url && !mapImageByHost.has(stay.host_id)) {
+        mapImageByHost.set(stay.host_id, stay.cover_url);
+      }
+    });
+
+    (offersResult.data || []).forEach((offer) => {
+      if (!offer?.host_id) return;
+
+      const type = inferOfferType(offer);
+      const category = String(offer.category || "").trim();
+
+      if (offer.cover_url && !mapImageByHost.has(offer.host_id)) {
+        mapImageByHost.set(offer.host_id, offer.cover_url);
+      }
+
+      if (type === "adventure") {
+        adventureHosts.add(offer.host_id);
+      }
+
+      if (type === "service") {
+        serviceHosts.add(offer.host_id);
+        if (!serviceCategoriesByHost.has(offer.host_id)) {
+          serviceCategoriesByHost.set(offer.host_id, new Set());
+        }
+        if (category) {
+          serviceCategoriesByHost.get(offer.host_id).add(category);
+        }
+      }
+
+      if (type === "rental") {
+        rentalHosts.add(offer.host_id);
+        if (!rentalCategoriesByHost.has(offer.host_id)) {
+          rentalCategoriesByHost.set(offer.host_id, new Set());
+        }
+        if (category) {
+          rentalCategoriesByHost.get(offer.host_id).add(category);
+        }
+      }
+    });
+
+    setHosts(
+      (hostRows || []).map((host) => ({
+        ...host,
+        capabilities: {
+          adventures: adventureHosts.has(host.id),
+          accommodation: accommodationHosts.has(host.id),
+          services: serviceHosts.has(host.id),
+          rental: rentalHosts.has(host.id),
+        },
+        serviceCategories: Array.from(
+          serviceCategoriesByHost.get(host.id) || []
+        ),
+        rentalCategories: Array.from(
+          rentalCategoriesByHost.get(host.id) || []
+        ),
+        map_image_url:
+          host.avatar_url ||
+          mapImageByHost.get(host.id) ||
+          "",
+      }))
+    );
+  }, []);
+
   const loadCategories = useCallback(async () => {
     const { data, error } = await supabase
       .from("place_categories")
@@ -461,6 +691,7 @@ export default function ExploreMap() {
 
       await Promise.all([
         loadPlaces(),
+        loadHosts(),
         loadCategories(),
       ]);
 
@@ -474,7 +705,7 @@ export default function ExploreMap() {
     return () => {
       active = false;
     };
-  }, [loadCategories, loadPlaces]);
+  }, [loadCategories, loadHosts, loadPlaces]);
 
   useEffect(() => {
     const channel = supabase
@@ -506,12 +737,48 @@ export default function ExploreMap() {
         },
         loadPlaces
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "profiles",
+        },
+        loadHosts
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "events",
+        },
+        loadHosts
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "host_accommodations",
+        },
+        loadHosts
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "host_offers",
+        },
+        loadHosts
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [loadPlaces]);
+  }, [loadHosts, loadPlaces]);
 
   const handleLocateStart = useCallback(() => {
     setLocateStatus("locating");
@@ -602,6 +869,129 @@ export default function ExploreMap() {
       });
   }, [categoryId, places, query, userLocation]);
 
+  const offerTypeFilters = useMemo(
+    () =>
+      activeFilters.filter((filter) =>
+        [
+          "adventures",
+          "accommodation",
+          "services",
+          "rental",
+        ].includes(filter)
+      ),
+    [activeFilters]
+  );
+
+  const filteredHosts = useMemo(() => {
+    const hostsVisible =
+      activeFilters.includes("hosts") ||
+      offerTypeFilters.length > 0;
+
+    if (!hostsVisible) return [];
+
+    const needle = query.trim().toLowerCase();
+
+    return hosts
+      .filter((host) => {
+        if (offerTypeFilters.length > 0) {
+          const matchesCapability = offerTypeFilters.some(
+            (filter) => Boolean(host.capabilities?.[filter])
+          );
+
+          if (!matchesCapability) return false;
+        }
+
+        if (
+          activeFilters.includes("services") &&
+          serviceCategories.length > 0 &&
+          !serviceCategories.some((category) =>
+            host.serviceCategories?.includes(category)
+          )
+        ) {
+          return false;
+        }
+
+        if (
+          activeFilters.includes("rental") &&
+          rentalCategories.length > 0 &&
+          !rentalCategories.some((category) =>
+            host.rentalCategories?.includes(category)
+          )
+        ) {
+          return false;
+        }
+
+        if (!needle) return true;
+
+        return [
+          host.full_name,
+          host.username,
+          host.public_location,
+          host.city,
+          host.country,
+        ]
+          .filter(Boolean)
+          .some((value) =>
+            String(value).toLowerCase().includes(needle)
+          );
+      })
+      .map((host) => ({
+        ...host,
+        distanceKm: distanceKm(userLocation, host),
+      }))
+      .sort((a, b) => {
+        if (!userLocation) return 0;
+
+        return (
+          (a.distanceKm ?? Number.POSITIVE_INFINITY) -
+          (b.distanceKm ?? Number.POSITIVE_INFINITY)
+        );
+      });
+  }, [
+    activeFilters,
+    hosts,
+    offerTypeFilters,
+    query,
+    rentalCategories,
+    serviceCategories,
+    userLocation,
+  ]);
+
+  const selectedHost = useMemo(
+    () =>
+      hosts.find((host) => host.id === selectedHostId) || null,
+    [hosts, selectedHostId]
+  );
+
+  const selectedHostDistance = useMemo(
+    () =>
+      selectedHost
+        ? distanceKm(userLocation, selectedHost)
+        : null,
+    [selectedHost, userLocation]
+  );
+
+  function toggleMapFilter(filterId) {
+    setActiveFilters((current) =>
+      current.includes(filterId)
+        ? current.filter((item) => item !== filterId)
+        : [...current, filterId]
+    );
+  }
+
+  function toggleCategoryFilter(category, type) {
+    const setter =
+      type === "service"
+        ? setServiceCategories
+        : setRentalCategories;
+
+    setter((current) =>
+      current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category]
+    );
+  }
+
   const selectedPlace = useMemo(
     () =>
       places.find(
@@ -690,7 +1080,7 @@ export default function ExploreMap() {
               onError={handleLocateError}
             />
 
-            <FocusPlace place={selectedPlace} />
+            <FocusPlace place={selectedHost || selectedPlace} />
 
             {userLocation && (
               <>
@@ -725,7 +1115,8 @@ export default function ExploreMap() {
               </>
             )}
 
-            {filteredPlaces.map((place) => (
+            {activeFilters.includes("places") &&
+              filteredPlaces.map((place) => (
               <Marker
                 key={place.id}
                 position={[
@@ -744,6 +1135,31 @@ export default function ExploreMap() {
                 eventHandlers={{
                   click: () => {
                     setSelectedPlaceId(place.id);
+                    setSelectedHostId(null);
+                    setResultsOpen(false);
+                  },
+                }}
+              />
+            ))}
+
+            {filteredHosts.map((host) => (
+              <Marker
+                key={`host-${host.id}`}
+                position={[
+                  Number(host.latitude),
+                  Number(host.longitude),
+                ]}
+                icon={makeHostMarker(
+                  host,
+                  host.id === selectedHostId
+                )}
+                zIndexOffset={
+                  host.id === selectedHostId ? 1200 : 400
+                }
+                eventHandlers={{
+                  click: () => {
+                    setSelectedHostId(host.id);
+                    setSelectedPlaceId(null);
                     setResultsOpen(false);
                   },
                 }}
@@ -849,26 +1265,12 @@ export default function ExploreMap() {
                 </span>
               </div>
 
-              <h1>
-                {userLocation ? (
-                  <>
-                    Šta je
-                    <br />
-                    <em>oko tebe?</em>
-                  </>
-                ) : (
-                  <>
-                    Istraži
-                    <br />
-                    <em>Srbiju.</em>
-                  </>
-                )}
-              </h1>
+              <h1>{userLocation ? "Istraži oko sebe" : "Istraži Srbiju"}</h1>
 
               <p>
                 {userLocation
-                  ? "Najbliža mesta i community tragovi — sortirani oko tvoje pozicije."
-                  : "Čisti stikeri na mapi. Klikni kategoriju i tek tada otkrij fotografiju mesta."}
+                  ? "Mesta i domaćini u tvojoj blizini."
+                  : "Mesta, domaćini i outdoor ponude na jednoj mapi."}
               </p>
             </div>
 
@@ -900,6 +1302,82 @@ export default function ExploreMap() {
               )}
             </label>
 
+            <div className="moLayerFilters">
+              {MAP_FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  className={
+                    activeFilters.includes(filter.id)
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() => toggleMapFilter(filter.id)}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
+            {activeFilters.includes("services") && (
+              <div className="moQuickFilters">
+                <button
+                  type="button"
+                  className={serviceCategories.length === 0 ? "active" : ""}
+                  onClick={() => setServiceCategories([])}
+                >
+                  Sve usluge
+                </button>
+
+                {SERVICE_CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={
+                      serviceCategories.includes(category)
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      toggleCategoryFilter(category, "service")
+                    }
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeFilters.includes("rental") && (
+              <div className="moQuickFilters">
+                <button
+                  type="button"
+                  className={rentalCategories.length === 0 ? "active" : ""}
+                  onClick={() => setRentalCategories([])}
+                >
+                  Sve za iznajmljivanje
+                </button>
+
+                {RENTAL_CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={
+                      rentalCategories.includes(category)
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      toggleCategoryFilter(category, "rental")
+                    }
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeFilters.includes("places") && (
             <div className="moQuickFilters">
               <button
                 type="button"
@@ -937,6 +1415,7 @@ export default function ExploreMap() {
                   </button>
                 ))}
             </div>
+            )}
 
             <div className="moNearMe">
               <div className="moNearMeHead">
@@ -1098,6 +1577,7 @@ export default function ExploreMap() {
 
           {selectedPlace && (
             <section className="moPlaceSheet">
+              <div className="moPopupAccent" />
               <button
                 type="button"
                 className="moPlaceSheetClose"
@@ -1256,7 +1736,7 @@ export default function ExploreMap() {
                     }
                   >
                     <span>
-                      Otvori mesto
+                      Istraži mesto
                     </span>
 
                     <span className="moOpenPlaceArrow">
@@ -1267,6 +1747,103 @@ export default function ExploreMap() {
                     </span>
                   </button>
                 </div>
+              </div>
+            </section>
+          )}
+
+          {selectedHost && (
+            <section className="moHostSheet">
+              <div className="moPopupAccent" />
+
+              <button
+                type="button"
+                className="moHostSheetClose"
+                onClick={() => setSelectedHostId(null)}
+                aria-label="Zatvori domaćina"
+              >
+                <Icon name="close" size={15} />
+              </button>
+
+              <div className="moHostSheetHead">
+                <div className="moHostSheetAvatar">
+                  {selectedHost.avatar_url ? (
+                    <img src={selectedHost.avatar_url} alt="" />
+                  ) : (
+                    <strong>
+                      {(
+                        selectedHost.full_name ||
+                        selectedHost.username ||
+                        "H"
+                      )
+                        .charAt(0)
+                        .toUpperCase()}
+                    </strong>
+                  )}
+
+                  <span className="moHostSheetVerified">
+                    <Icon name="sparkle" size={11} />
+                  </span>
+                </div>
+
+                <div className="moHostSheetIdentity">
+                  <span>MEETOUTDOORS HOST</span>
+
+                  <h2>
+                    {selectedHost.full_name ||
+                      selectedHost.username}
+                  </h2>
+
+                  <p>
+                    <Icon name="mapPin" size={12} />
+                    {selectedHost.public_location ||
+                      [selectedHost.city, selectedHost.country]
+                        .filter(Boolean)
+                        .join(", ") ||
+                      "Javna lokacija"}
+                  </p>
+
+                  {selectedHostDistance != null && (
+                    <small>
+                      <Icon name="navigation" size={11} />
+                      {formatDistance(selectedHostDistance)} od tebe
+                    </small>
+                  )}
+                </div>
+              </div>
+
+              <div className="moHostSheetDivider" />
+
+              <div className="moHostCapabilities">
+                {selectedHost.capabilities?.adventures && (
+                  <span><Icon name="compass" size={12} />Avanture</span>
+                )}
+                {selectedHost.capabilities?.accommodation && (
+                  <span><Icon name="mapPin" size={12} />Smeštaj</span>
+                )}
+                {selectedHost.capabilities?.services && (
+                  <span><Icon name="sparkle" size={12} />Usluge</span>
+                )}
+                {selectedHost.capabilities?.rental && (
+                  <span><Icon name="layers" size={12} />Iznajmljivanje</span>
+                )}
+              </div>
+
+              <div className="moHostSheetFoot">
+                <div>
+                  <small>DIREKTAN KONTAKT</small>
+                  <strong>Detalji i kontakt su na profilu domaćina.</strong>
+                </div>
+
+                <button
+                  type="button"
+                  className="moOpenHost"
+                  onClick={() =>
+                    navigate(`/h/${selectedHost.username}`)
+                  }
+                >
+                  Otvori profil
+                  <Icon name="arrow" size={15} />
+                </button>
               </div>
             </section>
           )}
@@ -1505,6 +2082,31 @@ function ExploreStyles() {
       .moSearch input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font-size:8px}
       .moSearch input::placeholder{color:rgba(255,255,255,.3)}
       .moSearch button{display:grid;place-items:center;width:27px;height:27px;border:0;border-radius:9px;background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+      .moLayerFilters{display:flex;gap:7px;margin-top:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+      .moLayerFilters::-webkit-scrollbar{display:none}
+      .moLayerFilters button{flex:0 0 auto;min-height:34px;padding:0 11px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(7,19,13,.62);backdrop-filter:blur(16px);color:rgba(255,255,255,.7);cursor:pointer;font-size:7px;font-weight:900;letter-spacing:.02em}
+      .moLayerFilters button.active{border-color:#baff9e;background:#baff9e;color:#102619;box-shadow:0 7px 20px rgba(100,240,140,.12)}
+      .moHostMarkerShell{background:transparent!important;border:0!important}
+      .moHostMarker{position:relative;display:flex;align-items:center;gap:8px;width:max-content;max-width:180px;padding:6px 10px 8px 6px;border:1px solid rgba(186,255,158,.45);border-radius:17px;background:rgba(8,24,15,.94);box-shadow:0 12px 30px rgba(0,0,0,.28);backdrop-filter:blur(16px);transform:translateZ(0)}
+      .moHostMarkerShell.active .moHostMarker{border-color:#baff9e;box-shadow:0 16px 40px rgba(0,0,0,.36),0 0 0 3px rgba(186,255,158,.12)}
+      .moHostMarkerAvatar{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#baff9e;color:#14311f;font-size:12px;font-weight:900}
+      .moHostMarkerAvatar img{width:100%;height:100%;object-fit:cover}
+      .moHostMarkerLabel{min-width:0;display:flex;flex-direction:column;gap:1px}
+      .moHostMarkerLabel small{font-size:6px;line-height:1;color:#baff9e;font-weight:900;letter-spacing:.12em}
+      .moHostMarkerLabel strong{max-width:115px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;line-height:1.2;color:#fff}
+      .moHostMarker i{position:absolute;left:25px;bottom:-7px;width:12px;height:12px;background:rgba(8,24,15,.96);border-right:1px solid rgba(186,255,158,.45);border-bottom:1px solid rgba(186,255,158,.45);transform:rotate(45deg)}
+      .moHostSheet{position:absolute;z-index:900;left:50%;bottom:28px;transform:translateX(-50%);width:min(420px,calc(100% - 28px));padding:18px;border:1px solid rgba(186,255,158,.18);border-radius:24px;background:rgba(8,22,14,.96);box-shadow:0 24px 70px rgba(0,0,0,.4);backdrop-filter:blur(24px);color:#fff}
+      .moHostSheetClose{position:absolute;right:12px;top:12px;width:30px;height:30px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.06);color:#fff;display:grid;place-items:center;cursor:pointer}
+      .moHostSheetHead{display:flex;gap:12px;align-items:center;padding-right:34px}
+      .moHostSheetAvatar{width:58px;height:58px;border-radius:18px;overflow:hidden;display:grid;place-items:center;flex:0 0 auto;background:#baff9e;color:#14311f;font-size:20px}
+      .moHostSheetAvatar img{width:100%;height:100%;object-fit:cover}
+      .moHostSheetHead>div:last-child{min-width:0}
+      .moHostSheetHead span{font-size:7px;font-weight:900;letter-spacing:.14em;color:#baff9e}
+      .moHostSheetHead h2{margin:4px 0 3px;font-size:18px;line-height:1.08}
+      .moHostSheetHead p{margin:0;display:flex;align-items:center;gap:4px;font-size:10px;color:rgba(255,255,255,.6)}
+      .moHostCapabilities{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+      .moHostCapabilities span{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:8px;font-weight:800;color:rgba(255,255,255,.74)}
+      .moOpenHost{margin-top:14px;width:100%;min-height:44px;border:0;border-radius:14px;background:#baff9e;color:#102619;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;font-weight:900;cursor:pointer}
       .moQuickFilters{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
       .moQuickFilters::-webkit-scrollbar{display:none}
       .moQuickFilters button{flex:0 0 auto;min-height:31px;padding:0 9px;border:1px solid rgba(255,255,255,.09);border-radius:999px;background:rgba(255,255,255,.045);color:rgba(255,255,255,.58);cursor:pointer;font-size:6px;font-weight:800}
@@ -1654,6 +2256,7 @@ function ExploreStyles() {
         .moCommand.collapsed{right:auto;bottom:12px;width:170px;max-height:none;padding:11px}
         .moCommand.collapsed .moCommandIntro p,
         .moCommand.collapsed .moSearch,
+        .moCommand.collapsed .moLayerFilters,
         .moCommand.collapsed .moQuickFilters,
         .moCommand.collapsed .moNearMe,
         .moCommand.collapsed .moCommandFooter{display:none}
@@ -1700,6 +2303,1412 @@ function ExploreStyles() {
           scroll-behavior:auto!important
         }
       }
+
+      /* =========================================================
+         PREMIUM MAP MARKERS + SELECTED POPUPS
+         Small at rest. Rich only after selection.
+         ========================================================= */
+
+      .moPlacePinShell,
+      .moHostAvatarPinShell{
+        background:transparent!important;
+        border:0!important;
+      }
+
+      .moPlacePin{
+        position:relative;
+        width:54px;
+        height:58px;
+        display:grid;
+        place-items:start center;
+        cursor:pointer;
+        filter:drop-shadow(0 12px 18px rgba(8,22,14,.28));
+        transition:transform .18s ease,filter .18s ease;
+      }
+
+      .moPlacePin:hover{
+        transform:translateY(-3px) scale(1.04);
+        filter:drop-shadow(0 16px 24px rgba(8,22,14,.34));
+      }
+
+      .moPlacePinCore{
+        position:relative;
+        z-index:2;
+        width:42px;
+        height:42px;
+        display:grid;
+        place-items:center;
+        border:3px solid rgba(255,255,255,.98);
+        border-radius:16px 16px 16px 6px;
+        background:linear-gradient(145deg,#1d4a33,#123422);
+        color:#dffff0;
+        box-shadow:
+          0 8px 22px rgba(8,22,14,.25),
+          inset 0 1px 0 rgba(255,255,255,.14);
+        transform:rotate(-45deg);
+      }
+
+      .moPlacePinCore svg{
+        width:20px;
+        height:20px;
+        fill:none;
+        stroke:currentColor;
+        stroke-width:2;
+        stroke-linecap:round;
+        stroke-linejoin:round;
+        transform:rotate(45deg);
+      }
+
+      .moPlacePinCount{
+        position:absolute;
+        z-index:5;
+        top:-5px;
+        right:-2px;
+        min-width:20px;
+        height:20px;
+        padding:0 5px;
+        display:grid;
+        place-items:center;
+        border:2px solid #fff;
+        border-radius:999px;
+        background:#cfffbb;
+        color:#14311f;
+        font-size:7px;
+        font-weight:950;
+        box-shadow:0 5px 12px rgba(0,0,0,.18);
+      }
+
+      .moPlacePinLabel{
+        position:absolute;
+        z-index:3;
+        top:39px;
+        left:50%;
+        max-width:96px;
+        transform:translateX(-50%);
+        padding:4px 7px;
+        overflow:hidden;
+        border:1px solid rgba(255,255,255,.24);
+        border-radius:999px;
+        background:rgba(8,24,15,.88);
+        color:#fff;
+        backdrop-filter:blur(10px);
+        font-size:6px;
+        font-weight:900;
+        letter-spacing:.04em;
+        text-overflow:ellipsis;
+        text-transform:uppercase;
+        white-space:nowrap;
+        box-shadow:0 6px 16px rgba(0,0,0,.18);
+      }
+
+      .moPlacePinShell.active .moPlacePin{
+        transform:translateY(-7px) scale(1.14);
+        filter:drop-shadow(0 20px 30px rgba(8,22,14,.4));
+      }
+
+      .moPlacePinShell.active .moPlacePinCore{
+        background:linear-gradient(145deg,#cfffbb,#aef48f);
+        color:#14311f;
+        border-color:#fff;
+        box-shadow:
+          0 0 0 6px rgba(186,255,158,.13),
+          0 12px 28px rgba(0,0,0,.28);
+      }
+
+      .moPlacePinShell.active .moPlacePinLabel{
+        background:#102c1d;
+        border-color:rgba(207,255,187,.45);
+        color:#dffff0;
+      }
+
+      .moHostAvatarPin{
+        position:relative;
+        width:56px;
+        height:58px;
+        display:grid;
+        place-items:start center;
+        cursor:pointer;
+        transition:transform .18s ease,filter .18s ease;
+        filter:drop-shadow(0 12px 18px rgba(7,18,11,.3));
+      }
+
+      .moHostAvatarPin:hover{
+        transform:translateY(-3px) scale(1.04);
+      }
+
+      .moHostAvatarPinImage{
+        position:relative;
+        z-index:2;
+        width:46px;
+        height:46px;
+        overflow:hidden;
+        display:grid;
+        place-items:center;
+        border:3px solid #fff;
+        border-radius:50%;
+        background:linear-gradient(145deg,#cfffbb,#9de87f);
+        color:#14311f;
+        font-size:14px;
+        font-weight:950;
+        box-shadow:
+          0 0 0 3px rgba(23,63,44,.90),
+          0 10px 26px rgba(0,0,0,.26);
+      }
+
+      .moHostAvatarPinImage img{
+        width:100%;
+        height:100%;
+        object-fit:cover;
+      }
+
+      .moHostVerifiedDot{
+        position:absolute;
+        z-index:5;
+        right:0;
+        top:28px;
+        width:19px;
+        height:19px;
+        display:grid;
+        place-items:center;
+        border:2px solid #fff;
+        border-radius:50%;
+        background:#baff9e;
+        color:#14311f;
+        box-shadow:0 5px 12px rgba(0,0,0,.2);
+      }
+
+      .moHostVerifiedDot svg{
+        width:11px;
+        height:11px;
+        fill:none;
+        stroke:currentColor;
+        stroke-width:2.5;
+        stroke-linecap:round;
+        stroke-linejoin:round;
+      }
+
+      .moHostCapabilityCount{
+        position:absolute;
+        z-index:5;
+        left:-3px;
+        top:-3px;
+        min-width:19px;
+        height:19px;
+        padding:0 4px;
+        display:grid;
+        place-items:center;
+        border:2px solid #fff;
+        border-radius:999px;
+        background:#173f2c;
+        color:#dffff0;
+        font-size:7px;
+        font-weight:950;
+      }
+
+      .moHostAvatarPin>i{
+        position:absolute;
+        z-index:1;
+        top:37px;
+        width:15px;
+        height:15px;
+        border-right:3px solid #fff;
+        border-bottom:3px solid #fff;
+        background:#173f2c;
+        transform:rotate(45deg);
+      }
+
+      .moHostAvatarPinShell.active .moHostAvatarPin{
+        transform:translateY(-6px) scale(1.13);
+      }
+
+      .moHostAvatarPinShell.active .moHostAvatarPinImage{
+        box-shadow:
+          0 0 0 4px #baff9e,
+          0 0 0 9px rgba(186,255,158,.13),
+          0 16px 34px rgba(0,0,0,.34);
+      }
+
+      /* Selected cards: one visual language for places + hosts. */
+      .moPopupAccent{
+        position:absolute;
+        z-index:8;
+        top:0;
+        left:30px;
+        right:30px;
+        height:2px;
+        background:linear-gradient(90deg,transparent,#baff9e,transparent);
+        opacity:.85;
+        pointer-events:none;
+      }
+
+      .moPlaceSheet,
+      .moHostSheet{
+        border:1px solid rgba(255,255,255,.13)!important;
+        background:
+          radial-gradient(circle at 10% 0%,rgba(186,255,158,.07),transparent 19rem),
+          linear-gradient(145deg,rgba(7,20,12,.96),rgba(13,33,20,.94))!important;
+        box-shadow:
+          0 34px 90px rgba(0,0,0,.42),
+          inset 0 1px 0 rgba(255,255,255,.05)!important;
+        backdrop-filter:blur(28px) saturate(1.14)!important;
+      }
+
+      .moPlaceSheet{
+        right:24px!important;
+        bottom:24px!important;
+        grid-template-columns:168px minmax(0,1fr)!important;
+        width:min(550px,calc(100% - 48px))!important;
+        border-radius:27px!important;
+      }
+
+      .moPlaceSheetVisual{
+        min-height:228px!important;
+      }
+
+      .moPlaceSheetVisual>span{
+        right:12px!important;
+        bottom:12px!important;
+        left:12px!important;
+        padding:7px 9px!important;
+        border-radius:11px!important;
+        color:#dffff0!important;
+        font-size:7px!important;
+        letter-spacing:.08em!important;
+      }
+
+      .moPlaceSheetBody{
+        padding:18px 18px 17px!important;
+      }
+
+      .moPlaceSheetClose,
+      .moHostSheetClose{
+        width:34px!important;
+        height:34px!important;
+        border-radius:11px!important;
+        background:rgba(255,255,255,.065)!important;
+        transition:background .18s ease,transform .18s ease;
+      }
+
+      .moPlaceSheetClose:hover,
+      .moHostSheetClose:hover{
+        background:rgba(255,255,255,.12)!important;
+        transform:scale(1.04);
+      }
+
+      .moPlaceSheetMeta>span,
+      .moPlaceSheetMeta em{
+        font-size:8px!important;
+      }
+
+      .moPlaceSheet h2{
+        margin:9px 0 0!important;
+        font-size:27px!important;
+        line-height:.98!important;
+        letter-spacing:-.05em!important;
+        text-wrap:balance;
+      }
+
+      .moPlaceSheetDescription{
+        margin-top:9px!important;
+        color:rgba(255,255,255,.56)!important;
+        font-size:9px!important;
+        line-height:1.55!important;
+        -webkit-line-clamp:3!important;
+      }
+
+      .moPlaceSheetStats{
+        gap:7px!important;
+        margin-top:13px!important;
+      }
+
+      .moPlaceSheetStats>span{
+        padding:9px!important;
+        border-radius:11px!important;
+        font-size:8px!important;
+      }
+
+      .moPlaceSheetStats small{
+        font-size:6px!important;
+      }
+
+      .moProtectedNote{
+        padding:8px 10px!important;
+        border-radius:11px!important;
+        font-size:7px!important;
+      }
+
+      .moPlaceSheetActions{
+        gap:8px!important;
+        margin-top:12px!important;
+      }
+
+      .moNavigatePlace,
+      .moOpenPlace{
+        min-height:48px!important;
+        border-radius:13px!important;
+      }
+
+      .moNavigatePlace small{
+        font-size:5px!important;
+      }
+
+      .moNavigatePlace strong,
+      .moOpenPlace{
+        font-size:8px!important;
+      }
+
+      .moHostSheet{
+        left:50%!important;
+        bottom:24px!important;
+        width:min(470px,calc(100% - 40px))!important;
+        padding:20px!important;
+        border-radius:27px!important;
+        animation:moHostPopIn .22s ease both;
+      }
+
+      @keyframes moHostPopIn{
+        from{opacity:0;transform:translate(-50%,12px) scale(.985)}
+        to{opacity:1;transform:translate(-50%,0) scale(1)}
+      }
+
+      .moHostSheetHead{
+        gap:14px!important;
+        padding-right:38px!important;
+      }
+
+      .moHostSheetAvatar{
+        position:relative;
+        width:70px!important;
+        height:70px!important;
+        border:3px solid rgba(255,255,255,.92);
+        border-radius:22px!important;
+        background:#baff9e!important;
+        box-shadow:0 12px 28px rgba(0,0,0,.24);
+      }
+
+      .moHostSheetVerified{
+        position:absolute;
+        right:-5px;
+        bottom:-5px;
+        width:24px;
+        height:24px;
+        display:grid!important;
+        place-items:center;
+        border:2px solid #102619;
+        border-radius:50%;
+        background:#baff9e;
+        color:#14311f!important;
+      }
+
+      .moHostSheetIdentity{
+        min-width:0;
+      }
+
+      .moHostSheetIdentity>span{
+        color:#baff9e!important;
+        font-size:7px!important;
+        letter-spacing:.14em!important;
+      }
+
+      .moHostSheetHead h2{
+        margin:5px 0 5px!important;
+        font-size:24px!important;
+        line-height:1!important;
+        letter-spacing:-.04em;
+      }
+
+      .moHostSheetHead p{
+        color:rgba(255,255,255,.59)!important;
+        font-size:10px!important;
+      }
+
+      .moHostSheetIdentity>small{
+        display:flex;
+        align-items:center;
+        gap:5px;
+        margin-top:5px;
+        color:#d9ffc8;
+        font-size:8px;
+        font-weight:800;
+      }
+
+      .moHostSheetDivider{
+        height:1px;
+        margin:16px 0 13px;
+        background:linear-gradient(90deg,rgba(255,255,255,.11),rgba(255,255,255,.025));
+      }
+
+      .moHostCapabilities{
+        gap:7px!important;
+        margin-top:0!important;
+      }
+
+      .moHostCapabilities span{
+        display:inline-flex!important;
+        align-items:center!important;
+        gap:5px!important;
+        padding:7px 9px!important;
+        border-color:rgba(186,255,158,.10)!important;
+        border-radius:999px!important;
+        background:rgba(186,255,158,.055)!important;
+        color:rgba(239,255,233,.82)!important;
+        font-size:8px!important;
+      }
+
+      .moHostSheetFoot{
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto;
+        align-items:center;
+        gap:14px;
+        margin-top:16px;
+      }
+
+      .moHostSheetFoot>div small,
+      .moHostSheetFoot>div strong{
+        display:block;
+      }
+
+      .moHostSheetFoot>div small{
+        color:rgba(255,255,255,.32);
+        font-size:6px;
+        font-weight:900;
+        letter-spacing:.1em;
+      }
+
+      .moHostSheetFoot>div strong{
+        margin-top:3px;
+        color:rgba(255,255,255,.72);
+        font-size:8px;
+        line-height:1.35;
+      }
+
+      .moOpenHost{
+        width:auto!important;
+        min-width:132px;
+        min-height:46px!important;
+        margin-top:0!important;
+        padding:0 15px!important;
+        border-radius:13px!important;
+        background:#baff9e!important;
+        color:#102619!important;
+        font-size:9px!important;
+        box-shadow:0 10px 26px rgba(186,255,158,.12);
+      }
+
+      @media(max-width:700px){
+        .moPlacePinLabel{
+          display:none;
+        }
+
+        .moPlacePin{
+          width:48px;
+          height:52px;
+        }
+
+        .moPlacePinCore{
+          width:38px;
+          height:38px;
+          border-radius:14px 14px 14px 5px;
+        }
+
+        .moHostAvatarPin{
+          width:50px;
+          height:54px;
+        }
+
+        .moHostAvatarPinImage{
+          width:42px;
+          height:42px;
+        }
+
+        .moPlaceSheet,
+        .moHostSheet{
+          right:10px!important;
+          bottom:10px!important;
+          left:10px!important;
+          width:auto!important;
+          transform:none!important;
+        }
+
+        .moPlaceSheet{
+          grid-template-columns:112px minmax(0,1fr)!important;
+          border-radius:21px!important;
+        }
+
+        .moPlaceSheetVisual{
+          min-height:190px!important;
+        }
+
+        .moPlaceSheetBody{
+          padding:13px!important;
+        }
+
+        .moPlaceSheet h2{
+          font-size:20px!important;
+        }
+
+        .moPlaceSheetDescription{
+          display:none!important;
+        }
+
+        .moPlaceSheetStats{
+          gap:4px!important;
+        }
+
+        .moPlaceSheetStats>span{
+          padding:6px!important;
+          font-size:7px!important;
+        }
+
+        .moPlaceSheetStats small{
+          display:none;
+        }
+
+        .moPlaceSheetActions{
+          grid-template-columns:1fr!important;
+        }
+
+        .moNavigatePlace{
+          display:none!important;
+        }
+
+        .moHostSheet{
+          padding:17px!important;
+          border-radius:22px!important;
+          animation:moHostPopMobile .22s ease both;
+        }
+
+        @keyframes moHostPopMobile{
+          from{opacity:0;transform:translateY(12px) scale(.985)}
+          to{opacity:1;transform:translateY(0) scale(1)}
+        }
+
+        .moHostSheetAvatar{
+          width:60px!important;
+          height:60px!important;
+          border-radius:18px!important;
+        }
+
+        .moHostSheetHead h2{
+          font-size:20px!important;
+        }
+
+        .moHostSheetFoot{
+          grid-template-columns:1fr!important;
+        }
+
+        .moOpenHost{
+          width:100%!important;
+        }
+      }
+
+      @media(max-width:470px){
+        .moPlaceSheet{
+          grid-template-columns:98px minmax(0,1fr)!important;
+        }
+
+        .moPlaceSheetVisual{
+          min-height:176px!important;
+        }
+
+        .moHostCapabilities span{
+          padding:6px 8px!important;
+          font-size:7px!important;
+        }
+      }
+
+
+      /* =========================================================
+         EXPLORE V4 — SIMPLE MAP
+         The map is the product. Controls stay quiet.
+         ========================================================= */
+
+      .moExplore{
+        position:fixed!important;
+        inset:0!important;
+        z-index:99999!important;
+        min-height:100svh!important;
+        background:#e8eee6!important;
+      }
+
+      .moMapStage{
+        height:100svh!important;
+        min-height:0!important;
+        background:#e8eee6!important;
+      }
+
+      .moMapShade,
+      .moMapVignette{
+        display:none!important;
+      }
+
+      .moLeaflet{
+        filter:saturate(.86) contrast(.96) brightness(1.02);
+      }
+
+      /* Small, clear top bar. */
+      .moMapHeader{
+        top:14px!important;
+        right:14px!important;
+        left:14px!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:space-between!important;
+        pointer-events:none;
+      }
+
+      .moBrand,
+      .moHeaderActions{
+        pointer-events:auto;
+      }
+
+      .moBrand{
+        min-height:44px!important;
+        padding:5px 11px 5px 6px!important;
+        border:1px solid rgba(24,54,36,.08)!important;
+        border-radius:16px!important;
+        background:rgba(255,255,255,.94)!important;
+        color:#173b27!important;
+        box-shadow:0 10px 30px rgba(20,42,28,.10)!important;
+        backdrop-filter:blur(18px)!important;
+      }
+
+      .moBrand>span{
+        width:34px!important;
+        height:34px!important;
+        border-radius:11px!important;
+        background:#173f2c!important;
+        color:#cfffbb!important;
+      }
+
+      .moBrand strong{
+        color:#173b27!important;
+        font-size:8px!important;
+      }
+
+      .moBrand small{
+        color:#748078!important;
+        font-size:7px!important;
+      }
+
+      .moHeaderActions{
+        gap:7px!important;
+      }
+
+      .moHeaderActions button,
+      .moHeaderActions a{
+        min-height:44px!important;
+        border:1px solid rgba(24,54,36,.08)!important;
+        border-radius:14px!important;
+        background:rgba(255,255,255,.94)!important;
+        color:#173b27!important;
+        box-shadow:0 10px 30px rgba(20,42,28,.10)!important;
+      }
+
+      .moHeaderDiscover{
+        background:#173f2c!important;
+        color:#fff!important;
+      }
+
+      /* Compact search + filters only. */
+      .moCommand{
+        top:auto!important;
+        right:auto!important;
+        bottom:18px!important;
+        left:18px!important;
+        width:min(410px,calc(100% - 36px))!important;
+        max-height:none!important;
+        padding:12px!important;
+        overflow:visible!important;
+        border:1px solid rgba(24,54,36,.08)!important;
+        border-radius:20px!important;
+        background:rgba(255,255,255,.95)!important;
+        color:#173b27!important;
+        box-shadow:0 18px 48px rgba(20,42,28,.14)!important;
+        backdrop-filter:blur(20px)!important;
+      }
+
+      .moCommandGlow,
+      .moCommandCollapse,
+      .moCommandBadge,
+      .moNearMe,
+      .moCommandFooter{
+        display:none!important;
+      }
+
+      .moCommandIntro{
+        display:flex!important;
+        align-items:end!important;
+        justify-content:space-between!important;
+        gap:12px!important;
+        margin:0 0 9px!important;
+      }
+
+      .moCommandIntro h1{
+        margin:0!important;
+        color:#173b27!important;
+        font-size:19px!important;
+        line-height:1!important;
+        letter-spacing:-.04em!important;
+      }
+
+      .moCommandIntro h1 em{
+        color:inherit!important;
+        font-style:normal!important;
+      }
+
+      .moCommandIntro p{
+        max-width:180px!important;
+        margin:0!important;
+        color:#728077!important;
+        font-size:8px!important;
+        line-height:1.35!important;
+        text-align:right;
+      }
+
+      .moSearch{
+        min-height:44px!important;
+        margin:0!important;
+        border:1px solid #e1e7e2!important;
+        border-radius:13px!important;
+        background:#f5f7f4!important;
+        box-shadow:none!important;
+      }
+
+      .moSearch input{
+        color:#173b27!important;
+        font-size:11px!important;
+      }
+
+      .moSearch input::placeholder{
+        color:#87938b!important;
+      }
+
+      .moSearchIcon,
+      .moSearch button{
+        color:#4a6252!important;
+      }
+
+      .moLayerFilters,
+      .moQuickFilters{
+        display:flex!important;
+        gap:6px!important;
+        margin-top:8px!important;
+        padding-bottom:1px!important;
+        overflow-x:auto!important;
+        scrollbar-width:none!important;
+      }
+
+      .moLayerFilters::-webkit-scrollbar,
+      .moQuickFilters::-webkit-scrollbar{
+        display:none!important;
+      }
+
+      .moLayerFilters button,
+      .moQuickFilters button{
+        flex:0 0 auto!important;
+        min-height:32px!important;
+        padding:0 10px!important;
+        border:1px solid #dfe5e0!important;
+        border-radius:999px!important;
+        background:#fff!important;
+        color:#6e7c73!important;
+        font-size:7px!important;
+        font-weight:850!important;
+        box-shadow:none!important;
+      }
+
+      .moLayerFilters button.active,
+      .moQuickFilters button.active{
+        border-color:#173f2c!important;
+        background:#173f2c!important;
+        color:#fff!important;
+      }
+
+      .moPassportHud,
+      .moFloatingDiscover{
+        display:none!important;
+      }
+
+      /* --- Markers --- */
+      .moSimplePlaceMarkerShell,
+      .moActivePlaceMarkerShell,
+      .moSimpleHostMarkerShell{
+        background:transparent!important;
+        border:0!important;
+      }
+
+      .moSimplePlaceMarker{
+        position:relative;
+        width:34px;
+        height:40px;
+        cursor:pointer;
+        filter:drop-shadow(0 8px 14px rgba(18,44,28,.22));
+        transition:transform .16s ease;
+      }
+
+      .moSimplePlaceMarker:hover{
+        transform:translateY(-2px) scale(1.04);
+      }
+
+      .moSimplePlaceMarker>span{
+        position:absolute;
+        left:4px;
+        top:2px;
+        width:26px;
+        height:26px;
+        border:3px solid #fff;
+        border-radius:50% 50% 50% 8px;
+        background:#173f2c;
+        transform:rotate(-45deg);
+        box-shadow:0 5px 15px rgba(0,0,0,.18);
+      }
+
+      .moSimplePlaceMarker>span::after{
+        content:"";
+        position:absolute;
+        inset:8px;
+        border-radius:50%;
+        background:#cfffbb;
+      }
+
+      .moSimplePlaceMarker>i{
+        display:none;
+      }
+
+      .moActivePlaceMarker{
+        position:relative;
+        width:132px;
+        height:124px;
+        cursor:pointer;
+        filter:drop-shadow(0 16px 30px rgba(16,40,25,.28));
+      }
+
+      .moActivePlacePhoto{
+        position:absolute;
+        inset:0 0 14px;
+        overflow:hidden;
+        border:3px solid #fff;
+        border-radius:19px;
+        background:#173f2c;
+        box-shadow:0 0 0 3px #173f2c;
+      }
+
+      .moActivePlacePhoto img{
+        width:100%;
+        height:100%;
+        object-fit:cover;
+        display:block;
+      }
+
+      .moActivePlaceShade{
+        position:absolute;
+        inset:0;
+        background:linear-gradient(180deg,rgba(6,18,11,.02),rgba(6,18,11,.10) 40%,rgba(6,18,11,.82));
+      }
+
+      .moActivePlacePhoto span{
+        position:absolute;
+        top:8px;
+        left:8px;
+        max-width:108px;
+        padding:4px 6px;
+        overflow:hidden;
+        border-radius:999px;
+        background:rgba(9,25,15,.68);
+        color:#dffff0;
+        font-size:5px;
+        font-weight:900;
+        text-overflow:ellipsis;
+        text-transform:uppercase;
+        white-space:nowrap;
+        backdrop-filter:blur(7px);
+      }
+
+      .moActivePlacePhoto strong{
+        position:absolute;
+        right:8px;
+        bottom:8px;
+        left:8px;
+        color:#fff;
+        font-size:8px;
+        line-height:1.12;
+        text-shadow:0 2px 8px rgba(0,0,0,.45);
+      }
+
+      .moActivePlaceMarker>i{
+        position:absolute;
+        left:54px;
+        bottom:3px;
+        width:19px;
+        height:19px;
+        border-right:3px solid #fff;
+        border-bottom:3px solid #fff;
+        background:#173f2c;
+        transform:rotate(45deg);
+        z-index:-1;
+      }
+
+      .moSimpleHostMarker{
+        position:relative;
+        min-width:48px;
+        height:52px;
+        display:flex;
+        align-items:flex-start;
+        gap:7px;
+        cursor:pointer;
+        filter:drop-shadow(0 8px 16px rgba(18,44,28,.24));
+        transition:transform .16s ease;
+      }
+
+      .moSimpleHostMarker:hover{
+        transform:translateY(-2px) scale(1.04);
+      }
+
+      .moSimpleHostAvatar{
+        position:relative;
+        z-index:2;
+        width:46px;
+        height:46px;
+        flex:0 0 auto;
+        overflow:hidden;
+        display:grid;
+        place-items:center;
+        border:3px solid #fff;
+        border-radius:15px;
+        background:#173f2c;
+        color:#fff;
+        font-size:13px;
+        font-weight:950;
+        box-shadow:0 0 0 3px #173f2c,0 8px 20px rgba(0,0,0,.20);
+      }
+
+      .moSimpleHostAvatar img{
+        position:absolute;
+        inset:0;
+        width:100%;
+        height:100%;
+        display:block;
+        object-fit:cover;
+        object-position:center;
+        background:#173f2c;
+      }
+
+      .moSimpleHostMarker>strong{
+        max-width:96px;
+        margin-top:7px;
+        padding:8px 10px;
+        overflow:hidden;
+        border:1px solid rgba(23,63,44,.10);
+        border-radius:12px;
+        background:rgba(255,255,255,.96);
+        color:#173f2c;
+        font-size:8px;
+        font-weight:900;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        box-shadow:0 7px 18px rgba(20,42,28,.12);
+      }
+
+      .moSimpleHostMarker>i{
+        position:absolute;
+        z-index:1;
+        left:16px;
+        top:35px;
+        width:12px;
+        height:12px;
+        border-right:3px solid #fff;
+        border-bottom:3px solid #fff;
+        background:#173f2c;
+        transform:rotate(45deg);
+      }
+
+      .moSimpleHostMarkerShell.active .moSimpleHostAvatar{
+        box-shadow:0 0 0 4px #cfffbb,0 10px 22px rgba(0,0,0,.22);
+      }
+
+      /* Popup cards: white, minimal, easier to read on the map. */
+      .moPlaceSheet,
+      .moHostSheet{
+        border:1px solid rgba(24,54,36,.10)!important;
+        background:rgba(255,255,255,.97)!important;
+        color:#173b27!important;
+        box-shadow:0 24px 70px rgba(20,42,28,.18)!important;
+        backdrop-filter:blur(20px)!important;
+      }
+
+      .moPopupAccent{
+        background:linear-gradient(90deg,transparent,#173f2c,transparent)!important;
+        opacity:.3!important;
+      }
+
+      .moPlaceSheetMeta>span,
+      .moPlaceSheetMeta em,
+      .moPlaceSheetDescription,
+      .moHostSheetHead p,
+      .moHostSheetFoot>div strong{
+        color:#6f7c73!important;
+      }
+
+      .moPlaceSheet h2,
+      .moHostSheetHead h2{
+        color:#173b27!important;
+      }
+
+      .moHostSheetIdentity>span,
+      .moHostSheetIdentity>small{
+        color:#2f6243!important;
+      }
+
+      .moHostSheetClose,
+      .moPlaceSheetClose{
+        border-color:#e1e7e2!important;
+        background:#f4f6f3!important;
+        color:#38503f!important;
+      }
+
+      .moHostSheetAvatar{
+        border-color:#fff!important;
+        background:#cfffbb!important;
+        color:#173f2c!important;
+        box-shadow:0 8px 22px rgba(20,42,28,.12)!important;
+      }
+
+      .moHostSheetVerified{
+        border-color:#fff!important;
+      }
+
+      .moHostSheetDivider{
+        background:#e8ece8!important;
+      }
+
+      .moHostCapabilities span{
+        border-color:#e1e7e2!important;
+        background:#f4f6f3!important;
+        color:#516158!important;
+      }
+
+      .moOpenHost,
+      .moOpenPlace{
+        background:#173f2c!important;
+        color:#fff!important;
+      }
+
+      .moNavigatePlace{
+        border-color:#e0e6e1!important;
+        background:#f4f6f3!important;
+        color:#173f2c!important;
+      }
+
+      .moPlaceSheetStats>span{
+        border-color:#e2e7e3!important;
+        background:#f6f8f5!important;
+        color:#244d37!important;
+      }
+
+      .moProtectedNote{
+        background:#f1f5f1!important;
+        color:#5d6e63!important;
+      }
+
+      @media(max-width:700px){
+        .moExplore{
+          z-index:2147483000!important;
+        }
+
+        .moMapHeader{
+          top:10px!important;
+          right:10px!important;
+          left:10px!important;
+        }
+
+        .moBrand{
+          min-height:40px!important;
+          padding-right:8px!important;
+        }
+
+        .moBrand>span{
+          width:30px!important;
+          height:30px!important;
+        }
+
+        .moBrand small,
+        .moHeaderActions span{
+          display:none!important;
+        }
+
+        .moHeaderActions button,
+        .moHeaderActions a{
+          width:40px!important;
+          min-height:40px!important;
+          padding:0!important;
+        }
+
+        .moCommand{
+          right:10px!important;
+          bottom:10px!important;
+          left:10px!important;
+          width:auto!important;
+          padding:10px!important;
+          border-radius:17px!important;
+        }
+
+        .moCommandIntro{
+          display:none!important;
+        }
+
+        .moSearch{
+          min-height:41px!important;
+        }
+
+        .moLayerFilters,
+        .moQuickFilters{
+          margin-top:7px!important;
+        }
+
+        .moLayerFilters button,
+        .moQuickFilters button{
+          min-height:30px!important;
+          padding:0 9px!important;
+          font-size:7px!important;
+        }
+
+        .moPlaceSheet{
+          right:10px!important;
+          bottom:106px!important;
+          left:10px!important;
+          width:auto!important;
+          grid-template-columns:104px minmax(0,1fr)!important;
+          border-radius:18px!important;
+        }
+
+        .moPlaceSheetVisual{
+          min-height:174px!important;
+        }
+
+        .moPlaceSheetBody{
+          padding:12px!important;
+        }
+
+        .moPlaceSheet h2{
+          font-size:18px!important;
+        }
+
+        .moPlaceSheetDescription,
+        .moPlaceSheetStats small,
+        .moNavigatePlace{
+          display:none!important;
+        }
+
+        .moPlaceSheetActions{
+          grid-template-columns:1fr!important;
+        }
+
+        .moHostSheet{
+          right:10px!important;
+          bottom:106px!important;
+          left:10px!important;
+          width:auto!important;
+          transform:none!important;
+          padding:15px!important;
+          border-radius:18px!important;
+        }
+
+        .moHostSheetAvatar{
+          width:56px!important;
+          height:56px!important;
+          border-radius:17px!important;
+        }
+
+        .moHostSheetHead h2{
+          font-size:19px!important;
+        }
+
+        .moHostSheetFoot{
+          grid-template-columns:1fr!important;
+          gap:10px!important;
+        }
+
+        .moOpenHost{
+          width:100%!important;
+        }
+
+        .moActivePlaceMarker{
+          width:116px;
+          height:112px;
+        }
+
+        .moActivePlaceMarker>i{
+          left:47px;
+        }
+      }
+
+
+      /* =========================================================
+         FILTER CARD — PREMIUM COMPACT PASS
+         ========================================================= */
+
+      .moCommand{
+        padding:11px 11px 10px!important;
+        border:1px solid rgba(18,53,34,.10)!important;
+        border-radius:22px!important;
+        background:
+          linear-gradient(180deg,rgba(255,255,255,.985),rgba(248,250,247,.97))!important;
+        box-shadow:
+          0 22px 60px rgba(19,44,28,.16),
+          0 2px 10px rgba(19,44,28,.05)!important;
+        backdrop-filter:blur(26px) saturate(1.08)!important;
+      }
+
+      .moSearch{
+        position:relative!important;
+        min-height:46px!important;
+        padding:0 8px!important;
+        border:1px solid rgba(29,67,44,.09)!important;
+        border-radius:15px!important;
+        background:#fff!important;
+        box-shadow:
+          inset 0 0 0 1px rgba(255,255,255,.7),
+          0 6px 18px rgba(23,59,39,.04)!important;
+      }
+
+      .moSearch::after{
+        content:"";
+        position:absolute;
+        right:12px;
+        bottom:-9px;
+        left:12px;
+        height:1px;
+        background:linear-gradient(90deg,transparent,#dfe7e0,transparent);
+        pointer-events:none;
+      }
+
+      .moSearchIcon{
+        width:34px!important;
+        height:34px!important;
+        display:grid!important;
+        place-items:center!important;
+        border-radius:11px!important;
+        background:#f1f5f1!important;
+        color:#315842!important;
+      }
+
+      .moSearch input{
+        font-size:11px!important;
+        font-weight:700!important;
+        letter-spacing:-.01em!important;
+      }
+
+      .moLayerFilters{
+        margin-top:15px!important;
+        padding:1px 1px 2px!important;
+        gap:7px!important;
+      }
+
+      .moLayerFilters button{
+        min-height:34px!important;
+        padding:0 12px!important;
+        border:1px solid #e2e8e3!important;
+        border-radius:12px!important;
+        background:#f9faf8!important;
+        color:#5e6f64!important;
+        font-size:7.5px!important;
+        font-weight:900!important;
+        letter-spacing:.01em!important;
+        transition:
+          transform .16s ease,
+          background .16s ease,
+          border-color .16s ease,
+          color .16s ease!important;
+      }
+
+      .moLayerFilters button:hover{
+        transform:translateY(-1px);
+        border-color:#ccd9cf!important;
+        color:#294a36!important;
+      }
+
+      .moLayerFilters button.active{
+        border-color:#173f2c!important;
+        background:
+          linear-gradient(145deg,#1d4a33,#143522)!important;
+        color:#fff!important;
+        box-shadow:0 7px 16px rgba(23,63,44,.16)!important;
+      }
+
+      .moQuickFilters{
+        margin-top:7px!important;
+        padding-top:7px!important;
+        border-top:1px solid #edf1ed!important;
+      }
+
+      .moQuickFilters button{
+        min-height:29px!important;
+        padding:0 9px!important;
+        border-color:#e8ece9!important;
+        background:#fff!important;
+        color:#7b877f!important;
+        font-size:6.5px!important;
+      }
+
+      .moQuickFilters button.active{
+        border-color:#cfe0d2!important;
+        background:#edf5ef!important;
+        color:#234c35!important;
+        box-shadow:none!important;
+      }
+
+      @media(max-width:700px){
+        .moCommand{
+          right:8px!important;
+          bottom:8px!important;
+          left:8px!important;
+          padding:9px!important;
+          border-radius:19px!important;
+          box-shadow:
+            0 16px 42px rgba(19,44,28,.16),
+            0 1px 6px rgba(19,44,28,.05)!important;
+        }
+
+        .moSearch{
+          min-height:43px!important;
+          border-radius:13px!important;
+        }
+
+        .moSearchIcon{
+          width:31px!important;
+          height:31px!important;
+          border-radius:10px!important;
+        }
+
+        .moLayerFilters{
+          margin-top:13px!important;
+          gap:6px!important;
+        }
+
+        .moLayerFilters button{
+          min-height:32px!important;
+          padding:0 10px!important;
+          border-radius:11px!important;
+          font-size:7px!important;
+        }
+
+        .moQuickFilters{
+          gap:5px!important;
+        }
+
+        .moQuickFilters button{
+          min-height:28px!important;
+          font-size:6px!important;
+        }
+
+        .moSimpleHostAvatar{
+          width:44px!important;
+          height:44px!important;
+          border-radius:14px!important;
+        }
+      }
+
     `}</style>
   );
 }

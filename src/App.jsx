@@ -51,6 +51,11 @@ import HostTerms from "./pages/HostTerms";
 import Safety from "./pages/Safety";
 import Stays from "./pages/Stays";
 
+// NOVO
+import AccommodationDetails from "./pages/AccommodationDetails";
+import ServiceDetails from "./pages/ServiceDetails";
+import RentalDetails from "./pages/RentalDetails";
+
 function AppRoutes() {
   const {
     loading,
@@ -188,6 +193,24 @@ function AppRoutes() {
           element={<EventDetails />}
         />
 
+        {/* NOVO - SMEŠTAJ */}
+        <Route
+          path="/accommodation/:id"
+          element={<AccommodationDetails />}
+        />
+
+        {/* NOVO - USLUGE */}
+        <Route
+          path="/service/:id"
+          element={<ServiceDetails />}
+        />
+
+        {/* NOVO - IZNAJMLJIVANJE */}
+        <Route
+          path="/rental/:id"
+          element={<RentalDetails />}
+        />
+
         <Route
           path="/dashboard"
           element={<HostDashboard />}
@@ -209,16 +232,14 @@ function AppRoutes() {
         />
 
         <Route
-  path="/stays"
-  element={<Stays />}
-/>
+          path="/stays"
+          element={<Stays />}
+        />
 
         <Route
           path="/notifications"
           element={<Notifications />}
         />
-
-        
 
         <Route
           path="/host/demand/:id"
@@ -229,7 +250,6 @@ function AppRoutes() {
           path="/agent/request/:id"
           element={<AdventureRequestDetails />}
         />
-
 
         <Route
           path="/booking-requests"

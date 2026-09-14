@@ -226,976 +226,719 @@ export default function Login() {
 
   return (
     <>
-      <LoginStyles />
+      <style>{css}</style>
 
-      <main className="loginPage">
-        <section className="loginVisual">
-          <div className="loginVisualBackground" />
-          <div className="loginVisualOverlay" />
+      <main className="signupPage userMode">
+        <div className="ambient ambientOne" />
+        <div className="ambient ambientTwo" />
 
-        
-
-          <div className="visualContent">
-            <span className="visualKicker">
-              <span />
-              Dobrodošao nazad
-            </span>
-
-            <h1>
-              Avantura se nastavlja tamo gde si stao.
-            </h1>
-
-            <p>
-              Prijavi se, pronađi sledeći događaj ili nastavi da razvijaš
-              svoju outdoor zajednicu.
-            </p>
-
-            <div className="visualBenefits">
-              <article>
-                <span>
-                  <Icon name="sparkles" size={17} />
-                </span>
-
-                <div>
-                  <strong>Personalizovane avanture</strong>
-                  <small>
-                    Događaji i iskustva prilagođeni tvojim interesovanjima.
-                  </small>
-                </div>
-              </article>
-
-              <article>
-                <span>
-                  <Icon name="users" size={17} />
-                </span>
-
-                <div>
-                  <strong>Zajednica pravih ljudi</strong>
-                  <small>
-                    Upoznaj avanturiste i domaćine koji dele tvoju energiju.
-                  </small>
-                </div>
-              </article>
-
-              <article>
-                <span>
-                  <Icon name="shield" size={17} />
-                </span>
-
-                <div>
-                  <strong>Sigurno i jednostavno</strong>
-                  <small>
-                    Svi događaji, rezervacije i profili na jednom mestu.
-                  </small>
-                </div>
-              </article>
-            </div>
+        <section className="authShell">
+          <div className="photoLayer" aria-hidden="true">
+            <div className="mountain mountainBack" />
+            <div className="mountain mountainFront" />
+            <div className="photoShade" />
           </div>
 
-          <div className="visualFooter">
-            <span>Prave avanture.</span>
-            <span>Pravi ljudi.</span>
-          </div>
-        </section>
+          <header className="topBrand">
+            <Link to="/" className="brand" aria-label="MeetOutdoors početna">
+              <span className="brandMark">
+                <Icon name="compass" size={22} />
+              </span>
 
-        <section className="loginFormSection">
-          <div className="loginFormContainer">
-            <Link to="/" className="backLink">
-              <Icon name="arrowLeft" size={17} />
-              Nazad na početnu
+              <span className="brandText">
+                Meet<span>Outdoors</span>
+              </span>
             </Link>
 
-            <div className="formHeader">
-              <span className="formKicker">Prijava</span>
+            <span className="brandMini">DISCOVER · CONNECT · GO OUTSIDE</span>
+          </header>
 
-              <h2>Dobrodošao nazad.</h2>
+          <section className="authContent">
+            <div className="intro">
+              <span className="introTag">
+                <Icon name="sparkles" size={13} />
+                DOBRODOŠAO NAZAD
+              </span>
+
+              <h1>Tvoja sledeća avantura nastavlja se ovde.</h1>
 
               <p>
-                Unesi podatke svog MeetOutdoors naloga i nastavi svoju
-                avanturu.
+                Prijavi se i nastavi da otkrivaš avanture, smeštaj, mesta i domaćine — sve na jednom mestu.
               </p>
+
+              <div className="introMeta">
+                <span>Avanture</span><i />
+                <span>Smeštaj</span><i />
+                <span>Mapa</span><i />
+                <span>AI Agent</span>
+              </div>
             </div>
 
-            <form className="loginForm" onSubmit={handleLogin}>
-              <label className="inputGroup">
-                <span>Email adresa</span>
-
-                <div className="inputWrapper">
-                  <Icon name="mail" size={19} />
-
-                  <input
-                    required
-                    type="email"
-                    value={email}
-                    onChange={handleEmailChange}
-                    placeholder="ime@email.com"
-                    autoComplete="email"
-                    disabled={loading}
-                  />
+            <div className="authPanel">
+              <div className="panelTop">
+                <div>
+                  <span className="panelEyebrow">PRIJAVA</span>
+                  <h2>Dobrodošao nazad</h2>
                 </div>
-              </label>
 
-              <label className="inputGroup">
-                <span>Lozinka</span>
-
-                <div className="inputWrapper">
-                  <Icon name="lock" size={19} />
-
-                  <input
-                    required
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={handlePasswordChange}
-                    placeholder="Unesi svoju lozinku"
-                    autoComplete="current-password"
-                    disabled={loading}
-                  />
-
-                  <button
-                    type="button"
-                    className="passwordToggle"
-                    onClick={() => setShowPassword((current) => !current)}
-                    aria-label={
-                      showPassword
-                        ? "Sakrij lozinku"
-                        : "Prikaži lozinku"
-                    }
-                    disabled={loading}
-                  >
-                    <Icon
-                      name={showPassword ? "eyeOff" : "eye"}
-                      size={18}
-                    />
-                  </button>
-                </div>
-              </label>
-
-              <div className="loginOptions">
-                <label className="rememberOption">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(event) =>
-                      setRememberMe(event.target.checked)
-                    }
-                  />
-
-                  <span className="customCheckbox">
-                    {rememberMe && <Icon name="check" size={13} />}
-                  </span>
-
-                  Zapamti me
-                </label>
-
-                <Link to="/forgot-password" className="forgotLink">
-                  Zaboravljena lozinka?
-                </Link>
+                <span className="stepBadge">Brzo</span>
               </div>
 
-              {error && (
-                <div className="loginError" role="alert">
-                  <span>
-                    <Icon name="alert" size={18} />
-                  </span>
+              <form className="form" onSubmit={handleLogin}>
+                <label className="field">
+                  <span>Email adresa</span>
 
-                  <p>{error}</p>
+                  <div className="control">
+                    <Icon name="mail" size={17} />
+
+                    <input
+                      required
+                      type="email"
+                      value={email}
+                      onChange={handleEmailChange}
+                      placeholder="ime@email.com"
+                      autoComplete="email"
+                      disabled={loading}
+                    />
+                  </div>
+                </label>
+
+                <label className="field">
+                  <span>Lozinka</span>
+
+                  <div className="control">
+                    <Icon name="lock" size={17} />
+
+                    <input
+                      required
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={handlePasswordChange}
+                      placeholder="Unesi svoju lozinku"
+                      autoComplete="current-password"
+                      disabled={loading}
+                    />
+
+                    <button
+                      type="button"
+                      className="eyeButton"
+                      onClick={() => setShowPassword((current) => !current)}
+                      aria-label={showPassword ? "Sakrij lozinku" : "Prikaži lozinku"}
+                      disabled={loading}
+                    >
+                      <Icon name={showPassword ? "eyeOff" : "eye"} size={17} />
+                    </button>
+                  </div>
+                </label>
+
+                <div className="loginOptions">
+                  <label className="rememberOption">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(event) => setRememberMe(event.target.checked)}
+                    />
+
+                    <span className="customCheckbox">
+                      {rememberMe && <Icon name="check" size={11} />}
+                    </span>
+
+                    Zapamti me
+                  </label>
+
+                  <Link to="/forgot-password" className="forgotLink">
+                    Zaboravljena lozinka?
+                  </Link>
                 </div>
-              )}
 
-              <button
-                className="loginButton"
-                disabled={loading}
-                type="submit"
-              >
-                {loading ? (
-                  <>
-                    <span className="buttonLoader" />
-                    Prijavljivanje...
-                  </>
-                ) : (
-                  <>
-                    Prijavi se
-                    <Icon name="arrowRight" size={19} />
-                  </>
+                {error && (
+                  <div className="loginError" role="alert">
+                    <p>{error}</p>
+                  </div>
                 )}
-              </button>
-            </form>
 
-            <div className="divider">
-              <span />
-              <p>Nemaš nalog?</p>
-              <span />
+                <button className="submit" type="submit" disabled={loading}>
+                  <span>{loading ? "Prijavljivanje..." : "Prijavi se"}</span>
+
+                  {loading ? (
+                    <span className="buttonLoader" />
+                  ) : (
+                    <Icon name="arrowRight" size={18} />
+                  )}
+                </button>
+              </form>
+
+              <div className="loginTrust">
+                <span><Icon name="check" size={11} /> Sigurno</span>
+                <span><Icon name="check" size={11} /> Brzo</span>
+                <span><Icon name="check" size={11} /> Bez komplikacija</span>
+              </div>
+
+              <p className="loginText">
+                Nemaš nalog? <Link to="/signup">Kreiraj nalog</Link>
+              </p>
             </div>
-
-            <Link to="/signup" className="signupButton">
-              Kreiraj novi nalog
-              <Icon name="arrowRight" size={18} />
-            </Link>
-
-            <div className="accountTypes">
-              <article>
-                <span>
-                  <Icon name="users" size={18} />
-                </span>
-
-                <div>
-                  <strong>Korisnik</strong>
-                  <small>Pronađi i rezerviši avanture.</small>
-                </div>
-              </article>
-
-              <article>
-                <span>
-                  <Icon name="sparkles" size={18} />
-                </span>
-
-                <div>
-                  <strong>Domaćin</strong>
-                  <small>Kreiraj događaje i iskustva.</small>
-                </div>
-              </article>
-            </div>
-
-            <p className="securityNotice">
-              <Icon name="shield" size={15} />
-              Tvoji podaci su zaštićeni i nikada ih ne delimo bez tvoje
-              dozvole.
-            </p>
-          </div>
+          </section>
         </section>
       </main>
     </>
   );
 }
 
-function LoginStyles() {
-  return (
-    <style>{`
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        background: #f4f5ef;
-      }
-
-      button,
-      input {
-        font: inherit;
-      }
-
-      button,
-      a {
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      .loginPage {
-        min-height: 100vh;
-        display: grid;
-        grid-template-columns:
-          minmax(440px, 0.95fr)
-          minmax(540px, 1.05fr);
-        background:
-          radial-gradient(
-            circle at 85% 10%,
-            rgba(173, 205, 138, 0.13),
-            transparent 26%
-          ),
-          #f4f5ef;
-        color: #17271f;
-        font-family:
-          Inter,
-          ui-sans-serif,
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          sans-serif;
-      }
-
-      .loginPage a {
-        color: inherit;
-        text-decoration: none;
-      }
-
-      .loginVisual {
-        position: relative;
-        isolation: isolate;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        padding: 42px;
-        overflow: hidden;
-        color: white;
-      }
-
-      .loginVisualBackground,
-      .loginVisualOverlay {
-        position: absolute;
-        inset: 0;
-      }
-
-      .loginVisualBackground {
-        z-index: -3;
-        background:
-          url("https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1900&q=92")
-          center / cover;
-        transition: transform 8s ease;
-      }
-
-      .loginVisual:hover .loginVisualBackground {
-        transform: scale(1.035);
-      }
-
-      .loginVisualOverlay {
-        z-index: -2;
-        background:
-          linear-gradient(
-            180deg,
-            rgba(5, 15, 9, 0.36),
-            rgba(5, 16, 10, 0.69) 56%,
-            rgba(4, 13, 8, 0.96)
-          ),
-          linear-gradient(
-            90deg,
-            rgba(4, 15, 8, 0.57),
-            transparent 72%
-          );
-      }
-
-      .loginVisual::after {
-        position: absolute;
-        inset: auto -150px -190px auto;
-        z-index: -1;
-        width: 420px;
-        height: 420px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 50%;
-        content: "";
-        box-shadow:
-          0 0 0 70px rgba(255, 255, 255, 0.025),
-          0 0 0 140px rgba(255, 255, 255, 0.018);
-      }
-
-      .loginLogo {
-        display: inline-flex;
-        align-items: center;
-        gap: 11px;
-        align-self: flex-start;
-        font-size: 17px;
-        font-weight: 900;
-        letter-spacing: -0.035em;
-      }
-
-      .loginLogo > span {
-        display: grid;
-        place-items: center;
-        width: 44px;
-        height: 44px;
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.1);
-        color: #c9f28c;
-        backdrop-filter: blur(14px);
-      }
-
-      .visualContent {
-        max-width: 660px;
-        margin-top: auto;
-        padding: 90px 0 55px;
-      }
-
-      .visualKicker {
-        display: inline-flex;
-        align-items: center;
-        gap: 9px;
-        padding: 9px 13px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        color: rgba(255, 255, 255, 0.82);
-        font-size: 11px;
-        font-weight: 850;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        backdrop-filter: blur(12px);
-      }
-
-      .visualKicker > span {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: #c9f28c;
-        box-shadow: 0 0 0 5px rgba(201, 242, 140, 0.12);
-      }
-
-      .visualContent h1 {
-        max-width: 700px;
-        margin: 24px 0 0;
-        font-size: clamp(54px, 5.7vw, 86px);
-        line-height: 0.96;
-        letter-spacing: -0.075em;
-      }
-
-      .visualContent > p {
-        max-width: 570px;
-        margin: 25px 0 0;
-        color: rgba(255, 255, 255, 0.68);
-        font-size: 16px;
-        line-height: 1.75;
-      }
-
-      .visualBenefits {
-        display: grid;
-        gap: 13px;
-        margin-top: 36px;
-      }
-
-      .visualBenefits article {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-      }
-
-      .visualBenefits article > span {
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        width: 37px;
-        height: 37px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.09);
-        color: #c9f28c;
-        backdrop-filter: blur(10px);
-      }
-
-      .visualBenefits strong,
-      .visualBenefits small {
-        display: block;
-      }
-
-      .visualBenefits strong {
-        font-size: 13px;
-      }
-
-      .visualBenefits small {
-        margin-top: 3px;
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 11px;
-      }
-
-      .visualFooter {
-        display: flex;
-        justify-content: space-between;
-        gap: 20px;
-        padding-top: 24px;
-        border-top: 1px solid rgba(255, 255, 255, 0.13);
-        color: rgba(255, 255, 255, 0.43);
-        font-size: 10px;
-        font-weight: 850;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-
-      .loginFormSection {
-        display: grid;
-        place-items: center;
-        min-width: 0;
-        padding: 60px 34px;
-      }
-
-      .loginFormContainer {
-        width: min(540px, 100%);
-      }
-
-      .backLink {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        margin-bottom: 55px;
-        color: #6f7d74;
-        font-size: 11px;
-        font-weight: 800;
-        transition: 0.18s ease;
-      }
-
-      .backLink:hover {
-        gap: 11px;
-        color: #274331;
-      }
-
-      .formHeader {
-        margin-bottom: 30px;
-      }
-
-      .formKicker {
-        display: block;
-        margin-bottom: 12px;
-        color: #719052;
-        font-size: 11px;
-        font-weight: 900;
-        letter-spacing: 0.13em;
-        text-transform: uppercase;
-      }
-
-      .formHeader h2 {
-        margin: 0;
-        font-size: clamp(42px, 5vw, 61px);
-        line-height: 1;
-        letter-spacing: -0.065em;
-      }
-
-      .formHeader p {
-        max-width: 490px;
-        margin: 16px 0 0;
-        color: #77837b;
-        font-size: 14px;
-        line-height: 1.65;
-      }
-
-      .loginForm {
-        display: grid;
-        gap: 18px;
-      }
-
-      .inputGroup {
-        display: grid;
-        gap: 8px;
-      }
-
-      .inputGroup > span {
-        color: #45544b;
-        font-size: 11px;
-        font-weight: 850;
-      }
-
-      .inputWrapper {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        min-height: 58px;
-        padding: 0 16px;
-        border: 1px solid #d7ded5;
-        border-radius: 17px;
-        background: rgba(255, 255, 255, 0.78);
-        color: #7d8981;
-        box-shadow: 0 8px 24px rgba(37, 55, 44, 0.035);
-        transition: 0.18s ease;
-      }
-
-      .inputWrapper:focus-within {
-        border-color: #759552;
-        background: white;
-        box-shadow:
-          0 0 0 4px rgba(117, 149, 82, 0.11),
-          0 12px 30px rgba(37, 55, 44, 0.055);
-      }
-
-      .inputWrapper input {
-        width: 100%;
-        min-width: 0;
-        min-height: 56px;
-        border: 0;
-        outline: 0;
-        background: transparent;
-        color: #17271f;
-        font-size: 13px;
-      }
-
-      .inputWrapper input::placeholder {
-        color: #a0aaa2;
-      }
-
-      .inputWrapper input:disabled {
-        cursor: not-allowed;
-      }
-
-      .passwordToggle {
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        width: 35px;
-        height: 35px;
-        padding: 0;
-        border: 0;
-        border-radius: 10px;
-        background: transparent;
-        color: #7b877f;
-        cursor: pointer;
-        transition: 0.17s ease;
-      }
-
-      .passwordToggle:hover:not(:disabled) {
-        background: #edf1eb;
-        color: #294333;
-      }
-
-      .passwordToggle:disabled {
-        cursor: not-allowed;
-      }
-
-      .loginOptions {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 15px;
-        margin-top: -2px;
-      }
-
-      .rememberOption {
-        display: inline-flex;
-        align-items: center;
-        gap: 9px;
-        color: #647168;
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: 700;
-      }
-
-      .rememberOption input {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        opacity: 0;
-        pointer-events: none;
-      }
-
-      .customCheckbox {
-        display: grid;
-        place-items: center;
-        width: 20px;
-        height: 20px;
-        border: 1px solid #cdd6ca;
-        border-radius: 6px;
-        background: white;
-        color: #183a27;
-      }
-
-      .rememberOption input:checked + .customCheckbox {
-        border-color: #c9f28c;
-        background: #c9f28c;
-      }
-
-      .forgotLink {
-        color: #3e5c46 !important;
-        font-size: 11px;
-        font-weight: 850;
-      }
-
-      .forgotLink:hover {
-        text-decoration: underline;
-      }
-
-      .loginError {
-        display: flex;
-        align-items: flex-start;
-        gap: 11px;
-        padding: 15px;
-        border: 1px solid #efc9c3;
-        border-radius: 16px;
-        background: #fff1ef;
-        color: #963d33;
-      }
-
-      .loginError > span {
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        width: 30px;
-        height: 30px;
-        border-radius: 10px;
-        background: #f8d9d5;
-      }
-
-      .loginError p {
-        margin: 5px 0 0;
-        font-size: 12px;
-        line-height: 1.5;
-      }
-
-      .loginButton {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 11px;
-        width: 100%;
-        min-height: 61px;
-        margin-top: 3px;
-        padding: 0 23px;
-        border: 0;
-        border-radius: 17px;
-        background: #183a27;
-        color: white;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 900;
-        box-shadow: 0 17px 38px rgba(24, 58, 39, 0.2);
-        transition: 0.2s ease;
-      }
-
-      .loginButton:hover:not(:disabled) {
-        gap: 17px;
-        background: #214c34;
-        transform: translateY(-2px);
-      }
-
-      .loginButton:disabled {
-        cursor: not-allowed;
-        opacity: 0.7;
-      }
-
-      .buttonLoader {
-        width: 19px;
-        height: 19px;
-        border: 2px solid rgba(255, 255, 255, 0.28);
-        border-top-color: white;
-        border-radius: 50%;
-        animation: loginSpin 0.8s linear infinite;
-      }
-
-      @keyframes loginSpin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
-      .divider {
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        align-items: center;
-        gap: 12px;
-        margin: 29px 0 20px;
-      }
-
-      .divider span {
-        height: 1px;
-        background: #dce2da;
-      }
-
-      .divider p {
-        margin: 0;
-        color: #8c968f;
-        font-size: 10px;
-        font-weight: 700;
-      }
-
-      .signupButton {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 9px;
-        min-height: 56px;
-        padding: 0 20px;
-        border: 1px solid #ccd6c9;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.6);
-        color: #294333 !important;
-        font-size: 12px;
-        font-weight: 900;
-        transition: 0.19s ease;
-      }
-
-      .signupButton:hover {
-        gap: 14px;
-        border-color: #8fa483;
-        background: white;
-        transform: translateY(-2px);
-      }
-
-      .accountTypes {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 11px;
-        margin-top: 17px;
-      }
-
-      .accountTypes article {
-        display: flex;
-        align-items: center;
-        gap: 11px;
-        padding: 14px;
-        border: 1px solid #dfe4dd;
-        border-radius: 15px;
-        background: rgba(255, 255, 255, 0.48);
-      }
-
-      .accountTypes article > span {
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        width: 37px;
-        height: 37px;
-        border-radius: 11px;
-        background: #e8f1dd;
-        color: #57723e;
-      }
-
-      .accountTypes strong,
-      .accountTypes small {
-        display: block;
-      }
-
-      .accountTypes strong {
-        color: #34463b;
-        font-size: 11px;
-      }
-
-      .accountTypes small {
-        margin-top: 3px;
-        color: #879189;
-        font-size: 9px;
-        line-height: 1.4;
-      }
-
-      .securityNotice {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        max-width: 470px;
-        margin: 25px auto 0;
-        color: #8b958e;
-        font-size: 9px;
-        line-height: 1.5;
-        text-align: center;
-      }
-
-      .securityNotice svg {
-        flex: 0 0 auto;
-        color: #6f8f51;
-      }
-
-      @media (max-width: 1030px) {
-        .loginPage {
-          grid-template-columns: 410px minmax(0, 1fr);
-        }
-
-        .loginVisual {
-          padding: 32px;
-        }
-
-        .visualContent h1 {
-          font-size: 60px;
-        }
-
-        .loginFormSection {
-          padding-inline: 26px;
-        }
-      }
-
-      @media (max-width: 820px) {
-        .loginPage {
-          display: block;
-        }
-
-        .loginVisual {
-          min-height: 620px;
-          padding: 28px;
-        }
-
-        .visualContent {
-          max-width: 670px;
-          padding-top: 150px;
-        }
-
-        .visualContent h1 {
-          font-size: clamp(52px, 10vw, 73px);
-        }
-
-        .visualBenefits {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
-        .visualBenefits article {
-          align-items: flex-start;
-        }
-
-        .loginFormSection {
-          padding: 65px 24px 90px;
-        }
-
-        .loginFormContainer {
-          width: min(600px, 100%);
-        }
-
-        .backLink {
-          margin-bottom: 38px;
-        }
-      }
-
-      @media (max-width: 620px) {
-        .loginVisual {
-          min-height: 610px;
-        }
-
-        .visualContent {
-          padding-bottom: 32px;
-        }
-
-        .visualContent h1 {
-          font-size: 49px;
-        }
-
-        .visualContent > p {
-          font-size: 14px;
-        }
-
-        .visualBenefits {
-          grid-template-columns: 1fr;
-        }
-
-        .visualFooter {
-          display: none;
-        }
-
-        .formHeader h2 {
-          font-size: 43px;
-        }
-      }
-
-      @media (max-width: 430px) {
-        .loginVisual {
-          min-height: 570px;
-          padding: 22px;
-        }
-
-        .loginLogo {
-          font-size: 15px;
-        }
-
-        .visualContent h1 {
-          font-size: 42px;
-        }
-
-        .loginFormSection {
-          padding: 52px 16px 75px;
-        }
-
-        .formHeader h2 {
-          font-size: 38px;
-        }
-
-        .loginOptions {
-          align-items: flex-start;
-          flex-direction: column;
-        }
-
-        .accountTypes {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        *,
-        *::before,
-        *::after {
-          animation: none !important;
-          scroll-behavior: auto !important;
-          transition: none !important;
-        }
-      }
-    `}</style>
-  );
-}
+const css = `
+  *{box-sizing:border-box}
+  html,body,#root{width:100%;height:100%;min-height:100%;overflow:hidden}
+  body{margin:0;background:#dfe9df}
+  button,input{font:inherit}
+  a{text-decoration:none}
+  button,a{-webkit-tap-highlight-color:transparent}
+
+  .signupPage{
+    position:relative;
+    width:100%;
+    height:100svh;
+    overflow:hidden;
+    padding:12px;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#fff;
+    background:
+      radial-gradient(circle at 12% 18%,rgba(182,221,136,.38),transparent 26%),
+      radial-gradient(circle at 87% 80%,rgba(66,113,78,.18),transparent 28%),
+      linear-gradient(135deg,#e8f0e6,#d6e4d6 48%,#eef3eb);
+  }
+
+  .ambient{position:absolute;border-radius:999px;filter:blur(40px);pointer-events:none}
+  .ambientOne{width:420px;height:420px;left:-160px;top:-190px;background:rgba(184,229,125,.22)}
+  .ambientTwo{width:440px;height:440px;right:-190px;bottom:-210px;background:rgba(50,98,64,.12)}
+
+  .authShell{
+    position:relative;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    border-radius:34px;
+    background:#173b28;
+    box-shadow:0 38px 100px rgba(34,66,43,.20);
+    isolation:isolate;
+  }
+
+  .photoLayer{
+    position:absolute;
+    inset:0;
+    z-index:-3;
+    overflow:hidden;
+    background:
+      linear-gradient(180deg,rgba(18,38,52,.06),rgba(8,28,20,.18)),
+      url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2200&q=92")
+      center/cover no-repeat;
+  }
+
+  .photoLayer:before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(115deg,rgba(255,255,255,.16),transparent 31%),
+      radial-gradient(circle at 70% 30%,rgba(255,255,255,.18),transparent 22%);
+    opacity:.7;
+  }
+
+  .mountain{display:none}
+
+  .mountainBack{
+    width:70vw;height:56vw;
+    min-width:760px;min-height:610px;
+    right:-18vw;bottom:-24vw;
+    clip-path:polygon(0 100%,22% 42%,36% 58%,53% 18%,72% 53%,84% 35%,100% 100%);
+    background:
+      linear-gradient(120deg,rgba(230,239,221,.86) 0 28%,rgba(87,118,90,.90) 29% 53%,rgba(38,78,50,.98) 54% 100%);
+  }
+
+  .mountainFront{
+    width:76vw;height:52vw;
+    min-width:820px;min-height:560px;
+    left:-15vw;bottom:-31vw;
+    clip-path:polygon(0 100%,0 64%,17% 45%,29% 58%,43% 26%,57% 50%,69% 31%,83% 58%,100% 37%,100% 100%);
+    background:
+      linear-gradient(125deg,#173e29 0 34%,#2d5d3d 35% 58%,#0d2c1b 59% 100%);
+    opacity:.96;
+  }
+
+  .photoShade{
+    position:absolute;inset:0;
+    background:
+      linear-gradient(90deg,rgba(7,24,32,.44) 0%,rgba(7,24,32,.18) 43%,rgba(5,29,22,.12) 64%,rgba(5,21,28,.36) 100%),
+      linear-gradient(0deg,rgba(4,20,16,.72) 0%,rgba(6,27,21,.28) 52%,rgba(13,34,46,.08) 100%);
+  }
+
+  .topBrand{
+    position:absolute;
+    z-index:5;
+    top:30px;left:34px;right:34px;
+    display:flex;align-items:center;justify-content:space-between;gap:20px;
+  }
+
+  .brand{display:inline-flex;align-items:center;gap:12px;color:#fff}
+  .brandMark{
+    display:grid;place-items:center;
+    width:44px;height:44px;
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:15px;
+    background:rgba(255,255,255,.075);
+    color:#d9ff9a;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.13);
+    backdrop-filter:blur(16px);
+  }
+  .brandText{
+    font-size:26px;line-height:1;font-weight:950;letter-spacing:-.06em;
+    text-shadow:0 4px 18px rgba(0,0,0,.18)
+  }
+  .brandText span{color:#d8ff94}
+  .brandMini{
+    color:rgba(255,255,255,.58);
+    font-size:8px;font-weight:900;letter-spacing:.18em
+  }
+
+  .authContent{
+    position:relative;
+    z-index:2;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 445px;
+    align-items:center;
+    gap:64px;
+    width:100%;height:100%;
+    padding:88px clamp(42px,6vw,100px) 44px;
+  }
+
+  .intro{max-width:720px}
+  .introTag{
+    display:inline-flex;align-items:center;gap:8px;
+    margin-bottom:16px;
+    color:#d8ff94;font-size:9px;font-weight:950;letter-spacing:.16em
+  }
+  .intro h1{
+    max-width:690px;
+    margin:0;
+    font-size:clamp(56px,5.8vw,92px);
+    line-height:.90;
+    letter-spacing:-.078em;
+    font-weight:950;
+    text-wrap:balance;
+    text-shadow:0 14px 42px rgba(4,22,11,.26)
+  }
+  .intro p{
+    max-width:560px;margin:22px 0 0;
+    color:rgba(255,255,255,.73);
+    font-size:14px;line-height:1.7
+  }
+  .introMeta{
+    display:flex;align-items:center;flex-wrap:wrap;gap:10px;
+    margin-top:25px;color:rgba(255,255,255,.56);
+    font-size:8px;font-weight:900;letter-spacing:.12em;text-transform:uppercase
+  }
+  .introMeta i{width:4px;height:4px;border-radius:50%;background:#d8ff94}
+
+  .authPanel{
+    width:100%;
+    transform:translateY(-34px);
+    padding:24px;
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:30px;
+    background:
+      linear-gradient(155deg,rgba(255,255,255,.12),rgba(10,31,25,.24) 42%,rgba(4,18,14,.36));
+    box-shadow:
+      0 30px 78px rgba(2,18,11,.25),
+      inset 0 1px 0 rgba(255,255,255,.17),
+      inset 0 -1px 0 rgba(255,255,255,.05);
+    backdrop-filter:blur(30px) saturate(145%);
+    -webkit-backdrop-filter:blur(30px) saturate(145%);
+  }
+
+  .panelTop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  .panelEyebrow{
+    color:#d8ff94;font-size:7px;font-weight:950;letter-spacing:.16em
+  }
+  .panelTop h2{
+    margin:7px 0 0;color:#fff;font-size:30px;line-height:1;letter-spacing:-.055em
+  }
+  .stepBadge{
+    flex:0 0 auto;
+    padding:7px 9px;border:1px solid rgba(255,255,255,.12);border-radius:999px;
+    background:rgba(255,255,255,.07);color:rgba(255,255,255,.64);
+    font-size:7px;font-weight:850
+  }
+
+  .roleSwitch{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:16px 0 13px}
+  .roleSwitch button{
+    position:relative;
+    display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;
+    min-width:0;min-height:64px;padding:9px 11px;
+    border:1px solid rgba(255,255,255,.11);border-radius:16px;
+    background:rgba(255,255,255,.055);color:rgba(255,255,255,.76);
+    cursor:pointer;text-align:left;transition:.18s ease
+  }
+  .roleSwitch button:hover{background:rgba(255,255,255,.10)}
+  .roleSwitch button.active{
+    border-color:rgba(216,255,148,.46);
+    background:linear-gradient(180deg,rgba(216,255,148,.16),rgba(216,255,148,.075));
+    color:#fff;
+    box-shadow:0 10px 24px rgba(0,0,0,.13)
+  }
+  .roleIcon{
+    display:grid;place-items:center;width:34px;height:34px;border-radius:11px;
+    background:rgba(255,255,255,.08);color:rgba(255,255,255,.70)
+  }
+  .active .roleIcon{background:rgba(216,255,148,.14);color:#d8ff94}
+  .roleSwitch strong,.roleSwitch small{display:block}
+  .roleSwitch strong{font-size:10px}
+  .roleSwitch small{margin-top:3px;color:rgba(255,255,255,.46);font-size:7px}
+  .active small{color:rgba(255,255,255,.62)}
+  .roleCheck{
+    display:grid;place-items:center;width:16px;height:16px;border:1px solid rgba(255,255,255,.13);
+    border-radius:50%
+  }
+  .active .roleCheck{border-color:#d8ff94;background:#d8ff94;color:#183c28}
+
+  .form{display:grid;gap:10px}
+  .field{display:grid;gap:5px}
+  .field>span{color:rgba(255,255,255,.74);font-size:8px;font-weight:850}
+  .control{
+    display:grid;grid-template-columns:auto 1fr auto;align-items:center;
+    min-height:49px;padding:0 13px;
+    border:1px solid rgba(255,255,255,.14);border-radius:13px;
+    background:rgba(255,255,255,.78);color:#758279;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7);transition:.18s ease
+  }
+  .control:focus-within{
+    border-color:#d8ff94;background:rgba(255,255,255,.94);box-shadow:0 0 0 4px rgba(216,255,148,.10)
+  }
+  .control input{
+    width:100%;min-width:0;height:47px;padding:0 9px;border:0;outline:0;background:transparent;
+    color:#193325;font-size:11px
+  }
+  .control input::placeholder{color:#98a29b}
+  .eyeButton{
+    display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:9px;
+    background:transparent;color:#7d8981;cursor:pointer
+  }
+  .eyeButton:hover{background:#edf1eb}
+
+  .legal{
+    position:relative;display:grid;grid-template-columns:auto 1fr;align-items:start;gap:8px;
+    color:rgba(255,255,255,.53);font-size:5.8px;line-height:1.48;cursor:pointer
+  }
+  .legal input{position:absolute;opacity:0}
+  .legalBox{
+    display:grid;place-items:center;width:17px;height:17px;border:1px solid rgba(255,255,255,.22);
+    border-radius:5px;background:rgba(255,255,255,.07)
+  }
+  .legal input:checked+.legalBox{border-color:#d8ff94;background:#d8ff94;color:#173b27}
+  .legal a{color:#d8ff94;font-weight:850;text-decoration:underline;text-decoration-color:rgba(216,255,148,.28)}
+
+  .error{
+    padding:8px 10px;border:1px solid rgba(255,142,128,.24);border-radius:10px;
+    background:rgba(117,28,21,.38);color:#ffd1ca;font-size:7px;line-height:1.4
+  }
+
+  .submit{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    min-height:50px;padding:0 15px;border:0;border-radius:13px;
+    background:linear-gradient(180deg,#d9ff9b,#bfe878);color:#183b28;
+    cursor:pointer;font-size:9px;font-weight:950;
+    box-shadow:0 14px 30px rgba(179,228,105,.16),inset 0 1px 0 rgba(255,255,255,.62);
+    transition:.18s ease
+  }
+  .submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 18px 36px rgba(179,228,105,.21)}
+  .submit:active:not(:disabled){transform:scale(.995)}
+  .submit:disabled{opacity:.62;cursor:wait}
+
+
+
+
+
+
+
+  .trustLine{
+    display:flex;align-items:center;justify-content:center;gap:13px;margin-top:10px;
+    color:rgba(255,255,255,.48);font-size:6px;font-weight:750
+  }
+  .trustLine span{display:flex;align-items:center;gap:4px}
+  .trustLine svg{color:#d8ff94}
+
+  .loginText{margin:12px 0 0;color:rgba(255,255,255,.55);font-size:7.5px;text-align:center}
+  .loginText a{color:#d8ff94;font-weight:900}
+
+  /* MOBILE: full-screen app-style composition */
+  @media(max-width:760px){
+    .signupPage{padding:0;background:#153623}
+    .authShell{border-radius:0;box-shadow:none}
+    .photoLayer{
+      background:
+        linear-gradient(180deg,rgba(21,44,58,.04),rgba(8,27,20,.18)),
+        url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=92")
+        center/cover no-repeat
+    }
+    .photoShade{
+      background:
+        linear-gradient(0deg,rgba(4,18,15,.82) 0%,rgba(5,25,22,.52) 46%,rgba(7,31,39,.16) 76%,rgba(11,36,48,.18) 100%),
+        linear-gradient(90deg,rgba(5,23,29,.14),rgba(4,22,18,.04))
+    }
+    .mountainBack{
+      width:155vw;height:115vw;min-width:0;min-height:0;
+      right:-64vw;bottom:5vh
+    }
+    .mountainFront{
+      width:170vw;height:110vw;min-width:0;min-height:0;
+      left:-54vw;bottom:-23vh
+    }
+
+    .topBrand{
+      top:calc(18px + env(safe-area-inset-top));
+      left:18px;
+      right:18px
+    }
+    .brand{gap:9px}
+    .brandMark{width:37px;height:37px;border-radius:12px}
+    .brandText{font-size:22px}
+    .brandMini{display:none}
+
+    .authContent{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:0;
+      width:100%;
+      height:100%;
+      padding:
+        calc(78px + env(safe-area-inset-top))
+        15px
+        calc(18px + env(safe-area-inset-bottom))
+    }
+
+    .intro{
+      width:88%;
+      max-width:390px;
+      margin:0 auto 18px;
+      padding:0 2px;
+      text-align:left
+    }
+    .introTag{
+      margin-bottom:8px;
+      font-size:7px;
+      letter-spacing:.14em
+    }
+    .intro h1{
+      max-width:335px;
+      margin:0;
+      font-size:clamp(29px,8vw,37px);
+      line-height:1.01;
+      letter-spacing:-.052em;
+      text-wrap:balance
+    }
+    .intro p{
+      max-width:325px;
+      margin:11px 0 0;
+      color:rgba(255,255,255,.76);
+      font-size:10px;
+      line-height:1.55;
+      text-wrap:pretty
+    }
+    .introMeta{display:none}
+
+    .authPanel{
+      width:88%;
+      max-width:390px;
+      transform:none;
+      margin-left:auto;
+      margin-right:auto;
+      padding:16px 15px 12px;
+      border:1px solid rgba(255,255,255,.20);
+      border-radius:25px;
+      background:
+        radial-gradient(circle at 12% 0%,rgba(216,255,148,.10),transparent 34%),
+        linear-gradient(155deg,rgba(255,255,255,.13),rgba(11,34,27,.20) 44%,rgba(4,18,14,.34));
+      box-shadow:
+        0 22px 52px rgba(0,0,0,.20),
+        inset 0 1px 0 rgba(255,255,255,.17),
+        0 0 0 1px rgba(255,255,255,.02);
+      backdrop-filter:blur(30px) saturate(150%);
+      -webkit-backdrop-filter:blur(30px) saturate(150%)
+    }
+
+    .panelTop h2{margin-top:4px;font-size:21px;line-height:1.02}
+    .panelEyebrow{font-size:6px;letter-spacing:.15em}
+    .stepBadge{padding:6px 8px;font-size:6px;background:rgba(255,255,255,.09)}
+
+    .roleSwitch{gap:6px;margin:10px 0 8px}
+    .roleSwitch button{
+      min-height:50px;padding:7px 8px;border-radius:14px
+    }
+    .roleIcon{width:28px;height:28px;border-radius:9px}
+    .roleSwitch strong{font-size:8.3px}
+    .roleSwitch small{font-size:5.8px}
+    .roleCheck{position:absolute;right:6px;top:6px;width:13px;height:13px}
+
+    .form{gap:7px}
+    .field{gap:3px}
+    .field>span{font-size:6.8px}
+    .control{min-height:43px;padding:0 11px;border-radius:12px;background:rgba(255,255,255,.86)}
+    .control input{height:41px;padding:0 8px;font-size:9.2px}
+    .eyeButton{width:31px;height:31px}
+    .legal{font-size:5px;line-height:1.42}
+    .legalBox{width:16px;height:16px}
+    .submit{min-height:44px;border-radius:12px;font-size:8.5px}
+
+    .trustLine{margin-top:7px;gap:10px;font-size:5.2px}
+    .loginText{margin-top:8px;font-size:7px}
+  }
+
+  @media(max-width:390px){
+    .topBrand{
+      top:calc(14px + env(safe-area-inset-top));
+      left:14px;
+      right:14px
+    }
+    .brandMark{width:34px;height:34px}
+    .brandText{font-size:20px}
+    .authContent{padding-left:10px;padding-right:10px}
+    .intro{width:91%;margin-bottom:10px}
+    .intro h1{font-size:28px;max-width:300px}
+    .intro p{font-size:8.8px;max-width:300px}
+    .authPanel{width:91%;padding:13px 12px 10px;border-radius:21px}
+    .panelTop h2{font-size:18px}
+    .roleSwitch{margin:7px 0}
+    .roleSwitch button{min-height:44px}
+    .control{min-height:38px}
+    .control input{height:36px}
+    .submit{min-height:39px}
+    .trustLine{display:none}
+  }
+
+  @media(max-height:700px) and (max-width:760px){
+    .topBrand{top:calc(12px + env(safe-area-inset-top))}
+    .authContent{
+      justify-content:center;
+      padding-top:calc(64px + env(safe-area-inset-top));
+      padding-bottom:calc(8px + env(safe-area-inset-bottom))
+    }
+    .intro{margin-bottom:7px}
+    .introTag{display:none}
+    .intro h1{font-size:25px;max-width:290px}
+    .intro p{display:none}
+    .authPanel{padding:10px 11px 8px}
+    .panelTop h2{font-size:17px}
+    .roleSwitch{margin:6px 0}
+    .roleSwitch button{min-height:40px}
+    .form{gap:5px}
+    .control{min-height:35px}
+    .control input{height:33px}
+    .legal{font-size:4.4px}
+    .submit{min-height:36px}
+    .trustLine{display:none}
+    .loginText{margin-top:4px}
+  }
+
+
+  .loginOptions{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:1px;
+  }
+
+  .rememberOption{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    color:rgba(255,255,255,.56);
+    cursor:pointer;
+    font-size:7px;
+    font-weight:750;
+  }
+
+  .rememberOption input{
+    position:absolute;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .customCheckbox{
+    display:grid;
+    place-items:center;
+    width:17px;
+    height:17px;
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:5px;
+    background:rgba(255,255,255,.07);
+    color:#173b27;
+  }
+
+  .rememberOption input:checked + .customCheckbox{
+    border-color:#d8ff94;
+    background:#d8ff94;
+  }
+
+  .forgotLink{
+    color:#d8ff94;
+    font-size:7px;
+    font-weight:850;
+    text-decoration:none;
+  }
+
+  .forgotLink:hover{text-decoration:underline}
+
+  .loginError{
+    padding:8px 10px;
+    border:1px solid rgba(255,142,128,.24);
+    border-radius:10px;
+    background:rgba(117,28,21,.38);
+    color:#ffd1ca;
+    font-size:7px;
+    line-height:1.4;
+  }
+
+  .loginError p{margin:0}
+
+  .buttonLoader{
+    width:15px;
+    height:15px;
+    border:2px solid rgba(24,59,40,.22);
+    border-top-color:#183b28;
+    border-radius:50%;
+    animation:loginSpin .75s linear infinite;
+  }
+
+  @keyframes loginSpin{to{transform:rotate(360deg)}}
+
+  .loginTrust{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:13px;
+    margin-top:10px;
+    color:rgba(255,255,255,.48);
+    font-size:6px;
+    font-weight:750;
+  }
+
+  .loginTrust span{display:flex;align-items:center;gap:4px}
+  .loginTrust svg{color:#d8ff94}
+
+  @media(max-width:760px){
+    .loginOptions{gap:9px}
+    .rememberOption,.forgotLink{font-size:6.5px}
+    .loginTrust{margin-top:7px;gap:10px;font-size:5.2px}
+  }
+
+  @media(max-width:390px){
+    .loginTrust{display:none}
+  }
+
+  @media(max-height:700px) and (max-width:760px){
+    .loginTrust{display:none}
+  }
+`;

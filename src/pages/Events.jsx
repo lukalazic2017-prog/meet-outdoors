@@ -359,7 +359,8 @@ export default function Events() {
   const [durationFilter, setDurationFilter] = useState("all");
   const [priceFilter, setPriceFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(9);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
     loadEvents();
@@ -368,9 +369,8 @@ export default function Events() {
   useEffect(() => {
     function syncPageSize() {
       const width = window.innerWidth;
-      if (width <= 580) setPageSize(6);
-      else if (width <= 1080) setPageSize(8);
-      else setPageSize(12);
+      if (width <= 760) setPageSize(6);
+      else setPageSize(9);
     }
 
     syncPageSize();
@@ -610,7 +610,7 @@ export default function Events() {
         </section>
 
         <section className="eventsContent">
-          <div className="filterPanel">
+          <div className={`filterPanel ${mobileFiltersOpen ? "mobileOpen" : ""}`}>
             <div className="searchField">
               <Icon name="search" size={19} />
 
@@ -631,6 +631,17 @@ export default function Events() {
                 </button>
               )}
             </div>
+
+            <button
+              type="button"
+              className="mobileFilterToggle"
+              onClick={() => setMobileFiltersOpen((current) => !current)}
+              aria-expanded={mobileFiltersOpen}
+            >
+              <Icon name="filter" size={16} />
+              <span>{mobileFiltersOpen ? "Sakrij filtere" : "Filteri"}</span>
+              {hasFilters && <strong>•</strong>}
+            </button>
 
             <div className="filterField">
               <Icon name="compass" size={17} />
@@ -2382,6 +2393,1059 @@ function EventsStyles() {
         .eventsHero{min-height:275px}
         .eventsHeroContent h1{font-size:32px}
         .eventCard{flex-basis:86vw}
+      }
+
+
+
+      /* =========================================================
+         MEETOUTDOORS SIGNATURE UI — premium visual system
+         Visual treatment only. Data/filter/routing logic unchanged.
+         ========================================================= */
+
+      :root {
+        --mo-bg: #eef1ea;
+        --mo-paper: rgba(255,255,255,.88);
+        --mo-paper-solid: #f9faf6;
+        --mo-ink: #14231a;
+        --mo-muted: #758078;
+        --mo-deep: #07140c;
+        --mo-green: #c8f79d;
+        --mo-green-2: #a8dc7c;
+        --mo-line: rgba(18,42,26,.085);
+        --mo-shadow-sm: 0 12px 34px rgba(26,52,34,.08);
+        --mo-shadow-md: 0 22px 60px rgba(22,47,31,.12);
+        --mo-shadow-lg: 0 36px 100px rgba(17,43,27,.18);
+      }
+
+      .hostsPage,
+      .eventsPage {
+        background:
+          radial-gradient(circle at 9% 3%, rgba(176,214,137,.17), transparent 24%),
+          radial-gradient(circle at 94% 30%, rgba(73,118,79,.10), transparent 23%),
+          linear-gradient(180deg, #f1f4ed 0%, #ecefe8 100%);
+      }
+
+      .heroKicker {
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(255,255,255,.075);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+        backdrop-filter: blur(18px) saturate(130%);
+        -webkit-backdrop-filter: blur(18px) saturate(130%);
+      }
+
+      .heroKicker > span {
+        background: #d6ffae;
+        box-shadow:
+          0 0 0 5px rgba(205,255,166,.09),
+          0 0 22px rgba(205,255,166,.35);
+      }
+
+      .sectionKicker {
+        letter-spacing: .13em !important;
+        font-weight: 900 !important;
+      }
+
+      .searchField,
+      .filterField {
+        border-color: rgba(28,51,35,.08);
+        background: rgba(248,250,246,.88);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+      }
+
+      .searchField:hover,
+      .filterField:hover {
+        border-color: rgba(72,112,79,.17);
+        background: #fff;
+      }
+
+      .searchField:focus-within,
+      .filterField:focus-within {
+        border-color: rgba(93,135,93,.44);
+        background: #fff;
+        box-shadow:
+          0 0 0 4px rgba(116,157,104,.085),
+          0 10px 28px rgba(31,60,40,.07);
+      }
+
+      .clearFilters {
+        transition:
+          transform .18s ease,
+          border-color .18s ease,
+          box-shadow .18s ease;
+      }
+
+      .clearFilters:hover {
+        transform: translateY(-1px);
+        border-color: rgba(163,77,64,.28);
+        box-shadow: 0 10px 25px rgba(130,60,50,.08);
+      }
+
+      .hostsSectionHeader h2,
+      .eventsSectionHeader h2,
+      .trustIntro h2,
+      .hostsCta h2,
+      .eventsCta h2 {
+        letter-spacing: -.055em !important;
+        text-wrap: balance;
+      }
+
+      .hostsPagination button,
+      .eventsPagination button {
+        border: 1px solid rgba(28,51,35,.09);
+        background: rgba(255,255,255,.76);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.65);
+        transition:
+          transform .18s ease,
+          box-shadow .18s ease,
+          background .18s ease;
+      }
+
+      .hostsPagination button:not(:disabled):hover,
+      .eventsPagination button:not(:disabled):hover {
+        transform: translateY(-1px);
+        background: #fff;
+        box-shadow: 0 10px 26px rgba(30,57,39,.09);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hostCard,
+        .eventCard,
+        .hostMedia img,
+        .eventImage,
+        .viewHostButton,
+        .eventArrow {
+          transition: none !important;
+        }
+      }
+
+      /* ========================= EVENTS — SIGNATURE ========================= */
+
+      .eventsPage {
+        padding-top: 104px;
+      }
+
+      .eventsHero {
+        min-height: 650px;
+        border-radius: 38px;
+        box-shadow:
+          0 40px 110px rgba(20,47,29,.22),
+          inset 0 1px 0 rgba(255,255,255,.05);
+      }
+
+      .eventsHero::before {
+        filter: saturate(.92) contrast(1.04);
+      }
+
+      .eventsHeroOverlay {
+        background:
+          radial-gradient(circle at 78% 15%, rgba(202,255,166,.095), transparent 28%),
+          linear-gradient(180deg, rgba(3,13,7,.16) 0%, rgba(3,13,7,.24) 34%, rgba(3,13,7,.81) 78%, rgba(3,13,7,.97) 100%),
+          linear-gradient(90deg, rgba(3,13,7,.61), rgba(3,13,7,.06) 72%);
+      }
+
+      .eventsHeroContent {
+        max-width: 910px;
+        padding-bottom: 62px;
+      }
+
+      .eventsHeroContent h1 {
+        max-width: 900px;
+        font-size: clamp(58px, 7.6vw, 102px);
+        font-weight: 790;
+        line-height: .91;
+        letter-spacing: -.075em;
+        text-shadow: 0 18px 55px rgba(0,0,0,.24);
+      }
+
+      .eventsHeroContent p {
+        max-width: 610px;
+        color: rgba(255,255,255,.70);
+        font-size: 15.5px;
+        line-height: 1.72;
+      }
+
+      .heroStats {
+        gap: 0;
+        padding-top: 18px;
+        border-top-color: rgba(255,255,255,.13);
+      }
+
+      .heroStats > div {
+        position: relative;
+        padding: 4px 24px 2px 0;
+      }
+
+      .heroStats > div:not(:first-child) {
+        padding-left: 24px;
+      }
+
+      .heroStats > div:not(:first-child)::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 4px;
+        bottom: 4px;
+        width: 1px;
+        background: rgba(255,255,255,.10);
+      }
+
+      .heroStats strong {
+        font-size: 29px;
+        font-weight: 800;
+      }
+
+      .filterPanel {
+        margin-top: -37px;
+        padding: 10px;
+        border: 1px solid rgba(23,50,31,.075);
+        border-radius: 25px;
+        background: rgba(250,252,248,.86);
+        box-shadow:
+          0 28px 70px rgba(24,51,32,.13),
+          inset 0 1px 0 rgba(255,255,255,.78);
+        backdrop-filter: blur(24px) saturate(135%);
+        -webkit-backdrop-filter: blur(24px) saturate(135%);
+      }
+
+      .eventsSectionHeader {
+        margin-top: 72px;
+        align-items: center;
+      }
+
+      .eventsSectionHeader h2 {
+        margin-top: 8px;
+        font-size: clamp(34px, 4vw, 56px);
+        font-weight: 790;
+        line-height: .98;
+      }
+
+      .eventsSectionHeader p {
+        color: #7a857d;
+      }
+
+      .resultCount {
+        min-width: 54px;
+        height: 54px;
+        border: 1px solid rgba(26,51,34,.08);
+        border-radius: 18px;
+        background: rgba(255,255,255,.78);
+        box-shadow:
+          0 14px 34px rgba(27,54,36,.08),
+          inset 0 1px 0 rgba(255,255,255,.8);
+      }
+
+      .eventsGrid {
+        gap: 22px;
+      }
+
+      .eventCard {
+        overflow: hidden;
+        border: 1px solid rgba(25,51,33,.075);
+        border-radius: 27px;
+        background: rgba(255,255,255,.90);
+        box-shadow:
+          0 14px 38px rgba(31,58,39,.075),
+          inset 0 1px 0 rgba(255,255,255,.75);
+        transition:
+          transform .32s cubic-bezier(.2,.8,.2,1),
+          box-shadow .32s ease,
+          border-color .32s ease;
+      }
+
+      .eventCard:hover {
+        transform: translateY(-7px);
+        border-color: rgba(82,127,83,.17);
+        box-shadow:
+          0 30px 72px rgba(24,54,34,.15),
+          inset 0 1px 0 rgba(255,255,255,.82);
+      }
+
+      .eventImageWrapper {
+        min-height: 245px;
+      }
+
+      .eventImage {
+        transition: transform .78s cubic-bezier(.2,.8,.2,1);
+      }
+
+      .eventCard:hover .eventImage {
+        transform: scale(1.05);
+      }
+
+      .eventImageOverlay {
+        background:
+          linear-gradient(180deg, rgba(3,13,7,.04) 20%, rgba(3,13,7,.14) 54%, rgba(3,13,7,.70) 100%);
+      }
+
+      .eventTypeBadge,
+      .eventPriceBadge {
+        border: 1px solid rgba(255,255,255,.17);
+        background: rgba(5,16,10,.44);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+
+      .eventPriceBadge {
+        background: rgba(235,255,224,.92);
+        color: #15311e;
+        border-color: rgba(255,255,255,.38);
+        box-shadow:
+          0 9px 22px rgba(0,0,0,.14),
+          inset 0 1px 0 rgba(255,255,255,.55);
+      }
+
+      .eventCardBody {
+        padding: 22px;
+      }
+
+      .eventKicker {
+        color: #6a806b;
+        font-weight: 900;
+        letter-spacing: .105em;
+      }
+
+      .eventCardBody h2 {
+        margin-top: 9px;
+        font-weight: 800;
+        letter-spacing: -.045em;
+        line-height: 1.05;
+      }
+
+      .eventMeta {
+        gap: 7px 12px;
+      }
+
+      .eventMeta span {
+        color: #66746b;
+      }
+
+      .eventDescription {
+        color: #69756e;
+        line-height: 1.68;
+      }
+
+      .eventCardFooter {
+        margin-top: 19px;
+        padding-top: 17px;
+        border-top-color: rgba(28,52,35,.07);
+      }
+
+      .eventCardFooter > div small {
+        color: #859087;
+      }
+
+      .eventCardFooter > div strong {
+        font-size: 18px;
+        font-weight: 830;
+        letter-spacing: -.03em;
+      }
+
+      .eventArrow {
+        color: #173821;
+        font-weight: 850;
+        transition: transform .18s ease;
+      }
+
+      .eventCard:hover .eventArrow {
+        transform: translateX(3px);
+      }
+
+      .eventsCta {
+        overflow: hidden;
+        position: relative;
+        border: 1px solid rgba(255,255,255,.06);
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 80% 0%, rgba(201,255,170,.12), transparent 34%),
+          linear-gradient(135deg,#09170f 0%,#10271a 58%,#0a1b12 100%);
+        box-shadow: 0 32px 85px rgba(14,39,24,.18);
+      }
+
+      .eventsCta::after {
+        content: "";
+        position: absolute;
+        width: 240px;
+        height: 240px;
+        right: -80px;
+        bottom: -110px;
+        border: 1px solid rgba(213,255,186,.09);
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 42px rgba(213,255,186,.025),
+          0 0 0 88px rgba(213,255,186,.015);
+        pointer-events: none;
+      }
+
+      .eventsCta > a {
+        background: linear-gradient(180deg,#ddffc2,#bde891);
+        color: #112116 !important;
+        box-shadow: 0 15px 34px rgba(119,167,82,.18);
+      }
+
+      .emptyEvents,
+      .eventsError {
+        box-shadow: var(--mo-shadow-sm);
+      }
+
+      @media (max-width: 760px) {
+        .eventsPage {
+          padding: 78px 12px 64px;
+        }
+
+        .eventsHero {
+          min-height: 560px;
+          padding: 22px;
+          border-radius: 26px;
+        }
+
+        .eventsHeroContent {
+          padding: 86px 0 32px;
+        }
+
+        .eventsHeroContent h1 {
+          font-size: clamp(46px, 15vw, 70px);
+        }
+
+        .heroStats > div {
+          padding-right: 12px;
+        }
+
+        .heroStats > div:not(:first-child) {
+          padding-left: 12px;
+        }
+
+        .filterPanel {
+          margin: -22px 8px 0;
+          border-radius: 20px;
+        }
+
+        .eventsSectionHeader {
+          margin-top: 54px;
+        }
+
+        .eventCard {
+          border-radius: 23px;
+        }
+
+        .eventImageWrapper {
+          min-height: 225px;
+        }
+
+        .eventsCta {
+          border-radius: 26px;
+        }
+      }
+
+
+
+      /* =========================================================
+         MOBILE COMPACT — less scroll, clearer hierarchy
+         ========================================================= */
+      @media (max-width: 760px) {
+        .eventsPage {
+          padding: 66px 10px 42px !important;
+        }
+
+        .eventsHero {
+          min-height: 360px !important;
+          padding: 18px !important;
+          border-radius: 22px !important;
+        }
+
+        .eventsHeroContent {
+          max-width: 100% !important;
+          padding: 42px 0 20px !important;
+        }
+
+        .heroKicker {
+          padding: 7px 10px !important;
+          font-size: 8px !important;
+          letter-spacing: .08em !important;
+        }
+
+        .eventsHeroContent h1 {
+          margin-top: 16px !important;
+          font-size: clamp(38px, 12vw, 52px) !important;
+          line-height: .95 !important;
+          letter-spacing: -.065em !important;
+        }
+
+        .eventsHeroContent p {
+          margin-top: 14px !important;
+          max-width: 95% !important;
+          font-size: 12px !important;
+          line-height: 1.55 !important;
+        }
+
+        .heroStats {
+          grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+          padding-top: 14px !important;
+          gap: 0 !important;
+        }
+
+        .heroStats > div {
+          padding: 2px 8px 0 0 !important;
+        }
+
+        .heroStats > div:not(:first-child) {
+          padding-left: 9px !important;
+        }
+
+        .heroStats strong {
+          font-size: 20px !important;
+        }
+
+        .heroStats span {
+          margin-top: 3px !important;
+          font-size: 6.3px !important;
+          line-height: 1.25 !important;
+          letter-spacing: .035em !important;
+        }
+
+        .filterPanel {
+          grid-template-columns: 1fr 1fr !important;
+          gap: 7px !important;
+          margin: 10px 0 0 !important;
+          padding: 8px !important;
+          border-radius: 16px !important;
+          box-shadow: 0 10px 28px rgba(24,51,32,.08) !important;
+        }
+
+        .searchField {
+          grid-column: 1 / -1 !important;
+        }
+
+        .searchField,
+        .filterField {
+          min-height: 44px !important;
+          padding: 0 11px !important;
+          border-radius: 11px !important;
+          gap: 7px !important;
+        }
+
+        .searchField input,
+        .filterField select {
+          min-height: 42px !important;
+          font-size: 10px !important;
+        }
+
+        .clearFilters {
+          grid-column: 1 / -1 !important;
+          min-height: 40px !important;
+          border-radius: 10px !important;
+          font-size: 8px !important;
+        }
+
+        .eventsSectionHeader {
+          margin: 34px 2px 14px !important;
+          align-items: flex-end !important;
+        }
+
+        .sectionKicker {
+          font-size: 7px !important;
+        }
+
+        .eventsSectionHeader h2 {
+          margin-top: 5px !important;
+          font-size: 28px !important;
+        }
+
+        .eventsSectionHeader p {
+          margin-top: 7px !important;
+          font-size: 9px !important;
+        }
+
+        .resultCount {
+          min-width: 42px !important;
+          height: 42px !important;
+          border-radius: 13px !important;
+          font-size: 10px !important;
+        }
+
+        .eventsGrid {
+          grid-template-columns: 1fr !important;
+          gap: 12px !important;
+        }
+
+        .eventCard {
+          display: grid !important;
+          grid-template-columns: 125px minmax(0,1fr) !important;
+          min-height: 168px !important;
+          border-radius: 18px !important;
+        }
+
+        .eventImageWrapper {
+          min-height: 168px !important;
+          height: 100% !important;
+        }
+
+        .eventTypeBadge {
+          top: 9px !important;
+          left: 8px !important;
+          padding: 5px 7px !important;
+          font-size: 6.5px !important;
+        }
+
+        .eventPriceBadge {
+          right: auto !important;
+          left: 8px !important;
+          bottom: 9px !important;
+          top: auto !important;
+          padding: 6px 8px !important;
+          font-size: 8px !important;
+        }
+
+        .eventCardBody {
+          min-width: 0 !important;
+          padding: 12px !important;
+        }
+
+        .eventKicker {
+          font-size: 6.5px !important;
+          letter-spacing: .08em !important;
+        }
+
+        .eventCardBody h2 {
+          margin-top: 5px !important;
+          font-size: 16px !important;
+          line-height: 1.08 !important;
+        }
+
+        .eventMeta {
+          margin-top: 8px !important;
+          display: grid !important;
+          gap: 4px !important;
+        }
+
+        .eventMeta span {
+          gap: 4px !important;
+          font-size: 8px !important;
+        }
+
+        .eventMeta span:nth-child(n+3) {
+          display: none !important;
+        }
+
+        .eventDescription {
+          display: -webkit-box !important;
+          -webkit-line-clamp: 2 !important;
+          -webkit-box-orient: vertical !important;
+          overflow: hidden !important;
+          margin-top: 8px !important;
+          font-size: 9px !important;
+          line-height: 1.45 !important;
+        }
+
+        .eventCardFooter {
+          margin-top: 9px !important;
+          padding-top: 8px !important;
+        }
+
+        .eventCardFooter > div small {
+          display: none !important;
+        }
+
+        .eventCardFooter > div strong {
+          font-size: 14px !important;
+        }
+
+        .eventArrow {
+          font-size: 0 !important;
+          gap: 0 !important;
+        }
+
+        .eventArrow svg {
+          width: 17px !important;
+          height: 17px !important;
+        }
+
+        .eventsCta {
+          margin-top: 38px !important;
+          padding: 22px 16px !important;
+          border-radius: 20px !important;
+        }
+
+        .eventsCta h2 {
+          font-size: 27px !important;
+        }
+
+        .eventsCta p {
+          font-size: 10px !important;
+          line-height: 1.55 !important;
+        }
+
+        .eventsCta > a {
+          min-height: 42px !important;
+          padding: 0 13px !important;
+          font-size: 8px !important;
+        }
+      }
+
+
+
+      /* =========================================================
+         MOBILE PAGED GRID V2
+         6 cards per page on phone, 9 on larger screens.
+         No horizontal swipe for filters or cards.
+         ========================================================= */
+
+      .mobileFilterToggle {
+        display: none;
+      }
+
+      @media (max-width: 760px) {
+        .eventsPage {
+          padding: 64px 10px 38px !important;
+          overflow-x: hidden !important;
+        }
+
+        .eventsHero {
+          min-height: 310px !important;
+          padding: 16px !important;
+          border-radius: 20px !important;
+        }
+
+        .eventsHeroContent {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          max-width: 100% !important;
+          padding: 34px 0 14px !important;
+          text-align: center !important;
+        }
+
+        .heroKicker {
+          margin-inline: auto !important;
+          padding: 6px 9px !important;
+          font-size: 7.5px !important;
+        }
+
+        .eventsHeroContent h1 {
+          margin: 13px auto 0 !important;
+          max-width: 320px !important;
+          font-size: clamp(35px, 10.8vw, 46px) !important;
+          line-height: .95 !important;
+          text-align: center !important;
+        }
+
+        .eventsHeroContent p {
+          margin: 11px auto 0 !important;
+          max-width: 310px !important;
+          font-size: 10.5px !important;
+          line-height: 1.45 !important;
+          text-align: center !important;
+        }
+
+        .heroStats {
+          width: 100% !important;
+          max-width: 330px !important;
+          margin: 0 auto !important;
+          grid-template-columns: repeat(3,1fr) !important;
+          padding-top: 12px !important;
+          text-align: center !important;
+        }
+
+        .heroStats > div,
+        .heroStats > div:not(:first-child) {
+          padding: 1px 6px !important;
+        }
+
+        .heroStats strong {
+          font-size: 18px !important;
+        }
+
+        .heroStats span {
+          font-size: 5.7px !important;
+        }
+
+        .filterPanel {
+          display: grid !important;
+          grid-template-columns: 1fr auto !important;
+          gap: 7px !important;
+          margin: 10px 0 0 !important;
+          padding: 7px !important;
+          border-radius: 15px !important;
+          overflow: visible !important;
+          overflow-x: visible !important;
+          white-space: normal !important;
+        }
+
+        .filterPanel .searchField {
+          grid-column: 1 !important;
+          min-width: 0 !important;
+        }
+
+        .mobileFilterToggle {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 6px !important;
+          min-width: 82px !important;
+          min-height: 42px !important;
+          padding: 0 10px !important;
+          border: 1px solid rgba(32,58,39,.09) !important;
+          border-radius: 11px !important;
+          background: #10241a !important;
+          color: white !important;
+          font-size: 8px !important;
+          font-weight: 850 !important;
+          cursor: pointer !important;
+        }
+
+        .mobileFilterToggle strong {
+          color: #caff9f !important;
+          font-size: 13px !important;
+          line-height: 1 !important;
+        }
+
+        .filterPanel > .filterField,
+        .filterPanel > .clearFilters {
+          display: none !important;
+        }
+
+        .filterPanel.mobileOpen {
+          grid-template-columns: 1fr 1fr !important;
+        }
+
+        .filterPanel.mobileOpen .searchField {
+          grid-column: 1 / -1 !important;
+        }
+
+        .filterPanel.mobileOpen .mobileFilterToggle {
+          grid-column: 1 / -1 !important;
+          min-height: 38px !important;
+          background: #eef3eb !important;
+          color: #24402d !important;
+        }
+
+        .filterPanel.mobileOpen > .filterField {
+          display: flex !important;
+          min-width: 0 !important;
+          width: 100% !important;
+          min-height: 42px !important;
+          padding: 0 9px !important;
+          border-radius: 10px !important;
+        }
+
+        .filterPanel.mobileOpen > .clearFilters {
+          display: inline-flex !important;
+          grid-column: 1 / -1 !important;
+          min-height: 37px !important;
+        }
+
+        .searchField {
+          min-height: 42px !important;
+          border-radius: 11px !important;
+        }
+
+        .searchField input,
+        .filterField select {
+          min-height: 40px !important;
+          font-size: 9px !important;
+        }
+
+        .eventsSectionHeader {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 9px !important;
+          margin: 30px 0 13px !important;
+          text-align: center !important;
+        }
+
+        .eventsSectionHeader > div {
+          width: 100% !important;
+          text-align: center !important;
+        }
+
+        .eventsSectionHeader h2 {
+          margin: 4px auto 0 !important;
+          font-size: 26px !important;
+          line-height: 1 !important;
+          text-align: center !important;
+        }
+
+        .eventsSectionHeader p {
+          margin: 6px auto 0 !important;
+          font-size: 8.5px !important;
+          text-align: center !important;
+        }
+
+        .resultCount {
+          min-width: 40px !important;
+          height: 34px !important;
+          padding: 0 10px !important;
+          border-radius: 11px !important;
+        }
+
+        .eventsGrid {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+          gap: 9px !important;
+          width: 100% !important;
+          overflow: visible !important;
+          overflow-x: visible !important;
+          scroll-snap-type: none !important;
+        }
+
+        .eventsGrid > * {
+          min-width: 0 !important;
+          width: auto !important;
+          scroll-snap-align: none !important;
+        }
+
+        .eventCard {
+          display: block !important;
+          min-height: 0 !important;
+          border-radius: 15px !important;
+          overflow: hidden !important;
+          text-align: center !important;
+        }
+
+        .eventImageWrapper {
+          height: 108px !important;
+          min-height: 108px !important;
+        }
+
+        .eventTypeBadge {
+          top: 7px !important;
+          left: 7px !important;
+          padding: 4px 6px !important;
+          font-size: 5.5px !important;
+          gap: 3px !important;
+        }
+
+        .eventTypeBadge svg {
+          width: 10px !important;
+          height: 10px !important;
+        }
+
+        .eventPriceBadge {
+          top: auto !important;
+          right: 7px !important;
+          bottom: 7px !important;
+          left: auto !important;
+          padding: 5px 7px !important;
+          font-size: 7px !important;
+        }
+
+        .eventCardBody {
+          padding: 9px !important;
+          text-align: center !important;
+        }
+
+        .eventKicker {
+          font-size: 5.7px !important;
+          letter-spacing: .07em !important;
+        }
+
+        .eventCardBody h2 {
+          margin: 4px auto 0 !important;
+          font-size: 13px !important;
+          line-height: 1.08 !important;
+          text-align: center !important;
+          display: -webkit-box !important;
+          -webkit-line-clamp: 2 !important;
+          -webkit-box-orient: vertical !important;
+          overflow: hidden !important;
+        }
+
+        .eventMeta {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 3px !important;
+          margin-top: 7px !important;
+          text-align: center !important;
+        }
+
+        .eventMeta span {
+          justify-content: center !important;
+          max-width: 100% !important;
+          font-size: 6.6px !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+        }
+
+        .eventMeta span:nth-child(n+3) {
+          display: none !important;
+        }
+
+        .eventDescription {
+          display: none !important;
+        }
+
+        .eventCardFooter {
+          justify-content: center !important;
+          margin-top: 7px !important;
+          padding-top: 7px !important;
+          text-align: center !important;
+        }
+
+        .eventCardFooter > div {
+          text-align: center !important;
+        }
+
+        .eventCardFooter > div small {
+          display: none !important;
+        }
+
+        .eventCardFooter > div strong {
+          font-size: 12px !important;
+        }
+
+        .eventArrow {
+          display: none !important;
+        }
+
+        .eventsPagination {
+          margin-top: 18px !important;
+          gap: 8px !important;
+          justify-content: center !important;
+        }
+
+        .eventsPagination button {
+          min-height: 36px !important;
+          padding: 0 11px !important;
+          border-radius: 10px !important;
+          font-size: 7px !important;
+        }
+
+        .eventsPagination span {
+          font-size: 8px !important;
+        }
+
+        .eventsCta,
+        .eventsCta > div,
+        .eventsCta h2,
+        .eventsCta p {
+          text-align: center !important;
+        }
+
+        .eventsCta > a {
+          margin-inline: auto !important;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .eventsGrid {
+          gap: 7px !important;
+        }
+
+        .eventImageWrapper {
+          height: 100px !important;
+          min-height: 100px !important;
+        }
+
+        .eventCardBody {
+          padding: 8px !important;
+        }
+
+        .eventCardBody h2 {
+          font-size: 12px !important;
+        }
       }
 
     `}</style>

@@ -302,6 +302,7 @@ export default function EditEvent() {
     location: "",
     country: "",
     price: "",
+    min_participants: "",
     capacity: "",
     start_date: "",
     end_date: "",
@@ -371,6 +372,11 @@ export default function EditEvent() {
           data.price === undefined
             ? ""
             : String(data.price),
+        min_participants:
+          data.min_participants === null ||
+          data.min_participants === undefined
+            ? "1"
+            : String(data.min_participants),
         capacity:
           data.capacity === null ||
           data.capacity === undefined
@@ -604,6 +610,9 @@ export default function EditEvent() {
       const price = Number(
         form.price || 0
       );
+      const minParticipants = Number(
+        form.min_participants || 1
+      );
       const capacity = Number(
         form.capacity || 1
       );
@@ -618,11 +627,26 @@ export default function EditEvent() {
       }
 
       if (
-        Number.isNaN(capacity) ||
+        !Number.isInteger(minParticipants) ||
+        minParticipants < 1
+      ) {
+        throw new Error(
+          "Minimalan broj osoba mora biti najmanje 1."
+        );
+      }
+
+      if (
+        !Number.isInteger(capacity) ||
         capacity < 1
       ) {
         throw new Error(
-          "Kapacitet mora biti najmanje 1."
+          "Maksimalan broj osoba mora biti najmanje 1."
+        );
+      }
+
+      if (minParticipants > capacity) {
+        throw new Error(
+          "Minimalan broj osoba ne može biti veći od maksimalnog."
         );
       }
 
@@ -677,6 +701,7 @@ export default function EditEvent() {
           country:
             form.country.trim(),
           price,
+          min_participants: minParticipants,
           capacity,
           start_date: startDate,
           end_date: endDate,
@@ -854,10 +879,10 @@ export default function EditEvent() {
             </h1>
 
             <p>
-              Ažuriraj sadržaj, lokaciju,
-              termine, cenu i naslovnu
-              fotografiju bez menjanja
-              postojeće poslovne logike.
+              Ažuriraj svoju ponudu, lokaciju,
+              termine, cenu, broj osoba i
+              fotografije koje korisnici vide
+              u MeetOutdoors katalogu.
             </p>
           </div>
 
@@ -868,7 +893,7 @@ export default function EditEvent() {
                   "Avantura"}
               </strong>
               <span>
-                aktivna avantura
+                objavljena ponuda
               </span>
             </article>
 
@@ -883,9 +908,9 @@ export default function EditEvent() {
 
             <article>
               <strong>
-                {form.capacity || 1}
+                {form.min_participants || 1}–{form.capacity || 1}
               </strong>
-              <span>kapacitet</span>
+              <span>broj osoba</span>
             </article>
           </div>
         </section>
@@ -904,7 +929,7 @@ export default function EditEvent() {
 
               <p>
                 Izmene se čuvaju direktno
-                u postojećoj avanturi.
+                u postojećoj ponudi.
               </p>
             </div>
 
@@ -1074,11 +1099,11 @@ export default function EditEvent() {
 
                   <div>
                     <small>
-                      Lokacija i kapacitet
+                      Lokacija i uslovi ponude
                     </small>
 
                     <h2>
-                      Gde i za koliko ljudi.
+                      Gde, po kojoj ceni i za koliko osoba.
                     </h2>
                   </div>
                 </div>
@@ -1149,7 +1174,7 @@ export default function EditEvent() {
 
                   <label className="editEventField">
                     <span>
-                      Kapacitet
+                      Minimalan broj osoba
                     </span>
 
                     <div className="editEventInputIcon">
@@ -1161,6 +1186,37 @@ export default function EditEvent() {
                       <input
                         type="number"
                         min="1"
+                        max={form.capacity || undefined}
+                        step="1"
+                        value={
+                          form.min_participants
+                        }
+                        onChange={(changeEvent) =>
+                          updateField(
+                            "min_participants",
+                            changeEvent.target.value
+                          )
+                        }
+                        placeholder="6"
+                        required
+                      />
+                    </div>
+                  </label>
+
+                  <label className="editEventField">
+                    <span>
+                      Maksimalan broj osoba
+                    </span>
+
+                    <div className="editEventInputIcon">
+                      <Icon
+                        name="users"
+                        size={17}
+                      />
+
+                      <input
+                        type="number"
+                        min={form.min_participants || "1"}
                         step="1"
                         value={
                           form.capacity
@@ -1168,10 +1224,11 @@ export default function EditEvent() {
                         onChange={(changeEvent) =>
                           updateField(
                             "capacity",
-                            changeEvent
-                              .target.value
+                            changeEvent.target.value
                           )
                         }
+                        placeholder="15"
+                        required
                       />
                     </div>
                   </label>
@@ -1351,8 +1408,8 @@ export default function EditEvent() {
 
                   <p>
                     Izmene će odmah biti
-                    vidljive na stranici
-                    avanture.
+                    vidljive korisnicima
+                    u katalogu.
                   </p>
                 </div>
 
@@ -1402,7 +1459,7 @@ export default function EditEvent() {
 
                 <div className="editEventPreviewBody">
                   <small>
-                    MeetOutdoors avantura
+                    MeetOutdoors ponuda
                   </small>
 
                   <h2>
@@ -1428,11 +1485,19 @@ export default function EditEvent() {
 
                     <article>
                       <span>
-                        Kapacitet
+                        Minimum
                       </span>
                       <strong>
-                        {form.capacity ||
-                          1}
+                        {form.min_participants || 1}
+                      </strong>
+                    </article>
+
+                    <article>
+                      <span>
+                        Maksimum
+                      </span>
+                      <strong>
+                        {form.capacity || 1}
                       </strong>
                     </article>
 

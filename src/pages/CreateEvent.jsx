@@ -260,6 +260,7 @@ function FormField({
   placeholder,
   required = false,
   min,
+  max,
   step,
   hint,
 }) {
@@ -282,6 +283,7 @@ function FormField({
           placeholder={placeholder}
           required={required}
           min={min}
+          max={max}
           step={step}
         />
       </span>
@@ -327,6 +329,9 @@ export default function CreateEvent() {
   const [location, setLocation] = useState(() => searchParams.get("location") || "");
   const [country, setCountry] = useState(() => searchParams.get("country") || "");
   const [price, setPrice] = useState(() => searchParams.get("price") || "");
+  const [minParticipants, setMinParticipants] = useState(
+    () => searchParams.get("min_participants") || ""
+  );
   const [capacity, setCapacity] = useState(() => searchParams.get("capacity") || "");
   const [startDate, setStartDate] = useState(() => searchParams.get("start") || "");
   const [endDate, setEndDate] = useState(() => searchParams.get("end") || "");
@@ -425,10 +430,19 @@ export default function CreateEvent() {
   const completion = useMemo(() => {
     const checks = [
       activities.length, title.trim(), description.trim(), location.trim(), country.trim(),
-      capacity, photoFiles.length,
+      minParticipants, capacity, photoFiles.length,
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  }, [activities, title, description, location, country, capacity, photoFiles.length]);
+  }, [
+    activities,
+    title,
+    description,
+    location,
+    country,
+    minParticipants,
+    capacity,
+    photoFiles.length,
+  ]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -461,8 +475,21 @@ export default function CreateEvent() {
       return;
     }
 
-    if (Number(capacity || 1) < 1) {
-      setError("Kapacitet mora biti najmanje 1.");
+    const minPeople = Number(minParticipants || 1);
+    const maxPeople = Number(capacity || 1);
+
+    if (!Number.isInteger(minPeople) || minPeople < 1) {
+      setError("Minimalan broj osoba mora biti najmanje 1.");
+      return;
+    }
+
+    if (!Number.isInteger(maxPeople) || maxPeople < 1) {
+      setError("Maksimalan broj osoba mora biti najmanje 1.");
+      return;
+    }
+
+    if (minPeople > maxPeople) {
+      setError("Minimalan broj osoba ne može biti veći od maksimalnog.");
       return;
     }
 
@@ -543,7 +570,8 @@ export default function CreateEvent() {
             ).slice(0, 7),
             included_items: includedItems,
             price: Number(price || 0),
-            capacity: Number(capacity || 1),
+            min_participants: minPeople,
+            capacity: maxPeople,
             start_date: startDate || null,
             end_date: endDate || null,
             is_active: true,
@@ -625,9 +653,11 @@ export default function CreateEvent() {
 
                 <span>
                   <Icon name="users" size={14} />
-                  {capacity
-                    ? `Do ${capacity} učesnika`
-                    : "Kapacitet nije dodat"}
+                  {minParticipants && capacity
+                    ? `${minParticipants}–${capacity} osoba`
+                    : capacity
+                    ? `Do ${capacity} osoba`
+                    : "Broj osoba nije dodat"}
                 </span>
               </div>
             </div>
@@ -689,10 +719,25 @@ export default function CreateEvent() {
                   </span>
 
                   <div>
-                    <small>Kapacitet</small>
+                    <small>Minimum</small>
+                    <strong>
+                      {minParticipants
+                        ? `${minParticipants} osoba`
+                        : "Nije navedeno"}
+                    </strong>
+                  </div>
+                </article>
+
+                <article>
+                  <span>
+                    <Icon name="users" size={17} />
+                  </span>
+
+                  <div>
+                    <small>Maksimum</small>
                     <strong>
                       {capacity
-                        ? `${capacity} učesnika`
+                        ? `${capacity} osoba`
                         : "Nije navedeno"}
                     </strong>
                   </div>
@@ -752,9 +797,9 @@ export default function CreateEvent() {
                 <h1>Kreiraj avanturu.</h1>
 
                 <p>
-                  Jedna forma za ture, avanturae i višednevna iskustva.
-                  Dodaj detalje, termin i sadržaj — korisnik sve vidi kao
-                  jednu MeetOutdoors avanturu.
+                  Objavi svoju outdoor ponudu u MeetOutdoors katalogu.
+                  Dodaj jasne detalje, cenu i uslove — korisnik zatim
+                  kontaktira domaćina direktno.
                 </p>
               </div>
 
@@ -770,7 +815,7 @@ export default function CreateEvent() {
                 <div>
                   <small>MeetOutdoors Intelligence</small>
                   <strong>Agent je pripremio nacrt iz realne potražnje.</strong>
-                  <p>Predloženi naslov, lokacija, kapacitet i cena služe kao polazna tačka. Ti imaš potpunu kontrolu pre objave.</p>
+                  <p>Predloženi naslov, lokacija, broj osoba i cena služe kao polazna tačka. Ti imaš potpunu kontrolu pre objave.</p>
                 </div>
                 <span className="eventAgentBadge"><Icon name="check" size={14} /> Predlog, ne automatika</span>
               </section>
@@ -871,7 +916,7 @@ export default function CreateEvent() {
 
                   <div>
                     <small>Šta je uključeno? · opciono</small>
-                    <h2>Istakni šta učesnik dobija</h2>
+                    <h2>Istakni šta je uključeno u ponudu</h2>
                     <p>
                       Izaberi gotove stavke ili dodaj svoju, na primer „Kupanje na vodopadu“.
                     </p>
@@ -1031,11 +1076,11 @@ export default function CreateEvent() {
                   </span>
 
                   <div>
-                    <small>Učešće</small>
-                    <h2>Cena i kapacitet</h2>
+                    <small>Uslovi ponude</small>
+                    <h2>Cena i broj osoba</h2>
                     <p>
-                      Besplatna avantura može imati cenu 0.
-                      Kapacitet određuje maksimalan broj učesnika.
+                      Unesi minimalan broj osoba potreban za realizaciju i
+                      maksimalan broj osoba koje domaćin može da primi.
                     </p>
                   </div>
                 </div>
@@ -1056,16 +1101,36 @@ export default function CreateEvent() {
                   />
 
                   <FormField
-                    label="Maksimalan broj učesnika"
+                    label="Minimalan broj osoba"
                     icon="users"
                     type="number"
                     min="1"
+                    max={capacity || undefined}
+                    step="1"
+                    value={minParticipants}
+                    onChange={(event) => {
+                      setMinParticipants(event.target.value);
+                      if (error) setError("");
+                    }}
+                    placeholder="6"
+                    hint="Najmanji broj osoba potreban da bi se avantura realizovala."
+                    required
+                  />
+
+                  <FormField
+                    label="Maksimalan broj osoba"
+                    icon="users"
+                    type="number"
+                    min={minParticipants || "1"}
                     step="1"
                     value={capacity}
-                    onChange={(event) =>
-                      setCapacity(event.target.value)
-                    }
-                    placeholder="30"
+                    onChange={(event) => {
+                      setCapacity(event.target.value);
+                      if (error) setError("");
+                    }}
+                    placeholder="15"
+                    hint="Najveći broj osoba koje možeš da primiš."
+                    required
                   />
                 </div>
               </section>
@@ -1200,8 +1265,9 @@ export default function CreateEvent() {
                 <Icon name="shield" size={17} />
 
                 <p>
-                  Avantura će odmah biti vidljiva korisnicima
-                  nakon uspešnog objavljivanja.
+                  Ponuda će odmah biti vidljiva korisnicima nakon objavljivanja.
+                  MeetOutdoors prikazuje tvoju ponudu — korisnik
+                  kontaktira domaćina direktno.
                 </p>
               </div>
             </form>

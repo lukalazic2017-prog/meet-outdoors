@@ -47,6 +47,12 @@ function Icon({
         <path d="m11 18-6-6 6-6" />
       </>
     ),
+    close: (
+      <>
+        <path d="M6 6l12 12" />
+        <path d="M18 6 6 18" />
+      </>
+    ),
     check: <path d="m5 12 4 4L19 6" />,
     verified: (
       <>
@@ -286,6 +292,107 @@ function ContactItem({
   );
 }
 
+
+function DirectContactModal({ open, profile, onClose }) {
+  if (!open || !profile) return null;
+
+  const phoneHref = profile.phone
+    ? `tel:${String(profile.phone).replace(/\s/g, "")}`
+    : "";
+
+  const contacts = [
+    phoneHref
+      ? {
+          key: "phone",
+          icon: "phone",
+          label: "Pozovi",
+          value: profile.phone,
+          href: phoneHref,
+        }
+      : null,
+    profile.instagram_url
+      ? {
+          key: "instagram",
+          icon: "instagram",
+          label: "Instagram",
+          value: "Otvori Instagram",
+          href: normalizeExternalUrl(profile.instagram_url),
+        }
+      : null,
+    profile.website_url
+      ? {
+          key: "website",
+          icon: "globe",
+          label: "Web-sajt",
+          value: "Poseti sajt",
+          href: normalizeExternalUrl(profile.website_url),
+        }
+      : null,
+  ].filter(Boolean);
+
+  return (
+    <div
+      className="directContactBackdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose?.();
+      }}
+    >
+      <section
+        className="directContactSheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Kontaktiraj domaćina"
+      >
+        <div className="directContactHead">
+          <div>
+            <small>DIREKTAN KONTAKT</small>
+            <h3>Kontaktiraj domaćina</h3>
+            <p>
+              Dogovor nastavljate direktno sa domaćinom, van MeetOutdoors-a.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="directContactClose"
+            onClick={onClose}
+            aria-label="Zatvori"
+          >
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+
+        {contacts.length > 0 ? (
+          <div className="directContactOptions">
+            {contacts.map((item) => (
+              <a
+                key={item.key}
+                href={item.href}
+                target={item.href.startsWith("tel:") ? undefined : "_blank"}
+                rel={item.href.startsWith("tel:") ? undefined : "noreferrer"}
+              >
+                <span>
+                  <Icon name={item.icon} size={19} />
+                </span>
+                <div>
+                  <small>{item.label}</small>
+                  <strong>{item.value}</strong>
+                </div>
+                <Icon name="external" size={15} />
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div className="directContactEmpty">
+            Domaćin još nije dodao javne kontakt podatke.
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function LoadingState() {
   return (
     <>
@@ -422,7 +529,7 @@ function EventCard({ event, completed = false }) {
 
         <div className="hostListingFooter adventureCardFooter">
           <span className="adventureCardState">
-            {completed ? "Sačuvano u portfoliju" : "Prijave otvorene"}
+            {completed ? "Sačuvano u portfoliju" : "Ponuda domaćina"}
           </span>
 
           <span className="adventureCardOpen">
@@ -436,7 +543,45 @@ function EventCard({ event, completed = false }) {
 }
 
 
-const OFFER_CATEGORIES = [
+const SERVICE_CATEGORIES = [
+  "Vodič",
+  "Instruktor",
+  "Prevoz / transfer",
+  "Fotografija / video",
+  "Organizacija / team building",
+  "Servis / podrška",
+  "Ostalo",
+];
+
+const MAX_STAY_PHOTOS = 12;
+const MAX_OFFER_PHOTOS = 7;
+
+const ACCOMMODATION_TYPES = [
+  "Vikendica",
+  "Apartman",
+  "Brvnara",
+  "Kuća",
+  "Soba",
+  "Kamp",
+  "Glamping",
+  "Planinarski dom",
+  "Etno domaćinstvo",
+  "Ostalo",
+];
+
+const RENTAL_CATEGORIES = [
+  "Bicikli / e-bike",
+  "Kajak / SUP",
+  "Čamac",
+  "Quad / ATV",
+  "Ski / snowboard oprema",
+  "Kamp oprema",
+  "Planinarska oprema",
+  "Penjačka / via ferrata oprema",
+  "Ostalo",
+];
+
+const LEGACY_ADVENTURE_CATEGORIES = new Set([
   "Planinarenje",
   "Rafting",
   "Kajak / SUP",
@@ -445,12 +590,31 @@ const OFFER_CATEGORIES = [
   "Kampovanje",
   "Penjanje / Via ferrata",
   "Speleologija",
-  "Vodič",
-  "Iznajmljivanje opreme",
-  "Prevoz",
-  "Team building",
-  "Ostalo",
-];
+]);
+
+function inferOfferType(item) {
+  if (item?.offer_type) return item.offer_type;
+
+  const category = String(item?.category || "").trim();
+
+  if (category === "Iznajmljivanje opreme") return "rental";
+  if (LEGACY_ADVENTURE_CATEGORIES.has(category)) return "adventure";
+  return "service";
+}
+
+function getOfferDetailsPath(item) {
+  const type = inferOfferType(item);
+
+  if (type === "rental") return `/rental/${item.id}`;
+  if (type === "service") return `/service/${item.id}`;
+  return null;
+}
+
+function getOfferCategories(type) {
+  if (type === "rental") return RENTAL_CATEGORIES;
+  if (type === "service") return SERVICE_CATEGORIES;
+  return [];
+}
 
 function formatOfferPrice(item) {
   if (item?.price_on_request) return "Cena na upit";
@@ -468,7 +632,7 @@ function OfferCard({
   isOwner = false,
   onEdit,
   onDelete,
-  onInquiry,
+  onContact,
 }) {
   const location = item.location || "Lokacija po dogovoru";
 
@@ -483,7 +647,11 @@ function OfferCard({
 
         <span className="offerCategoryBadge">
           <Icon name="sparkle" size={13} />
-          {item.category || "Outdoor"}
+          {inferOfferType(item) === "rental"
+            ? `Iznajmljivanje · ${item.category || "Oprema"}`
+            : inferOfferType(item) === "service"
+              ? `Usluga · ${item.category || "Ostalo"}`
+              : item.category || "Avantura"}
         </span>
 
         {isOwner && (
@@ -521,13 +689,23 @@ function OfferCard({
         <div className="offerCardBottom">
           <strong>{formatOfferPrice(item)}</strong>
 
+          {getOfferDetailsPath(item) && (
+            <Link
+              to={getOfferDetailsPath(item)}
+              className="offerDetailsLink"
+            >
+              Pogledaj detalje
+              <Icon name="arrowRight" size={14} />
+            </Link>
+          )}
+
           {!isOwner ? (
             <button
               type="button"
-              className="offerInquiryButton"
-              onClick={() => onInquiry?.(item)}
+              className="offerContactButton"
+              onClick={() => onContact?.()}
             >
-              Pošalji upit
+              Kontaktiraj domaćina
               <Icon name="arrowRight" size={15} />
             </button>
           ) : (
@@ -544,8 +722,11 @@ function OfferModal({
   mode = "create",
   form,
   setForm,
-  imagePreview,
-  onImageChange,
+  photoItems,
+  coverIndex,
+  onPhotoChange,
+  onRemovePhoto,
+  onSetCover,
   onClose,
   onSubmit,
   saving,
@@ -567,7 +748,7 @@ function OfferModal({
             <span>ŠTA NUDIMO</span>
             <h2>{mode === "edit" ? "Izmeni ponudu" : "Dodaj novu ponudu"}</h2>
             <p>
-              Kratko predstavi uslugu koju ljudi mogu da zatraže direktno od tebe.
+              Dodaj uslugu ili opremu za iznajmljivanje koju ljudi mogu da pronađu preko tvog profila.
             </p>
           </div>
 
@@ -592,6 +773,29 @@ function OfferModal({
 
           <div className="offerFormGrid">
             <label className="offerField">
+              <span>Tip ponude *</span>
+              <select
+                value={form.offer_type}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    offer_type: event.target.value,
+                    category: "",
+                  }))
+                }
+                required
+              >
+                {form.offer_type === "adventure" && (
+                  <option value="adventure">
+                    Avantura — postojeća stara ponuda
+                  </option>
+                )}
+                <option value="service">Usluga</option>
+                <option value="rental">Iznajmljivanje</option>
+              </select>
+            </label>
+
+            <label className="offerField">
               <span>Kategorija *</span>
               <select
                 value={form.category}
@@ -602,16 +806,27 @@ function OfferModal({
                   }))
                 }
                 required
+                disabled={form.offer_type === "adventure"}
               >
-                <option value="">Izaberi kategoriju</option>
-                {OFFER_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                {form.offer_type === "adventure" ? (
+                  <option value={form.category}>
+                    {form.category || "Stara kategorija avanture"}
                   </option>
-                ))}
+                ) : (
+                  <>
+                    <option value="">Izaberi kategoriju</option>
+                    {getOfferCategories(form.offer_type).map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
             </label>
+          </div>
 
+          <div className="offerFormGrid">
             <label className="offerField">
               <span>Lokacija *</span>
               <input
@@ -685,28 +900,99 @@ function OfferModal({
             </label>
           </div>
 
-          <label className="offerImagePicker">
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={onImageChange}
-            />
-            <div className="offerImagePreview">
-              {imagePreview ? (
-                <img src={imagePreview} alt="Pregled fotografije ponude" />
-              ) : (
-                <span>
-                  <Icon name="camera" size={24} />
-                </span>
-              )}
+          <div className="stayGalleryEditor offerGalleryEditor">
+            <div className="stayGalleryEditorHead">
               <div>
-                <strong>
-                  {imagePreview ? "Promeni fotografiju" : "Dodaj fotografiju"}
-                </strong>
-                <small>JPG, PNG ili WEBP · do 8 MB</small>
+                <span>Fotografije ponude</span>
+                <strong>Dodaj do {MAX_OFFER_PHOTOS} fotografija sa telefona ili računara</strong>
+                <small>
+                  Prva/naslovna fotografija predstavlja ponudu na Host profilu.
+                </small>
               </div>
+              <span className="stayGalleryCount">
+                {photoItems.length} / {MAX_OFFER_PHOTOS}
+              </span>
             </div>
-          </label>
+
+            <label
+              className={
+                photoItems.length
+                  ? "offerImagePicker stayMultiPicker selected"
+                  : "offerImagePicker stayMultiPicker"
+              }
+            >
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={onPhotoChange}
+                aria-label="Izaberi fotografije sa telefona ili računara"
+              />
+              <div className="offerImagePreview stayMultiUpload">
+                <span>
+                  <Icon name={photoItems.length ? "plus" : "camera"} size={24} />
+                </span>
+                <div>
+                  <strong>
+                    {photoItems.length
+                      ? "Dodaj još sa uređaja"
+                      : "Izaberi sa uređaja"}
+                  </strong>
+                  <small>
+                    Sa telefona ili računara · JPG, PNG ili WEBP · do 8 MB · maksimalno {MAX_OFFER_PHOTOS}
+                  </small>
+                </div>
+              </div>
+            </label>
+
+            {photoItems.length > 0 && (
+              <div className="stayPhotoGrid offerPhotoGrid">
+                {photoItems.map((photo, index) => (
+                  <article
+                    key={photo.id}
+                    className={
+                      coverIndex === index
+                        ? "stayPhotoItem cover"
+                        : "stayPhotoItem"
+                    }
+                  >
+                    <img
+                      src={photo.url}
+                      alt={`Fotografija ponude ${index + 1}`}
+                    />
+
+                    {coverIndex === index && (
+                      <span className="stayPhotoCoverBadge">
+                        <Icon name="check" size={12} />
+                        Naslovna
+                      </span>
+                    )}
+
+                    <div className="stayPhotoActions">
+                      {coverIndex !== index && (
+                        <button
+                          type="button"
+                          className="setCover"
+                          onClick={() => onSetCover(index)}
+                        >
+                          Postavi naslovnu
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="removePhoto"
+                        onClick={() => onRemovePhoto(index)}
+                        aria-label={`Ukloni fotografiju ponude ${index + 1}`}
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
 
           {error && <div className="offerFormError">{error}</div>}
 
@@ -728,134 +1014,6 @@ function OfferModal({
   );
 }
 
-function InquiryModal({
-  open,
-  offer,
-  form,
-  setForm,
-  onClose,
-  onSubmit,
-  sending,
-  error,
-  success,
-}) {
-  if (!open || !offer) return null;
-
-  return (
-    <div className="offerModalBackdrop" role="presentation" onMouseDown={onClose}>
-      <div
-        className="offerModal inquiryModal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Pošalji upit"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="offerModalHeader">
-          <div>
-            <span>POŠALJI UPIT</span>
-            <h2>{offer.title}</h2>
-            <p>Ostavi kontakt i domaćin može direktno da ti se javi.</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Zatvori">×</button>
-        </div>
-
-        {success ? (
-          <div className="inquirySuccess">
-            <span><Icon name="check" size={24} /></span>
-            <h3>Upit je poslat.</h3>
-            <p>Domaćin je dobio tvoje podatke i može da te kontaktira.</p>
-            <button type="button" onClick={onClose}>Zatvori</button>
-          </div>
-        ) : (
-          <form className="offerForm" onSubmit={onSubmit}>
-            <label className="offerField">
-              <span>Ime i prezime *</span>
-              <input
-                value={form.full_name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, full_name: event.target.value }))
-                }
-                maxLength={100}
-                required
-              />
-            </label>
-
-            <div className="offerFormGrid">
-              <label className="offerField">
-                <span>Telefon *</span>
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, phone: event.target.value }))
-                  }
-                  maxLength={40}
-                  placeholder="+381..."
-                  required
-                />
-              </label>
-
-              <label className="offerField">
-                <span>Broj osoba</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={form.people_count}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      people_count: event.target.value,
-                    }))
-                  }
-                  placeholder="2"
-                />
-              </label>
-            </div>
-
-            <label className="offerField">
-              <span>Poruka</span>
-              <textarea
-                value={form.message}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, message: event.target.value }))
-                }
-                maxLength={700}
-                rows={4}
-                placeholder="Npr. zanima nas sledeći vikend..."
-              />
-            </label>
-
-            {error && <div className="offerFormError">{error}</div>}
-
-            <div className="offerModalActions">
-              <button type="button" className="secondary" onClick={onClose}>
-                Odustani
-              </button>
-              <button type="submit" className="primary" disabled={sending}>
-                {sending ? "Slanje..." : "Pošalji upit"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
-const ACCOMMODATION_TYPES = [
-  "Brvnara",
-  "Vikendica",
-  "Planinska kuća",
-  "Kamp",
-  "Glamping",
-  "Etno domaćinstvo",
-  "Bungalov",
-  "Planinarski dom",
-  "Ostalo",
-];
-
 function formatStayPrice(item) {
   if (item?.price_on_request) return "Cena na upit";
   const value = Number(item?.price_per_night || 0);
@@ -867,12 +1025,252 @@ function formatStayPrice(item) {
   }).format(value)} / noć`;
 }
 
+
+function SingleAccommodationFeature({
+  item,
+  isOwner = false,
+  onEdit,
+  onDelete,
+  onContact,
+}) {
+  const photos = [
+    item.cover_url,
+    ...(Array.isArray(item.gallery_urls) ? item.gallery_urls : []),
+  ].filter(Boolean);
+  const sidePhotos = photos.slice(1, 3);
+
+  return (
+    <article className="singleFeature singleStayFeature">
+      <div className="singleFeatureVisual">
+        <img
+          className="singleFeatureMainImage"
+          src={photos[0] || FALLBACK_COVER}
+          alt={item.title || "Smeštaj"}
+        />
+        <div className="singleFeatureShade" />
+
+        <span className="singleFeatureBadge">
+          <Icon name="home" size={13} />
+          {item.type || "Smeštaj"}
+        </span>
+
+        {photos.length > 1 && (
+          <span className="singleFeaturePhotoCount">
+            <Icon name="camera" size={12} />
+            {photos.length} fotografija
+          </span>
+        )}
+
+        {isOwner && (
+          <div className="offerOwnerActions singleFeatureOwnerActions">
+            <button type="button" onClick={() => onEdit?.(item)} aria-label="Izmeni smeštaj">
+              <Icon name="edit" size={14} />
+            </button>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => onDelete?.(item)}
+              aria-label="Obriši smeštaj"
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
+        )}
+
+        <div className="singleFeatureImageCopy">
+          <span>
+            <Icon name="mapPin" size={13} />
+            {item.location || "Lokacija nije navedena"}
+          </span>
+          <h3>{item.title || "Smeštaj u prirodi"}</h3>
+        </div>
+      </div>
+
+      <div className="singleFeatureContent">
+        <div className="singleFeatureTopline">
+          <span className="singleFeatureEyebrow">ISTAKNUT SMEŠTAJ</span>
+          <strong>{formatStayPrice(item)}</strong>
+        </div>
+
+        {item.description && <p>{item.description}</p>}
+
+        <div className="singleFeatureFacts">
+          <span>
+            <Icon name="users" size={15} />
+            <b>
+              {Number(item.max_guests || 0) > 0
+                ? `Do ${item.max_guests} gostiju`
+                : "Broj gostiju po dogovoru"}
+            </b>
+          </span>
+          <span>
+            <Icon name="mapPin" size={15} />
+            <b>{item.location || "Lokacija po dogovoru"}</b>
+          </span>
+        </div>
+
+        {sidePhotos.length > 0 && (
+          <div className={`singleFeatureMiniGallery count-${sidePhotos.length}`}>
+            {sidePhotos.map((photo, index) => (
+              <img
+                key={`${photo}-${index}`}
+                src={photo}
+                alt={`${item.title || "Smeštaj"} ${index + 2}`}
+              />
+            ))}
+          </div>
+        )}
+
+        <Link
+          to={`/accommodation/${item.id}`}
+          className="singleFeatureDetailsLink"
+        >
+          Pogledaj smeštaj
+          <Icon name="arrowRight" size={15} />
+        </Link>
+
+        {!isOwner ? (
+          <button type="button" className="singleFeatureCta" onClick={() => onContact?.()}>
+            Kontaktiraj domaćina
+            <Icon name="arrowRight" size={15} />
+          </button>
+        ) : (
+          <div className="singleFeatureOwnerNote">
+            <Icon name="check" size={14} />
+            Ovaj smeštaj je javno prikazan na profilu.
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function SingleOfferFeature({
+  item,
+  isOwner = false,
+  onEdit,
+  onDelete,
+  onContact,
+}) {
+  const offerPhotos = [
+    item.cover_url,
+    ...(Array.isArray(item.gallery_urls) ? item.gallery_urls : []),
+  ].filter(Boolean);
+  const offerSidePhotos = offerPhotos.slice(1, 3);
+
+  const type = inferOfferType(item);
+  const typeLabel =
+    type === "rental"
+      ? "Iznajmljivanje"
+      : type === "service"
+        ? "Usluga"
+        : "Ponuda";
+
+  return (
+    <article className="singleFeature singleOfferFeature">
+      <div className="singleFeatureVisual">
+        <img
+          className="singleFeatureMainImage"
+          src={offerPhotos[0] || FALLBACK_COVER}
+          alt={item.title || "Ponuda domaćina"}
+        />
+        <div className="singleFeatureShade" />
+
+        <span className="singleFeatureBadge">
+          <Icon name="sparkle" size={13} />
+          {typeLabel}{item.category ? ` · ${item.category}` : ""}
+        </span>
+
+        {isOwner && (
+          <div className="offerOwnerActions singleFeatureOwnerActions">
+            <button type="button" onClick={() => onEdit?.(item)} aria-label="Izmeni ponudu">
+              <Icon name="edit" size={14} />
+            </button>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => onDelete?.(item)}
+              aria-label="Obriši ponudu"
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
+        )}
+
+        <div className="singleFeatureImageCopy">
+          <span>
+            <Icon name="mapPin" size={13} />
+            {item.location || "Lokacija po dogovoru"}
+          </span>
+          <h3>{item.title || "Outdoor ponuda"}</h3>
+        </div>
+      </div>
+
+      <div className="singleFeatureContent">
+        <div className="singleFeatureTopline">
+          <span className="singleFeatureEyebrow">
+            {type === "rental" ? "IZNAJMLJIVANJE" : "USLUGA DOMAĆINA"}
+          </span>
+          <strong>{formatOfferPrice(item)}</strong>
+        </div>
+
+        {item.description && <p>{item.description}</p>}
+
+        <div className="singleFeatureFacts">
+          <span>
+            <Icon name="sparkle" size={15} />
+            <b>{item.category || typeLabel}</b>
+          </span>
+          <span>
+            <Icon name="mapPin" size={15} />
+            <b>{item.location || "Lokacija po dogovoru"}</b>
+          </span>
+        </div>
+
+        {offerSidePhotos.length > 0 && (
+          <div className={`singleFeatureMiniGallery count-${offerSidePhotos.length}`}>
+            {offerSidePhotos.map((photo, index) => (
+              <img
+                key={`${photo}-${index}`}
+                src={photo}
+                alt={`${item.title || "Ponuda"} ${index + 2}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {getOfferDetailsPath(item) && (
+          <Link
+            to={getOfferDetailsPath(item)}
+            className="singleFeatureDetailsLink"
+          >
+            Pogledaj detalje
+            <Icon name="arrowRight" size={15} />
+          </Link>
+        )}
+
+        {!isOwner ? (
+          <button type="button" className="singleFeatureCta" onClick={() => onContact?.()}>
+            Kontaktiraj domaćina
+            <Icon name="arrowRight" size={15} />
+          </button>
+        ) : (
+          <div className="singleFeatureOwnerNote">
+            <Icon name="check" size={14} />
+            Ova ponuda je javno prikazana na profilu.
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
 function AccommodationCard({
   item,
   isOwner = false,
   onEdit,
   onDelete,
-  onInquiry,
+  onContact,
 }) {
   return (
     <article className="stayCard">
@@ -888,7 +1286,7 @@ function AccommodationCard({
         {Array.isArray(item.gallery_urls) && item.gallery_urls.length > 0 && (
           <span className="stayPhotoCountBadge">
             <Icon name="camera" size={12} />
-            {Math.min(item.gallery_urls.length + (item.cover_url ? 1 : 0), 8)} fotografija
+            {Math.min(item.gallery_urls.length + (item.cover_url ? 1 : 0), MAX_STAY_PHOTOS)} fotografija
           </span>
         )}
 
@@ -930,13 +1328,21 @@ function AccommodationCard({
           <strong>{formatStayPrice(item)}</strong>
         </div>
 
+        <Link
+          to={`/accommodation/${item.id}`}
+          className="stayDetailsLink"
+        >
+          Pogledaj detalje
+          <Icon name="arrowRight" size={14} />
+        </Link>
+
         {!isOwner ? (
           <button
             type="button"
-            className="stayInquiryButton"
-            onClick={() => onInquiry?.(item)}
+            className="stayContactButton"
+            onClick={() => onContact?.()}
           >
-            Pošalji upit
+            Kontaktiraj domaćina
             <Icon name="arrowRight" size={15} />
           </button>
         ) : (
@@ -1095,10 +1501,10 @@ function AccommodationModal({
             <div className="stayGalleryEditorHead">
               <div>
                 <span>Fotografije smeštaja</span>
-                <strong>Dodaj do 8 fotografija</strong>
+                <strong>Dodaj do {MAX_STAY_PHOTOS} fotografija sa telefona ili računara</strong>
                 <small>Izaberi naslovnu fotografiju koja će se prikazivati na kartici smeštaja.</small>
               </div>
-              <span className="stayGalleryCount">{photoItems.length} / 8</span>
+              <span className="stayGalleryCount">{photoItems.length} / {MAX_STAY_PHOTOS}</span>
             </div>
 
             <label className={photoItems.length ? "offerImagePicker stayMultiPicker selected" : "offerImagePicker stayMultiPicker"}>
@@ -1107,12 +1513,13 @@ function AccommodationModal({
                 accept="image/jpeg,image/png,image/webp"
                 multiple
                 onChange={onPhotoChange}
+                aria-label="Izaberi fotografije sa telefona ili računara"
               />
               <div className="offerImagePreview stayMultiUpload">
                 <span><Icon name={photoItems.length ? "plus" : "camera"} size={24} /></span>
                 <div>
                   <strong>{photoItems.length ? "Dodaj još fotografija" : "Dodaj fotografije"}</strong>
-                  <small>JPG, PNG ili WEBP · do 8 MB po fotografiji · maksimalno 8</small>
+                  <small>Sa telefona ili računara · JPG, PNG ili WEBP · do 8 MB · maksimalno {MAX_STAY_PHOTOS}</small>
                 </div>
               </div>
             </label>
@@ -1173,140 +1580,6 @@ function AccommodationModal({
   );
 }
 
-function StayInquiryModal({
-  open,
-  stay,
-  form,
-  setForm,
-  onClose,
-  onSubmit,
-  sending,
-  error,
-  success,
-}) {
-  if (!open || !stay) return null;
-
-  return (
-    <div className="offerModalBackdrop" role="presentation" onMouseDown={onClose}>
-      <div
-        className="offerModal inquiryModal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Pošalji upit za smeštaj"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="offerModalHeader">
-          <div>
-            <span>UPIT ZA SMEŠTAJ</span>
-            <h2>{stay.title}</h2>
-            <p>Pošalji željeni termin i kontakt. Domaćin ti se javlja direktno.</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Zatvori">×</button>
-        </div>
-
-        {success ? (
-          <div className="inquirySuccess">
-            <span><Icon name="check" size={24} /></span>
-            <h3>Upit je poslat.</h3>
-            <p>Domaćin je dobio termin i tvoje kontakt podatke.</p>
-            <button type="button" onClick={onClose}>Zatvori</button>
-          </div>
-        ) : (
-          <form className="offerForm" onSubmit={onSubmit}>
-            <label className="offerField">
-              <span>Ime i prezime *</span>
-              <input
-                value={form.full_name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, full_name: event.target.value }))
-                }
-                maxLength={100}
-                required
-              />
-            </label>
-
-            <div className="offerFormGrid">
-              <label className="offerField">
-                <span>Telefon *</span>
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, phone: event.target.value }))
-                  }
-                  maxLength={40}
-                  placeholder="+381..."
-                  required
-                />
-              </label>
-
-              <label className="offerField">
-                <span>Broj gostiju</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={form.people_count}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, people_count: event.target.value }))
-                  }
-                  placeholder="2"
-                />
-              </label>
-            </div>
-
-            <div className="offerFormGrid">
-              <label className="offerField">
-                <span>Dolazak</span>
-                <input
-                  type="date"
-                  value={form.check_in}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, check_in: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="offerField">
-                <span>Odlazak</span>
-                <input
-                  type="date"
-                  value={form.check_out}
-                  min={form.check_in || undefined}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, check_out: event.target.value }))
-                  }
-                />
-              </label>
-            </div>
-
-            <label className="offerField">
-              <span>Poruka</span>
-              <textarea
-                value={form.message}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, message: event.target.value }))
-                }
-                maxLength={700}
-                rows={3}
-                placeholder="Npr. dolazimo sa detetom, zanima nas parking..."
-              />
-            </label>
-
-            {error && <div className="offerFormError">{error}</div>}
-
-            <div className="offerModalActions">
-              <button type="button" className="secondary" onClick={onClose}>Odustani</button>
-              <button type="submit" className="primary" disabled={sending}>
-                {sending ? "Slanje..." : "Pošalji upit"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
-
 
 
 export default function HostProfile() {
@@ -1319,13 +1592,7 @@ export default function HostProfile() {
 
   const [events, setEvents] = useState([]);
   const [offers, setOffers] = useState([]);
-  const [offerInquiries, setOfferInquiries] = useState([]);
-  const [inquiryActionLoading, setInquiryActionLoading] = useState(null);
-
   const [accommodations, setAccommodations] = useState([]);
-  const [stayInquiries, setStayInquiries] = useState([]);
-  const [stayInquiryActionLoading, setStayInquiryActionLoading] = useState(null);
-
   const [hostPhotos, setHostPhotos] = useState([]);
   const [hostCheckins, setHostCheckins] = useState([]);
   const [taggedPlaces, setTaggedPlaces] = useState([]);
@@ -1334,6 +1601,7 @@ export default function HostProfile() {
 
   const emptyOfferForm = {
     title: "",
+    offer_type: "service",
     category: "",
     description: "",
     location: "",
@@ -1345,24 +1613,13 @@ export default function HostProfile() {
   const [offerModalMode, setOfferModalMode] = useState("create");
   const [editingOffer, setEditingOffer] = useState(null);
   const [offerForm, setOfferForm] = useState(emptyOfferForm);
-  const [offerImageFile, setOfferImageFile] = useState(null);
-  const [offerImagePreview, setOfferImagePreview] = useState("");
+  const [offerPhotoItems, setOfferPhotoItems] = useState([]);
+  const [offerCoverIndex, setOfferCoverIndex] = useState(0);
   const [offerSaving, setOfferSaving] = useState(false);
   const [offerError, setOfferError] = useState("");
 
-  const emptyInquiryForm = {
-    full_name: "",
-    phone: "",
-    people_count: "",
-    message: "",
-  };
-
-  const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
-  const [inquiryOffer, setInquiryOffer] = useState(null);
-  const [inquiryForm, setInquiryForm] = useState(emptyInquiryForm);
-  const [inquirySending, setInquirySending] = useState(false);
-  const [inquiryError, setInquiryError] = useState("");
-  const [inquirySuccess, setInquirySuccess] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [activeProfileTab, setActiveProfileTab] = useState("overview");
 
   const emptyStayForm = {
     title: "",
@@ -1382,22 +1639,6 @@ export default function HostProfile() {
   const [stayCoverIndex, setStayCoverIndex] = useState(0);
   const [staySaving, setStaySaving] = useState(false);
   const [stayError, setStayError] = useState("");
-
-  const emptyStayInquiryForm = {
-    full_name: "",
-    phone: "",
-    people_count: "",
-    check_in: "",
-    check_out: "",
-    message: "",
-  };
-
-  const [stayInquiryModalOpen, setStayInquiryModalOpen] = useState(false);
-  const [inquiryStay, setInquiryStay] = useState(null);
-  const [stayInquiryForm, setStayInquiryForm] = useState(emptyStayInquiryForm);
-  const [stayInquirySending, setStayInquirySending] = useState(false);
-  const [stayInquiryError, setStayInquiryError] = useState("");
-  const [stayInquirySuccess, setStayInquirySuccess] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -1545,71 +1786,6 @@ export default function HostProfile() {
         setAccommodations([]);
       }
 
-      if (user?.id === hostData.id) {
-        const { data: inquiryRows, error: inquiryRowsError } = await supabase
-          .from("host_offer_inquiries")
-          .select(`
-            id,
-            offer_id,
-            host_id,
-            user_id,
-            full_name,
-            phone,
-            people_count,
-            message,
-            status,
-            created_at,
-            host_offers:offer_id (
-              id,
-              title,
-              category
-            )
-          `)
-          .eq("host_id", hostData.id)
-          .order("created_at", { ascending: false });
-
-        if (!inquiryRowsError) {
-          setOfferInquiries(inquiryRows || []);
-        } else {
-          console.warn("Host offer inquiries:", inquiryRowsError);
-          setOfferInquiries([]);
-        }
-
-        const { data: stayInquiryRows, error: stayInquiryRowsError } = await supabase
-          .from("host_accommodation_inquiries")
-          .select(`
-            id,
-            accommodation_id,
-            host_id,
-            user_id,
-            full_name,
-            phone,
-            people_count,
-            check_in,
-            check_out,
-            message,
-            status,
-            created_at,
-            host_accommodations:accommodation_id (
-              id,
-              title,
-              type
-            )
-          `)
-          .eq("host_id", hostData.id)
-          .order("created_at", { ascending: false });
-
-        if (!stayInquiryRowsError) {
-          setStayInquiries(stayInquiryRows || []);
-        } else {
-          console.warn("Host accommodation inquiries:", stayInquiryRowsError);
-          setStayInquiries([]);
-        }
-      } else {
-        setOfferInquiries([]);
-        setStayInquiries([]);
-      }
-
       if (!photosResult.error) {
         const visibleHostPhotos = (photosResult.data || []).filter(
           (photo) => {
@@ -1710,9 +1886,7 @@ export default function HostProfile() {
       setProfile(null);
       setEvents([]);
       setOffers([]);
-      setOfferInquiries([]);
       setAccommodations([]);
-      setStayInquiries([]);
       setHostPhotos([]);
       setHostCheckins([]);
       setTaggedPlaces([]);
@@ -1778,41 +1952,35 @@ export default function HostProfile() {
         {
           event: "*",
           schema: "public",
-          table: "host_offer_inquiries",
-        },
-        loadProfile
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
           table: "host_accommodations",
-        },
-        loadProfile
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "host_accommodation_inquiries",
         },
         loadProfile
       )
       .subscribe();
 
-    return () => {
+  
+  return () => {
       supabase.removeChannel(channel);
     };
   }, [loadProfile, username]);
 
 
+  const revokeOfferBlobUrls = (items = []) => {
+    items.forEach((item) => {
+      if (item?.url?.startsWith("blob:")) {
+        URL.revokeObjectURL(item.url);
+      }
+    });
+  };
+
   const resetOfferEditor = () => {
     setOfferForm(emptyOfferForm);
     setEditingOffer(null);
-    setOfferImageFile(null);
-    setOfferImagePreview("");
+    setOfferPhotoItems((current) => {
+      revokeOfferBlobUrls(current);
+      return [];
+    });
+    setOfferCoverIndex(0);
     setOfferError("");
     setOfferModalMode("create");
   };
@@ -1827,6 +1995,7 @@ export default function HostProfile() {
     setOfferModalMode("edit");
     setOfferForm({
       title: item.title || "",
+      offer_type: inferOfferType(item),
       category: item.category || "",
       description: item.description || "",
       location: item.location || "",
@@ -1836,8 +2005,24 @@ export default function HostProfile() {
           : "",
       price_on_request: Boolean(item.price_on_request),
     });
-    setOfferImageFile(null);
-    setOfferImagePreview(item.cover_url || "");
+
+    const existingUrls = [
+      item.cover_url,
+      ...(Array.isArray(item.gallery_urls) ? item.gallery_urls : []),
+    ].filter(Boolean);
+
+    const uniqueUrls = [...new Set(existingUrls)].slice(0, MAX_OFFER_PHOTOS);
+
+    setOfferPhotoItems((current) => {
+      revokeOfferBlobUrls(current);
+      return uniqueUrls.map((url, index) => ({
+        id: `existing-offer-${item.id}-${index}-${url}`,
+        url,
+        file: null,
+        existing: true,
+      }));
+    });
+    setOfferCoverIndex(0);
     setOfferError("");
     setOfferModalOpen(true);
   };
@@ -1848,38 +2033,90 @@ export default function HostProfile() {
     resetOfferEditor();
   };
 
-  const handleOfferImageChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleOfferPhotosChange = (event) => {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = "";
 
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setOfferError("Fotografija mora biti JPG, PNG ili WEBP.");
+    if (!selected.length) return;
+
+    const invalid = selected.find(
+      (file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type)
+    );
+
+    if (invalid) {
+      setOfferError("Fotografije moraju biti JPG, PNG ili WEBP.");
       return;
     }
 
-    if (file.size > 8 * 1024 * 1024) {
-      setOfferError("Fotografija može imati najviše 8 MB.");
+    const tooLarge = selected.find((file) => file.size > 8 * 1024 * 1024);
+
+    if (tooLarge) {
+      setOfferError("Svaka fotografija može imati najviše 8 MB.");
       return;
     }
 
-    setOfferError("");
-    setOfferImageFile(file);
+    setOfferPhotoItems((current) => {
+      const remaining = Math.max(MAX_OFFER_PHOTOS - current.length, 0);
 
-    const previewUrl = URL.createObjectURL(file);
-    setOfferImagePreview((current) => {
-      if (current?.startsWith("blob:")) URL.revokeObjectURL(current);
-      return previewUrl;
+      if (remaining === 0) {
+        setOfferError(
+          `Možeš dodati najviše ${MAX_OFFER_PHOTOS} fotografija.`
+        );
+        return current;
+      }
+
+      const accepted = selected.slice(0, remaining);
+      const created = accepted.map((file, index) => ({
+        id: `new-offer-${Date.now()}-${index}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`,
+        url: URL.createObjectURL(file),
+        file,
+        existing: false,
+      }));
+
+      if (selected.length > remaining) {
+        setOfferError(
+          `Dodato je prvih ${remaining} fotografija. Maksimum je ${MAX_OFFER_PHOTOS}.`
+        );
+      } else {
+        setOfferError("");
+      }
+
+      return [...current, ...created];
     });
   };
 
-  const uploadOfferCover = async (file, hostId) => {
+  const removeOfferPhoto = (index) => {
+    setOfferPhotoItems((current) => {
+      const target = current[index];
+      if (target?.url?.startsWith("blob:")) {
+        URL.revokeObjectURL(target.url);
+      }
+      return current.filter((_, itemIndex) => itemIndex !== index);
+    });
+
+    setOfferCoverIndex((currentCover) => {
+      if (index < currentCover) return Math.max(currentCover - 1, 0);
+      if (index === currentCover) return 0;
+      return currentCover;
+    });
+
+    if (offerError) setOfferError("");
+  };
+
+  const uploadOfferPhoto = async (file, hostId, index = 0) => {
     if (!file) return null;
 
     const extension =
       file.name.split(".").pop()?.toLowerCase() ||
-      (file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg");
+      (file.type === "image/png"
+        ? "png"
+        : file.type === "image/webp"
+          ? "webp"
+          : "jpg");
 
-    const path = `${hostId}/offer-${Date.now()}-${Math.random()
+    const path = `${hostId}/offer-${Date.now()}-${index}-${Math.random()
       .toString(36)
       .slice(2, 8)}.${extension}`;
 
@@ -1897,10 +2134,11 @@ export default function HostProfile() {
       .from("host-offers")
       .getPublicUrl(path);
 
-    return {
-      url: data?.publicUrl || "",
-      path,
-    };
+    if (!data?.publicUrl) {
+      throw new Error("Nije moguće dobiti URL fotografije ponude.");
+    }
+
+    return { url: data.publicUrl, path };
   };
 
   const submitOffer = async (event) => {
@@ -1912,28 +2150,63 @@ export default function HostProfile() {
     }
 
     const title = offerForm.title.trim();
+    const offerType = offerForm.offer_type.trim();
     const category = offerForm.category.trim();
     const description = offerForm.description.trim();
     const location = offerForm.location.trim();
 
-    if (!title || !category || !description || !location) {
-      setOfferError("Popuni naziv, kategoriju, lokaciju i opis.");
+    if (!title || !offerType || !category || !description || !location) {
+      setOfferError("Popuni tip ponude, naziv, kategoriju, lokaciju i opis.");
+      return;
+    }
+
+    if (!["service", "rental", "adventure"].includes(offerType)) {
+      setOfferError("Izaberi ispravan tip ponude.");
       return;
     }
 
     setOfferSaving(true);
     setOfferError("");
 
-    let uploaded = null;
+    const uploadedPaths = [];
 
     try {
-      if (offerImageFile) {
-        uploaded = await uploadOfferCover(offerImageFile, profile.id);
+      const resolvedPhotos = [];
+
+      for (let index = 0; index < offerPhotoItems.length; index += 1) {
+        const photo = offerPhotoItems[index];
+
+        if (photo.existing && !photo.file) {
+          resolvedPhotos.push(photo.url);
+          continue;
+        }
+
+        if (photo.file) {
+          const uploaded = await uploadOfferPhoto(photo.file, profile.id, index);
+          uploadedPaths.push(uploaded.path);
+          resolvedPhotos.push(uploaded.url);
+        }
       }
+
+      if (!resolvedPhotos.length) {
+        setOfferError("Dodaj bar jednu fotografiju ponude.");
+        setOfferSaving(false);
+        return;
+      }
+
+      const safeCoverIndex = Math.min(
+        offerCoverIndex,
+        resolvedPhotos.length - 1
+      );
+      const coverUrl = resolvedPhotos[safeCoverIndex];
+      const galleryUrls = resolvedPhotos
+        .filter((_, index) => index !== safeCoverIndex)
+        .slice(0, MAX_OFFER_PHOTOS - 1);
 
       const payload = {
         host_id: profile.id,
         title,
+        offer_type: offerType,
         category,
         description,
         location,
@@ -1943,10 +2216,8 @@ export default function HostProfile() {
             ? Number(offerForm.price_from)
             : null,
         price_on_request: Boolean(offerForm.price_on_request),
-        cover_url:
-          uploaded?.url ||
-          editingOffer?.cover_url ||
-          null,
+        cover_url: coverUrl,
+        gallery_urls: galleryUrls,
         updated_at: new Date().toISOString(),
       };
 
@@ -1981,10 +2252,10 @@ export default function HostProfile() {
     } catch (error) {
       console.error("Host offer save:", error);
 
-      if (uploaded?.path) {
+      if (uploadedPaths.length) {
         await supabase.storage
           .from("host-offers")
-          .remove([uploaded.path])
+          .remove(uploadedPaths)
           .catch(() => {});
       }
 
@@ -2018,122 +2289,6 @@ export default function HostProfile() {
 
     setOffers((current) => current.filter((offer) => offer.id !== item.id));
   };
-
-  const openInquiry = (item) => {
-    setInquiryOffer(item);
-    setInquiryForm(emptyInquiryForm);
-    setInquiryError("");
-    setInquirySuccess(false);
-    setInquiryModalOpen(true);
-  };
-
-  const closeInquiryModal = () => {
-    if (inquirySending) return;
-    setInquiryModalOpen(false);
-    setInquiryOffer(null);
-    setInquiryForm(emptyInquiryForm);
-    setInquiryError("");
-    setInquirySuccess(false);
-  };
-
-  const submitInquiry = async (event) => {
-    event.preventDefault();
-
-    if (!inquiryOffer?.id || !profile?.id) return;
-
-    const fullName = inquiryForm.full_name.trim();
-    const phone = inquiryForm.phone.trim();
-
-    if (!fullName || !phone) {
-      setInquiryError("Unesi ime i prezime i broj telefona.");
-      return;
-    }
-
-    setInquirySending(true);
-    setInquiryError("");
-
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-
-      const payload = {
-        offer_id: inquiryOffer.id,
-        host_id: profile.id,
-        user_id: authData?.user?.id || null,
-        full_name: fullName,
-        phone,
-        people_count: inquiryForm.people_count
-          ? Number(inquiryForm.people_count)
-          : null,
-        message: inquiryForm.message.trim() || null,
-      };
-
-      const { error } = await supabase
-        .from("host_offer_inquiries")
-        .insert(payload);
-
-      if (error) throw error;
-
-      setInquirySuccess(true);
-    } catch (error) {
-      console.error("Host offer inquiry:", error);
-      setInquiryError(
-        error?.message || "Upit trenutno ne može da se pošalje."
-      );
-    } finally {
-      setInquirySending(false);
-    }
-  };
-
-
-  const inquiryStats = useMemo(() => {
-    const newCount = offerInquiries.filter(
-      (item) => (item.status || "new") === "new"
-    ).length;
-
-    const contactedCount = offerInquiries.filter(
-      (item) => item.status === "contacted"
-    ).length;
-
-    return {
-      total: offerInquiries.length,
-      newCount,
-      contactedCount,
-    };
-  }, [offerInquiries]);
-
-  const markInquiryStatus = async (inquiryId, nextStatus) => {
-    if (!profile?.id || currentUserId !== profile.id || !inquiryId) return;
-
-    setInquiryActionLoading(inquiryId);
-
-    try {
-      const { data, error } = await supabase
-        .from("host_offer_inquiries")
-        .update({ status: nextStatus })
-        .eq("id", inquiryId)
-        .eq("host_id", profile.id)
-        .select("*")
-        .single();
-
-      if (error) throw error;
-
-      setOfferInquiries((current) =>
-        current.map((item) =>
-          item.id === inquiryId
-            ? { ...item, status: data.status }
-            : item
-        )
-      );
-    } catch (error) {
-      console.error("Host inquiry status:", error);
-      window.alert(
-        error?.message || "Status upita trenutno ne može da se promeni."
-      );
-    } finally {
-      setInquiryActionLoading(null);
-    }
-  };
-
 
   const revokeStayBlobUrls = (items = []) => {
     items.forEach((item) => {
@@ -2181,7 +2336,7 @@ export default function HostProfile() {
       ...(Array.isArray(item.gallery_urls) ? item.gallery_urls : []),
     ].filter(Boolean);
 
-    const uniqueUrls = [...new Set(existingUrls)].slice(0, 8);
+    const uniqueUrls = [...new Set(existingUrls)].slice(0, MAX_STAY_PHOTOS);
 
     setStayPhotoItems((current) => {
       revokeStayBlobUrls(current);
@@ -2226,10 +2381,10 @@ export default function HostProfile() {
     }
 
     setStayPhotoItems((current) => {
-      const remaining = Math.max(8 - current.length, 0);
+      const remaining = Math.max(MAX_STAY_PHOTOS - current.length, 0);
 
       if (remaining === 0) {
-        setStayError("Možeš dodati najviše 8 fotografija.");
+        setStayError(`Možeš dodati najviše ${MAX_STAY_PHOTOS} fotografija.`);
         return current;
       }
 
@@ -2242,7 +2397,7 @@ export default function HostProfile() {
       }));
 
       if (selected.length > remaining) {
-        setStayError(`Dodato je prvih ${remaining} fotografija. Maksimum je 8.`);
+        setStayError(`Dodato je prvih ${remaining} fotografija. Maksimum je ${MAX_STAY_PHOTOS}.`);
       } else {
         setStayError("");
       }
@@ -2341,6 +2496,12 @@ export default function HostProfile() {
         }
       }
 
+      if (!resolvedPhotos.length) {
+        setStayError("Dodaj bar jednu fotografiju smeštaja.");
+        setStaySaving(false);
+        return;
+      }
+
       const safeCoverIndex =
         resolvedPhotos.length > 0
           ? Math.min(stayCoverIndex, resolvedPhotos.length - 1)
@@ -2351,7 +2512,7 @@ export default function HostProfile() {
 
       const galleryUrls = resolvedPhotos
         .filter((_, index) => index !== safeCoverIndex)
-        .slice(0, 7);
+        .slice(0, MAX_STAY_PHOTOS - 1);
 
       const payload = {
         host_id: profile.id,
@@ -2435,120 +2596,6 @@ export default function HostProfile() {
 
     setAccommodations((current) => current.filter((stay) => stay.id !== item.id));
   };
-
-  const openStayInquiry = (item) => {
-    setInquiryStay(item);
-    setStayInquiryForm(emptyStayInquiryForm);
-    setStayInquiryError("");
-    setStayInquirySuccess(false);
-    setStayInquiryModalOpen(true);
-  };
-
-  const closeStayInquiryModal = () => {
-    if (stayInquirySending) return;
-    setStayInquiryModalOpen(false);
-    setInquiryStay(null);
-    setStayInquiryForm(emptyStayInquiryForm);
-    setStayInquiryError("");
-    setStayInquirySuccess(false);
-  };
-
-  const submitStayInquiry = async (event) => {
-    event.preventDefault();
-    if (!inquiryStay?.id || !profile?.id) return;
-
-    const fullName = stayInquiryForm.full_name.trim();
-    const phone = stayInquiryForm.phone.trim();
-
-    if (!fullName || !phone) {
-      setStayInquiryError("Unesi ime i prezime i broj telefona.");
-      return;
-    }
-
-    if (
-      stayInquiryForm.check_in &&
-      stayInquiryForm.check_out &&
-      stayInquiryForm.check_out < stayInquiryForm.check_in
-    ) {
-      setStayInquiryError("Datum odlaska ne može biti pre datuma dolaska.");
-      return;
-    }
-
-    setStayInquirySending(true);
-    setStayInquiryError("");
-
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-
-      const payload = {
-        accommodation_id: inquiryStay.id,
-        host_id: profile.id,
-        user_id: authData?.user?.id || null,
-        full_name: fullName,
-        phone,
-        people_count: stayInquiryForm.people_count
-          ? Number(stayInquiryForm.people_count)
-          : null,
-        check_in: stayInquiryForm.check_in || null,
-        check_out: stayInquiryForm.check_out || null,
-        message: stayInquiryForm.message.trim() || null,
-      };
-
-      const { error } = await supabase
-        .from("host_accommodation_inquiries")
-        .insert(payload);
-
-      if (error) throw error;
-      setStayInquirySuccess(true);
-    } catch (error) {
-      console.error("Accommodation inquiry:", error);
-      setStayInquiryError(
-        error?.message || "Upit trenutno ne može da se pošalje."
-      );
-    } finally {
-      setStayInquirySending(false);
-    }
-  };
-
-  const stayInquiryStats = useMemo(() => {
-    return {
-      total: stayInquiries.length,
-      newCount: stayInquiries.filter(
-        (item) => (item.status || "new") === "new"
-      ).length,
-    };
-  }, [stayInquiries]);
-
-  const markStayInquiryStatus = async (inquiryId, nextStatus) => {
-    if (!profile?.id || currentUserId !== profile.id || !inquiryId) return;
-
-    setStayInquiryActionLoading(inquiryId);
-
-    try {
-      const { data, error } = await supabase
-        .from("host_accommodation_inquiries")
-        .update({ status: nextStatus })
-        .eq("id", inquiryId)
-        .eq("host_id", profile.id)
-        .select("*")
-        .single();
-
-      if (error) throw error;
-
-      setStayInquiries((current) =>
-        current.map((item) =>
-          item.id === inquiryId ? { ...item, status: data.status } : item
-        )
-      );
-    } catch (error) {
-      console.error("Accommodation inquiry status:", error);
-      window.alert(error?.message || "Status upita trenutno ne može da se promeni.");
-    } finally {
-      setStayInquiryActionLoading(null);
-    }
-  };
-
-
 
   const visitedPlaces = useMemo(() => {
     const unique = new Map();
@@ -2640,32 +2687,98 @@ export default function HostProfile() {
       item.is_active !== false
   );
 
-  const completedEvents = events.filter(
-    (item) =>
-      item.status === "completed" &&
-      item.show_on_profile !== false
-  );
 
   const displayName =
     profile.full_name ||
     profile.username ||
     "Outdoor Host";
 
-  const completedAdventureCount =
-    completedEvents.length +
-    0;
+  const hasAccommodation = accommodations.length > 0;
+  const hasOffers = offers.length > 0;
+  const hasAdventures = activeEvents.length > 0;
+  const hasGallery = hostPhotos.length > 0;
 
-  const contactHref =
-    profile.phone
-      ? `tel:${profile.phone.replace(
-          /\s/g,
-          ""
-        )}`
-      : profile.instagram_url
-        ? normalizeExternalUrl(
-            profile.instagram_url
-          )
-        : "";
+  const hostLatitude = Number(profile.latitude);
+  const hostLongitude = Number(profile.longitude);
+  const hasPublicMapLocation =
+    Boolean(profile.public_location) &&
+    Number.isFinite(hostLatitude) &&
+    Number.isFinite(hostLongitude);
+
+  const hasMapContent =
+    hasPublicMapLocation || mapPlaces.length > 0;
+
+  const visibleMapCenter = hasPublicMapLocation
+    ? [hostLatitude, hostLongitude]
+    : mapCenter;
+
+  const serviceOffers = offers.filter(
+    (item) => inferOfferType(item) === "service"
+  );
+  const rentalOffers = offers.filter(
+    (item) => inferOfferType(item) === "rental"
+  );
+
+  const contentTabs = [
+    {
+      id: "adventures",
+      label: "Avanture",
+      icon: "route",
+      count: activeEvents.length,
+    },
+    {
+      id: "accommodation",
+      label: "Smeštaj",
+      icon: "home",
+      count: accommodations.length,
+    },
+    {
+      id: "services",
+      label: "Usluge",
+      icon: "sparkle",
+      count: serviceOffers.length,
+    },
+    {
+      id: "rentals",
+      label: "Iznajmljivanje",
+      icon: "package",
+      count: rentalOffers.length,
+    },
+  ].filter((tab) => tab.count > 0);
+
+  const hasMultipleContentSections = contentTabs.length > 1;
+  const singleContentSection =
+    contentTabs.length === 1 ? contentTabs[0].id : null;
+
+  const profileTabs = hasMultipleContentSections
+    ? [
+        {
+          id: "overview",
+          label: "Pregled",
+          icon: "compass",
+        },
+        ...contentTabs,
+      ]
+    : [];
+
+  const showOverview =
+    !hasMultipleContentSections || activeProfileTab === "overview";
+
+  const showAdventures = hasMultipleContentSections
+    ? activeProfileTab === "adventures"
+    : singleContentSection === "adventures";
+
+  const showAccommodation = hasMultipleContentSections
+    ? activeProfileTab === "accommodation"
+    : singleContentSection === "accommodation";
+
+  const showServices = hasMultipleContentSections
+    ? activeProfileTab === "services"
+    : singleContentSection === "services";
+
+  const showRentals = hasMultipleContentSections
+    ? activeProfileTab === "rentals"
+    : singleContentSection === "rentals";
 
   return (
     <>
@@ -2722,6 +2835,7 @@ export default function HostProfile() {
       <HostProfileStyles />
 
       <main className="hostProfilePage">
+
         <section className="profileShell">
           <div className="profileHero">
             <img
@@ -2736,352 +2850,143 @@ export default function HostProfile() {
             <div className="coverOverlay" />
             <div className="heroGlow" />
 
-            <div className="heroTopline">
+            {isOwnProfile && (
               <Link
-                to="/explore"
-                className="heroExploreLink"
+                to="/edit-profile"
+                className="heroEditButton heroEditFloating"
               >
-                <Icon
-                  name="compass"
-                  size={16}
-                />
-                Explore
+                <Icon name="edit" size={15} />
+                Uredi profil
               </Link>
+            )}
 
-              {isOwnProfile && (
-                <Link
-                  to="/edit-profile"
-                  className="heroEditButton"
-                >
-                  <Icon
-                    name="edit"
-                    size={16}
-                  />
-                  Uredi profil
-                </Link>
-              )}
-            </div>
 
-            <div className="heroProfileInfo">
-              <img
-                src={
-                  profile.avatar_url ||
-                  FALLBACK_AVATAR
-                }
-                alt={displayName}
-                className="profileAvatar"
-              />
 
-              <div className="heroText">
-                <div className="hostBadgeRow">
-                  <span
-                    className={
-                      profile.is_verified
-                        ? "hostBadge verified"
-                        : "hostBadge"
-                    }
-                  >
-                    <Icon
-                      name={
-                        profile.is_verified
-                          ? "verified"
-                          : "shield"
-                      }
-                      size={15}
-                    />
+          </div>
 
-                    {profile.is_verified
-                      ? "MeetOutdoors verifikovani domaćin"
-                      : "MeetOutdoors domaćin"}
+        <section className="profileIdentityCard">
+          <div className="identityMain">
+            <img
+              src={profile.avatar_url || FALLBACK_AVATAR}
+              alt={displayName}
+              className="identityAvatar"
+            />
+
+            <div className="identityCopy">
+              <div className="identityEyebrow">
+                <span className="identityVerified">
+                  <Icon name={profile.is_verified ? "verified" : "shield"} size={13} />
+                  {profile.is_verified
+                    ? "Verifikovani MeetOutdoors domaćin"
+                    : "MeetOutdoors domaćin"}
+                </span>
+
+                {hasAccommodation && (
+                  <span className="identityType">
+                    <Icon name="home" size={12} />
+                    Smeštaj
                   </span>
+                )}
 
-                  {isAccommodationHost && (
-                    <span className="heroLevelBadge stayHeroBadge">
-                      <Icon name="home" size={14} />
-                      Domaćin smeštaja
-                    </span>
-                  )}
-                </div>
-
-                <h1>{displayName}</h1>
-
-                <div className="profileMeta">
-                  <span>
-                    @{profile.username}
+                {hasAdventures && (
+                  <span className="identityType">
+                    <Icon name="calendar" size={12} />
+                    Avanture
                   </span>
+                )}
 
-                  <span className="metaDivider" />
-
-                  <span>
-                    <Icon
-                      name="mapPin"
-                      size={15}
-                    />
-                    {location}
+                {serviceOffers.length > 0 && (
+                  <span className="identityType">
+                    <Icon name="sparkle" size={12} />
+                    Usluge
                   </span>
-                </div>
+                )}
 
-                <div className="heroActivityBadges">
-                  {activities
-                    .slice(0, 5)
-                    .map((activity) => (
-                      <span key={activity}>
-                        <Icon
-                          name="check"
-                          size={12}
-                        />
-                        {activity}
-                      </span>
-                    ))}
-                </div>
+                {rentalOffers.length > 0 && (
+                  <span className="identityType">
+                    <Icon name="package" size={12} />
+                    Iznajmljivanje
+                  </span>
+                )}
               </div>
-            </div>
 
-            <div className="heroTrustStrip">
-              <article>
-                <strong>
-                  {isAccommodationHost ? accommodations.length : activeEvents.length}
-                </strong>
-                <span>
-                  {isAccommodationHost ? "smeštaja" : "aktivnih avantura"}
-                </span>
-              </article>
+              <h1>{displayName}</h1>
 
-              <article>
-                <strong>
-                  {offers.length}
-                </strong>
-                <span>
-                  ponuda
-                </span>
-              </article>
+              <div className="identityMeta">
+                {profile.username && <span>@{profile.username}</span>}
+                {location && (
+                  <>
+                    <span className="identityDot">•</span>
+                    <span>
+                      <Icon name="mapPin" size={13} />
+                      {location}
+                    </span>
+                  </>
+                )}
+              </div>
 
-              <article>
-                  <strong>{completedEvents.length}</strong>
-                  <span>održanih avantura</span>
-                </article>
-
-              <article>
-                <strong>
-                  {visitedPlaces.length}
-                </strong>
-                <span>
-                  GPS mesta
-                </span>
-              </article>
+              {activities.length > 0 && (
+                <div className="identityActivities">
+                  {activities.slice(0, 6).map((activity) => (
+                    <span key={activity}>{activity}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
+          <div className="identityActions">
+            {!isOwnProfile && (
+              <button
+                type="button"
+                className="identityContactButton"
+                onClick={() => setContactModalOpen(true)}
+              >
+                <Icon name="phone" size={16} />
+                Kontaktiraj domaćina
+              </button>
+            )}
+
+            <ShareSheet
+              type="host"
+              title={displayName}
+              image={profile.cover_url || FALLBACK_COVER}
+              avatar={profile.avatar_url || FALLBACK_AVATAR}
+              location={location}
+              url={`https://www.meetoutdoors.app/h/${profile.username}`}
+              triggerClassName="identityShareButton"
+              triggerEyebrow=""
+              triggerLabel="Podeli"
+            />
+          </div>
+        </section>
+
+        {hasMultipleContentSections && (
+          <nav className="hostProfileTabs" aria-label="Sekcije host profila">
+            <div className="hostProfileTabsInner">
+              {profileTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={
+                    activeProfileTab === tab.id
+                      ? "hostProfileTab active"
+                      : "hostProfileTab"
+                  }
+                  onClick={() => setActiveProfileTab(tab.id)}
+                  aria-pressed={activeProfileTab === tab.id}
+                >
+                  <Icon name={tab.icon} size={18} />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
+
           <div className="profileContent">
-            <section className="hostActionBar">
-              {isAccommodationHost && (
-                <a
-                  href="#accommodation"
-                  className="hostAction primary"
-                >
-                  <Icon name="home" size={17} />
-                  <div>
-                    <small>POGLEDAJ</small>
-                    <strong>Smeštaj</strong>
-                  </div>
-                </a>
-              )}
-
-              <a
-                href="#offers"
-                className={`hostAction ${!isAccommodationHost ? "primary" : ""}`}
-              >
-                <Icon
-                  name="sparkle"
-                  size={17}
-                />
-                <div>
-                  <small>
-                    POGLEDAJ
-                  </small>
-                  <strong>
-                    Šta nudimo
-                  </strong>
-                </div>
-              </a>
-
-              {isAdventureHost && (
-                <a href="#events" className="hostAction">
-                  <Icon name="calendar" size={17} />
-                  <div>
-                    <small>POGLEDAJ</small>
-                    <strong>Avanture</strong>
-                  </div>
-                </a>
-              )}
-
-              <a
-                href="#host-map"
-                className="hostAction"
-              >
-                <Icon
-                  name="mapPin"
-                  size={17}
-                />
-                <div>
-                  <small>
-                    ISTRAŽI
-                  </small>
-                  <strong>
-                    Moje lokacije
-                  </strong>
-                </div>
-              </a>
-
-              {contactHref && (
-                <a
-                  href={contactHref}
-                  target={
-                    contactHref.startsWith(
-                      "http"
-                    )
-                      ? "_blank"
-                      : undefined
-                  }
-                  rel={
-                    contactHref.startsWith(
-                      "http"
-                    )
-                      ? "noreferrer"
-                      : undefined
-                  }
-                  className="hostAction"
-                >
-                  <Icon
-                    name="phone"
-                    size={17}
-                  />
-                  <div>
-                    <small>
-                      DIREKTNO
-                    </small>
-                    <strong>
-                      Kontakt
-                    </strong>
-                  </div>
-                </a>
-              )}
-
-              {isOwnProfile && (
-                <a
-                  href="#offer-inquiries"
-                  className="hostAction inquiryHostAction"
-                >
-                  <Icon
-                    name="message"
-                    size={17}
-                  />
-                  <div>
-                    <small>
-                      UPITI
-                    </small>
-                    <strong>
-                      {inquiryStats.newCount > 0
-                        ? `${inquiryStats.newCount} novih`
-                        : "Ponude"}
-                    </strong>
-                  </div>
-                </a>
-              )}
-
-              <ShareSheet
-                type="host"
-                title={displayName}
-                image={
-                  profile.cover_url ||
-                  FALLBACK_COVER
-                }
-                avatar={
-                  profile.avatar_url ||
-                  FALLBACK_AVATAR
-                }
-                location={location}
-                url={`https://www.meetoutdoors.app/h/${profile.username}`}
-                triggerClassName="hostAction hostShareAction"
-                triggerEyebrow="PODELI"
-                triggerLabel="Profil"
-              />
-            </section>
-
-            <section className="hostStats">
-              <article>
-                <span>
-                  <Icon
-                    name="calendar"
-                    size={19}
-                  />
-                </span>
-
-                <div>
-                  <strong>
-                    {activeEvents.length}
-                  </strong>
-                  <small>
-                    Aktivnih avantura
-                  </small>
-                </div>
-              </article>
-
-              <article>
-                <span>
-                  <Icon
-                    name="home"
-                    size={19}
-                  />
-                </span>
-
-                <div>
-                  <strong>
-                    {accommodations.length}
-                  </strong>
-                  <small>
-                    Smeštaja
-                  </small>
-                </div>
-              </article>
-
-              <article>
-                <span>
-                  <Icon
-                    name="camera"
-                    size={19}
-                  />
-                </span>
-
-                <div>
-                  <strong>
-                    {hostPhotos.length}
-                  </strong>
-                  <small>
-                    Community fotografija
-                  </small>
-                </div>
-              </article>
-
-              <article>
-                <span>
-                  <Icon
-                    name="route"
-                    size={19}
-                  />
-                </span>
-
-                <div>
-                  <strong>
-                    {mapPlaces.length}
-                  </strong>
-                  <small>
-                    Outdoor lokacija
-                  </small>
-                </div>
-              </article>
-            </section>
-
+            {showOverview && (
+              <>
             <div className="mainGrid">
               <div className="mainColumn">
                 <section className="contentCard aboutCard">
@@ -3109,29 +3014,38 @@ export default function HostProfile() {
                       "Ovaj domaćin još nije dodao opis. Uskoro će ovde biti više informacija o iskustvu, pristupu organizaciji i avanturama koje nudi."}
                   </p>
 
-                  <div className="hostStoryStats">
-                    <article>
-                      <span>
-                        {completedAdventureCount}
-                      </span>
-                      <small>
-                        održanih avantura
-                      </small>
-                    </article>
+                  {(hasAdventures || hostCheckins.length > 0 || hasOffers) && (
+                    <div className="hostStoryStats">
+                      {hasAdventures && (
+                        <article>
+                          <span>{activeEvents.length}</span>
+                          <small>avantura</small>
+                        </article>
+                      )}
 
-                    <article>
-                      <span>
-                        {hostCheckins.length}
-                      </span>
-                      <small>
-                        GPS check-inova
-                      </small>
-                    </article>
+                      {hostCheckins.length > 0 && (
+                        <article>
+                          <span>{hostCheckins.length}</span>
+                          <small>GPS check-inova</small>
+                        </article>
+                      )}
 
-                    <article>
-                      <span>{offers.length}</span>
-                      <small>aktivnih ponuda</small>
-                    </article>
+                      {hasOffers && (
+                        <article>
+                          <span>{offers.length}</span>
+                          <small>aktivnih ponuda</small>
+                        </article>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="profilePresence">
+                    <span className="profilePresenceDot" />
+                    <span>
+                      {hasAdventures || hasAccommodation || hasOffers
+                        ? "Aktivan MeetOutdoors domaćin"
+                        : "MeetOutdoors profil domaćina"}
+                    </span>
                   </div>
 
                   <div className="trustMessage">
@@ -3148,10 +3062,7 @@ export default function HostProfile() {
                       </strong>
 
                       <p>
-                        Upoznaj organizatora,
-                        njegove lokacije,
-                        iskustva i utiske drugih
-                        učesnika pre rezervacije.
+                        Upoznaj domaćina, njegove ponude, lokacije i utiske zajednice pre nego što ga kontaktiraš.
                       </p>
                     </div>
                   </div>
@@ -3283,21 +3194,20 @@ export default function HostProfile() {
                     </span>
 
                     <h3>
-                      Upoznaj domaćina pre
-                      rezervacije.
+                      Upoznaj domaćina pre kontakta.
                     </h3>
 
                     <p>
-                      Profil spaja aktivnosti,
-                      avanture, mesta,
-                      fotografije i iskustva
-                      drugih učesnika.
+                      Na jednom mestu vidiš šta domaćin nudi,
+                      gde se nalazi i kako da ga
+                      kontaktiraš direktno.
                     </p>
                   </div>
                 </section>
               </aside>
             </div>
 
+            {hasMapContent && (
             <section
               id="host-map"
               className="hostMapSection"
@@ -3305,7 +3215,7 @@ export default function HostProfile() {
               <div className="listingHeader">
                 <div>
                   <span className="sectionKicker">
-                    Mapa avantura
+                    Lokacija domaćina
                   </span>
 
                   <h2>
@@ -3313,9 +3223,8 @@ export default function HostProfile() {
                   </h2>
 
                   <p>
-                    GPS potvrđena mesta i odobrene
-                    lokacije na kojima je domaćin
-                    tagovan.
+                    Javna lokacija domaćina i mesta povezana
+                    sa njegovim MeetOutdoors profilom.
                   </p>
                 </div>
 
@@ -3333,12 +3242,8 @@ export default function HostProfile() {
 
               <div className="hostMapFrame">
                 <MapContainer
-                  center={mapCenter}
-                  zoom={
-                    mapPlaces.length > 0
-                      ? 7
-                      : 6
-                  }
+                  center={visibleMapCenter}
+                  zoom={hasPublicMapLocation ? 12 : 7}
                   scrollWheelZoom={false}
                   className="hostLeaflet"
                 >
@@ -3346,6 +3251,12 @@ export default function HostProfile() {
                     attribution='&copy; OpenStreetMap contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
+
+                  {hasPublicMapLocation && (
+                    <Marker
+                      position={[hostLatitude, hostLongitude]}
+                    />
+                  )}
 
                   {mapPlaces.map((place) => (
                     <Marker
@@ -3368,36 +3279,19 @@ export default function HostProfile() {
                   ))}
                 </MapContainer>
 
-                {mapPlaces.length === 0 && (
-                  <div className="hostMapEmpty">
-                    <Icon
-                      name="mapPin"
-                      size={28}
-                    />
-
-                    <strong>
-                      Još nema povezanih mesta.
-                    </strong>
-
-                    <span>
-                      Kada domaćin napravi GPS
-                      check-in ili prihvati tag,
-                      mesto će se pojaviti ovde.
-                    </span>
-                  </div>
-                )}
-
                 <div className="hostMapLegend">
                   <Icon
                     name="verified"
                     size={13}
                   />
 
-                  COMMUNITY + GPS LOKACIJE
+                  JAVNA + COMMUNITY LOKACIJE
                 </div>
               </div>
             </section>
+            )}
 
+            {hasGallery && (
             <section className="hostGallerySection">
               <div className="listingHeader">
                 <div>
@@ -3488,7 +3382,12 @@ export default function HostProfile() {
             </section>
 
 
-            {(isAccommodationHost || accommodations.length > 0) && (
+            )}
+
+              </>
+            )}
+
+            {showAccommodation && (hasAccommodation || (isOwnProfile && isAccommodationHost)) && (
               <section
                 id="accommodation"
                 className="listingSection accommodationSection"
@@ -3498,23 +3397,42 @@ export default function HostProfile() {
                     <span className="sectionKicker">Smeštaj u prirodi</span>
                     <h2>Odmor koji počinje napolju</h2>
                     <p>
-                      Izaberi smeštaj i pošalji upit domaćinu za termin i detalje.
+                      Pronađi smeštaj i kontaktiraj domaćina direktno za termin i detalje.
                     </p>
                   </div>
 
                   {isOwnProfile && isAccommodationHost && (
-                    <button
-                      type="button"
-                      className="sectionAction"
-                      onClick={openCreateStay}
-                    >
-                      <Icon name="plus" size={16} />
-                      Dodaj smeštaj
-                    </button>
+                    accommodations.length === 1 ? (
+                      <button
+                        type="button"
+                        className="sectionAction"
+                        onClick={() => openEditStay(accommodations[0])}
+                      >
+                        <Icon name="edit" size={16} />
+                        Uredi smeštaj
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="sectionAction"
+                        onClick={openCreateStay}
+                      >
+                        <Icon name="plus" size={16} />
+                        Dodaj smeštaj
+                      </button>
+                    )
                   )}
                 </div>
 
-                {accommodations.length > 0 ? (
+                {accommodations.length === 1 ? (
+                  <SingleAccommodationFeature
+                    item={accommodations[0]}
+                    isOwner={isOwnProfile}
+                    onEdit={openEditStay}
+                    onDelete={deleteStay}
+                    onContact={() => setContactModalOpen(true)}
+                  />
+                ) : accommodations.length > 1 ? (
                   <div className="stayRailShell">
                     <div className="staySwipeRail" aria-label="Smeštaj domaćina">
                       {accommodations.map((item) => (
@@ -3524,17 +3442,15 @@ export default function HostProfile() {
                           isOwner={isOwnProfile}
                           onEdit={openEditStay}
                           onDelete={deleteStay}
-                          onInquiry={openStayInquiry}
+                          onContact={() => setContactModalOpen(true)}
                         />
                       ))}
                     </div>
 
-                    {accommodations.length > 1 && (
-                      <div className="adventureSwipeHint">
-                        <span>Prevuci za još smeštaja</span>
-                        <Icon name="arrowRight" size={14} />
-                      </div>
-                    )}
+                    <div className="adventureSwipeHint">
+                      <span>Prevuci za još smeštaja</span>
+                      <Icon name="arrowRight" size={14} />
+                    </div>
                   </div>
                 ) : (
                   isOwnProfile && isAccommodationHost ? (
@@ -3554,355 +3470,124 @@ export default function HostProfile() {
               </section>
             )}
 
-            {(isOwnProfile || offers.length > 0) && (
-            <section
-              id="offers"
-              className="listingSection offersSection"
-            >
-              <div className="listingHeader">
-                <div>
-                  <span className="sectionKicker">
-                    Šta nudimo
-                  </span>
-
-                  <h2>
-                    Usluge i iskustva po dogovoru
-                  </h2>
-
-                  <p>
-                    Ponude domaćina koje nisu vezane za jedan datum — pošalji upit i dogovori detalje direktno.
-                  </p>
-                </div>
-
-                {isOwnProfile && (
-                  <button
-                    type="button"
-                    className="sectionAction offerAddButton"
-                    onClick={openCreateOffer}
-                  >
-                    <Icon name="plus" size={16} />
-                    Dodaj ponudu
-                  </button>
-                )}
-              </div>
-
-              {offers.length > 0 ? (
-                <div className="offerRailShell">
-                  <div className="offerSwipeRail" aria-label="Ponude domaćina">
-                    {offers.map((item) => (
-                      <OfferCard
-                        key={item.id}
-                        item={item}
-                        isOwner={isOwnProfile}
-                        onEdit={openEditOffer}
-                        onDelete={deleteOffer}
-                        onInquiry={openInquiry}
-                      />
-                    ))}
+            {showServices && serviceOffers.length > 0 && (
+              <section
+                id="services"
+                className="listingSection offersSection"
+              >
+                <div className="listingHeader">
+                  <div>
+                    <span className="sectionKicker">Usluge</span>
+                    <h2>Usluge ovog domaćina</h2>
+                    <p>
+                      Pogledaj usluge koje domaćin nudi i dogovori detalje direktno.
+                    </p>
                   </div>
 
-                  {offers.length > 1 && (
+                  {isOwnProfile && (
+                    <button
+                      type="button"
+                      className="sectionAction offerAddButton"
+                      onClick={openCreateOffer}
+                    >
+                      <Icon name="plus" size={16} />
+                      Dodaj uslugu
+                    </button>
+                  )}
+                </div>
+
+                {serviceOffers.length === 1 ? (
+                  <SingleOfferFeature
+                    item={serviceOffers[0]}
+                    isOwner={isOwnProfile}
+                    onEdit={openEditOffer}
+                    onDelete={deleteOffer}
+                    onContact={() => setContactModalOpen(true)}
+                  />
+                ) : (
+                  <div className="offerRailShell">
+                    <div className="offerSwipeRail" aria-label="Usluge domaćina">
+                      {serviceOffers.map((item) => (
+                        <OfferCard
+                          key={item.id}
+                          item={item}
+                          isOwner={isOwnProfile}
+                          onEdit={openEditOffer}
+                          onDelete={deleteOffer}
+                          onContact={() => setContactModalOpen(true)}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="adventureSwipeHint">
+                      <span>Prevuci za još usluga</span>
+                      <Icon name="arrowRight" size={14} />
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {showRentals && rentalOffers.length > 0 && (
+              <section
+                id="rentals"
+                className="listingSection offersSection"
+              >
+                <div className="listingHeader">
+                  <div>
+                    <span className="sectionKicker">Iznajmljivanje</span>
+                    <h2>Oprema i vozila za iznajmljivanje</h2>
+                    <p>
+                      Pogledaj šta možeš da iznajmiš i kontaktiraj domaćina direktno.
+                    </p>
+                  </div>
+
+                  {isOwnProfile && (
+                    <button
+                      type="button"
+                      className="sectionAction offerAddButton"
+                      onClick={openCreateOffer}
+                    >
+                      <Icon name="plus" size={16} />
+                      Dodaj iznajmljivanje
+                    </button>
+                  )}
+                </div>
+
+                {rentalOffers.length === 1 ? (
+                  <SingleOfferFeature
+                    item={rentalOffers[0]}
+                    isOwner={isOwnProfile}
+                    onEdit={openEditOffer}
+                    onDelete={deleteOffer}
+                    onContact={() => setContactModalOpen(true)}
+                  />
+                ) : (
+                  <div className="offerRailShell">
+                    <div className="offerSwipeRail" aria-label="Iznajmljivanje domaćina">
+                      {rentalOffers.map((item) => (
+                        <OfferCard
+                          key={item.id}
+                          item={item}
+                          isOwner={isOwnProfile}
+                          onEdit={openEditOffer}
+                          onDelete={deleteOffer}
+                          onContact={() => setContactModalOpen(true)}
+                        />
+                      ))}
+                    </div>
+
                     <div className="adventureSwipeHint">
                       <span>Prevuci za još ponuda</span>
                       <Icon name="arrowRight" size={14} />
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="emptyListing offerEmptyState">
-                  <span>
-                    <Icon name="sparkle" size={27} />
-                  </span>
-
-                  <h3>
-                    {isOwnProfile
-                      ? "Dodaj šta nudiš gostima."
-                      : "Domaćin još nije dodao ponude."}
-                  </h3>
-
-                  <p>
-                    {isOwnProfile
-                      ? "Rafting, vođene ture, iznajmljivanje opreme, prevoz, team building i druge usluge koje mogu da se dogovore direktno."
-                      : "Kada domaćin doda usluge koje nudi po dogovoru, pojaviće se ovde."}
-                  </p>
-
-                  {isOwnProfile && (
-                    <button type="button" onClick={openCreateOffer}>
-                      <Icon name="plus" size={15} />
-                      Dodaj prvu ponudu
-                    </button>
-                  )}
-                </div>
-              )}
-            </section>
-            )}
-
-
-            {isOwnProfile && (
-              <section
-                id="offer-inquiries"
-                className="listingSection hostInquirySection"
-              >
-                <div className="listingHeader inquiryListingHeader">
-                  <div>
-                    <span className="sectionKicker">
-                      Upiti za ponude
-                    </span>
-
-                    <h2>
-                      Ljudi koji žele da se dogovore
-                    </h2>
-
-                    <p>
-                      Privatni podaci su vidljivi samo tebi kao vlasniku profila.
-                    </p>
-                  </div>
-
-                  <div className="inquirySummary">
-                    <span>
-                      <strong>{inquiryStats.newCount}</strong>
-                      novih
-                    </span>
-                    <span>
-                      <strong>{inquiryStats.total}</strong>
-                      ukupno
-                    </span>
-                  </div>
-                </div>
-
-                {offerInquiries.length > 0 ? (
-                  <div className="hostInquiryList">
-                    {offerInquiries.map((item) => {
-                      const status = item.status || "new";
-                      const phoneHref = item.phone
-                        ? `tel:${String(item.phone).replace(/\s/g, "")}`
-                        : "";
-
-                      return (
-                        <article
-                          key={item.id}
-                          className={`hostInquiryCard inquiry-${status}`}
-                        >
-                          <div className="hostInquiryTop">
-                            <div className="hostInquiryIdentity">
-                              <span className="hostInquiryAvatar">
-                                {String(item.full_name || "?")
-                                  .trim()
-                                  .slice(0, 1)
-                                  .toUpperCase()}
-                              </span>
-
-                              <div>
-                                <strong>
-                                  {item.full_name || "MeetOutdoors korisnik"}
-                                </strong>
-                                <small>
-                                  {item.host_offers?.title || "Ponuda domaćina"}
-                                </small>
-                              </div>
-                            </div>
-
-                            <span className={`inquiryStatusBadge ${status}`}>
-                              {status === "contacted"
-                                ? "Kontaktiran"
-                                : status === "closed"
-                                  ? "Zatvoreno"
-                                  : "Novo"}
-                            </span>
-                          </div>
-
-                          <div className="hostInquiryMeta">
-                            {item.phone && (
-                              <span>
-                                <Icon name="phone" size={14} />
-                                {item.phone}
-                              </span>
-                            )}
-
-                            {Number(item.people_count) > 0 && (
-                              <span>
-                                <Icon name="users" size={14} />
-                                {item.people_count} osoba
-                              </span>
-                            )}
-
-                            <span>
-                              <Icon name="calendar" size={14} />
-                              {formatDate(item.created_at)}
-                            </span>
-                          </div>
-
-                          {item.message && (
-                            <p className="hostInquiryMessage">
-                              {item.message}
-                            </p>
-                          )}
-
-                          <div className="hostInquiryActions">
-                            {phoneHref && (
-                              <a href={phoneHref} className="callInquiryButton">
-                                <Icon name="phone" size={14} />
-                                Pozovi
-                              </a>
-                            )}
-
-                            {status === "new" && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  markInquiryStatus(item.id, "contacted")
-                                }
-                                disabled={inquiryActionLoading === item.id}
-                              >
-                                <Icon name="check" size={14} />
-                                {inquiryActionLoading === item.id
-                                  ? "Čuvanje..."
-                                  : "Označi kontaktirano"}
-                              </button>
-                            )}
-
-                            {status !== "closed" && (
-                              <button
-                                type="button"
-                                className="quiet"
-                                onClick={() =>
-                                  markInquiryStatus(item.id, "closed")
-                                }
-                                disabled={inquiryActionLoading === item.id}
-                              >
-                                Zatvori
-                              </button>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="emptyListing compactEmpty">
-                    <span>
-                      <Icon name="message" size={27} />
-                    </span>
-                    <h3>Još nema upita za ponude.</h3>
-                    <p>
-                      Kada neko pošalje upit preko kartice „Šta nudimo“,
-                      pojaviće se ovde sa kontakt podacima.
-                    </p>
                   </div>
                 )}
               </section>
             )}
 
-            {isOwnProfile && isAccommodationHost && (
-              <section
-                id="stay-inquiries"
-                className="listingSection hostInquirySection stayInquirySection"
-              >
-                <div className="listingHeader inquiryListingHeader">
-                  <div>
-                    <span className="sectionKicker">Upiti za smeštaj</span>
-                    <h2>Termini i kontakti na jednom mestu</h2>
-                    <p>Privatni podaci su vidljivi samo tebi kao vlasniku profila.</p>
-                  </div>
 
-                  <div className="inquirySummary">
-                    <span>
-                      <strong>{stayInquiryStats.newCount}</strong>
-                      novih
-                    </span>
-                    <span>
-                      <strong>{stayInquiryStats.total}</strong>
-                      ukupno
-                    </span>
-                  </div>
-                </div>
-
-                {stayInquiries.length > 0 ? (
-                  <div className="hostInquiryList">
-                    {stayInquiries.map((item) => {
-                      const status = item.status || "new";
-                      const phoneHref = item.phone
-                        ? `tel:${String(item.phone).replace(/\s/g, "")}`
-                        : "";
-
-                      return (
-                        <article key={item.id} className={`hostInquiryCard inquiry-${status}`}>
-                          <div className="hostInquiryTop">
-                            <div className="hostInquiryIdentity">
-                              <span className="hostInquiryAvatar">
-                                {String(item.full_name || "?").trim().slice(0, 1).toUpperCase()}
-                              </span>
-                              <div>
-                                <strong>{item.full_name || "MeetOutdoors korisnik"}</strong>
-                                <small>{item.host_accommodations?.title || "Smeštaj"}</small>
-                              </div>
-                            </div>
-
-                            <span className={`inquiryStatusBadge ${status}`}>
-                              {status === "contacted"
-                                ? "Kontaktiran"
-                                : status === "closed"
-                                  ? "Zatvoren"
-                                  : "Nov"}
-                            </span>
-                          </div>
-
-                          <div className="hostInquiryMeta">
-                            {item.people_count && (
-                              <span><Icon name="users" size={12} /> {item.people_count} gostiju</span>
-                            )}
-                            {(item.check_in || item.check_out) && (
-                              <span>
-                                <Icon name="calendar" size={12} />
-                                {item.check_in || "?"} → {item.check_out || "?"}
-                              </span>
-                            )}
-                          </div>
-
-                          {item.message && <p className="hostInquiryMessage">{item.message}</p>}
-
-                          <div className="hostInquiryActions">
-                            {phoneHref && (
-                              <a className="callInquiryButton" href={phoneHref}>
-                                <Icon name="phone" size={13} />
-                                Pozovi
-                              </a>
-                            )}
-                            {status === "new" && (
-                              <button
-                                type="button"
-                                disabled={stayInquiryActionLoading === item.id}
-                                onClick={() => markStayInquiryStatus(item.id, "contacted")}
-                              >
-                                Kontaktirano
-                              </button>
-                            )}
-                            {status !== "closed" && (
-                              <button
-                                type="button"
-                                className="quiet"
-                                disabled={stayInquiryActionLoading === item.id}
-                                onClick={() => markStayInquiryStatus(item.id, "closed")}
-                              >
-                                Zatvori
-                              </button>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="emptyListing compactEmpty">
-                    <span><Icon name="message" size={27} /></span>
-                    <h3>Još nema upita za smeštaj.</h3>
-                    <p>Kada neko pošalje upit sa kartice smeštaja, pojaviće se ovde.</p>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {isAdventureHost && (
+            {showAdventures && (hasAdventures || (isOwnProfile && isAdventureHost)) && (
             <section
               id="events"
               className="listingSection adventureRailSection"
@@ -3946,10 +3631,12 @@ export default function HostProfile() {
                       />
                     ))}
                   </div>
-                  <div className="adventureSwipeHint">
-                    <span>Prevuci za još</span>
-                    <Icon name="arrowRight" size={14} />
-                  </div>
+                  {activeEvents.length > 1 && (
+                    <div className="adventureSwipeHint">
+                      <span>Prevuci za još</span>
+                      <Icon name="arrowRight" size={14} />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="emptyListing">
@@ -3982,118 +3669,23 @@ export default function HostProfile() {
             </section>
             )}
 
-            {isAdventureHost && completedEvents.length > 0 && (
-              <section
-                id="completed-adventures"
-                className="listingSection completedAdventureSection adventureRailSection"
-              >
-                <div className="listingHeader">
-                  <div>
-                    <span className="sectionKicker">
-                      Održane avanture
-                    </span>
-
-                    <h2>
-                      Iskustva koja ostaju iza domaćina
-                    </h2>
-
-                    <p>
-                      Završene avanture čuvaju istoriju, iskustvo i portfolio organizatora.
-                    </p>
-                  </div>
-
-                  <div className="completedAdventureCount">
-                    <Icon name="trophy" size={16} />
-                    {completedEvents.length}
-                  </div>
-                </div>
-
-                <div className="adventureRailShell">
-                  <div className="adventureSwipeRail" aria-label="Održane avanture">
-                    {completedEvents.map((event) => (
-                      <EventCard
-                        key={event.id}
-                        event={event}
-                        completed
-                      />
-                    ))}
-                  </div>
-                  <div className="adventureSwipeHint">
-                    <span>Prevuci kroz portfolio</span>
-                    <Icon name="arrowRight" size={14} />
-                  </div>
-                </div>
-              </section>
-            )}
           </div>
         </section>
-
-        {!isOwnProfile && (
-          <div className="mobileHostDock">
-            {isAccommodationHost && accommodations.length > 0 && (
-              <a href="#accommodation">
-                <Icon name="home" size={17} />
-                Smeštaj
-              </a>
-            )}
-
-            {isAdventureHost && activeEvents.length > 0 && (
-              <a href="#events">
-                <Icon name="calendar" size={17} />
-                Avanture
-              </a>
-            )}
-
-            {offers.length > 0 && (
-              <a href="#offers">
-                <Icon name="sparkle" size={17} />
-                Ponude
-              </a>
-            )}
-
-            <a href="#host-map">
-              <Icon
-                name="mapPin"
-                size={17}
-              />
-              Mapa
-            </a>
-
-            {contactHref && (
-              <a href={contactHref}>
-                <Icon
-                  name="phone"
-                  size={17}
-                />
-                Kontakt
-              </a>
-            )}
-          </div>
-        )}
 
         <OfferModal
           open={offerModalOpen}
           mode={offerModalMode}
           form={offerForm}
           setForm={setOfferForm}
-          imagePreview={offerImagePreview}
-          onImageChange={handleOfferImageChange}
+          photoItems={offerPhotoItems}
+          coverIndex={offerCoverIndex}
+          onPhotoChange={handleOfferPhotosChange}
+          onRemovePhoto={removeOfferPhoto}
+          onSetCover={setOfferCoverIndex}
           onClose={closeOfferModal}
           onSubmit={submitOffer}
           saving={offerSaving}
           error={offerError}
-        />
-
-        <InquiryModal
-          open={inquiryModalOpen}
-          offer={inquiryOffer}
-          form={inquiryForm}
-          setForm={setInquiryForm}
-          onClose={closeInquiryModal}
-          onSubmit={submitInquiry}
-          sending={inquirySending}
-          error={inquiryError}
-          success={inquirySuccess}
         />
 
         <AccommodationModal
@@ -4112,16 +3704,10 @@ export default function HostProfile() {
           error={stayError}
         />
 
-        <StayInquiryModal
-          open={stayInquiryModalOpen}
-          stay={inquiryStay}
-          form={stayInquiryForm}
-          setForm={setStayInquiryForm}
-          onClose={closeStayInquiryModal}
-          onSubmit={submitStayInquiry}
-          sending={stayInquirySending}
-          error={stayInquiryError}
-          success={stayInquirySuccess}
+        <DirectContactModal
+          open={contactModalOpen}
+          profile={profile}
+          onClose={() => setContactModalOpen(false)}
         />
       </main>
     </>
@@ -4138,6 +3724,23 @@ function HostProfileStyles() {
       button,a{-webkit-tap-highlight-color:transparent}
       .hostProfilePage{min-height:100vh;padding:118px 30px 50px;background:radial-gradient(circle at 8% 0%,rgba(178,212,145,.18),transparent 27%),radial-gradient(circle at 94% 18%,rgba(67,108,76,.1),transparent 24%),#eef2eb;color:#17271f;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       .hostProfilePage a{color:inherit;text-decoration:none}
+      .hostActionButton{border:0;font:inherit;text-align:left;cursor:pointer}
+      .mobileHostDock button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer}
+      .directContactBackdrop{position:fixed;inset:0;z-index:9999;display:grid;place-items:end center;padding:20px;background:rgba(9,18,13,.55);backdrop-filter:blur(8px)}
+      .directContactSheet{width:min(520px,100%);padding:22px;border:1px solid rgba(255,255,255,.14);border-radius:26px;background:#f8faf5;box-shadow:0 28px 90px rgba(8,20,12,.28);color:#17271f}
+      .directContactHead{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+      .directContactHead small{display:block;color:#79906d;font-size:9px;font-weight:900;letter-spacing:.12em}
+      .directContactHead h3{margin:5px 0 0;font-size:25px;letter-spacing:-.04em}
+      .directContactHead p{margin:7px 0 0;color:#718078;font-size:12px;line-height:1.55}
+      .directContactClose{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border:1px solid #dbe3d8;border-radius:13px;background:white;color:#314638;cursor:pointer}
+      .directContactOptions{display:grid;gap:10px;margin-top:20px}
+      .directContactOptions>a{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:66px;padding:11px 13px;border:1px solid #dce5d9;border-radius:17px;background:white;transition:transform .18s ease,border-color .18s ease}
+      .directContactOptions>a:hover{transform:translateY(-1px);border-color:#a9c59a}
+      .directContactOptions>a>span{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#e8f2df;color:#456435}
+      .directContactOptions small,.directContactOptions strong{display:block}
+      .directContactOptions small{color:#8a968e;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+      .directContactOptions strong{margin-top:4px;color:#203329;font-size:12px}
+      .directContactEmpty{margin-top:18px;padding:18px;border:1px dashed #cfd9cb;border-radius:16px;color:#718078;text-align:center;font-size:12px}
       .profileShell{width:min(1260px,100%);margin:0 auto;overflow:hidden;border:1px solid rgba(34,55,43,.1);border-radius:36px;background:rgba(250,251,247,.91);box-shadow:0 34px 100px rgba(30,50,37,.12)}
       .profileHero{position:relative;isolation:isolate;min-height:670px;display:flex;flex-direction:column;justify-content:flex-end;padding:34px;overflow:hidden;color:white}
       .coverImage,.coverOverlay{position:absolute;inset:0;width:100%;height:100%}
@@ -4244,7 +3847,7 @@ function HostProfileStyles() {
       .offerCardBody>p{min-height:48px;margin:0;color:#627168;font-size:10px;line-height:1.52;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
       .offerCardBottom{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;padding-top:12px;border-top:1px solid #edf1eb}
       .offerCardBottom>strong{color:#173f2a;font-size:12px}
-      .offerInquiryButton{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:0;border-radius:11px;background:#c9f28c;color:#173f2a;font-size:8px;font-weight:900;cursor:pointer}
+      .offerContactButton{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:0;border-radius:11px;background:#c9f28c;color:#173f2a;font-size:8px;font-weight:900;cursor:pointer}
       .offerOwnerHint{color:#819086;font-size:8px;font-weight:800}
       .offerEmptyState button{display:inline-flex;align-items:center;gap:7px;margin-top:14px;padding:10px 14px;border:0;border-radius:12px;background:#173f2a;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
       .offerModalBackdrop{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;background:rgba(6,18,11,.72);backdrop-filter:blur(10px)}
@@ -4307,39 +3910,8 @@ function HostProfileStyles() {
       .offerModalActions .secondary{border:1px solid #d7dfd4;background:#fff;color:#516258}
       .offerModalActions .primary{border:0;background:#173f2a;color:#fff;box-shadow:0 10px 20px rgba(23,63,42,.16)}
       .offerModalActions button:disabled{opacity:.55;cursor:not-allowed}
-      .inquirySuccess{display:grid;place-items:center;padding:34px 22px 30px;text-align:center}
-      .inquirySuccess>span{display:grid;place-items:center;width:54px;height:54px;border-radius:17px;background:#dff3c0;color:#234d30}
-      .inquirySuccess h3{margin:14px 0 0;font-size:22px}
-      .inquirySuccess p{max-width:390px;margin:7px 0 0;color:#748178;font-size:10px;line-height:1.5}
-      .inquirySuccess button{margin-top:18px;min-height:40px;padding:0 16px;border:0;border-radius:11px;background:#173f2a;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
 
 
-      .inquiryHostAction{position:relative}
-      .inquirySummary{display:flex;gap:8px;flex-wrap:wrap}
-      .inquirySummary>span{display:grid;min-width:78px;padding:10px 12px;border:1px solid #dce4d9;border-radius:14px;background:#fff;color:#77857c;font-size:7px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-      .inquirySummary strong{color:#173f2a;font-size:17px;letter-spacing:-.04em}
-      .hostInquiryList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
-      .hostInquiryCard{padding:16px;border:1px solid #dce4d9;border-radius:19px;background:#fff;box-shadow:0 8px 24px rgba(31,51,38,.045)}
-      .hostInquiryCard.inquiry-new{border-color:#bdd49f;background:linear-gradient(180deg,#fbfff7,#fff)}
-      .hostInquiryTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-      .hostInquiryIdentity{display:flex;align-items:center;gap:10px;min-width:0}
-      .hostInquiryAvatar{display:grid;place-items:center;flex:0 0 auto;width:38px;height:38px;border-radius:13px;background:#173f2a;color:#fff;font-size:13px;font-weight:900}
-      .hostInquiryIdentity>div{display:grid;gap:3px;min-width:0}
-      .hostInquiryIdentity strong{overflow:hidden;color:#17271f;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
-      .hostInquiryIdentity small{overflow:hidden;color:#7c8a81;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
-      .inquiryStatusBadge{flex:0 0 auto;padding:6px 8px;border-radius:999px;background:#eef2ec;color:#67756c;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}
-      .inquiryStatusBadge.new{background:#dff3c0;color:#275131}
-      .inquiryStatusBadge.contacted{background:#edf0f7;color:#45536a}
-      .inquiryStatusBadge.closed{background:#f0f0f0;color:#7b7b7b}
-      .hostInquiryMeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
-      .hostInquiryMeta span{display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border-radius:9px;background:#f3f6f1;color:#607067;font-size:8px;font-weight:800}
-      .hostInquiryMessage{margin:12px 0 0;padding:11px 12px;border-left:3px solid #c9f28c;border-radius:0 10px 10px 0;background:#f7faf5;color:#5b6a61;font-size:9px;line-height:1.5}
-      .hostInquiryActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid #edf1eb}
-      .hostInquiryActions a,.hostInquiryActions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:0 10px;border:1px solid #d7dfd4;border-radius:10px;background:#fff;color:#405249;font-size:7px;font-weight:900;text-decoration:none;cursor:pointer}
-      .hostInquiryActions .callInquiryButton{border-color:#173f2a;background:#173f2a;color:#fff}
-      .hostInquiryActions button:not(.quiet){border-color:#bed39f;background:#ecf8dc;color:#2b5332}
-      .hostInquiryActions .quiet{margin-left:auto;color:#7e8982}
-      .hostInquiryActions button:disabled{opacity:.5;cursor:not-allowed}
 
       .hostMapSection,.hostGallerySection,.listingSection,.reviewFeedSection{margin-top:20px;padding:28px}
       .listingHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
@@ -4413,10 +3985,9 @@ function HostProfileStyles() {
       .stayMeta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;padding:10px 11px;border-radius:13px;background:#f3f6f0}
       .stayMeta span{display:flex;align-items:center;gap:6px;color:#67756c;font-size:8px;font-weight:800}
       .stayMeta strong{color:#294333;font-size:10px;white-space:nowrap}
-      .stayInquiryButton{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:39px;margin-top:11px;padding:0 12px;border:0;border-radius:12px;background:#183a27;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
+      .stayContactButton{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:39px;margin-top:11px;padding:0 12px;border:0;border-radius:12px;background:#183a27;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
       .stayOwnerHint{display:block;margin-top:11px;color:#7e8c82;font-size:8px;font-weight:800;text-align:right}
       .compactStayCheck{margin-top:0}
-      .stayInquirySection{background:linear-gradient(145deg,#f7faf4,#fff)}
       .emptyListing button{display:inline-flex;align-items:center;gap:7px;margin-top:18px;padding:11px 14px;border:0;border-radius:12px;background:#183a27;color:#fff;font-size:9px;font-weight:850;cursor:pointer}
       .hostListingsGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:24px}
       .hostListingCard{min-width:0;overflow:hidden;border:1px solid #dce4d9;border-radius:22px;background:#fff;box-shadow:0 10px 30px rgba(31,51,38,.05);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
@@ -4662,8 +4233,6 @@ function HostProfileStyles() {
       }
 
       @media(max-width:760px){
-        .hostInquiryList{grid-template-columns:1fr}
-        .inquiryListingHeader{align-items:flex-start}
         .offerCard{flex-basis:310px}
         .offerCardMedia{height:190px}
         .offerFormGrid{grid-template-columns:1fr}
@@ -4754,11 +4323,6 @@ function HostProfileStyles() {
       }
 
       @media(max-width:520px){
-        .hostInquiryCard{padding:13px;border-radius:16px}
-        .hostInquiryTop{gap:8px}
-        .hostInquiryActions{gap:6px}
-        .hostInquiryActions a,.hostInquiryActions button{flex:1 1 auto}
-        .hostInquiryActions .quiet{margin-left:0}
         .offerSwipeRail{gap:9px;margin-right:-8px;padding-right:18px;padding-bottom:6px}
         .offerCard{flex-basis:82vw;max-width:330px;border-radius:18px}
         .offerCardMedia{height:185px}
@@ -4766,7 +4330,7 @@ function HostProfileStyles() {
         .offerCardBody{padding:11px}
         .offerCardBody>p{min-height:34px;font-size:8px}
         .offerCardBottom{margin-top:8px;padding-top:8px}
-        .offerInquiryButton{min-height:32px;padding:0 9px;font-size:7px}
+        .offerContactButton{min-height:32px;padding:0 9px;font-size:7px}
         .offerModalBackdrop{align-items:end;padding:0}
         .offerModal{width:100%;max-height:92vh;border-radius:22px 22px 0 0}
         .offerModalHeader{padding:15px}
@@ -5055,8 +4619,8 @@ function HostProfileStyles() {
         padding-top:7px;
       }
 
-      .stayInquiryButton,
-      .offerInquiryButton{
+      .stayContactButton,
+      .offerContactButton{
         min-height:31px;
         padding:0 9px;
       }
@@ -5262,6 +4826,2764 @@ function HostProfileStyles() {
         }
       }
 
-    `}</style>
+
+      /* =========================================================
+         HOST PROFILE / PREMIUM LAYER
+         ========================================================= */
+      .hostProfilePage{
+        --p-ink:#142019;
+        --p-muted:#718078;
+        --p-line:rgba(28,59,38,.10);
+        --p-green:#173d28;
+        --p-green2:#2b5f40;
+        --p-card:rgba(255,255,255,.90);
+        --p-shadow:0 18px 55px rgba(18,45,28,.08);
+        background:
+          radial-gradient(circle at 8% 0%,rgba(143,178,118,.12),transparent 30rem),
+          linear-gradient(180deg,#f9fbf7 0%,#f3f6f1 100%);
+        color:var(--p-ink);
+      }
+
+      .hostProfilePage *{box-sizing:border-box}
+      .hostProfilePage{scroll-behavior:smooth}
+
+      .profileHero{
+        position:relative;
+        overflow:hidden;
+        min-height:470px;
+        border-radius:0 0 36px 36px;
+        box-shadow:0 26px 72px rgba(8,25,15,.15);
+        isolation:isolate;
+      }
+
+      .profileHero::after{
+        content:"";
+        position:absolute;
+        inset:0;
+        z-index:1;
+        pointer-events:none;
+        background:
+          linear-gradient(180deg,rgba(4,15,8,.02),rgba(4,15,8,.11) 34%,rgba(4,15,8,.84)),
+          linear-gradient(90deg,rgba(6,22,12,.34),transparent 58%);
+      }
+
+      .heroInner,
+      .heroTrustStrip{position:relative;z-index:2}
+
+      .heroInner{
+        width:min(1180px,calc(100% - 44px));
+        margin:0 auto;
+      }
+
+      .heroAvatar{
+        width:116px;
+        height:116px;
+        border:4px solid rgba(255,255,255,.94);
+        box-shadow:0 16px 42px rgba(0,0,0,.20);
+      }
+
+      .heroText h1{
+        font-size:clamp(36px,5.3vw,62px);
+        line-height:.95;
+        letter-spacing:-.055em;
+        text-wrap:balance;
+      }
+
+      .heroBadges span,
+      .heroLevelBadge,
+      .heroActivityBadges span{
+        border:1px solid rgba(255,255,255,.17);
+        background:rgba(18,42,26,.45);
+        backdrop-filter:blur(14px);
+        -webkit-backdrop-filter:blur(14px);
+      }
+
+      .heroTrustStrip{
+        width:min(1180px,calc(100% - 44px));
+        margin:0 auto 20px;
+        padding:8px;
+        gap:7px;
+        border:1px solid rgba(255,255,255,.16);
+        border-radius:19px;
+        background:rgba(12,31,19,.42);
+        backdrop-filter:blur(18px);
+        -webkit-backdrop-filter:blur(18px);
+      }
+
+      .heroTrustStrip article{
+        flex:1 1 120px;
+        min-width:105px;
+        padding:12px 14px;
+        border:0;
+        border-radius:13px;
+        background:rgba(255,255,255,.07);
+      }
+
+      .heroTrustStrip strong{color:#fff;font-size:18px;letter-spacing:-.03em}
+      .heroTrustStrip span{
+        margin-top:2px;
+        color:rgba(255,255,255,.62);
+        font-size:8px;
+        font-weight:900;
+        letter-spacing:.08em;
+        text-transform:uppercase;
+      }
+
+      .profileContent{
+        width:min(1180px,calc(100% - 32px));
+        margin:-15px auto 0;
+        padding-bottom:110px;
+        position:relative;
+        z-index:5;
+      }
+
+      .hostActionBar{
+        position:sticky;
+        top:12px;
+        z-index:60;
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+        gap:8px;
+        padding:9px;
+        margin-bottom:18px;
+        border:1px solid rgba(255,255,255,.76);
+        border-radius:22px;
+        background:rgba(250,252,248,.89);
+        box-shadow:0 18px 55px rgba(22,48,31,.12);
+        backdrop-filter:blur(24px);
+        -webkit-backdrop-filter:blur(24px);
+      }
+
+      .hostAction{
+        min-height:58px;
+        padding:10px 13px;
+        border:1px solid transparent;
+        border-radius:15px;
+        background:transparent;
+        transition:.18s ease;
+      }
+
+      .hostAction:hover{
+        transform:translateY(-1px);
+        border-color:var(--p-line);
+        background:#fff;
+        box-shadow:0 8px 22px rgba(26,52,34,.07);
+      }
+
+      .hostAction.primary{
+        border-color:transparent;
+        background:linear-gradient(135deg,var(--p-green),var(--p-green2));
+        color:#fff;
+        box-shadow:0 10px 25px rgba(23,61,40,.18);
+      }
+
+      .hostAction small{font-size:7px;letter-spacing:.13em;opacity:.56}
+      .hostAction strong{font-size:11px;letter-spacing:-.015em}
+
+      .hostStats{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+        gap:10px;
+        margin-bottom:22px;
+      }
+
+      .hostStats article{
+        min-height:82px;
+        padding:15px 16px;
+        border:1px solid var(--p-line);
+        border-radius:18px;
+        background:var(--p-card);
+        box-shadow:0 12px 36px rgba(21,47,29,.055);
+      }
+
+      .hostStats article>span{
+        width:38px;
+        height:38px;
+        border-radius:12px;
+        background:#edf4e9;
+        color:#45683b;
+      }
+
+      .hostStats strong{font-size:20px;letter-spacing:-.04em}
+      .hostStats small{color:#829087;font-size:9px}
+
+      .mainGrid{gap:18px;align-items:start}
+
+      .aboutCard,
+      .contactCard,
+      .trustCard,
+      .hostMapSection,
+      .hostGallerySection,
+      .listingSection{
+        border:1px solid var(--p-line);
+        border-radius:27px;
+        background:var(--p-card);
+        box-shadow:var(--p-shadow);
+      }
+
+      .aboutCard{padding:25px}
+      .aboutCard h2,
+      .listingHeader h2{letter-spacing:-.045em;text-wrap:balance}
+      .aboutCard p{color:var(--p-muted);line-height:1.76}
+
+      .contactCard{padding:12px}
+      .contactItem{
+        min-height:62px;
+        margin-top:6px;
+        border:1px solid transparent;
+        border-radius:15px;
+        transition:.18s ease;
+      }
+      .contactItem.active{background:#fafcf8}
+      .contactItem.active:hover{
+        transform:translateY(-1px);
+        border-color:#dce7d7;
+        background:#fff;
+        box-shadow:0 8px 22px rgba(27,54,35,.06);
+      }
+      .contactIcon{border-radius:12px;background:#edf4e9;color:#47683c}
+
+      .trustCard{
+        padding:21px;
+        background:linear-gradient(145deg,#173d28,#214c34);
+        color:#fff;
+      }
+      .trustCard p{color:rgba(255,255,255,.67)}
+
+      .listingSection,
+      .hostGallerySection,
+      .hostMapSection{
+        margin-top:19px;
+        padding:25px;
+      }
+
+      .listingHeader{
+        gap:20px;
+        align-items:flex-end;
+        margin-bottom:19px;
+      }
+
+      .listingHeader>div:first-child{max-width:690px}
+      .sectionKicker{
+        color:#71905f;
+        font-size:9px;
+        font-weight:950;
+        letter-spacing:.14em;
+      }
+      .listingHeader h2{
+        margin-top:5px;
+        font-size:clamp(25px,3.1vw,37px);
+        line-height:1.05;
+      }
+      .listingHeader p{
+        max-width:650px;
+        margin-top:8px;
+        color:#78867d;
+        font-size:12px;
+        line-height:1.66;
+      }
+
+      .sectionAction{
+        min-height:43px;
+        padding:0 15px;
+        border:1px solid #dce5d9;
+        border-radius:13px;
+        background:#fff;
+        box-shadow:0 6px 18px rgba(29,55,37,.05);
+        transition:.18s ease;
+      }
+      .sectionAction:hover{
+        transform:translateY(-1px);
+        border-color:#bad0b1;
+        box-shadow:0 10px 24px rgba(29,55,37,.08);
+      }
+
+      .staySwipeRail,
+      .offerSwipeRail,
+      .adventureSwipeRail{
+        gap:14px;
+        padding:2px 2px 10px;
+        scroll-snap-type:x mandatory;
+        scrollbar-width:none;
+      }
+      .staySwipeRail::-webkit-scrollbar,
+      .offerSwipeRail::-webkit-scrollbar,
+      .adventureSwipeRail::-webkit-scrollbar{display:none}
+
+      .stayCard,
+      .offerCard,
+      .adventureSwipeCard{
+        scroll-snap-align:start;
+        overflow:hidden;
+        border:1px solid #e1e8de;
+        border-radius:22px;
+        background:#fff;
+        box-shadow:0 12px 32px rgba(24,50,32,.07);
+        transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+      }
+
+      .stayCard:hover,
+      .offerCard:hover,
+      .adventureSwipeCard:hover{
+        transform:translateY(-4px);
+        border-color:#cbdac5;
+        box-shadow:0 20px 45px rgba(24,50,32,.12);
+      }
+
+      .stayCardMedia img,
+      .offerCardMedia img,
+      .adventureCardImage img{transition:transform .55s cubic-bezier(.2,.7,.2,1)}
+      .stayCard:hover .stayCardMedia img,
+      .offerCard:hover .offerCardMedia img,
+      .adventureSwipeCard:hover .adventureCardImage img{transform:scale(1.045)}
+
+      .stayContactButton,
+      .offerContactButton{
+        min-height:42px;
+        border:0;
+        border-radius:12px;
+        background:linear-gradient(135deg,#173d28,#2c6041);
+        color:#fff;
+        font-weight:850;
+        box-shadow:0 8px 20px rgba(23,61,40,.17);
+        transition:.18s ease;
+      }
+      .stayContactButton:hover,
+      .offerContactButton:hover{
+        transform:translateY(-1px);
+        box-shadow:0 12px 26px rgba(23,61,40,.22);
+      }
+
+      .offerCategoryBadge,
+      .stayTypeBadge,
+      .hostListingType{
+        border:1px solid rgba(255,255,255,.18);
+        background:rgba(13,29,19,.60);
+        backdrop-filter:blur(12px);
+        -webkit-backdrop-filter:blur(12px);
+      }
+
+      .hostMapFrame{
+        overflow:hidden;
+        border:1px solid #dfe8dc;
+        border-radius:22px;
+        box-shadow:0 10px 28px rgba(25,51,33,.055);
+      }
+      .hostLeaflet{min-height:390px}
+      .hostMapLegend{
+        left:14px;
+        bottom:14px;
+        padding:10px 12px;
+        border:1px solid rgba(255,255,255,.52);
+        border-radius:12px;
+        background:rgba(19,48,31,.90);
+        color:#fff;
+        box-shadow:0 8px 25px rgba(10,29,18,.16);
+        backdrop-filter:blur(14px);
+      }
+
+      .hostGalleryItem{
+        overflow:hidden;
+        border-radius:18px;
+        box-shadow:0 8px 24px rgba(28,53,35,.08);
+      }
+      .hostGalleryItem img{transition:transform .5s ease}
+      .hostGalleryItem:hover img{transform:scale(1.045)}
+
+      .emptyListing{
+        padding:34px 24px;
+        border:1px dashed #d5e0d1;
+        border-radius:20px;
+        background:
+          radial-gradient(circle at top left,rgba(145,176,123,.10),transparent 18rem),
+          #fbfcfa;
+      }
+
+      .directContactBackdrop{
+        background:rgba(6,18,11,.64);
+        backdrop-filter:blur(12px);
+        -webkit-backdrop-filter:blur(12px);
+      }
+      .directContactSheet{
+        border:1px solid rgba(255,255,255,.72);
+        border-radius:28px;
+        background:
+          radial-gradient(circle at 100% 0%,rgba(153,186,130,.15),transparent 14rem),
+          #f9fbf7;
+        box-shadow:0 32px 100px rgba(7,25,14,.28);
+      }
+
+      .mobileHostDock{
+        border:1px solid rgba(255,255,255,.74);
+        background:rgba(249,251,247,.94);
+        box-shadow:0 -8px 34px rgba(22,48,31,.12);
+        backdrop-filter:blur(22px);
+        -webkit-backdrop-filter:blur(22px);
+      }
+
+      @media(max-width:820px){
+        .profileHero{min-height:430px;border-radius:0 0 28px 28px}
+        .heroInner,.heroTrustStrip{width:calc(100% - 28px)}
+        .profileContent{width:calc(100% - 20px);margin-top:-11px;padding-bottom:94px}
+        .heroAvatar{width:86px;height:86px;border-width:3px}
+        .heroText h1{font-size:clamp(30px,9vw,44px)}
+        .hostActionBar{
+          position:relative;
+          top:auto;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          padding:7px;
+          border-radius:19px;
+        }
+        .hostStats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+        .listingSection,.hostGallerySection,.hostMapSection{padding:18px;border-radius:22px}
+        .listingHeader{align-items:flex-start;flex-direction:column}
+        .listingHeader h2{font-size:27px}
+        .sectionAction{width:100%;justify-content:center}
+        .hostLeaflet{min-height:300px}
+        .stayCard,.offerCard,.adventureSwipeCard{border-radius:19px}
+      }
+
+      @media(max-width:520px){
+        .profileHero{min-height:405px}
+        .heroAvatar{width:74px;height:74px}
+        .heroText h1{font-size:32px}
+        .heroActivityBadges{
+          max-width:100%;
+          overflow-x:auto;
+          flex-wrap:nowrap;
+          scrollbar-width:none;
+        }
+        .heroActivityBadges::-webkit-scrollbar{display:none}
+        .heroActivityBadges span{flex:0 0 auto}
+        .hostStats{
+          display:flex;
+          overflow-x:auto;
+          gap:8px;
+          padding-bottom:4px;
+          scrollbar-width:none;
+        }
+        .hostStats::-webkit-scrollbar{display:none}
+        .hostStats article{min-width:145px}
+        .listingSection,.hostGallerySection,.hostMapSection{padding:15px;border-radius:19px}
+        .listingHeader h2{font-size:24px}
+        .directContactBackdrop{padding:10px}
+        .directContactSheet{border-radius:24px}
+      }
+
+
+      /* =========================================================
+         HOST PROFILE V4 — DENSE PREMIUM SYSTEM
+         Purpose: less empty space, smaller cards, better rhythm.
+         ========================================================= */
+
+      .hostProfilePage{
+        background:#f5f7f3;
+      }
+
+      .profileHero{
+        min-height:360px !important;
+        border-radius:0 0 26px 26px !important;
+        box-shadow:0 18px 44px rgba(11,30,18,.13) !important;
+      }
+
+      .heroInner{
+        width:min(1120px,calc(100% - 32px)) !important;
+      }
+
+      .heroContent{
+        padding-bottom:18px !important;
+      }
+
+      .heroAvatar{
+        width:88px !important;
+        height:88px !important;
+        border-width:3px !important;
+      }
+
+      .heroText h1{
+        font-size:clamp(32px,4.8vw,50px) !important;
+        line-height:.98 !important;
+        letter-spacing:-.05em !important;
+        margin:6px 0 4px !important;
+      }
+
+      .heroMeta{
+        gap:8px !important;
+        font-size:11px !important;
+      }
+
+      .heroActivityBadges{
+        margin-top:10px !important;
+        gap:6px !important;
+      }
+
+      .heroActivityBadges span{
+        padding:6px 9px !important;
+        border-radius:999px !important;
+        font-size:8px !important;
+      }
+
+      .heroTrustStrip{
+        width:min(1120px,calc(100% - 32px)) !important;
+        margin:0 auto 14px !important;
+        padding:6px !important;
+        gap:6px !important;
+        border-radius:15px !important;
+      }
+
+      .heroTrustStrip article{
+        min-width:90px !important;
+        min-height:54px !important;
+        padding:9px 11px !important;
+        border-radius:10px !important;
+      }
+
+      .heroTrustStrip strong{
+        font-size:16px !important;
+      }
+
+      .heroTrustStrip span{
+        font-size:7px !important;
+      }
+
+      .profileContent{
+        width:min(1120px,calc(100% - 24px)) !important;
+        margin:-8px auto 0 !important;
+        padding-bottom:88px !important;
+      }
+
+      /* Navigation becomes a compact command bar, not giant tiles */
+      .hostActionBar{
+        position:sticky !important;
+        top:8px !important;
+        z-index:60 !important;
+        display:flex !important;
+        align-items:center !important;
+        gap:6px !important;
+        padding:6px !important;
+        margin:0 0 12px !important;
+        border-radius:16px !important;
+        background:rgba(250,252,248,.94) !important;
+        border:1px solid rgba(35,66,44,.08) !important;
+        box-shadow:0 10px 28px rgba(20,46,28,.09) !important;
+        overflow-x:auto !important;
+        scrollbar-width:none !important;
+      }
+
+      .hostActionBar::-webkit-scrollbar{display:none}
+
+      .hostAction{
+        flex:0 0 auto !important;
+        min-height:42px !important;
+        padding:8px 11px !important;
+        border-radius:11px !important;
+        gap:8px !important;
+      }
+
+      .hostAction svg{
+        width:15px !important;
+        height:15px !important;
+      }
+
+      .hostAction small{
+        display:none !important;
+      }
+
+      .hostAction strong{
+        font-size:10px !important;
+        white-space:nowrap !important;
+      }
+
+      .hostAction.primary{
+        padding-inline:14px !important;
+      }
+
+      /* Main content */
+      .mainGrid{
+        display:grid !important;
+        grid-template-columns:minmax(0,1.35fr) minmax(290px,.65fr) !important;
+        gap:12px !important;
+        margin:0 0 12px !important;
+      }
+
+      .aboutCard,
+      .contactCard,
+      .trustCard{
+        border-radius:18px !important;
+        box-shadow:0 8px 26px rgba(22,48,31,.055) !important;
+      }
+
+      .aboutCard{
+        padding:18px !important;
+      }
+
+      .aboutCard h2{
+        font-size:21px !important;
+        margin-bottom:8px !important;
+      }
+
+      .aboutCard p{
+        font-size:11px !important;
+        line-height:1.62 !important;
+      }
+
+      .hostStoryStats{
+        display:flex !important;
+        gap:8px !important;
+        margin-top:14px !important;
+      }
+
+      .hostStoryStats article{
+        min-width:0 !important;
+        flex:1 1 0 !important;
+        padding:9px 10px !important;
+        border-radius:11px !important;
+      }
+
+      .hostStoryStats span{
+        font-size:16px !important;
+      }
+
+      .hostStoryStats small{
+        font-size:7px !important;
+      }
+
+      .sideColumn{
+        gap:10px !important;
+      }
+
+      .contactCard{
+        padding:9px !important;
+      }
+
+      .contactCardHeader{
+        padding:7px 8px 8px !important;
+      }
+
+      .contactCardHeader h3{
+        font-size:17px !important;
+      }
+
+      .contactItem{
+        min-height:48px !important;
+        margin-top:4px !important;
+        padding:7px 8px !important;
+        border-radius:11px !important;
+      }
+
+      .contactIcon{
+        width:34px !important;
+        height:34px !important;
+        border-radius:10px !important;
+      }
+
+      .contactText small{
+        font-size:7px !important;
+      }
+
+      .contactText strong{
+        font-size:10px !important;
+      }
+
+      .trustCard{
+        padding:16px !important;
+        min-height:0 !important;
+      }
+
+      .trustCard h3{
+        font-size:16px !important;
+      }
+
+      .trustCard p{
+        margin-top:5px !important;
+        font-size:10px !important;
+        line-height:1.5 !important;
+      }
+
+      /* Catalog sections */
+      .listingSection,
+      .hostGallerySection,
+      .hostMapSection{
+        margin-top:12px !important;
+        padding:18px !important;
+        border-radius:20px !important;
+        box-shadow:0 8px 28px rgba(21,46,29,.055) !important;
+      }
+
+      .listingHeader{
+        display:flex !important;
+        align-items:center !important;
+        justify-content:space-between !important;
+        gap:14px !important;
+        margin-bottom:13px !important;
+      }
+
+      .sectionKicker{
+        font-size:7px !important;
+        letter-spacing:.16em !important;
+      }
+
+      .listingHeader h2{
+        margin-top:3px !important;
+        font-size:23px !important;
+        line-height:1.08 !important;
+      }
+
+      .listingHeader p{
+        margin-top:5px !important;
+        font-size:10px !important;
+        line-height:1.5 !important;
+      }
+
+      .sectionAction{
+        flex:0 0 auto !important;
+        width:auto !important;
+        min-height:36px !important;
+        padding:0 12px !important;
+        border-radius:10px !important;
+        font-size:9px !important;
+      }
+
+      .staySwipeRail,
+      .offerSwipeRail,
+      .adventureSwipeRail{
+        gap:10px !important;
+        padding-bottom:4px !important;
+      }
+
+      .stayCard,
+      .offerCard,
+      .adventureSwipeCard{
+        border-radius:16px !important;
+        box-shadow:0 7px 22px rgba(22,48,31,.06) !important;
+      }
+
+      .stayCardMedia,
+      .offerCardMedia,
+      .adventureCardImage{
+        min-height:0 !important;
+        height:170px !important;
+      }
+
+      .stayCardBody,
+      .offerCardBody,
+      .adventureCardBody{
+        padding:12px !important;
+      }
+
+      .stayHeroCopy h3,
+      .offerCardHeroCopy h3,
+      .adventureCardImageCopy h3{
+        font-size:18px !important;
+        line-height:1.08 !important;
+      }
+
+      .stayCardBody>p,
+      .offerCardBody>p,
+      .adventureCardDescription{
+        font-size:10px !important;
+        line-height:1.55 !important;
+        display:-webkit-box !important;
+        -webkit-line-clamp:2 !important;
+        -webkit-box-orient:vertical !important;
+        overflow:hidden !important;
+      }
+
+      .stayMeta,
+      .offerCardBottom,
+      .adventureCardMeta{
+        margin-top:10px !important;
+        padding-top:10px !important;
+      }
+
+      .stayMeta span,
+      .adventureCardMeta span{
+        font-size:9px !important;
+      }
+
+      .stayMeta strong,
+      .offerCardBottom>strong,
+      .adventureCardMeta strong{
+        font-size:12px !important;
+      }
+
+      .stayContactButton,
+      .offerContactButton{
+        min-height:36px !important;
+        padding:0 11px !important;
+        border-radius:10px !important;
+        font-size:9px !important;
+      }
+
+      /* Activity chips: much more compact */
+      .activitySection{
+        padding:16px !important;
+        border-radius:18px !important;
+        margin-top:12px !important;
+      }
+
+      .activityGrid{
+        gap:6px !important;
+      }
+
+      .activityChip{
+        min-height:30px !important;
+        padding:6px 9px !important;
+        border-radius:999px !important;
+        font-size:8px !important;
+      }
+
+      /* Map should not dominate profile */
+      .hostLeaflet{
+        min-height:280px !important;
+      }
+
+      .hostMapFrame{
+        border-radius:16px !important;
+      }
+
+      /* Gallery */
+      .hostGalleryGrid{
+        gap:7px !important;
+      }
+
+      .hostGalleryItem{
+        border-radius:12px !important;
+      }
+
+      /* Contact modal */
+      .directContactSheet{
+        width:min(460px,100%) !important;
+        padding:18px !important;
+        border-radius:21px !important;
+      }
+
+      .directContactHead h3{
+        font-size:21px !important;
+      }
+
+      .directContactOptions{
+        gap:7px !important;
+        margin-top:14px !important;
+      }
+
+      .directContactOptions>a{
+        min-height:54px !important;
+        border-radius:13px !important;
+      }
+
+      /* Mobile: one coherent stack, no oversized empty boxes */
+      @media(max-width:900px){
+        .mainGrid{
+          grid-template-columns:1fr !important;
+        }
+
+        .sideColumn{
+          display:grid !important;
+          grid-template-columns:1fr 1fr !important;
+        }
+      }
+
+      @media(max-width:640px){
+        .profileHero{
+          min-height:330px !important;
+          border-radius:0 0 22px 22px !important;
+        }
+
+        .heroInner{
+          width:calc(100% - 22px) !important;
+        }
+
+        .heroAvatar{
+          width:68px !important;
+          height:68px !important;
+        }
+
+        .heroText h1{
+          font-size:31px !important;
+        }
+
+        .heroTrustStrip{
+          width:calc(100% - 22px) !important;
+          margin-bottom:10px !important;
+        }
+
+        .heroTrustStrip article{
+          min-width:76px !important;
+          min-height:48px !important;
+          padding:7px 9px !important;
+        }
+
+        .profileContent{
+          width:calc(100% - 14px) !important;
+          margin-top:-6px !important;
+        }
+
+        .hostActionBar{
+          top:6px !important;
+          margin-bottom:9px !important;
+          border-radius:14px !important;
+        }
+
+        .hostAction{
+          min-height:39px !important;
+          padding:7px 10px !important;
+        }
+
+        .mainGrid{
+          gap:8px !important;
+          margin-bottom:8px !important;
+        }
+
+        .sideColumn{
+          display:grid !important;
+          grid-template-columns:1fr !important;
+          gap:8px !important;
+        }
+
+        .aboutCard{
+          padding:15px !important;
+        }
+
+        .contactCard{
+          padding:7px !important;
+        }
+
+        .trustCard{
+          padding:14px !important;
+        }
+
+        .listingSection,
+        .hostGallerySection,
+        .hostMapSection,
+        .activitySection{
+          margin-top:8px !important;
+          padding:14px !important;
+          border-radius:16px !important;
+        }
+
+        .listingHeader{
+          align-items:flex-start !important;
+          margin-bottom:10px !important;
+        }
+
+        .listingHeader h2{
+          font-size:20px !important;
+        }
+
+        .listingHeader p{
+          max-width:100% !important;
+        }
+
+        .sectionAction{
+          min-height:32px !important;
+          padding:0 9px !important;
+        }
+
+        .stayCardMedia,
+        .offerCardMedia,
+        .adventureCardImage{
+          height:150px !important;
+        }
+
+        .hostLeaflet{
+          min-height:230px !important;
+        }
+
+        .mobileHostDock{
+          min-height:58px !important;
+          padding:6px !important;
+        }
+
+        .mobileHostDock a,
+        .mobileHostDock button{
+          min-height:44px !important;
+          font-size:9px !important;
+        }
+      }
+
+      @media(max-width:420px){
+        .heroTrustStrip{
+          flex-wrap:nowrap !important;
+          overflow-x:auto !important;
+          scrollbar-width:none !important;
+        }
+
+        .heroTrustStrip::-webkit-scrollbar{display:none}
+
+        .listingHeader{
+          flex-direction:column !important;
+          gap:8px !important;
+        }
+
+        .sectionAction{
+          width:100% !important;
+        }
+      }
+
+
+      /* =========================================================
+         HOST PROFILE V5 — QUIET LUXURY / PREMIUM EMPTY STATE
+         ========================================================= */
+
+      .hostProfilePage{
+        background:
+          radial-gradient(circle at 12% -8%, rgba(141,175,118,.08), transparent 26rem),
+          #f6f8f4 !important;
+      }
+
+      .profileShell{
+        width:min(1180px,100%) !important;
+      }
+
+      .profileHero{
+        min-height:430px !important;
+        padding:24px 28px 28px !important;
+        border-radius:0 0 30px 30px !important;
+        box-shadow:0 18px 52px rgba(12,34,20,.12) !important;
+        justify-content:flex-end !important;
+      }
+
+      .coverImage{
+        filter:saturate(.94) brightness(1.08) !important;
+      }
+
+      .coverOverlay{
+        background:
+          linear-gradient(180deg,rgba(8,18,11,.04) 0%,rgba(8,18,11,.10) 30%,rgba(7,18,10,.62) 100%),
+          linear-gradient(90deg,rgba(6,18,10,.24) 0%,rgba(6,18,10,.03) 62%,rgba(6,18,10,.10) 100%) !important;
+      }
+
+      .heroGlow{
+        opacity:.28 !important;
+      }
+
+      .heroEditFloating{
+        position:absolute !important;
+        top:22px !important;
+        right:22px !important;
+        z-index:5 !important;
+        min-height:38px !important;
+        padding:0 12px !important;
+        border:1px solid rgba(255,255,255,.36) !important;
+        border-radius:12px !important;
+        background:rgba(255,255,255,.16) !important;
+        color:#fff !important;
+        box-shadow:0 8px 24px rgba(0,0,0,.09) !important;
+        backdrop-filter:blur(12px) !important;
+        -webkit-backdrop-filter:blur(12px) !important;
+      }
+
+      .heroProfileInfo{
+        align-items:flex-end !important;
+        gap:16px !important;
+        max-width:860px !important;
+      }
+
+      .profileAvatar{
+        width:78px !important;
+        height:78px !important;
+        border:3px solid rgba(255,255,255,.92) !important;
+        border-radius:22px !important;
+        box-shadow:0 12px 28px rgba(0,0,0,.16) !important;
+      }
+
+      .heroText{
+        min-width:0 !important;
+      }
+
+      .hostBadgeRow{
+        gap:6px !important;
+      }
+
+      .hostBadge,
+      .heroLevelBadge{
+        padding:6px 9px !important;
+        border-radius:999px !important;
+        background:rgba(14,31,20,.34) !important;
+        border-color:rgba(255,255,255,.19) !important;
+        color:rgba(255,255,255,.91) !important;
+        font-size:8px !important;
+        box-shadow:none !important;
+      }
+
+      .heroText h1{
+        margin:8px 0 5px !important;
+        max-width:760px !important;
+        font-size:clamp(34px,5vw,54px) !important;
+        line-height:.98 !important;
+        letter-spacing:-.052em !important;
+        color:#fff !important;
+        text-shadow:0 2px 18px rgba(0,0,0,.12) !important;
+      }
+
+      .profileMeta{
+        color:rgba(255,255,255,.78) !important;
+        font-size:10px !important;
+        gap:8px !important;
+      }
+
+      .heroActivityBadges{
+        margin-top:11px !important;
+        gap:6px !important;
+      }
+
+      .heroActivityBadges span{
+        padding:6px 9px !important;
+        border:1px solid rgba(255,255,255,.16) !important;
+        border-radius:999px !important;
+        background:rgba(255,255,255,.09) !important;
+        color:rgba(255,255,255,.90) !important;
+        font-size:8px !important;
+        backdrop-filter:blur(10px) !important;
+      }
+
+      .heroPrimaryActions{
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:8px !important;
+        margin-top:14px !important;
+      }
+
+      .heroContactButton,
+      .heroShareButton{
+        display:inline-flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        gap:7px !important;
+        min-height:40px !important;
+        padding:0 13px !important;
+        border-radius:12px !important;
+        font:inherit !important;
+        font-size:9px !important;
+        font-weight:850 !important;
+        cursor:pointer !important;
+        transition:.18s ease !important;
+      }
+
+      .heroContactButton{
+        border:1px solid rgba(190,255,161,.30) !important;
+        background:#baff9e !important;
+        color:#15341f !important;
+        box-shadow:0 8px 20px rgba(76,130,62,.18) !important;
+      }
+
+      .heroShareButton{
+        border:1px solid rgba(255,255,255,.22) !important;
+        background:rgba(255,255,255,.11) !important;
+        color:#fff !important;
+        backdrop-filter:blur(12px) !important;
+      }
+
+      .heroContactButton:hover,
+      .heroShareButton:hover{
+        transform:translateY(-1px) !important;
+      }
+
+      .profileContent{
+        width:min(1120px,calc(100% - 24px)) !important;
+        margin:14px auto 0 !important;
+        padding-bottom:70px !important;
+      }
+
+      .mainGrid{
+        display:grid !important;
+        grid-template-columns:minmax(0,1.45fr) minmax(280px,.72fr) !important;
+        gap:12px !important;
+        align-items:start !important;
+        margin-bottom:12px !important;
+      }
+
+      .contentCard,
+      .aboutCard,
+      .contactCard,
+      .trustCard,
+      .listingSection,
+      .hostGallerySection,
+      .hostMapSection{
+        border:1px solid rgba(31,60,40,.08) !important;
+        box-shadow:0 10px 30px rgba(18,45,28,.055) !important;
+      }
+
+      .aboutCard{
+        min-height:0 !important;
+        padding:20px !important;
+        border-radius:20px !important;
+        background:linear-gradient(180deg,#fff 0%,#fbfcfa 100%) !important;
+      }
+
+      .sectionHeading{
+        margin-bottom:10px !important;
+      }
+
+      .sectionHeading h2{
+        font-size:22px !important;
+        line-height:1.08 !important;
+      }
+
+      .aboutCard p{
+        margin:0 !important;
+        color:#6f7d74 !important;
+        font-size:11px !important;
+        line-height:1.68 !important;
+      }
+
+      .profilePresence{
+        display:inline-flex !important;
+        align-items:center !important;
+        gap:7px !important;
+        margin-top:13px !important;
+        padding:7px 9px !important;
+        border:1px solid #e1e8de !important;
+        border-radius:999px !important;
+        background:#f6f9f3 !important;
+        color:#607268 !important;
+        font-size:8px !important;
+        font-weight:800 !important;
+      }
+
+      .profilePresenceDot{
+        width:7px !important;
+        height:7px !important;
+        border-radius:50% !important;
+        background:#79a663 !important;
+        box-shadow:0 0 0 4px rgba(121,166,99,.11) !important;
+      }
+
+      .hostStoryStats{
+        display:flex !important;
+        gap:7px !important;
+        margin-top:12px !important;
+      }
+
+      .hostStoryStats article{
+        flex:0 1 auto !important;
+        min-width:92px !important;
+        padding:8px 10px !important;
+        border:1px solid #e4ebe1 !important;
+        border-radius:11px !important;
+        background:#fff !important;
+      }
+
+      .hostStoryStats span{
+        font-size:15px !important;
+      }
+
+      .hostStoryStats small{
+        font-size:7px !important;
+      }
+
+      .sideColumn{
+        gap:9px !important;
+      }
+
+      .contactCard{
+        padding:9px !important;
+        border-radius:18px !important;
+        background:#fff !important;
+      }
+
+      .contactCardHeader{
+        padding:8px !important;
+      }
+
+      .contactCardHeader h3{
+        font-size:17px !important;
+      }
+
+      .contactItem{
+        min-height:48px !important;
+        padding:7px 8px !important;
+        margin-top:4px !important;
+        border-radius:11px !important;
+      }
+
+      .contactIcon{
+        width:34px !important;
+        height:34px !important;
+        border-radius:10px !important;
+      }
+
+      .trustCard{
+        min-height:0 !important;
+        padding:15px !important;
+        border-radius:18px !important;
+        background:
+          radial-gradient(circle at 85% 0%,rgba(186,255,158,.12),transparent 10rem),
+          linear-gradient(145deg,#173d28,#204a33) !important;
+      }
+
+      .trustCard h3{
+        font-size:15px !important;
+      }
+
+      .trustCard p{
+        margin-top:4px !important;
+        font-size:9px !important;
+        line-height:1.5 !important;
+      }
+
+      .listingSection,
+      .hostGallerySection,
+      .hostMapSection{
+        margin-top:11px !important;
+        padding:17px !important;
+        border-radius:19px !important;
+        background:#fff !important;
+      }
+
+      .listingHeader{
+        margin-bottom:12px !important;
+      }
+
+      .listingHeader h2{
+        font-size:22px !important;
+      }
+
+      .listingHeader p{
+        font-size:10px !important;
+        line-height:1.5 !important;
+      }
+
+      .stayCard,
+      .offerCard,
+      .adventureSwipeCard{
+        border-radius:15px !important;
+        box-shadow:0 7px 22px rgba(21,47,29,.055) !important;
+      }
+
+      .stayCardMedia,
+      .offerCardMedia,
+      .adventureCardImage{
+        height:165px !important;
+      }
+
+      .hostLeaflet{
+        min-height:260px !important;
+      }
+
+      .mobileHostDock,
+      .hostActionBar,
+      .heroTrustStrip,
+      .heroTopline,
+      .heroExploreLink{
+        display:none !important;
+      }
+
+      @media(max-width:900px){
+        .mainGrid{
+          grid-template-columns:1fr !important;
+        }
+
+        .sideColumn{
+          display:grid !important;
+          grid-template-columns:1fr 1fr !important;
+        }
+      }
+
+      @media(max-width:640px){
+        .profileHero{
+          min-height:390px !important;
+          padding:18px 16px 20px !important;
+          border-radius:0 0 24px 24px !important;
+        }
+
+        .coverImage{
+          object-position:center center !important;
+        }
+
+        .profileAvatar{
+          width:64px !important;
+          height:64px !important;
+          border-radius:18px !important;
+        }
+
+        .heroProfileInfo{
+          gap:11px !important;
+          align-items:flex-end !important;
+        }
+
+        .heroText h1{
+          font-size:31px !important;
+          margin-top:6px !important;
+        }
+
+        .hostBadge{
+          font-size:7px !important;
+          padding:5px 7px !important;
+        }
+
+        .heroLevelBadge{
+          display:none !important;
+        }
+
+        .heroActivityBadges{
+          max-width:100% !important;
+          overflow-x:auto !important;
+          flex-wrap:nowrap !important;
+          scrollbar-width:none !important;
+        }
+
+        .heroActivityBadges::-webkit-scrollbar{display:none}
+
+        .heroActivityBadges span{
+          flex:0 0 auto !important;
+        }
+
+        .heroPrimaryActions{
+          margin-top:11px !important;
+        }
+
+        .heroContactButton,
+        .heroShareButton{
+          min-height:38px !important;
+          padding:0 11px !important;
+          border-radius:11px !important;
+        }
+
+        .profileContent{
+          width:calc(100% - 14px) !important;
+          margin-top:8px !important;
+          padding-bottom:24px !important;
+        }
+
+        .mainGrid{
+          gap:8px !important;
+        }
+
+        .sideColumn{
+          grid-template-columns:1fr !important;
+          gap:8px !important;
+        }
+
+        .aboutCard{
+          padding:15px !important;
+          border-radius:16px !important;
+        }
+
+        .contactCard,
+        .trustCard{
+          border-radius:16px !important;
+        }
+
+        .listingSection,
+        .hostGallerySection,
+        .hostMapSection{
+          margin-top:8px !important;
+          padding:14px !important;
+          border-radius:16px !important;
+        }
+
+        .stayCardMedia,
+        .offerCardMedia,
+        .adventureCardImage{
+          height:150px !important;
+        }
+
+        .hostLeaflet{
+          min-height:220px !important;
+        }
+      }
+
+      @media(max-width:420px){
+        .profileHero{
+          min-height:370px !important;
+        }
+
+        .heroText h1{
+          font-size:28px !important;
+        }
+
+        .heroPrimaryActions{
+          width:100% !important;
+        }
+
+        .heroContactButton{
+          flex:1 1 auto !important;
+        }
+      }
+
+
+      /* =========================================================
+         HOST PROFILE V6 — CLEAN COVER + IDENTITY CARD
+         ========================================================= */
+      .profileHero{
+        min-height:300px !important;
+        padding:0 !important;
+        border-radius:0 0 24px 24px !important;
+        overflow:hidden !important;
+        box-shadow:0 14px 36px rgba(13,34,20,.10) !important;
+      }
+
+      .coverImage{
+        width:100% !important;
+        height:100% !important;
+        object-fit:cover !important;
+        filter:saturate(.98) brightness(1.12) !important;
+      }
+
+      .coverOverlay{
+        background:
+          linear-gradient(180deg,rgba(6,18,10,.02),rgba(6,18,10,.06) 55%,rgba(6,18,10,.22)) !important;
+      }
+
+      .heroGlow,
+      .heroProfileInfo,
+      .heroPrimaryActions{
+        display:none !important;
+      }
+
+      .profileIdentityCard{
+        width:min(1120px,calc(100% - 24px));
+        margin:-34px auto 0;
+        position:relative;
+        z-index:8;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:20px;
+        padding:17px 18px;
+        border:1px solid rgba(28,58,38,.08);
+        border-radius:20px;
+        background:rgba(255,255,255,.98);
+        box-shadow:0 18px 48px rgba(19,45,28,.09);
+      }
+
+      .identityMain{
+        display:flex;
+        align-items:center;
+        gap:15px;
+        min-width:0;
+      }
+
+      .identityAvatar{
+        width:78px;
+        height:78px;
+        flex:0 0 auto;
+        border-radius:19px;
+        object-fit:cover;
+        border:3px solid #fff;
+        background:#eef2eb;
+        box-shadow:0 10px 22px rgba(20,46,29,.12);
+      }
+
+      .identityCopy{min-width:0}
+
+      .identityEyebrow{
+        display:flex;
+        flex-wrap:wrap;
+        gap:5px;
+        margin-bottom:6px;
+      }
+
+      .identityVerified,
+      .identityType{
+        display:inline-flex;
+        align-items:center;
+        gap:5px;
+        min-height:24px;
+        padding:0 8px;
+        border-radius:999px;
+        font-size:8px;
+        font-weight:800;
+      }
+
+      .identityVerified{
+        color:#356044;
+        background:#edf5e9;
+        border:1px solid #dde9d8;
+      }
+
+      .identityType{
+        color:#6a776f;
+        background:#f7f9f6;
+        border:1px solid #e8ede5;
+      }
+
+      .identityCopy h1{
+        margin:0;
+        color:#17251c;
+        font-size:clamp(27px,3.7vw,39px);
+        line-height:1;
+        letter-spacing:-.043em;
+      }
+
+      .identityMeta{
+        display:flex;
+        flex-wrap:wrap;
+        align-items:center;
+        gap:6px;
+        margin-top:6px;
+        color:#77847b;
+        font-size:10px;
+        font-weight:650;
+      }
+
+      .identityMeta span{
+        display:inline-flex;
+        align-items:center;
+        gap:4px;
+      }
+
+      .identityDot{opacity:.4}
+
+      .identityActivities{
+        display:flex;
+        flex-wrap:wrap;
+        gap:5px;
+        margin-top:8px;
+      }
+
+      .identityActivities span{
+        padding:5px 8px;
+        border-radius:999px;
+        background:#f5f7f3;
+        border:1px solid #e7ece4;
+        color:#66766b;
+        font-size:8px;
+        font-weight:740;
+      }
+
+      .identityActions{
+        flex:0 0 auto;
+        display:flex;
+        align-items:center;
+        gap:7px;
+      }
+
+      .identityContactButton,
+      .identityShareButton{
+        display:inline-flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        gap:7px !important;
+        min-height:40px !important;
+        padding:0 12px !important;
+        border-radius:11px !important;
+        font:inherit !important;
+        font-size:9px !important;
+        font-weight:850 !important;
+        cursor:pointer !important;
+      }
+
+      .identityContactButton{
+        border:1px solid #214832 !important;
+        background:#173d28 !important;
+        color:#fff !important;
+      }
+
+      .identityShareButton{
+        border:1px solid #dde5da !important;
+        background:#fff !important;
+        color:#435149 !important;
+      }
+
+      .profileContent{
+        margin:12px auto 0 !important;
+      }
+
+      @media(max-width:760px){
+        .profileHero{min-height:245px !important}
+
+        .profileIdentityCard{
+          width:calc(100% - 14px);
+          margin:-22px auto 0;
+          padding:13px;
+          border-radius:17px;
+          flex-direction:column;
+          align-items:stretch;
+          gap:11px;
+        }
+
+        .identityMain{
+          align-items:flex-start;
+          gap:11px;
+        }
+
+        .identityAvatar{
+          width:62px;
+          height:62px;
+          border-radius:16px;
+        }
+
+        .identityCopy h1{
+          font-size:27px;
+        }
+
+        .identityType{display:none}
+
+        .identityActivities{
+          max-width:100%;
+          overflow-x:auto;
+          flex-wrap:nowrap;
+          scrollbar-width:none;
+        }
+
+        .identityActivities::-webkit-scrollbar{display:none}
+        .identityActivities span{flex:0 0 auto}
+
+        .identityActions{width:100%}
+        .identityContactButton{flex:1 1 auto}
+      }
+
+
+      /* =========================================================
+         HOST PROFILE V7 — ADAPTIVE CONTENT
+         0 = hidden, 1 = premium feature, 2+ = catalog cards
+         ========================================================= */
+      .singleFeature{
+        display:grid;
+        grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);
+        min-height:330px;
+        overflow:hidden;
+        border:1px solid rgba(29,58,39,.08);
+        border-radius:19px;
+        background:#fff;
+        box-shadow:0 12px 34px rgba(20,46,29,.065);
+      }
+
+      .singleFeatureVisual{
+        position:relative;
+        min-height:330px;
+        overflow:hidden;
+        background:#dfe7dc;
+      }
+
+      .singleFeatureMainImage{
+        position:absolute;
+        inset:0;
+        width:100%;
+        height:100%;
+        object-fit:cover;
+        transition:transform .35s ease;
+      }
+
+      .singleFeature:hover .singleFeatureMainImage{
+        transform:scale(1.015);
+      }
+
+      .singleFeatureShade{
+        position:absolute;
+        inset:0;
+        background:
+          linear-gradient(180deg,rgba(7,19,11,.04),rgba(7,19,11,.10) 45%,rgba(7,19,11,.70)),
+          linear-gradient(90deg,rgba(7,19,11,.10),transparent 65%);
+      }
+
+      .singleFeatureBadge,
+      .singleFeaturePhotoCount{
+        position:absolute;
+        top:14px;
+        z-index:2;
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        min-height:29px;
+        padding:0 9px;
+        border:1px solid rgba(255,255,255,.22);
+        border-radius:999px;
+        background:rgba(16,34,22,.48);
+        color:#fff;
+        font-size:8px;
+        font-weight:850;
+        backdrop-filter:blur(10px);
+      }
+
+      .singleFeatureBadge{left:14px}
+      .singleFeaturePhotoCount{right:14px}
+
+      .singleFeatureOwnerActions{
+        top:52px !important;
+        right:14px !important;
+      }
+
+      .singleFeatureImageCopy{
+        position:absolute;
+        z-index:2;
+        left:18px;
+        right:18px;
+        bottom:17px;
+        color:#fff;
+      }
+
+      .singleFeatureImageCopy>span{
+        display:flex;
+        align-items:center;
+        gap:5px;
+        margin-bottom:5px;
+        color:rgba(255,255,255,.82);
+        font-size:9px;
+        font-weight:750;
+      }
+
+      .singleFeatureImageCopy h3{
+        margin:0;
+        max-width:650px;
+        color:#fff;
+        font-size:clamp(25px,3.2vw,38px);
+        line-height:1;
+        letter-spacing:-.04em;
+      }
+
+      .singleFeatureContent{
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        padding:22px;
+        min-width:0;
+      }
+
+      .singleFeatureTopline{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:12px;
+        padding-bottom:12px;
+        border-bottom:1px solid #edf1eb;
+      }
+
+      .singleFeatureEyebrow{
+        color:#78906f;
+        font-size:7px;
+        font-weight:900;
+        letter-spacing:.16em;
+      }
+
+      .singleFeatureTopline strong{
+        color:#1d3324;
+        font-size:14px;
+        white-space:nowrap;
+      }
+
+      .singleFeatureContent>p{
+        margin:14px 0 0;
+        color:#68776d;
+        font-size:10px;
+        line-height:1.65;
+        display:-webkit-box;
+        -webkit-line-clamp:4;
+        -webkit-box-orient:vertical;
+        overflow:hidden;
+      }
+
+      .singleFeatureFacts{
+        display:grid;
+        grid-template-columns:1fr;
+        gap:7px;
+        margin-top:14px;
+      }
+
+      .singleFeatureFacts>span{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        min-width:0;
+        padding:9px 10px;
+        border:1px solid #e7ece4;
+        border-radius:11px;
+        background:#f8faf7;
+        color:#526159;
+      }
+
+      .singleFeatureFacts b{
+        min-width:0;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        font-size:9px;
+      }
+
+      .singleFeatureMiniGallery{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:6px;
+        margin-top:12px;
+      }
+
+      .singleFeatureMiniGallery.count-1{
+        grid-template-columns:1fr;
+      }
+
+      .singleFeatureMiniGallery img{
+        width:100%;
+        height:72px;
+        object-fit:cover;
+        border-radius:10px;
+      }
+
+      .singleFeatureCta{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:7px;
+        width:100%;
+        min-height:42px;
+        margin-top:14px;
+        padding:0 12px;
+        border:1px solid #214832;
+        border-radius:11px;
+        background:#173d28;
+        color:#fff;
+        font:inherit;
+        font-size:9px;
+        font-weight:850;
+        cursor:pointer;
+      }
+
+      .singleFeatureOwnerNote{
+        display:flex;
+        align-items:center;
+        gap:7px;
+        margin-top:14px;
+        color:#728078;
+        font-size:8px;
+        font-weight:750;
+      }
+
+      @media(max-width:820px){
+        .singleFeature{
+          grid-template-columns:1fr;
+          min-height:0;
+        }
+
+        .singleFeatureVisual{
+          min-height:250px;
+        }
+
+        .singleFeatureContent{
+          padding:16px;
+        }
+
+        .singleFeatureMiniGallery img{
+          height:88px;
+        }
+      }
+
+      @media(max-width:520px){
+        .singleFeature{
+          border-radius:15px;
+        }
+
+        .singleFeatureVisual{
+          min-height:215px;
+        }
+
+        .singleFeatureBadge,
+        .singleFeaturePhotoCount{
+          top:10px;
+          min-height:26px;
+          padding:0 8px;
+          font-size:7px;
+        }
+
+        .singleFeatureBadge{left:10px}
+        .singleFeaturePhotoCount{right:10px}
+
+        .singleFeatureImageCopy{
+          left:13px;
+          right:13px;
+          bottom:13px;
+        }
+
+        .singleFeatureImageCopy h3{
+          font-size:25px;
+        }
+
+        .singleFeatureContent{
+          padding:14px;
+        }
+
+        .singleFeatureTopline{
+          align-items:center;
+        }
+
+        .singleFeatureContent>p{
+          -webkit-line-clamp:3;
+        }
+
+        .singleFeatureMiniGallery img{
+          height:72px;
+        }
+      }
+
+
+      /* V8 creation flow — richer photo editors */
+      .offerGalleryEditor{
+        margin-top:2px;
+      }
+
+      .offerPhotoGrid .stayPhotoItem{
+        aspect-ratio:1.45/1;
+      }
+
+      @media(max-width:640px){
+        .offerPhotoGrid,
+        .stayPhotoGrid{
+          grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+        }
+      }
+
+
+        .hostProfileTabs {
+          position: relative;
+          z-index: 4;
+          margin: 0;
+          background: rgba(250,251,247,.98);
+          border-top: 1px solid rgba(15,23,42,.07);
+          border-bottom: 1px solid rgba(15,23,42,.08);
+        }
+
+        .hostProfileTabsInner {
+          width: min(1180px, calc(100% - 32px));
+          margin: 0 auto;
+          justify-content: center;
+          display: flex;
+          align-items: stretch;
+          gap: 4px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .hostProfileTabsInner::-webkit-scrollbar { display: none; }
+
+        .hostProfileTab {
+          position: relative;
+          flex: 0 0 auto;
+          min-width: 92px;
+          min-height: 64px;
+          padding: 10px 14px 9px;
+          border: 0;
+          background: transparent;
+          color: #64748b;
+          display: inline-flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: color .18s ease, background .18s ease;
+        }
+
+        .hostProfileTab::after {
+          content: "";
+          position: absolute;
+          left: 18px;
+          right: 18px;
+          bottom: 0;
+          height: 2px;
+          border-radius: 999px 999px 0 0;
+          background: currentColor;
+          opacity: 0;
+          transform: scaleX(.5);
+          transition: opacity .18s ease, transform .18s ease;
+        }
+
+        .hostProfileTab:hover {
+          color: #0f172a;
+          background: rgba(15,23,42,.025);
+        }
+
+        .hostProfileTab.active {
+          color: #0f172a;
+        }
+
+        .hostProfileTab.active::after {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+
+        @media (max-width: 680px) {
+          .hostProfileTabs {
+            margin: 0;
+          }
+
+          .hostProfileTabsInner {
+            width: 100%;
+            padding: 0 8px;
+          }
+
+          .hostProfileTab {
+            min-width: 68px;
+            min-height: 56px;
+            padding: 8px 10px 7px;
+            font-size: 10px;
+          }
+
+          .hostProfileTab svg {
+            width: 19px;
+            height: 19px;
+          }
+        }
+
+
+      /* =========================================================
+         HOST PROFILE — WORLDCLASS FINAL VISUAL LAYER
+         Public profile = premium host portfolio, not dashboard.
+         ========================================================= */
+
+      .hostProfilePage{
+        background:
+          radial-gradient(circle at 8% 0%,rgba(44,91,62,.08),transparent 30rem),
+          radial-gradient(circle at 96% 18%,rgba(185,163,111,.08),transparent 28rem),
+          #f5f6f2 !important;
+        color:#14251a;
+      }
+
+      .profileShell{
+        width:min(1280px,calc(100% - 36px)) !important;
+        margin:0 auto 72px !important;
+        overflow:visible !important;
+        border:0 !important;
+        border-radius:0 !important;
+        background:transparent !important;
+        box-shadow:none !important;
+      }
+
+      /* Cover: photographic, clean, intentionally not overloaded. */
+      .profileHero{
+        min-height:0 !important;
+        height:clamp(270px,32vw,410px) !important;
+        margin-top:18px !important;
+        padding:0 !important;
+        overflow:hidden !important;
+        border-radius:34px !important;
+        background:#dce3dd !important;
+        box-shadow:0 28px 78px rgba(23,48,32,.13) !important;
+      }
+
+      .coverImage{
+        position:absolute !important;
+        inset:0 !important;
+        width:100% !important;
+        height:100% !important;
+        object-fit:cover !important;
+        transform:none !important;
+        filter:none !important;
+      }
+
+      .profileHero:hover .coverImage{transform:scale(1.012) !important}
+
+      .coverOverlay{
+        background:
+          linear-gradient(180deg,rgba(8,18,12,.10),transparent 44%,rgba(8,18,12,.20)) !important;
+      }
+
+      .heroGlow{display:none !important}
+
+      .heroEditFloating{
+        top:18px !important;
+        right:18px !important;
+        bottom:auto !important;
+        left:auto !important;
+        z-index:5 !important;
+        min-height:42px !important;
+        padding:0 15px !important;
+        border:1px solid rgba(255,255,255,.42) !important;
+        border-radius:999px !important;
+        background:rgba(18,31,22,.38) !important;
+        color:white !important;
+        box-shadow:none !important;
+        backdrop-filter:blur(16px) !important;
+      }
+
+      /* Identity is the only floating card. */
+      .profileIdentityCard{
+        position:relative !important;
+        z-index:10 !important;
+        width:calc(100% - 64px) !important;
+        margin:-58px auto 0 !important;
+        padding:26px 28px !important;
+        display:flex !important;
+        align-items:center !important;
+        justify-content:space-between !important;
+        gap:24px !important;
+        border:1px solid rgba(31,65,44,.09) !important;
+        border-radius:28px !important;
+        background:rgba(255,255,255,.96) !important;
+        box-shadow:0 24px 70px rgba(24,48,31,.12) !important;
+        backdrop-filter:blur(20px) !important;
+      }
+
+      .identityMain{
+        min-width:0 !important;
+        display:flex !important;
+        align-items:center !important;
+        gap:22px !important;
+      }
+
+      .identityAvatar{
+        flex:0 0 auto !important;
+        width:112px !important;
+        height:112px !important;
+        border:5px solid #fff !important;
+        border-radius:28px !important;
+        object-fit:cover !important;
+        box-shadow:0 13px 34px rgba(19,43,28,.16) !important;
+      }
+
+      .identityCopy{min-width:0 !important}
+
+      .identityEyebrow{
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:7px !important;
+        margin:0 0 8px !important;
+      }
+
+      .identityVerified,
+      .identityType{
+        min-height:27px !important;
+        display:inline-flex !important;
+        align-items:center !important;
+        gap:6px !important;
+        padding:0 9px !important;
+        border:1px solid #e1e8e2 !important;
+        border-radius:999px !important;
+        background:#f7f9f6 !important;
+        color:#365442 !important;
+        font-size:9px !important;
+        font-weight:900 !important;
+        letter-spacing:.035em !important;
+      }
+
+      .identityVerified{
+        border-color:#d4e4d8 !important;
+        background:#edf5ef !important;
+        color:#174b31 !important;
+      }
+
+      .identityCopy h1{
+        margin:0 !important;
+        color:#102b1d !important;
+        font-size:clamp(32px,4vw,50px) !important;
+        line-height:.98 !important;
+        letter-spacing:-.05em !important;
+      }
+
+      .identityMeta{
+        display:flex !important;
+        align-items:center !important;
+        flex-wrap:wrap !important;
+        gap:7px !important;
+        margin-top:8px !important;
+        color:#6e7c73 !important;
+        font-size:12px !important;
+        font-weight:750 !important;
+      }
+
+      .identityMeta span{
+        display:inline-flex !important;
+        align-items:center !important;
+        gap:4px !important;
+      }
+
+      .identityActivities{
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:6px !important;
+        margin-top:11px !important;
+      }
+
+      .identityActivities span{
+        padding:6px 9px !important;
+        border:0 !important;
+        border-radius:999px !important;
+        background:#f0f3ef !important;
+        color:#53645a !important;
+        font-size:10px !important;
+        font-weight:800 !important;
+      }
+
+      .identityActions{
+        flex:0 0 auto !important;
+        display:flex !important;
+        align-items:center !important;
+        gap:8px !important;
+      }
+
+      .identityContactButton{
+        min-height:48px !important;
+        padding:0 18px !important;
+        border:0 !important;
+        border-radius:15px !important;
+        background:#173f2c !important;
+        color:#fff !important;
+        font-size:12px !important;
+        font-weight:900 !important;
+        box-shadow:0 12px 28px rgba(23,63,44,.18) !important;
+      }
+
+      .identityShareButton{
+        min-height:48px !important;
+        border-radius:15px !important;
+        box-shadow:none !important;
+      }
+
+      /* Tabs behave like a quiet editorial navigation, never a dashboard. */
+      .hostProfileTabs{
+        position:static !important;
+        margin:22px auto 0 !important;
+        padding:0 !important;
+        border:0 !important;
+        background:transparent !important;
+        box-shadow:none !important;
+      }
+
+      .hostProfileTabsInner{
+        width:calc(100% - 64px) !important;
+        margin:0 auto !important;
+        padding:0 !important;
+        display:flex !important;
+        gap:6px !important;
+        overflow-x:auto !important;
+        scrollbar-width:none !important;
+      }
+      .hostProfileTabsInner::-webkit-scrollbar{display:none}
+
+      .hostProfileTab{
+        flex:0 0 auto !important;
+        min-width:auto !important;
+        min-height:40px !important;
+        padding:0 13px !important;
+        display:inline-flex !important;
+        flex-direction:row !important;
+        align-items:center !important;
+        gap:7px !important;
+        border:1px solid #e0e6e1 !important;
+        border-radius:999px !important;
+        background:rgba(255,255,255,.68) !important;
+        color:#69786f !important;
+        font-size:11px !important;
+        font-weight:850 !important;
+      }
+
+      .hostProfileTab::after{display:none !important}
+
+      .hostProfileTab.active{
+        border-color:#173f2c !important;
+        background:#173f2c !important;
+        color:#fff !important;
+      }
+
+      .profileContent{
+        width:calc(100% - 64px) !important;
+        margin:0 auto !important;
+        padding:30px 0 0 !important;
+      }
+
+      /* Overview: editorial, low-card-density. */
+      .mainGrid{
+        grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr) !important;
+        gap:48px !important;
+        align-items:start !important;
+      }
+
+      .mainColumn,.sideColumn{gap:18px !important}
+
+      .contentCard{
+        padding:0 !important;
+        border:0 !important;
+        border-radius:0 !important;
+        background:transparent !important;
+        box-shadow:none !important;
+      }
+
+      .aboutCard{
+        padding-bottom:28px !important;
+        border-bottom:1px solid rgba(29,59,40,.12) !important;
+      }
+
+      .sectionHeading{margin-bottom:14px !important}
+      .sectionHeading .sectionIcon{display:none !important}
+
+      .sectionKicker{
+        color:#748178 !important;
+        font-size:9px !important;
+        font-weight:950 !important;
+        letter-spacing:.17em !important;
+      }
+
+      .sectionHeading h2,
+      .listingHeader h2{
+        margin-top:5px !important;
+        color:#173a29 !important;
+        font-size:clamp(25px,3vw,38px) !important;
+        line-height:1 !important;
+        letter-spacing:-.045em !important;
+      }
+
+      .hostBio{
+        max-width:760px !important;
+        color:#4e5e54 !important;
+        font-size:15px !important;
+        line-height:1.78 !important;
+      }
+
+      .hostStoryStats{
+        display:flex !important;
+        gap:22px !important;
+        margin:20px 0 0 !important;
+        padding:16px 0 0 !important;
+        border-top:1px solid rgba(29,59,40,.10) !important;
+      }
+
+      .hostStoryStats article{
+        min-width:0 !important;
+        padding:0 !important;
+        border:0 !important;
+        background:transparent !important;
+        box-shadow:none !important;
+      }
+
+      .hostStoryStats span{font-size:22px !important}
+      .hostStoryStats small{font-size:9px !important}
+
+      .profilePresence{
+        margin-top:17px !important;
+        padding:0 !important;
+        border:0 !important;
+        background:transparent !important;
+        color:#54705e !important;
+      }
+
+      .trustMessage{display:none !important}
+
+      .activityList{gap:7px !important}
+      .activityChip{
+        padding:8px 10px !important;
+        border:1px solid #e1e7e2 !important;
+        border-radius:999px !important;
+        background:#fff !important;
+        box-shadow:none !important;
+      }
+
+      .contactCard{
+        position:static !important;
+        padding:21px !important;
+        border:1px solid rgba(29,59,40,.09) !important;
+        border-radius:22px !important;
+        background:#fff !important;
+        box-shadow:0 16px 42px rgba(24,48,31,.07) !important;
+      }
+
+      .verifiedCard{
+        padding:18px !important;
+        border:0 !important;
+        border-radius:20px !important;
+        background:#eaf1eb !important;
+        box-shadow:none !important;
+      }
+
+      .verifiedCard h3{
+        margin:4px 0 6px !important;
+        font-size:17px !important;
+      }
+
+      /* All content sections breathe, without giant white containers. */
+      .hostMapSection,
+      .hostGallerySection,
+      .listingSection,
+      .reviewsSection,
+      .reviewFeedSection{
+        margin-top:46px !important;
+        padding:0 !important;
+        border:0 !important;
+        border-radius:0 !important;
+        background:transparent !important;
+        box-shadow:none !important;
+      }
+
+      .listingHeader{
+        margin-bottom:18px !important;
+        align-items:end !important;
+      }
+
+      .listingHeader p{
+        max-width:650px !important;
+        margin-top:8px !important;
+        color:#6b786f !important;
+        font-size:13px !important;
+        line-height:1.6 !important;
+      }
+
+      .sectionAction{
+        min-height:40px !important;
+        padding:0 12px !important;
+        border:1px solid #dce4de !important;
+        border-radius:12px !important;
+        background:#fff !important;
+        color:#244d37 !important;
+        box-shadow:none !important;
+      }
+
+      /* Premium listing cards: image-led and compact. */
+      .singleFeature{
+        grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr) !important;
+        min-height:390px !important;
+        overflow:hidden !important;
+        border:1px solid rgba(29,59,40,.08) !important;
+        border-radius:27px !important;
+        background:#fff !important;
+        box-shadow:0 18px 52px rgba(24,48,31,.08) !important;
+      }
+
+      .singleFeatureVisual{min-height:390px !important}
+      .singleFeatureContent{padding:28px !important}
+      .singleFeatureContent > p{
+        display:-webkit-box !important;
+        overflow:hidden !important;
+        -webkit-line-clamp:4 !important;
+        -webkit-box-orient:vertical !important;
+      }
+
+      .singleFeatureMiniGallery{
+        max-height:88px !important;
+        overflow:hidden !important;
+      }
+
+      .singleFeatureDetailsLink,
+      .singleFeatureCta{
+        min-height:44px !important;
+        border-radius:13px !important;
+      }
+
+      .adventureSwipeRail,
+      .staySwipeRail,
+      .offerSwipeRail{
+        gap:14px !important;
+        padding:2px 2px 12px !important;
+      }
+
+      .hostListingCard,
+      .stayCard,
+      .offerCard{
+        border:1px solid rgba(29,59,40,.08) !important;
+        border-radius:22px !important;
+        background:#fff !important;
+        box-shadow:0 12px 36px rgba(24,48,31,.06) !important;
+      }
+
+      .adventureSwipeCard,
+      .stayCard,
+      .offerCard{
+        flex-basis:clamp(290px,31vw,370px) !important;
+      }
+
+      .hostListingImage,
+      .stayCardMedia,
+      .offerCardMedia{
+        height:245px !important;
+      }
+
+      .hostListingBody,
+      .stayCardBody,
+      .offerCardBody{
+        padding:16px !important;
+      }
+
+      .hostListingDescription,
+      .stayCardBody > p,
+      .offerCardBody > p{
+        display:-webkit-box !important;
+        overflow:hidden !important;
+        -webkit-line-clamp:3 !important;
+        -webkit-box-orient:vertical !important;
+      }
+
+      .hostMapFrame{
+        overflow:hidden !important;
+        border:1px solid rgba(29,59,40,.08) !important;
+        border-radius:26px !important;
+        box-shadow:0 16px 46px rgba(24,48,31,.07) !important;
+      }
+
+      .hostLeaflet{height:410px !important}
+
+      .hostGalleryGrid{
+        gap:10px !important;
+      }
+
+      .hostGalleryGrid button{
+        border-radius:18px !important;
+      }
+
+      @media(max-width:900px){
+        .profileIdentityCard{
+          width:calc(100% - 32px) !important;
+          align-items:flex-start !important;
+          flex-direction:column !important;
+        }
+
+        .identityActions{width:100% !important}
+        .identityContactButton{flex:1 !important}
+
+        .hostProfileTabsInner,
+        .profileContent{width:calc(100% - 32px) !important}
+
+        .mainGrid{grid-template-columns:1fr !important;gap:28px !important}
+
+        .singleFeature{
+          grid-template-columns:1fr !important;
+        }
+
+        .singleFeatureVisual{min-height:330px !important}
+      }
+
+      @media(max-width:680px){
+        .profileShell{
+          width:100% !important;
+          margin-bottom:42px !important;
+        }
+
+        .profileHero{
+          height:245px !important;
+          margin-top:0 !important;
+          border-radius:0 0 26px 26px !important;
+        }
+
+        .heroEditFloating{
+          top:12px !important;
+          right:12px !important;
+        }
+
+        .profileIdentityCard{
+          width:calc(100% - 20px) !important;
+          margin:-34px auto 0 !important;
+          padding:17px !important;
+          gap:16px !important;
+          border-radius:22px !important;
+        }
+
+        .identityMain{
+          width:100% !important;
+          align-items:flex-start !important;
+          gap:13px !important;
+        }
+
+        .identityAvatar{
+          width:76px !important;
+          height:76px !important;
+          border-width:4px !important;
+          border-radius:21px !important;
+        }
+
+        .identityCopy h1{
+          font-size:29px !important;
+        }
+
+        .identityEyebrow{
+          gap:5px !important;
+        }
+
+        .identityVerified,
+        .identityType{
+          min-height:23px !important;
+          padding:0 7px !important;
+          font-size:7.5px !important;
+        }
+
+        .identityActivities{
+          width:calc(100vw - 54px) !important;
+          margin-left:calc(-76px - 13px) !important;
+          padding-top:11px !important;
+        }
+
+        .identityActions{
+          display:grid !important;
+          grid-template-columns:1fr auto !important;
+        }
+
+        .identityContactButton,
+        .identityShareButton{
+          min-height:44px !important;
+        }
+
+        .hostProfileTabs{
+          margin-top:14px !important;
+        }
+
+        .hostProfileTabsInner{
+          width:100% !important;
+          padding:0 10px !important;
+        }
+
+        .hostProfileTab{
+          min-height:38px !important;
+          padding:0 11px !important;
+          font-size:10px !important;
+        }
+
+        .profileContent{
+          width:calc(100% - 20px) !important;
+          padding-top:22px !important;
+        }
+
+        .mainGrid{gap:22px !important}
+
+        .sectionHeading h2,
+        .listingHeader h2{
+          font-size:27px !important;
+        }
+
+        .hostStoryStats{
+          gap:15px !important;
+          overflow-x:auto !important;
+        }
+
+        .contactCard{
+          padding:16px !important;
+          border-radius:18px !important;
+        }
+
+        .hostMapSection,
+        .hostGallerySection,
+        .listingSection,
+        .reviewsSection,
+        .reviewFeedSection{
+          margin-top:34px !important;
+        }
+
+        .listingHeader{
+          align-items:flex-start !important;
+          gap:12px !important;
+        }
+
+        .singleFeature{
+          min-height:0 !important;
+          border-radius:22px !important;
+        }
+
+        .singleFeatureVisual{
+          min-height:280px !important;
+        }
+
+        .singleFeatureContent{
+          padding:18px !important;
+        }
+
+        .singleFeatureMiniGallery{
+          display:none !important;
+        }
+
+        .adventureSwipeCard,
+        .stayCard,
+        .offerCard{
+          flex-basis:min(84vw,330px) !important;
+        }
+
+        .hostListingImage,
+        .stayCardMedia,
+        .offerCardMedia{
+          height:220px !important;
+        }
+
+        .hostLeaflet{height:330px !important}
+      }
+
+    `}
+</style>
   );
 }
