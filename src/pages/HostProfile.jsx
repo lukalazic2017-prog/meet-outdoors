@@ -2734,7 +2734,9 @@ export default function HostProfile() {
       eyebrow: "DOŽIVLJAJI",
       icon: "route",
       count: activeEvents.length,
-      image: activeEvents[0]?.cover_url || profile.cover_url || FALLBACK_COVER,
+      actionLabel: "Dodaj avanturu",
+      image:
+        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=85",
     },
     {
       id: "accommodation",
@@ -2743,7 +2745,9 @@ export default function HostProfile() {
       eyebrow: "BORAVAK",
       icon: "home",
       count: accommodations.length,
-      image: accommodations[0]?.cover_url || profile.cover_url || FALLBACK_COVER,
+      actionLabel: "Dodaj smeštaj",
+      image:
+        "https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=1200&q=85",
     },
     {
       id: "services",
@@ -2752,7 +2756,9 @@ export default function HostProfile() {
       eyebrow: "PODRŠKA",
       icon: "sparkle",
       count: serviceOffers.length,
-      image: serviceOffers[0]?.cover_url || profile.cover_url || FALLBACK_COVER,
+      actionLabel: "Dodaj uslugu",
+      image:
+        "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1200&q=85",
     },
     {
       id: "rentals",
@@ -2761,7 +2767,9 @@ export default function HostProfile() {
       eyebrow: "OPREMA",
       icon: "package",
       count: rentalOffers.length,
-      image: rentalOffers[0]?.cover_url || profile.cover_url || FALLBACK_COVER,
+      actionLabel: "Dodaj iznajmljivanje",
+      image:
+        "https://images.unsplash.com/photo-1502744688674-c619d1586c9e?auto=format&fit=crop&w=1200&q=85",
     },
   ];
 
@@ -2793,6 +2801,54 @@ export default function HostProfile() {
   const showAccommodation = selectedContentTab === "accommodation";
   const showServices = selectedContentTab === "services";
   const showRentals = selectedContentTab === "rentals";
+
+  const handleCategoryCardClick = (tab) => {
+    if (!tab) return;
+
+    // Vlasnik: kartica je direktna prečica za kreiranje nove ponude.
+    if (isOwnProfile) {
+      if (tab.id === "adventures") {
+        navigate("/create-event");
+        return;
+      }
+
+      if (tab.id === "accommodation") {
+        openCreateStay();
+        return;
+      }
+
+      if (tab.id === "services") {
+        openCreateOffer("service");
+        return;
+      }
+
+      if (tab.id === "rentals") {
+        openCreateOffer("rental");
+      }
+
+      return;
+    }
+
+    // Posetilac: kartica otvara prvu javnu stavku te kategorije.
+    if (tab.id === "adventures" && activeEvents[0]?.id) {
+      navigate(`/event/${activeEvents[0].id}`);
+      return;
+    }
+
+    if (tab.id === "accommodation" && accommodations[0]?.id) {
+      navigate(`/accommodation/${accommodations[0].id}`);
+      return;
+    }
+
+    if (tab.id === "services" && serviceOffers[0]?.id) {
+      navigate(`/service/${serviceOffers[0].id}`);
+      return;
+    }
+
+    if (tab.id === "rentals" && rentalOffers[0]?.id) {
+      navigate(`/rental/${rentalOffers[0].id}`);
+    }
+  };
 
   return (
     <>
@@ -2979,10 +3035,14 @@ export default function HostProfile() {
           <section className="hostCategoryShowcase" aria-label="Šta domaćin nudi">
             <div className="hostCategoryShowcaseHead">
               <div>
-                <span>ŠTA OVAJ DOMAĆIN NUDI</span>
-                <h2>Izaberi deo ponude</h2>
+                <span>{isOwnProfile ? "UPRAVLJAJ PONUDOM" : "ŠTA OVAJ DOMAĆIN NUDI"}</span>
+                <h2>{isOwnProfile ? "Dodaj novu ponudu" : "Izaberi deo ponude"}</h2>
               </div>
-              <p>Prevuci kartice horizontalno i otvori kategoriju koja te zanima.</p>
+              <p>
+                {isOwnProfile
+                  ? "Izaberi kategoriju i odmah započni kreiranje."
+                  : "Prevuci kartice horizontalno i otvori ono što te zanima."}
+              </p>
             </div>
 
             <div className="hostCategoryRail">
@@ -2990,13 +3050,13 @@ export default function HostProfile() {
                 <button
                   key={tab.id}
                   type="button"
-                  className={
-                    selectedContentTab === tab.id
-                      ? "hostCategoryCard active"
-                      : "hostCategoryCard"
+                  className="hostCategoryCard"
+                  onClick={() => handleCategoryCardClick(tab)}
+                  aria-label={
+                    isOwnProfile
+                      ? tab.actionLabel
+                      : `Otvori ${tab.label.toLowerCase()}`
                   }
-                  onClick={() => setActiveProfileTab(tab.id)}
-                  aria-pressed={selectedContentTab === tab.id}
                 >
                   <img src={tab.image} alt="" />
                   <span className="hostCategoryShade" />
@@ -3009,10 +3069,10 @@ export default function HostProfile() {
                     <small>{tab.eyebrow}</small>
                     <strong>{tab.label}</strong>
                     <em>
-                      {tab.count > 0
-                        ? `${tab.count} ${tab.count === 1 ? "ponuda" : "ponude"}`
-                        : isOwnProfile
-                          ? "Spremno za dodavanje"
+                      {isOwnProfile
+                        ? tab.actionLabel
+                        : tab.count > 0
+                          ? `${tab.count} ${tab.count === 1 ? "ponuda" : "ponude"}`
                           : ""}
                     </em>
                   </span>
@@ -3025,7 +3085,11 @@ export default function HostProfile() {
             </div>
 
             <div className="hostCategorySwipeHint">
-              <span>Prevuci za ostale kategorije</span>
+              <span>
+                {isOwnProfile
+                  ? "Prevuci i izaberi šta želiš da dodaš"
+                  : "Prevuci za ostale kategorije"}
+              </span>
               <Icon name="arrowRight" size={14} />
             </div>
           </section>
@@ -7727,13 +7791,6 @@ function HostProfileStyles() {
         box-shadow: 0 18px 42px rgba(25, 49, 34, .13);
       }
 
-      .hostCategoryCard.active {
-        border-color: rgba(111, 151, 80, .72);
-        box-shadow:
-          0 0 0 3px rgba(126, 163, 95, .10),
-          0 18px 42px rgba(25, 49, 34, .13);
-      }
-
       .hostCategoryCard > img {
         position: absolute;
         inset: 0;
@@ -7795,11 +7852,19 @@ function HostProfileStyles() {
       }
 
       .hostCategoryCopy em {
-        margin-top: 7px;
-        color: rgba(255,255,255,.65);
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        margin-top: 8px;
+        padding: 5px 8px;
+        border: 1px solid rgba(255,255,255,.13);
+        border-radius: 999px;
+        background: rgba(255,255,255,.09);
+        color: rgba(255,255,255,.82);
         font-size: 8px;
         font-style: normal;
-        font-weight: 750;
+        font-weight: 800;
+        backdrop-filter: blur(8px);
       }
 
       .hostCategoryArrow {
