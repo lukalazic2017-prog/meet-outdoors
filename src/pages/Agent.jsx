@@ -312,7 +312,9 @@ export default function Agent() {
   }, [intent]);
 
   const hosts = useMemo(() => hostResults?.hosts || [], [hostResults?.hosts]);
-  const hasHosts = hosts.length > 0;
+  const foundHostCount = Number(hostResults?.count || hosts.length || 0);
+  const hasHostMatches = foundHostCount > 0;
+  const hasVisibleHosts = Boolean(user) && hosts.length > 0;
 
 
   const canSearch = prompt.trim().length >= 4 && !thinking;
@@ -327,22 +329,28 @@ export default function Agent() {
   }
 
   function inferHostNeeds(currentIntent, rawPrompt = "") {
-    const intentType = currentIntent?.intent_type || "adventure";
+    const intentType = currentIntent?.intent_type || null;
     const text = `${rawPrompt} ${currentIntent?.assistant_summary || ""}`.toLowerCase();
 
     const needsAccommodation =
       intentType === "accommodation" ||
       intentType === "mixed" ||
-      /smeštaj|smestaj|noćenj|nocenj|apartman|vikendic|hotel|hostel|kamp/.test(text);
+      /smeštaj|smestaj|noćenj|nocenj|apartman|vikendic|hotel|hostel|brvnar|kuć|kuc|glamping|planinarski dom/.test(text);
 
     const needsRental =
-      /iznajm|rent|oprem|bicikl|bike|kajak|ski|skije|snowboard|šator|sator/.test(text);
+      /iznajm|rent|oprem|bicikl|bike|e-bike|kajak|sup|čamac|camac|quad|atv|ski|skije|snowboard|šator|sator/.test(text);
 
     const needsService =
-      /uslug|vodič|vodic|transfer|prevoz|instruktor|fotograf|organizacij/.test(text);
+      /uslug|vodič|vodic|transfer|prevoz|instruktor|fotograf|video|team building|servis|podršk|podrsk/.test(text);
+
+    const explicitAdventure =
+      intentType === "adventure" ||
+      intentType === "mixed" ||
+      Boolean(currentIntent?.activity) ||
+      /avantur|rafting|planinar|hiking|kampov|cycling|biciklizam|penjan|via ferrata|paraglajd|skij|snowboard|jahan|ribolov|kanjon|surf|jedren|ronjen|kajak/.test(text);
 
     return {
-      adventure: intentType !== "accommodation",
+      adventure: explicitAdventure,
       accommodation: needsAccommodation,
       service: needsService,
       rental: needsRental,
@@ -352,7 +360,7 @@ export default function Agent() {
   async function searchHosts(currentIntent, rawPrompt = "") {
     const needs = inferHostNeeds(currentIntent, rawPrompt);
 
-    const { data, error: rpcError } = await supabase.rpc("search_agent_hosts", {
+    const params = {
       p_activity: normalizeActivity(currentIntent?.activity) || null,
       p_location_text: currentIntent?.location_text || null,
       p_needs_adventure: needs.adventure,
@@ -360,8 +368,14 @@ export default function Agent() {
       p_needs_service: needs.service,
       p_needs_rental: needs.rental,
       p_people_count: Number(currentIntent?.people_count) || 1,
-      p_limit: 8,
-    });
+      p_limit: 20,
+    };
+
+    const rpcName = user
+      ? "search_agent_hosts"
+      : "search_agent_hosts_preview";
+
+    const { data, error: rpcError } = await supabase.rpc(rpcName, params);
 
     if (rpcError) throw rpcError;
 
@@ -370,6 +384,7 @@ export default function Agent() {
       hosts: [],
       count: 0,
       query: { needs },
+      locked: !user,
     };
 
     setHostResults(normalized);
@@ -986,26 +1001,65 @@ export default function Agent() {
                         HOST ENGINE
                       </span>
                       <h2>
-                        {hasHosts
-                          ? "Najbolji domaćini za tvoj plan."
+                        {hasHostMatches
+                          ? user
+                            ? "Najbolji domaćini za tvoj plan."
+                            : `Pronašao sam ${foundHostCount} domaćina za tvoj plan.`
                           : "Nisam pronašao dovoljno dobar direktan match."}
                       </h2>
                       <p>
-                        {hasHosts
-                          ? "Agent je uporedio lokaciju, aktivnost i ono što svaki domaćin može da ponudi."
-                          : "Neću izmišljati rezultat. Možeš odmah poslati konkretan zahtev relevantnim domaćinima."}
+                        {hasHostMatches
+                          ? user
+                            ? "Agent je uporedio lokaciju, aktivnost i ono što svaki domaćin može da ponudi."
+                            : "Rezultati su spremni. Uloguj se da vidiš koji domaćini najbolje odgovaraju tvom planu."
+                          : "Neću izmišljati rezultat. Možeš poslati konkretan zahtev kada se uloguješ."}
                       </p>
                     </div>
 
-                    <div className={`ai-engine-status ${hasHosts ? "found" : ""}`}>
+                    <div className={`ai-engine-status ${hasHostMatches ? "found" : ""}`}>
                       <span />
-                      {hasHosts
-                        ? `${hosts.length} ${hosts.length === 1 ? "domaćin" : "domaćina"}`
+                      {hasHostMatches
+                        ? `${foundHostCount} ${foundHostCount === 1 ? "domaćin" : "domaćina"}`
                         : "Custom request"}
                     </div>
                   </div>
 
-                  {hasHosts ? (
+                  {hasHostMatches && !user ? (
+                    <div className="ai-locked-results">
+                      <div className="ai-locked-stack" aria-hidden="true">
+                        {[0, 1, 2].map((item) => (
+                          <div key={item} className="ai-locked-card">
+                            <div className="ai-locked-avatar" />
+                            <div className="ai-locked-lines">
+                              <span />
+                              <span />
+                            </div>
+                            <Icon name="shield" size={17} />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="ai-locked-copy">
+                        <span className="ai-section-label">
+                          <Icon name="shield" size={14} />
+                          REZULTATI SU ZAKLJUČANI
+                        </span>
+                        <h3>Pronašao sam {foundHostCount} domaćina.</h3>
+                        <p>
+                          Uloguj se da vidiš njihove profile, mogućnosti i ko
+                          najbolje odgovara tvom planu.
+                        </p>
+                        <button
+                          type="button"
+                          className="ai-login-results"
+                          onClick={() => navigate("/login")}
+                        >
+                          Uloguj se i otključaj rezultate
+                          <Icon name="arrow" size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : hasVisibleHosts ? (
                     <div className="ai-host-results">
                       {hosts.map((host, index) => {
                         const capabilities = host.capabilities || [];
@@ -4862,6 +4916,113 @@ function Styles() {
 
         .ai-host-cover {
           height: 108px;
+        }
+      }
+
+
+      .ai-locked-results {
+        display: grid;
+        grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+        gap: 18px;
+        align-items: center;
+        margin-top: 16px;
+        padding: 18px;
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 22px;
+        background: rgba(255,255,255,.035);
+      }
+
+      .ai-locked-stack {
+        display: grid;
+        gap: 9px;
+        filter: blur(3px);
+        opacity: .5;
+        pointer-events: none;
+      }
+
+      .ai-locked-card {
+        display: grid;
+        grid-template-columns: 38px 1fr 28px;
+        gap: 10px;
+        align-items: center;
+        min-height: 62px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 15px;
+        background: rgba(255,255,255,.045);
+      }
+
+      .ai-locked-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: rgba(255,255,255,.12);
+      }
+
+      .ai-locked-lines {
+        display: grid;
+        gap: 7px;
+      }
+
+      .ai-locked-lines span {
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.12);
+      }
+
+      .ai-locked-lines span:last-child {
+        width: 62%;
+      }
+
+      .ai-locked-copy h3 {
+        margin: 9px 0 0;
+        color: #fff;
+        font-size: 24px;
+        line-height: 1.04;
+        letter-spacing: -.04em;
+      }
+
+      .ai-locked-copy p {
+        margin: 9px 0 0;
+        color: rgba(255,255,255,.56);
+        font-size: 10px;
+        line-height: 1.6;
+      }
+
+      .ai-login-results {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 43px;
+        margin-top: 14px;
+        padding: 0 14px;
+        border: 1px solid rgba(224,246,175,.18);
+        border-radius: 13px;
+        background: #dff2ad;
+        color: #17301f;
+        font-size: 9px;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      @media (max-width: 760px) {
+        .ai-locked-results {
+          grid-template-columns: 1fr;
+          padding: 14px;
+        }
+
+        .ai-locked-stack {
+          max-height: 120px;
+          overflow: hidden;
+        }
+
+        .ai-locked-copy {
+          text-align: center;
+        }
+
+        .ai-login-results {
+          width: 100%;
         }
       }
 

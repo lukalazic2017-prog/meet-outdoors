@@ -469,7 +469,12 @@ function formatPrice(value) {
   }).format(number);
 }
 
-function EventCard({ event, completed = false }) {
+function EventCard({
+  event,
+  completed = false,
+  isOwner = false,
+  onDelete,
+}) {
   const location =
     [event.location, event.country]
       .filter(Boolean)
@@ -482,66 +487,71 @@ function EventCard({ event, completed = false }) {
     : formatDate(event.start_date);
 
   return (
-    <Link
-      to={`/event/${event.id}`}
-      className={`hostListingCard adventureSwipeCard ${completed ? "completedAdventureCard" : ""}`}
-    >
-      <div className="hostListingImage adventureCardImage">
-        <img
-          src={event.cover_url || FALLBACK_COVER}
-          alt={event.title || "Avantura"}
-        />
+    <article className={`hostListingCard adventureSwipeCard ${completed ? "completedAdventureCard" : ""}`}>
+      <Link to={`/event/${event.id}`} className="adventureCardLink">
+        <div className="hostListingImage adventureCardImage">
+          <img
+            src={event.cover_url || FALLBACK_COVER}
+            alt={event.title || "Avantura"}
+          />
+          <div className="listingImageShade adventureImageShade" />
 
-        <div className="listingImageShade adventureImageShade" />
-
-        <span className={`hostListingType ${completed ? "completedType" : ""}`}>
-          <Icon name={completed ? "trophy" : "calendar"} size={14} />
-          {completed ? "Održano" : "Aktuelno"}
-        </span>
-
-        <span className="listingDateBadge">
-          {dateLabel}
-        </span>
-
-        <div className="adventureCardImageCopy">
-          <span className="adventureCardLocation">
-            <Icon name="mapPin" size={13} />
-            {location}
+          <span className={`hostListingType ${completed ? "completedType" : ""}`}>
+            <Icon name={completed ? "trophy" : "calendar"} size={14} />
+            {completed ? "Održano" : "Aktuelno"}
           </span>
-          <h3>{event.title || "Outdoor avantura"}</h3>
-        </div>
-      </div>
 
-      <div className="hostListingBody adventureCardBody">
-        {event.description && (
-          <p className="hostListingDescription adventureCardDescription">
-            {event.description}
-          </p>
-        )}
+          <span className="listingDateBadge">{dateLabel}</span>
 
-        <div className="adventureCardMeta">
-          <span>
-            <Icon name="users" size={14} />
-            {event.capacity > 0 ? `${event.capacity} mesta` : "Otvorena grupa"}
-          </span>
-          <strong>{formatPrice(event.price)}</strong>
+          <div className="adventureCardImageCopy">
+            <span className="adventureCardLocation">
+              <Icon name="mapPin" size={13} />
+              {location}
+            </span>
+            <h3>{event.title || "Outdoor avantura"}</h3>
+          </div>
         </div>
 
-        <div className="hostListingFooter adventureCardFooter">
-          <span className="adventureCardState">
-            {completed ? "Sačuvano u portfoliju" : "Ponuda domaćina"}
-          </span>
+        <div className="hostListingBody adventureCardBody">
+          {event.description && (
+            <p className="hostListingDescription adventureCardDescription">
+              {event.description}
+            </p>
+          )}
 
-          <span className="adventureCardOpen">
-            Pogledaj
-            <Icon name="arrowRight" size={15} />
-          </span>
+          <div className="adventureCardMeta">
+            <span>
+              <Icon name="users" size={14} />
+              {event.capacity > 0 ? `${event.capacity} mesta` : "Otvorena grupa"}
+            </span>
+            <strong>{formatPrice(event.price)}</strong>
+          </div>
+
+          <div className="hostListingFooter adventureCardFooter">
+            <span className="adventureCardState">
+              {completed ? "Sačuvano u portfoliju" : "Ponuda domaćina"}
+            </span>
+            <span className="adventureCardOpen">
+              Pogledaj
+              <Icon name="arrowRight" size={15} />
+            </span>
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+
+      {isOwner && (
+        <button
+          type="button"
+          className="ownerDeleteButton adventureDeleteButton"
+          onClick={() => onDelete?.(event)}
+        >
+          <Icon name="trash" size={14} />
+          Obriši avanturu
+        </button>
+      )}
+    </article>
   );
 }
-
 
 const SERVICE_CATEGORIES = [
   "Vodič",
@@ -670,6 +680,7 @@ function OfferCard({
               aria-label="Obriši ponudu"
             >
               <Icon name="trash" size={14} />
+              <span>Obriši</span>
             </button>
           </div>
         )}
@@ -1073,6 +1084,7 @@ function SingleAccommodationFeature({
               aria-label="Obriši smeštaj"
             >
               <Icon name="trash" size={14} />
+              <span>Obriši</span>
             </button>
           </div>
         )}
@@ -1193,6 +1205,7 @@ function SingleOfferFeature({
               aria-label="Obriši ponudu"
             >
               <Icon name="trash" size={14} />
+              <span>Obriši</span>
             </button>
           </div>
         )}
@@ -1302,6 +1315,7 @@ function AccommodationCard({
               aria-label="Obriši smeštaj"
             >
               <Icon name="trash" size={14} />
+              <span>Obriši</span>
             </button>
           </div>
         )}
@@ -2271,6 +2285,29 @@ export default function HostProfile() {
     }
   };
 
+  const deleteEvent = async (item) => {
+    if (!item?.id || !profile?.id || currentUserId !== profile.id) return;
+
+    const confirmed = window.confirm(
+      `Obriši avanturu "${item.title}"? Ova radnja ne može da se poništi.`
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", item.id)
+      .eq("host_id", profile.id);
+
+    if (error) {
+      window.alert(error.message || "Avantura nije obrisana.");
+      return;
+    }
+
+    setEvents((current) => current.filter((event) => event.id !== item.id));
+  };
+
   const deleteOffer = async (item) => {
     if (!item?.id || !profile?.id || currentUserId !== profile.id) return;
 
@@ -3141,6 +3178,8 @@ export default function HostProfile() {
                       <EventCard
                         key={event.id}
                         event={event}
+                        isOwner={isOwnProfile}
+                        onDelete={deleteEvent}
                       />
                     ))}
                   </div>
@@ -8362,6 +8401,54 @@ function HostProfileStyles() {
           padding: 14px !important;
         }
       }
+
+      .adventureCardLink {
+        display: block;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .ownerDeleteButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 35px;
+        margin: 0 14px 14px;
+        padding: 0 11px;
+        border: 1px solid #f0cbc5;
+        border-radius: 11px;
+        background: #fff3f1;
+        color: #a34339;
+        font-size: 8px;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .adventureDeleteButton {
+        width: calc(100% - 28px);
+      }
+
+      .offerOwnerActions button.danger {
+        width: auto !important;
+        min-width: 31px;
+        padding: 0 8px !important;
+        gap: 5px;
+        background: rgba(125,39,31,.84) !important;
+      }
+
+      .offerOwnerActions button.danger span {
+        display: inline;
+        font-size: 7px;
+        font-weight: 900;
+      }
+
+      @media (max-width: 760px) {
+        .offerOwnerActions button.danger span {
+          display: none;
+        }
+      }
+
     `}
 </style>
   );
