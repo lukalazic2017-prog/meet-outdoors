@@ -295,17 +295,11 @@ export default function Agent() {
   const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login", { replace: true });
-    }
-  }, [authLoading, user, navigate]);
-
-  useEffect(() => {
-    if (!authLoading && user && !intent) {
+    if (!authLoading && !intent) {
       const t = window.setTimeout(() => inputRef.current?.focus(), 280);
       return () => window.clearTimeout(t);
     }
-  }, [authLoading, user, intent]);
+  }, [authLoading, intent]);
 
   const dateText = useMemo(() => {
     if (!intent) return null;
@@ -398,53 +392,59 @@ export default function Agent() {
         error: sessionError,
       } = await supabase.auth.getSession();
 
-      if (sessionError || !session?.user) {
-        navigate("/login", { replace: true });
-        return;
+      if (sessionError) {
+        console.error("Agent session read error:", sessionError);
       }
 
       let outdoorDNA = null;
 
-      try {
-        const { data: dnaData, error: dnaReadError } = await supabase
-          .from("outdoor_preferences")
-          .select(`
-            preferred_activities,
-            preferred_difficulty,
-            typical_budget_per_person,
-            currency,
-            has_car,
-            preferred_people_count,
-            preferred_location,
-            max_travel_minutes,
-            adventures_requested,
-            adventures_completed,
-            last_activity
-          `)
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+      if (session?.user) {
+        try {
+          const { data: dnaData, error: dnaReadError } = await supabase
+            .from("outdoor_preferences")
+            .select(`
+              preferred_activities,
+              preferred_difficulty,
+              typical_budget_per_person,
+              currency,
+              has_car,
+              preferred_people_count,
+              preferred_location,
+              max_travel_minutes,
+              adventures_requested,
+              adventures_completed,
+              last_activity
+            `)
+            .eq("user_id", session.user.id)
+            .maybeSingle();
 
-        if (dnaReadError) {
+          if (dnaReadError) {
+            console.error("Outdoor DNA read error:", dnaReadError);
+          } else {
+            outdoorDNA = dnaData || null;
+          }
+        } catch (dnaReadError) {
           console.error("Outdoor DNA read error:", dnaReadError);
-        } else {
-          outdoorDNA = dnaData || null;
         }
-      } catch (dnaReadError) {
-        console.error("Outdoor DNA read error:", dnaReadError);
+      }
+
+      const invokeOptions = {
+        body: {
+          mode: "parse",
+          message: prompt.trim(),
+          outdoor_dna: outdoorDNA,
+        },
+      };
+
+      if (session?.access_token) {
+        invokeOptions.headers = {
+          Authorization: `Bearer ${session.access_token}`,
+        };
       }
 
       const { data: aiData, error: aiError } = await supabase.functions.invoke(
         "meetoutdoors-agent",
-        {
-          body: {
-            mode: "parse",
-            message: prompt.trim(),
-            outdoor_dna: outdoorDNA,
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
+        invokeOptions
       );
 
       if (aiError) {
@@ -464,36 +464,38 @@ export default function Agent() {
 
       /*
         Outdoor DNA learning is intentionally non-blocking.
-        If this RPC ever fails, the Agent search still continues normally.
+        Guests can use Agent discovery without an account.
       */
-      try {
-        const { error: dnaError } = await supabase.rpc(
-          "update_outdoor_dna_from_intent",
-          {
-            p_activity: parsed.activity || null,
-            p_difficulty: parsed.difficulty || null,
-            p_budget_per_person:
-              parsed.budget_per_person === null ||
-              parsed.budget_per_person === undefined
-                ? null
-                : Number(parsed.budget_per_person),
-            p_currency: parsed.currency || null,
-            p_has_car:
-              typeof parsed.has_car === "boolean" ? parsed.has_car : null,
-            p_people_count:
-              parsed.people_count === null ||
-              parsed.people_count === undefined
-                ? null
-                : Number(parsed.people_count),
-            p_location_text: parsed.location_text || null,
-          }
-        );
+      if (session?.user) {
+        try {
+          const { error: dnaError } = await supabase.rpc(
+            "update_outdoor_dna_from_intent",
+            {
+              p_activity: parsed.activity || null,
+              p_difficulty: parsed.difficulty || null,
+              p_budget_per_person:
+                parsed.budget_per_person === null ||
+                parsed.budget_per_person === undefined
+                  ? null
+                  : Number(parsed.budget_per_person),
+              p_currency: parsed.currency || null,
+              p_has_car:
+                typeof parsed.has_car === "boolean" ? parsed.has_car : null,
+              p_people_count:
+                parsed.people_count === null ||
+                parsed.people_count === undefined
+                  ? null
+                  : Number(parsed.people_count),
+              p_location_text: parsed.location_text || null,
+            }
+          );
 
-        if (dnaError) {
+          if (dnaError) {
+            console.error("Outdoor DNA learning error:", dnaError);
+          }
+        } catch (dnaError) {
           console.error("Outdoor DNA learning error:", dnaError);
         }
-      } catch (dnaError) {
-        console.error("Outdoor DNA learning error:", dnaError);
       }
 
       await searchHosts(parsed, prompt.trim());
@@ -530,6 +532,11 @@ export default function Agent() {
 
   async function sendDemandToHosts() {
     if (!intent || sendingDemand) return;
+
+    if (!user) {
+      navigate("/login");
+      return;
+    }
 
     const intentType = intent.intent_type || "adventure";
     const needsActivity = intentType === "adventure" || intentType === "mixed";
@@ -605,8 +612,6 @@ export default function Agent() {
       </>
     );
   }
-
-  if (!user) return null;
 
   return (
     <>

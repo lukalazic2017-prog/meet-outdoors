@@ -3092,407 +3092,98 @@ export default function HostProfile() {
         )}
 
           <div className={`profileContent ${singleContentSection ? "singlePurposeProfile" : ""}`}>
-            {showOverview && (
-              <>
-            <div className="mainGrid">
-              <div className="mainColumn">
-                <section className="contentCard aboutCard">
-                  <div className="sectionHeading">
-                    <div>
-                      <span className="sectionKicker">
-                        O domaćinu
-                      </span>
-
-                      <h2>
-                        Iskustvo iza avanture.
-                      </h2>
-                    </div>
-
-                    <span className="sectionIcon">
-                      <Icon
-                        name="compass"
-                        size={21}
-                      />
-                    </span>
-                  </div>
-
-                  <p className="hostBio">
-                    {profile.bio ||
-                      "Ovaj domaćin još nije dodao opis. Uskoro će ovde biti više informacija o iskustvu, pristupu organizaciji i avanturama koje nudi."}
-                  </p>
-
-                  {(hasAdventures || hostCheckins.length > 0 || hasOffers) && (
-                    <div className="hostStoryStats">
-                      {hasAdventures && (
-                        <article>
-                          <span>{activeEvents.length}</span>
-                          <small>avantura</small>
-                        </article>
-                      )}
-
-                      {hostCheckins.length > 0 && (
-                        <article>
-                          <span>{hostCheckins.length}</span>
-                          <small>GPS check-inova</small>
-                        </article>
-                      )}
-
-                      {hasOffers && (
-                        <article>
-                          <span>{offers.length}</span>
-                          <small>aktivnih ponuda</small>
-                        </article>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="profilePresence">
-                    <span className="profilePresenceDot" />
-                    <span>
-                      {hasAdventures || hasAccommodation || hasOffers
-                        ? "Aktivan MeetOutdoors domaćin"
-                        : "MeetOutdoors profil domaćina"}
-                    </span>
-                  </div>
-
-                  <div className="trustMessage">
-                    <span>
-                      <Icon
-                        name="shield"
-                        size={18}
-                      />
-                    </span>
-
-                    <div>
-                      <strong>
-                        Profil domaćina
-                      </strong>
-
-                      <p>
-                        Upoznaj domaćina, njegove ponude, lokacije i utiske zajednice pre nego što ga kontaktiraš.
-                      </p>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="contentCard">
-                  <div className="sectionHeading">
-                    <div>
-                      <span className="sectionKicker">
-                        Outdoor aktivnosti
-                      </span>
-
-                      <h2>
-                        Avanture koje organizuje.
-                      </h2>
-                    </div>
-                  </div>
-
-                  <div className="activityList">
-                    {activities.length > 0 ? (
-                      activities.map(
-                        (activity) => (
-                          <span
-                            key={activity}
-                            className="activityChip"
-                          >
-                            <Icon
-                              name="check"
-                              size={14}
-                            />
-                            {activity}
-                          </span>
-                        )
-                      )
-                    ) : (
-                      <div className="emptyInline">
-                        Aktivnosti još nisu dodate.
-                      </div>
-                    )}
-                  </div>
-                </section>
+            <section className="hostOffersPriority">
+              <div className="priorityHeading">
+                <span>GLAVNA PONUDA</span>
+                <h2>Šta domaćin nudi</h2>
+                <p>Avanture, smeštaj, usluge i iznajmljivanje — sve najvažnije odmah na početku profila.</p>
               </div>
+            </section>
 
-              <aside className="sideColumn">
-                <section className="contentCard contactCard">
-                  <div className="sectionHeading compact">
-                    <div>
-                      <span className="sectionKicker">
-                        Kontakt
-                      </span>
-
-                      <h2>
-                        Poveži se sa domaćinom.
-                      </h2>
-                    </div>
-                  </div>
-
-                  <div className="contactList">
-                    <ContactItem
-                      icon="phone"
-                      title="Telefon"
-                      value={profile.phone}
-                      href={
-                        profile.phone
-                          ? `tel:${profile.phone.replace(
-                              /\s/g,
-                              ""
-                            )}`
-                          : ""
-                      }
-                      mutedText="Telefon nije dodat"
-                    />
-
-                    <ContactItem
-                      icon="instagram"
-                      title="Instagram"
-                      value={
-                        profile.instagram_url
-                          ? "Otvori Instagram profil"
-                          : ""
-                      }
-                      href={
-                        profile.instagram_url
-                      }
-                      mutedText="Instagram nije dodat"
-                    />
-
-                    <ContactItem
-                      icon="globe"
-                      title="Web-sajt"
-                      value={
-                        profile.website_url
-                          ? "Poseti web-sajt"
-                          : ""
-                      }
-                      href={
-                        profile.website_url
-                      }
-                      mutedText="Web-sajt nije dodat"
-                    />
-
-                    <ContactItem
-                      icon="video"
-                      title="Promo video"
-                      value={
-                        profile.promo_video_url
-                          ? "Pogledaj promo video"
-                          : ""
-                      }
-                      href={
-                        profile.promo_video_url
-                      }
-                      mutedText="Promo video nije dodat"
-                    />
-                  </div>
-                </section>
-
-                <section className="verifiedCard">
-                  <span className="verifiedIcon">
-                    <Icon
-                      name="shield"
-                      size={23}
-                    />
-                  </span>
-
-                  <div>
-                    <span className="verifiedLabel">
-                      MeetOutdoors sigurnost
-                    </span>
-
-                    <h3>
-                      Upoznaj domaćina pre kontakta.
-                    </h3>
-
-                    <p>
-                      Na jednom mestu vidiš šta domaćin nudi,
-                      gde se nalazi i kako da ga
-                      kontaktiraš direktno.
-                    </p>
-                  </div>
-                </section>
-              </aside>
-            </div>
-
-            {hasMapContent && (
+            {showAdventures && (hasAdventures || (isOwnProfile && isAdventureHost)) && (
             <section
-              id="host-map"
-              className="hostMapSection"
+              id="events"
+              className="listingSection adventureRailSection"
             >
               <div className="listingHeader">
                 <div>
                   <span className="sectionKicker">
-                    Lokacija domaćina
+                    Aktuelne avanture
                   </span>
 
                   <h2>
-                    Istraži lokacije ovog domaćina
+                    Izaberi sledeće iskustvo
                   </h2>
 
                   <p>
-                    Javna lokacija domaćina i mesta povezana
-                    sa njegovim MeetOutdoors profilom.
+                    Prevuci kartice horizontalno i pogledaj šta ovaj domaćin trenutno organizuje.
                   </p>
                 </div>
 
-                <Link
-                  to="/explore"
-                  className="sectionAction"
-                >
-                  Otvori Explore
-                  <Icon
-                    name="arrowRight"
-                    size={17}
-                  />
-                </Link>
-              </div>
-
-              <div className="hostMapFrame">
-                <MapContainer
-                  center={visibleMapCenter}
-                  zoom={hasPublicMapLocation ? 12 : 7}
-                  scrollWheelZoom={false}
-                  className="hostLeaflet"
-                >
-                  <TileLayer
-                    attribution='&copy; OpenStreetMap contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-
-                  {hasPublicMapLocation && (
-                    <Marker
-                      position={[hostLatitude, hostLongitude]}
+                {isOwnProfile && isAdventureHost && (
+                  <Link
+                    to="/create-event"
+                    className="sectionAction"
+                  >
+                    Kreiraj avanturu
+                    <Icon
+                      name="arrowRight"
+                      size={17}
                     />
-                  )}
-
-                  {mapPlaces.map((place) => (
-                    <Marker
-                      key={place.id}
-                      position={[
-                        Number(
-                          place.latitude
-                        ),
-                        Number(
-                          place.longitude
-                        ),
-                      ]}
-                      eventHandlers={{
-                        click: () =>
-                          navigate(
-                            `/explore/${place.id}`
-                          ),
-                      }}
-                    />
-                  ))}
-                </MapContainer>
-
-                <div className="hostMapLegend">
-                  <Icon
-                    name="verified"
-                    size={13}
-                  />
-
-                  JAVNA + COMMUNITY LOKACIJE
-                </div>
-              </div>
-            </section>
-            )}
-
-            {hasGallery && (
-            <section className="hostGallerySection">
-              <div className="listingHeader">
-                <div>
-                  <span className="sectionKicker">
-                    Galerija
-                  </span>
-
-                  <h2>
-                    Avanture kroz stvarne kadrove
-                  </h2>
-
-                  <p>
-                    Fotografije koje je domaćin
-                    dodao na MeetOutdoors mestima.
-                  </p>
-                </div>
-
-                <span className="galleryCount">
-                  {hostPhotos.length}
-                </span>
+                  </Link>
+                )}
               </div>
 
-              {hostPhotos.length > 0 ? (
-                <div className="hostGalleryGrid">
-                  {hostPhotos
-                    .slice(0, 8)
-                    .map((photo, index) => (
-                      <button
-                        key={photo.id}
-                        type="button"
-                        className={
-                          index === 0
-                            ? "featured"
-                            : ""
-                        }
-                        onClick={() =>
-                          photo.place_id &&
-                          navigate(
-                            `/explore/${photo.place_id}`
-                          )
-                        }
-                      >
-                        <img
-                          src={
-                            photo.image_url
-                          }
-                          alt={
-                            photo.places?.name ||
-                            "Outdoor fotografija"
-                          }
-                        />
-
-                        <div>
-                          <strong>
-                            {photo.places?.name ||
-                              "Outdoor mesto"}
-                          </strong>
-
-                          <span>
-                            {formatDate(
-                              photo.created_at
-                            )}
-                          </span>
-                        </div>
-                      </button>
+              {activeEvents.length > 0 ? (
+                <div className="adventureRailShell">
+                  <div className="adventureSwipeRail" aria-label="Aktuelne avanture">
+                    {activeEvents.map((event) => (
+                      <EventCard
+                        key={event.id}
+                        event={event}
+                      />
                     ))}
+                  </div>
+                  {activeEvents.length > 1 && (
+                    <div className="adventureSwipeHint">
+                      <span>Prevuci za još</span>
+                      <Icon name="arrowRight" size={14} />
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="emptyListing compactEmpty">
+                <div className="emptyListing">
                   <span>
                     <Icon
-                      name="camera"
+                      name="calendar"
                       size={27}
                     />
                   </span>
 
                   <h3>
-                    Još nema community fotografija.
+                    Trenutno nema aktuelnih avantura.
                   </h3>
 
                   <p>
-                    Fotografije će se automatski
-                    pojaviti ovde kada ih domaćin
-                    doda na Explore mesta.
+                    Kada domaćin objavi novu avanturu, pojaviće se ovde.
                   </p>
+
+                  {isOwnProfile && (
+                    <Link to="/create-event">
+                      Objavi prvu avanturu
+                      <Icon
+                        name="arrowRight"
+                        size={16}
+                      />
+                    </Link>
+                  )}
                 </div>
               )}
             </section>
-
-
             )}
 
-              </>
-            )}
+            {showOverview && (
+              <>
 
             {showAccommodation && (hasAccommodation || (isOwnProfile && isAccommodationHost)) && (
               <section
@@ -3713,86 +3404,407 @@ export default function HostProfile() {
               </section>
             )}
 
+            <div className="mainGrid">
+              <div className="mainColumn">
+                <section className="contentCard aboutCard">
+                  <div className="sectionHeading">
+                    <div>
+                      <span className="sectionKicker">
+                        O domaćinu
+                      </span>
 
-            {showAdventures && (hasAdventures || (isOwnProfile && isAdventureHost)) && (
-            <section
-              id="events"
-              className="listingSection adventureRailSection"
-            >
+                      <h2>
+                        Iskustvo iza avanture.
+                      </h2>
+                    </div>
+
+                    <span className="sectionIcon">
+                      <Icon
+                        name="compass"
+                        size={21}
+                      />
+                    </span>
+                  </div>
+
+                  <p className="hostBio">
+                    {profile.bio ||
+                      "Ovaj domaćin još nije dodao opis. Uskoro će ovde biti više informacija o iskustvu, pristupu organizaciji i avanturama koje nudi."}
+                  </p>
+
+                  {(hasAdventures || hostCheckins.length > 0 || hasOffers) && (
+                    <div className="hostStoryStats">
+                      {hasAdventures && (
+                        <article>
+                          <span>{activeEvents.length}</span>
+                          <small>avantura</small>
+                        </article>
+                      )}
+
+                      {hostCheckins.length > 0 && (
+                        <article>
+                          <span>{hostCheckins.length}</span>
+                          <small>GPS check-inova</small>
+                        </article>
+                      )}
+
+                      {hasOffers && (
+                        <article>
+                          <span>{offers.length}</span>
+                          <small>aktivnih ponuda</small>
+                        </article>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="profilePresence">
+                    <span className="profilePresenceDot" />
+                    <span>
+                      {hasAdventures || hasAccommodation || hasOffers
+                        ? "Aktivan MeetOutdoors domaćin"
+                        : "MeetOutdoors profil domaćina"}
+                    </span>
+                  </div>
+
+                  <div className="trustMessage">
+                    <span>
+                      <Icon
+                        name="shield"
+                        size={18}
+                      />
+                    </span>
+
+                    <div>
+                      <strong>
+                        Profil domaćina
+                      </strong>
+
+                      <p>
+                        Upoznaj domaćina, njegove ponude, lokacije i utiske zajednice pre nego što ga kontaktiraš.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="contentCard">
+                  <div className="sectionHeading">
+                    <div>
+                      <span className="sectionKicker">
+                        Outdoor aktivnosti
+                      </span>
+
+                      <h2>
+                        Avanture koje organizuje.
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="activityList">
+                    {activities.length > 0 ? (
+                      activities.map(
+                        (activity) => (
+                          <span
+                            key={activity}
+                            className="activityChip"
+                          >
+                            <Icon
+                              name="check"
+                              size={14}
+                            />
+                            {activity}
+                          </span>
+                        )
+                      )
+                    ) : (
+                      <div className="emptyInline">
+                        Aktivnosti još nisu dodate.
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+
+              <aside className="sideColumn">
+                <section className="contentCard contactCard">
+                  <div className="sectionHeading compact">
+                    <div>
+                      <span className="sectionKicker">
+                        Kontakt
+                      </span>
+
+                      <h2>
+                        Poveži se sa domaćinom.
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="contactList">
+                    <ContactItem
+                      icon="phone"
+                      title="Telefon"
+                      value={profile.phone}
+                      href={
+                        profile.phone
+                          ? `tel:${profile.phone.replace(
+                              /\s/g,
+                              ""
+                            )}`
+                          : ""
+                      }
+                      mutedText="Telefon nije dodat"
+                    />
+
+                    <ContactItem
+                      icon="instagram"
+                      title="Instagram"
+                      value={
+                        profile.instagram_url
+                          ? "Otvori Instagram profil"
+                          : ""
+                      }
+                      href={
+                        profile.instagram_url
+                      }
+                      mutedText="Instagram nije dodat"
+                    />
+
+                    <ContactItem
+                      icon="globe"
+                      title="Web-sajt"
+                      value={
+                        profile.website_url
+                          ? "Poseti web-sajt"
+                          : ""
+                      }
+                      href={
+                        profile.website_url
+                      }
+                      mutedText="Web-sajt nije dodat"
+                    />
+
+                    <ContactItem
+                      icon="video"
+                      title="Promo video"
+                      value={
+                        profile.promo_video_url
+                          ? "Pogledaj promo video"
+                          : ""
+                      }
+                      href={
+                        profile.promo_video_url
+                      }
+                      mutedText="Promo video nije dodat"
+                    />
+                  </div>
+                </section>
+
+                <section className="verifiedCard">
+                  <span className="verifiedIcon">
+                    <Icon
+                      name="shield"
+                      size={23}
+                    />
+                  </span>
+
+                  <div>
+                    <span className="verifiedLabel">
+                      MeetOutdoors sigurnost
+                    </span>
+
+                    <h3>
+                      Upoznaj domaćina pre kontakta.
+                    </h3>
+
+                    <p>
+                      Na jednom mestu vidiš šta domaćin nudi,
+                      gde se nalazi i kako da ga
+                      kontaktiraš direktno.
+                    </p>
+                  </div>
+                </section>
+              </aside>
+            </div>
+
+
+
+            {hasGallery && (
+            <section className="hostGallerySection">
               <div className="listingHeader">
                 <div>
                   <span className="sectionKicker">
-                    Aktuelne avanture
+                    Galerija
                   </span>
 
                   <h2>
-                    Izaberi sledeće iskustvo
+                    Avanture kroz stvarne kadrove
                   </h2>
 
                   <p>
-                    Prevuci kartice horizontalno i pogledaj šta ovaj domaćin trenutno organizuje.
+                    Fotografije koje je domaćin
+                    dodao na MeetOutdoors mestima.
                   </p>
                 </div>
 
-                {isOwnProfile && isAdventureHost && (
-                  <Link
-                    to="/create-event"
-                    className="sectionAction"
-                  >
-                    Kreiraj avanturu
-                    <Icon
-                      name="arrowRight"
-                      size={17}
-                    />
-                  </Link>
-                )}
+                <span className="galleryCount">
+                  {hostPhotos.length}
+                </span>
               </div>
 
-              {activeEvents.length > 0 ? (
-                <div className="adventureRailShell">
-                  <div className="adventureSwipeRail" aria-label="Aktuelne avanture">
-                    {activeEvents.map((event) => (
-                      <EventCard
-                        key={event.id}
-                        event={event}
-                      />
+              {hostPhotos.length > 0 ? (
+                <div className="hostGalleryGrid">
+                  {hostPhotos
+                    .slice(0, 8)
+                    .map((photo, index) => (
+                      <button
+                        key={photo.id}
+                        type="button"
+                        className={
+                          index === 0
+                            ? "featured"
+                            : ""
+                        }
+                        onClick={() =>
+                          photo.place_id &&
+                          navigate(
+                            `/explore/${photo.place_id}`
+                          )
+                        }
+                      >
+                        <img
+                          src={
+                            photo.image_url
+                          }
+                          alt={
+                            photo.places?.name ||
+                            "Outdoor fotografija"
+                          }
+                        />
+
+                        <div>
+                          <strong>
+                            {photo.places?.name ||
+                              "Outdoor mesto"}
+                          </strong>
+
+                          <span>
+                            {formatDate(
+                              photo.created_at
+                            )}
+                          </span>
+                        </div>
+                      </button>
                     ))}
-                  </div>
-                  {activeEvents.length > 1 && (
-                    <div className="adventureSwipeHint">
-                      <span>Prevuci za još</span>
-                      <Icon name="arrowRight" size={14} />
-                    </div>
-                  )}
                 </div>
               ) : (
-                <div className="emptyListing">
+                <div className="emptyListing compactEmpty">
                   <span>
                     <Icon
-                      name="calendar"
+                      name="camera"
                       size={27}
                     />
                   </span>
 
                   <h3>
-                    Trenutno nema aktuelnih avantura.
+                    Još nema community fotografija.
                   </h3>
 
                   <p>
-                    Kada domaćin objavi novu avanturu, pojaviće se ovde.
+                    Fotografije će se automatski
+                    pojaviti ovde kada ih domaćin
+                    doda na Explore mesta.
                   </p>
-
-                  {isOwnProfile && (
-                    <Link to="/create-event">
-                      Objavi prvu avanturu
-                      <Icon
-                        name="arrowRight"
-                        size={16}
-                      />
-                    </Link>
-                  )}
                 </div>
               )}
+            </section>
+
+
+            )}
+
+              </>
+            )}
+
+
+
+            {hasMapContent && (
+            <section
+              id="host-map"
+              className="hostMapSection"
+            >
+              <div className="listingHeader">
+                <div>
+                  <span className="sectionKicker">
+                    Lokacija domaćina
+                  </span>
+
+                  <h2>
+                    Istraži lokacije ovog domaćina
+                  </h2>
+
+                  <p>
+                    Javna lokacija domaćina i mesta povezana
+                    sa njegovim MeetOutdoors profilom.
+                  </p>
+                </div>
+
+                <Link
+                  to="/explore"
+                  className="sectionAction"
+                >
+                  Otvori Explore
+                  <Icon
+                    name="arrowRight"
+                    size={17}
+                  />
+                </Link>
+              </div>
+
+              <div className="hostMapFrame">
+                <MapContainer
+                  center={visibleMapCenter}
+                  zoom={hasPublicMapLocation ? 12 : 7}
+                  scrollWheelZoom={false}
+                  className="hostLeaflet"
+                >
+                  <TileLayer
+                    attribution='&copy; OpenStreetMap contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+
+                  {hasPublicMapLocation && (
+                    <Marker
+                      position={[hostLatitude, hostLongitude]}
+                    />
+                  )}
+
+                  {mapPlaces.map((place) => (
+                    <Marker
+                      key={place.id}
+                      position={[
+                        Number(
+                          place.latitude
+                        ),
+                        Number(
+                          place.longitude
+                        ),
+                      ]}
+                      eventHandlers={{
+                        click: () =>
+                          navigate(
+                            `/explore/${place.id}`
+                          ),
+                      }}
+                    />
+                  ))}
+                </MapContainer>
+
+                <div className="hostMapLegend">
+                  <Icon
+                    name="verified"
+                    size={13}
+                  />
+
+                  JAVNA + COMMUNITY LOKACIJE
+                </div>
+              </div>
             </section>
             )}
 
@@ -7955,6 +7967,401 @@ function HostProfileStyles() {
         }
       }
 
+
+      /* ===== Compact host profile / offer-first layout ===== */
+
+      .profileContent {
+        padding-top: 18px !important;
+      }
+
+      .hostOffersPriority {
+        width: min(1180px, 100%);
+        margin: 0 auto 8px;
+      }
+
+      .priorityHeading {
+        padding: 4px 2px 8px;
+      }
+
+      .priorityHeading > span {
+        display: block;
+        color: #78945b;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: .14em;
+      }
+
+      .priorityHeading h2 {
+        margin: 5px 0 0;
+        color: #21382c;
+        font-size: clamp(27px, 3.3vw, 40px);
+        line-height: .98;
+        letter-spacing: -.055em;
+      }
+
+      .priorityHeading p {
+        max-width: 680px;
+        margin: 8px 0 0;
+        color: #7d8981;
+        font-size: 10px;
+        line-height: 1.55;
+      }
+
+      .listingSection {
+        margin-top: 16px !important;
+        padding-top: 0 !important;
+      }
+
+      .listingHeader {
+        margin-bottom: 12px !important;
+      }
+
+      .listingHeader h2 {
+        margin-top: 5px !important;
+        font-size: clamp(23px, 3vw, 34px) !important;
+      }
+
+      .listingHeader p {
+        margin-top: 6px !important;
+        font-size: 9px !important;
+        line-height: 1.5 !important;
+      }
+
+      .singleFeature {
+        min-height: 340px !important;
+        border-radius: 22px !important;
+      }
+
+      .singleFeatureVisual {
+        min-height: 340px !important;
+      }
+
+      .singleFeatureContent {
+        padding: 25px !important;
+      }
+
+      .stayCard,
+      .offerCard,
+      .hostListingCard {
+        border-radius: 20px !important;
+      }
+
+      .stayCardMedia,
+      .offerCardMedia,
+      .hostListingImage {
+        min-height: 185px !important;
+      }
+
+      .mainGrid {
+        margin-top: 30px !important;
+        gap: 14px !important;
+      }
+
+      .mainColumn {
+        gap: 14px !important;
+      }
+
+      .contentCard,
+      .verifiedCard {
+        padding: 20px !important;
+        border-radius: 21px !important;
+      }
+
+      .sectionHeading {
+        margin-bottom: 13px !important;
+      }
+
+      .sectionHeading h2 {
+        font-size: 22px !important;
+      }
+
+      .hostBio {
+        font-size: 10px !important;
+        line-height: 1.65 !important;
+      }
+
+      .hostStoryStats {
+        margin-top: 15px !important;
+        gap: 8px !important;
+      }
+
+      .hostStoryStats article {
+        min-height: 66px !important;
+        padding: 10px !important;
+      }
+
+      .profilePresence,
+      .trustMessage {
+        margin-top: 13px !important;
+      }
+
+      .hostGallerySection {
+        margin-top: 24px !important;
+      }
+
+      .hostGalleryGrid {
+        gap: 8px !important;
+      }
+
+      .hostGalleryGrid button {
+        min-height: 160px !important;
+        border-radius: 17px !important;
+      }
+
+      .hostMapSection {
+        margin-top: 30px !important;
+        padding-top: 22px !important;
+        border-top: 1px solid rgba(34, 55, 43, .10);
+      }
+
+      .hostMapFrame {
+        border-radius: 21px !important;
+        overflow: hidden;
+      }
+
+      .hostLeaflet {
+        height: 300px !important;
+      }
+
+      @media (max-width: 760px) {
+        .profileContent {
+          padding-top: 10px !important;
+        }
+
+        .hostOffersPriority {
+          margin-bottom: 2px;
+        }
+
+        .priorityHeading {
+          padding: 2px 0 5px;
+          text-align: center;
+        }
+
+        .priorityHeading h2 {
+          font-size: 26px;
+        }
+
+        .priorityHeading p {
+          margin: 7px auto 0;
+          max-width: 310px;
+          font-size: 9px;
+        }
+
+        .listingSection {
+          margin-top: 12px !important;
+        }
+
+        .listingHeader {
+          gap: 10px !important;
+        }
+
+        .listingHeader h2 {
+          font-size: 22px !important;
+        }
+
+        .listingHeader p {
+          display: none;
+        }
+
+        .sectionAction {
+          min-height: 38px !important;
+          padding: 0 11px !important;
+          font-size: 8px !important;
+        }
+
+        .singleFeature {
+          min-height: 0 !important;
+          border-radius: 18px !important;
+        }
+
+        .singleFeatureVisual {
+          min-height: 220px !important;
+        }
+
+        .singleFeatureContent {
+          padding: 17px !important;
+        }
+
+        .mainGrid {
+          margin-top: 22px !important;
+          gap: 11px !important;
+        }
+
+        .contentCard,
+        .verifiedCard {
+          padding: 16px !important;
+          border-radius: 18px !important;
+        }
+
+        .hostGallerySection {
+          margin-top: 19px !important;
+        }
+
+        .hostMapSection {
+          margin-top: 24px !important;
+          padding-top: 18px !important;
+        }
+
+        .hostLeaflet {
+          height: 240px !important;
+        }
+      }
+
+      /* ===== Unified premium offer cards ===== */
+
+      .adventureSwipeRail,
+      .staySwipeRail,
+      .offerSwipeRail {
+        display: flex !important;
+        gap: 14px !important;
+        overflow-x: auto !important;
+        padding: 3px 2px 14px !important;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .adventureSwipeRail::-webkit-scrollbar,
+      .staySwipeRail::-webkit-scrollbar,
+      .offerSwipeRail::-webkit-scrollbar {
+        display: none;
+      }
+
+      .adventureSwipeCard,
+      .stayCard,
+      .offerCard {
+        flex: 0 0 clamp(320px, 31vw, 370px) !important;
+        width: clamp(320px, 31vw, 370px) !important;
+        min-width: 320px !important;
+        overflow: hidden !important;
+        border: 1px solid rgba(42, 66, 50, .10) !important;
+        border-radius: 24px !important;
+        background: #fff !important;
+        box-shadow:
+          0 10px 26px rgba(28, 50, 36, .055),
+          0 2px 6px rgba(28, 50, 36, .025) !important;
+        scroll-snap-align: start;
+        transition:
+          transform .22s ease,
+          box-shadow .22s ease,
+          border-color .22s ease !important;
+      }
+
+      .adventureSwipeCard:hover,
+      .stayCard:hover,
+      .offerCard:hover {
+        transform: translateY(-4px) !important;
+        border-color: rgba(112, 145, 88, .35) !important;
+        box-shadow:
+          0 20px 44px rgba(28, 50, 36, .11),
+          0 3px 9px rgba(28, 50, 36, .04) !important;
+      }
+
+      .adventureCardImage,
+      .stayCardMedia,
+      .offerCardMedia {
+        height: 225px !important;
+        min-height: 225px !important;
+      }
+
+      .adventureSwipeCard:hover .adventureCardImage > img,
+      .stayCard:hover .stayCardMedia > img,
+      .offerCard:hover .offerCardMedia > img {
+        transform: scale(1.045) !important;
+      }
+
+      .adventureCardImage > img,
+      .stayCardMedia > img,
+      .offerCardMedia > img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        transition: transform .45s ease !important;
+      }
+
+      .adventureCardImageCopy h3,
+      .stayHeroCopy h3,
+      .offerCardHeroCopy h3 {
+        margin-top: 7px !important;
+        color: #fff !important;
+        font-size: 20px !important;
+        line-height: 1.07 !important;
+        letter-spacing: -.035em !important;
+      }
+
+      .adventureCardBody,
+      .stayCardBody,
+      .offerCardBody {
+        padding: 16px !important;
+      }
+
+      .adventureCardDescription,
+      .stayCardBody > p,
+      .offerCardBody > p {
+        min-height: 38px !important;
+        color: #748179 !important;
+        font-size: 9px !important;
+        line-height: 1.55 !important;
+      }
+
+      .adventureCardMeta,
+      .stayMeta,
+      .offerCardBottom {
+        margin-top: 13px !important;
+        padding: 10px 11px !important;
+        border-radius: 13px !important;
+        background: #f3f6f0 !important;
+      }
+
+      .adventureRailSection {
+        margin-top: 10px !important;
+      }
+
+      .adventureRailSection .listingHeader h2 {
+        font-size: clamp(25px, 3.2vw, 36px) !important;
+      }
+
+      .adventureRailSection .sectionKicker {
+        color: #6e8d50 !important;
+      }
+
+      @media (max-width: 760px) {
+        .adventureSwipeRail,
+        .staySwipeRail,
+        .offerSwipeRail {
+          gap: 10px !important;
+          padding-bottom: 12px !important;
+        }
+
+        .adventureSwipeCard,
+        .stayCard,
+        .offerCard {
+          flex-basis: 82vw !important;
+          width: 82vw !important;
+          min-width: 82vw !important;
+          max-width: 340px !important;
+          border-radius: 20px !important;
+        }
+
+        .adventureCardImage,
+        .stayCardMedia,
+        .offerCardMedia {
+          height: 205px !important;
+          min-height: 205px !important;
+        }
+
+        .adventureCardImageCopy h3,
+        .stayHeroCopy h3,
+        .offerCardHeroCopy h3 {
+          font-size: 19px !important;
+        }
+
+        .adventureCardBody,
+        .stayCardBody,
+        .offerCardBody {
+          padding: 14px !important;
+        }
+      }
     `}
 </style>
   );
