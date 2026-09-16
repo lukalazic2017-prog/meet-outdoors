@@ -814,10 +814,55 @@ export default function EditProfile() {
       const { data, error: functionError } =
         await supabase.functions.invoke("delete-account", { body: {} });
 
-      if (functionError) throw functionError;
+      if (functionError) {
+        let errorPayload = null;
+
+        try {
+          if (functionError.context) {
+            errorPayload = await functionError.context.json();
+          }
+        } catch (responseReadError) {
+          console.warn(
+            "Nije moguće pročitati Edge Function error response:",
+            responseReadError
+          );
+        }
+
+        const detailedMessage = [
+          errorPayload?.step
+            ? `Korak: ${errorPayload.step}`
+            : null,
+          errorPayload?.details ||
+            errorPayload?.error ||
+            functionError.message,
+          errorPayload?.code
+            ? `Kod: ${errorPayload.code}`
+            : null,
+          errorPayload?.status
+            ? `Status: ${errorPayload.status}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+        throw new Error(
+          detailedMessage ||
+            "Brisanje naloga nije uspelo."
+        );
+      }
 
       if (!data?.success) {
-        throw new Error(data?.error || "Brisanje naloga nije uspelo.");
+        throw new Error(
+          [
+            data?.step ? `Korak: ${data.step}` : null,
+            data?.details || data?.error,
+            data?.code ? `Kod: ${data.code}` : null,
+            data?.status ? `Status: ${data.status}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") ||
+            "Brisanje naloga nije uspelo."
+        );
       }
 
       try {
