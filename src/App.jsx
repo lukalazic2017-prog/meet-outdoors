@@ -50,6 +50,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import HostTerms from "./pages/HostTerms";
 import Safety from "./pages/Safety";
 import Stays from "./pages/Stays";
+import DeleteAccount from "./pages/DeleteAccount";
 
 // NOVO
 import AccommodationDetails from "./pages/AccommodationDetails";
@@ -117,6 +118,8 @@ function AppRoutes() {
           path="/admin-login"
           element={<AdminLogin />}
         />
+
+        <Route path="/delete-account" element={<DeleteAccount />} />
 
         <Route
           path="/admin"
