@@ -415,109 +415,6 @@ function LoadingState() {
           </p>
         </div>
       </main>
-
-      {deleteModalOpen && (
-        <div
-          className="deleteAccountBackdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (
-              event.target === event.currentTarget &&
-              !deletingAccount
-            ) {
-              setDeleteModalOpen(false);
-            }
-          }}
-        >
-          <div
-            className="deleteAccountModal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-account-title"
-          >
-            <button
-              type="button"
-              className="deleteModalClose"
-              onClick={() => setDeleteModalOpen(false)}
-              disabled={deletingAccount}
-              aria-label="Zatvori"
-            >
-              <Icon name="close" size={18} />
-            </button>
-
-            <span className="deleteModalIcon">
-              <Icon name="trash" size={23} />
-            </span>
-
-            <small>Trajno brisanje</small>
-            <h2 id="delete-account-title">
-              Da li sigurno želiš da obrišeš nalog?
-            </h2>
-
-            <p className="deleteModalText">
-              Biće trajno obrisan tvoj MeetOutdoors nalog i podaci
-              povezani sa njim. Ovu radnju nije moguće poništiti.
-            </p>
-
-            <label className="deleteConfirmationField">
-              <span>
-                Za potvrdu upiši <strong>OBRIŠI</strong>
-              </span>
-              <input
-                type="text"
-                value={deleteConfirmation}
-                onChange={(event) => {
-                  setDeleteConfirmation(event.target.value);
-                  if (deleteError) setDeleteError("");
-                }}
-                placeholder="OBRIŠI"
-                autoComplete="off"
-                disabled={deletingAccount}
-              />
-            </label>
-
-            {deleteError && (
-              <div className="deleteModalError" role="alert">
-                <Icon name="alert" size={17} />
-                <span>{deleteError}</span>
-              </div>
-            )}
-
-            <div className="deleteModalActions">
-              <button
-                type="button"
-                className="deleteModalCancel"
-                onClick={() => setDeleteModalOpen(false)}
-                disabled={deletingAccount}
-              >
-                Odustani
-              </button>
-
-              <button
-                type="button"
-                className="deleteModalConfirm"
-                onClick={handleDeleteAccount}
-                disabled={
-                  deletingAccount ||
-                  deleteConfirmation !== "OBRIŠI"
-                }
-              >
-                {deletingAccount ? (
-                  <>
-                    <span className="deleteButtonLoader" />
-                    Brisanje...
-                  </>
-                ) : (
-                  <>
-                    <Icon name="trash" size={16} />
-                    Trajno obriši nalog
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
@@ -915,38 +812,23 @@ export default function EditProfile() {
 
     try {
       const { data, error: functionError } =
-        await supabase.functions.invoke("delete-account", {
-          body: {},
-        });
+        await supabase.functions.invoke("delete-account", { body: {} });
 
-      if (functionError) {
-        throw functionError;
-      }
+      if (functionError) throw functionError;
 
       if (!data?.success) {
-        throw new Error(
-          data?.error || "Brisanje naloga nije uspelo."
-        );
+        throw new Error(data?.error || "Brisanje naloga nije uspelo.");
       }
 
-      // Auth korisnik je već obrisan na serveru.
-      // Lokalnu sesiju čistimo best-effort i vraćamo korisnika na početnu.
       try {
         await supabase.auth.signOut({ scope: "local" });
       } catch (signOutError) {
-        console.warn(
-          "Lokalna odjava nakon brisanja naloga:",
-          signOutError
-        );
+        console.warn("Lokalna odjava nakon brisanja naloga:", signOutError);
       }
 
       navigate("/", { replace: true });
     } catch (accountDeleteError) {
-      console.error(
-        "Greška pri brisanju naloga:",
-        accountDeleteError
-      );
-
+      console.error("Greška pri brisanju naloga:", accountDeleteError);
       setDeleteError(
         accountDeleteError?.message ||
           "Brisanje naloga nije uspelo. Pokušaj ponovo."
@@ -1622,7 +1504,6 @@ export default function EditProfile() {
                   <span className="dangerZoneIcon">
                     <Icon name="trash" size={18} />
                   </span>
-
                   <div>
                     <small>Opasna zona</small>
                     <h3>Obriši nalog</h3>
@@ -1651,6 +1532,92 @@ export default function EditProfile() {
           </section>
         </div>
       </main>
+
+      {deleteModalOpen && (
+        <div
+          className="deleteAccountBackdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !deletingAccount) {
+              setDeleteModalOpen(false);
+            }
+          }}
+        >
+          <div
+            className="deleteAccountModal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+          >
+            <button
+              type="button"
+              className="deleteModalClose"
+              onClick={() => setDeleteModalOpen(false)}
+              disabled={deletingAccount}
+              aria-label="Zatvori"
+            >
+              <Icon name="close" size={18} />
+            </button>
+
+            <span className="deleteModalIcon">
+              <Icon name="trash" size={23} />
+            </span>
+
+            <small>Trajno brisanje</small>
+            <h2 id="delete-account-title">
+              Da li sigurno želiš da obrišeš nalog?
+            </h2>
+
+            <p className="deleteModalText">
+              Biće trajno obrisan tvoj MeetOutdoors nalog i podaci
+              povezani sa njim. Ovu radnju nije moguće poništiti.
+            </p>
+
+            <label className="deleteConfirmationField">
+              <span>
+                Za potvrdu upiši <strong>OBRIŠI</strong>
+              </span>
+              <input
+                type="text"
+                value={deleteConfirmation}
+                onChange={(event) => {
+                  setDeleteConfirmation(event.target.value);
+                  if (deleteError) setDeleteError("");
+                }}
+                placeholder="OBRIŠI"
+                autoComplete="off"
+                disabled={deletingAccount}
+              />
+            </label>
+
+            {deleteError && (
+              <div className="deleteModalError" role="alert">
+                <Icon name="alert" size={17} />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="deleteModalActions">
+              <button
+                type="button"
+                className="deleteModalCancel"
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={deletingAccount}
+              >
+                Odustani
+              </button>
+
+              <button
+                type="button"
+                className="deleteModalConfirm"
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount || deleteConfirmation !== "OBRIŠI"}
+              >
+                {deletingAccount ? "Brisanje..." : "Trajno obriši nalog"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -1681,262 +1648,6 @@ function EditProfileStyles() {
       }
 
       .editProfilePage,
-      .dangerZone {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-        margin-top: 2px;
-        padding: 20px;
-        border: 1px solid rgba(174, 67, 67, 0.18);
-        border-radius: 20px;
-        background: linear-gradient(
-          145deg,
-          rgba(255, 248, 247, 0.94),
-          rgba(255, 255, 255, 0.88)
-        );
-      }
-
-      .dangerZoneCopy {
-        display: flex;
-        align-items: flex-start;
-        gap: 13px;
-        min-width: 0;
-      }
-
-      .dangerZoneIcon {
-        width: 42px;
-        height: 42px;
-        display: grid;
-        place-items: center;
-        flex: 0 0 auto;
-        border-radius: 13px;
-        background: #fbe9e7;
-        color: #a33d35;
-      }
-
-      .dangerZoneCopy small {
-        display: block;
-        color: #a65a52;
-        font-size: 8px;
-        font-weight: 900;
-        letter-spacing: 0.11em;
-        text-transform: uppercase;
-      }
-
-      .dangerZoneCopy h3 {
-        margin: 5px 0 0;
-        color: #5a2d29;
-        font-size: 15px;
-        letter-spacing: -0.02em;
-      }
-
-      .dangerZoneCopy p {
-        max-width: 500px;
-        margin: 6px 0 0;
-        color: #8c7773;
-        font-size: 9px;
-        line-height: 1.55;
-      }
-
-      .deleteAccountButton {
-        min-height: 42px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        flex: 0 0 auto;
-        padding: 0 15px;
-        border: 1px solid #e6b9b4;
-        border-radius: 13px;
-        background: #fff;
-        color: #9c3d35;
-        font-size: 9px;
-        font-weight: 850;
-        cursor: pointer;
-        transition: 0.18s ease;
-      }
-
-      .deleteAccountButton:hover {
-        border-color: #c96b61;
-        background: #fff7f6;
-        transform: translateY(-1px);
-      }
-
-      .deleteAccountButton:disabled {
-        cursor: not-allowed;
-        opacity: 0.55;
-      }
-
-      .deleteAccountBackdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        display: grid;
-        place-items: center;
-        padding: 22px;
-        background: rgba(8, 18, 12, 0.66);
-        backdrop-filter: blur(9px);
-      }
-
-      .deleteAccountModal {
-        position: relative;
-        width: min(470px, 100%);
-        padding: 30px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 27px;
-        background: #fffdfa;
-        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
-      }
-
-      .deleteModalClose {
-        position: absolute;
-        top: 17px;
-        right: 17px;
-        width: 38px;
-        height: 38px;
-        display: grid;
-        place-items: center;
-        border: 1px solid #e6e8e3;
-        border-radius: 12px;
-        background: #fff;
-        color: #7c8580;
-        cursor: pointer;
-      }
-
-      .deleteModalIcon {
-        width: 54px;
-        height: 54px;
-        display: grid;
-        place-items: center;
-        margin-bottom: 19px;
-        border-radius: 17px;
-        background: #fbe7e5;
-        color: #a43d35;
-      }
-
-      .deleteAccountModal > small {
-        display: block;
-        color: #a5544d;
-        font-size: 8px;
-        font-weight: 900;
-        letter-spacing: 0.13em;
-        text-transform: uppercase;
-      }
-
-      .deleteAccountModal h2 {
-        margin: 8px 45px 0 0;
-        color: #2f342f;
-        font-size: 26px;
-        line-height: 1.08;
-        letter-spacing: -0.045em;
-      }
-
-      .deleteModalText {
-        margin: 13px 0 0;
-        color: #7d837e;
-        font-size: 10px;
-        line-height: 1.65;
-      }
-
-      .deleteConfirmationField {
-        display: grid;
-        gap: 8px;
-        margin-top: 22px;
-      }
-
-      .deleteConfirmationField span {
-        color: #5f6862;
-        font-size: 9px;
-        font-weight: 700;
-      }
-
-      .deleteConfirmationField strong {
-        color: #943c35;
-      }
-
-      .deleteConfirmationField input {
-        width: 100%;
-        height: 48px;
-        padding: 0 14px;
-        border: 1px solid #dddeda;
-        border-radius: 14px;
-        outline: none;
-        background: #fff;
-        color: #27332c;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 0.04em;
-      }
-
-      .deleteConfirmationField input:focus {
-        border-color: #c16b63;
-        box-shadow: 0 0 0 3px rgba(193, 107, 99, 0.1);
-      }
-
-      .deleteModalError {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        margin-top: 13px;
-        padding: 11px 12px;
-        border: 1px solid #efc3be;
-        border-radius: 13px;
-        background: #fff3f1;
-        color: #923f37;
-        font-size: 9px;
-        line-height: 1.5;
-      }
-
-      .deleteModalActions {
-        display: grid;
-        grid-template-columns: 1fr 1.35fr;
-        gap: 10px;
-        margin-top: 22px;
-      }
-
-      .deleteModalCancel,
-      .deleteModalConfirm {
-        min-height: 47px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        border-radius: 14px;
-        font-size: 9px;
-        font-weight: 850;
-        cursor: pointer;
-      }
-
-      .deleteModalCancel {
-        border: 1px solid #dfe3dd;
-        background: #f8faf6;
-        color: #66716a;
-      }
-
-      .deleteModalConfirm {
-        border: 1px solid #9c3c34;
-        background: #9c3c34;
-        color: #fff;
-        box-shadow: 0 10px 24px rgba(156, 60, 52, 0.18);
-      }
-
-      .deleteModalConfirm:disabled,
-      .deleteModalCancel:disabled,
-      .deleteModalClose:disabled {
-        cursor: not-allowed;
-        opacity: 0.52;
-      }
-
-      .deleteButtonLoader {
-        width: 14px;
-        height: 14px;
-        border: 2px solid rgba(255, 255, 255, 0.28);
-        border-top-color: #fff;
-        border-radius: 50%;
-        animation: editProfileSpin 0.75s linear infinite;
-      }
-
       .editProfileStatePage {
         min-height: 100vh;
         color: #17271f;
@@ -3279,33 +2990,6 @@ function EditProfileStyles() {
         }
       }
       @media (max-width: 760px) {
-        .dangerZone {
-          align-items: stretch;
-          flex-direction: column;
-          padding: 17px;
-        }
-
-        .deleteAccountButton {
-          width: 100%;
-        }
-
-        .deleteAccountModal {
-          padding: 24px 19px 19px;
-          border-radius: 23px;
-        }
-
-        .deleteAccountModal h2 {
-          font-size: 23px;
-        }
-
-        .deleteModalActions {
-          grid-template-columns: 1fr;
-        }
-
-        .deleteModalConfirm {
-          order: -1;
-        }
-
         .hostPurposeGrid {
           grid-template-columns: 1fr;
         }
@@ -3315,6 +2999,90 @@ function EditProfileStyles() {
           padding: 12px;
         }
 
+      }
+
+
+      .dangerZone {
+        display:flex;align-items:center;justify-content:space-between;gap:18px;
+        padding:19px;border:1px solid rgba(170,67,58,.18);
+        border-radius:20px;background:#fff9f8;
+      }
+      .dangerZoneCopy{display:flex;align-items:flex-start;gap:12px;min-width:0}
+      .dangerZoneIcon{
+        width:42px;height:42px;display:grid;place-items:center;flex:0 0 auto;
+        border-radius:13px;background:#fbe8e5;color:#9c3d35
+      }
+      .dangerZoneCopy small{
+        display:block;color:#a65a52;font-size:8px;font-weight:900;
+        letter-spacing:.11em;text-transform:uppercase
+      }
+      .dangerZoneCopy h3{margin:5px 0 0;color:#5a2d29;font-size:15px}
+      .dangerZoneCopy p{
+        max-width:500px;margin:6px 0 0;color:#8c7773;font-size:9px;line-height:1.55
+      }
+      .deleteAccountButton{
+        min-height:42px;display:inline-flex;align-items:center;justify-content:center;
+        gap:8px;flex:0 0 auto;padding:0 15px;border:1px solid #e6b9b4;
+        border-radius:13px;background:#fff;color:#9c3d35;font-size:9px;
+        font-weight:850;cursor:pointer
+      }
+      .deleteAccountBackdrop{
+        position:fixed;inset:0;z-index:9999;display:grid;place-items:center;
+        padding:22px;background:rgba(8,18,12,.66);backdrop-filter:blur(9px)
+      }
+      .deleteAccountModal{
+        position:relative;width:min(470px,100%);padding:30px;border-radius:27px;
+        background:#fffdfa;box-shadow:0 30px 90px rgba(0,0,0,.28)
+      }
+      .deleteModalClose{
+        position:absolute;top:17px;right:17px;width:38px;height:38px;
+        display:grid;place-items:center;border:1px solid #e6e8e3;border-radius:12px;
+        background:#fff;color:#7c8580;cursor:pointer
+      }
+      .deleteModalIcon{
+        width:54px;height:54px;display:grid;place-items:center;margin-bottom:19px;
+        border-radius:17px;background:#fbe7e5;color:#a43d35
+      }
+      .deleteAccountModal>small{
+        display:block;color:#a5544d;font-size:8px;font-weight:900;
+        letter-spacing:.13em;text-transform:uppercase
+      }
+      .deleteAccountModal h2{
+        margin:8px 45px 0 0;color:#2f342f;font-size:26px;line-height:1.08;
+        letter-spacing:-.045em
+      }
+      .deleteModalText{margin:13px 0 0;color:#7d837e;font-size:10px;line-height:1.65}
+      .deleteConfirmationField{display:grid;gap:8px;margin-top:22px}
+      .deleteConfirmationField span{color:#5f6862;font-size:9px;font-weight:700}
+      .deleteConfirmationField input{
+        width:100%;height:48px;padding:0 14px;border:1px solid #dddeda;
+        border-radius:14px;outline:none;background:#fff;color:#27332c;
+        font-size:11px;font-weight:800
+      }
+      .deleteModalError{
+        display:flex;gap:8px;margin-top:13px;padding:11px 12px;
+        border:1px solid #efc3be;border-radius:13px;background:#fff3f1;
+        color:#923f37;font-size:9px
+      }
+      .deleteModalActions{
+        display:grid;grid-template-columns:1fr 1.35fr;gap:10px;margin-top:22px
+      }
+      .deleteModalCancel,.deleteModalConfirm{
+        min-height:47px;border-radius:14px;font-size:9px;font-weight:850;cursor:pointer
+      }
+      .deleteModalCancel{border:1px solid #dfe3dd;background:#f8faf6;color:#66716a}
+      .deleteModalConfirm{border:1px solid #9c3c34;background:#9c3c34;color:#fff}
+      .deleteModalConfirm:disabled,.deleteModalCancel:disabled,
+      .deleteModalClose:disabled,.deleteAccountButton:disabled{
+        cursor:not-allowed;opacity:.52
+      }
+
+      @media(max-width:760px){
+        .dangerZone{align-items:stretch;flex-direction:column;padding:17px}
+        .deleteAccountButton{width:100%}
+        .deleteAccountModal{padding:24px 19px 19px;border-radius:23px}
+        .deleteAccountModal h2{font-size:23px}
+        .deleteModalActions{grid-template-columns:1fr}
       }
 
     `}</style>
