@@ -382,7 +382,6 @@ function useHomeLiveData(profile) {
     hosts: [],
     events: [],
     stays: [],
-    places: [],
   });
 
   useEffect(() => {
@@ -401,7 +400,8 @@ function useHomeLiveData(profile) {
               .eq("role", "host"),
             supabase
               .from("events")
-              .select("id", { count: "exact", head: true }),
+              .select("id", { count: "exact", head: true })
+              .eq("is_active", true),
             supabase
               .from("host_accommodations")
               .select("id", { count: "exact", head: true })
@@ -440,13 +440,10 @@ function useHomeLiveData(profile) {
 
     async function loadHomeDiscovery() {
       try {
-        const now = new Date().toISOString();
-
         const [
           hostsRes,
           eventsRes,
           staysRes,
-          placesRes,
         ] = await Promise.all([
           supabase
             .from("profiles")
@@ -482,9 +479,7 @@ function useHomeLiveData(profile) {
               is_active
             `)
             .eq("is_active", true)
-            .or(`start_date.gte.${now},start_date.is.null`)
-            .order("created_at", { ascending: false })
-            .limit(6),
+            .order("created_at", { ascending: false }),
 
           supabase
             .from("host_accommodations")
@@ -506,33 +501,12 @@ function useHomeLiveData(profile) {
             .order("created_at", { ascending: false })
             .limit(8),
 
-          supabase
-            .from("places")
-            .select(`
-              id,
-              name,
-              cover_url,
-              locality,
-              region,
-              country_name,
-              checkins_count,
-              photos_count,
-              created_at,
-              moderation_status,
-              is_active
-            `)
-            .eq("is_active", true)
-            .eq("moderation_status", "approved")
-            .is("deleted_at", null)
-            .order("created_at", { ascending: false })
-            .limit(6),
         ]);
 
         const discoveryError =
           hostsRes.error ||
           eventsRes.error ||
-          staysRes.error ||
-          placesRes.error;
+          staysRes.error;
 
         if (discoveryError) {
           console.error(
@@ -548,7 +522,6 @@ function useHomeLiveData(profile) {
           hosts: hostsRes.data ?? [],
           events: eventsRes.data ?? [],
           stays: staysRes.data ?? [],
-          places: placesRes.data ?? [],
         });
       } catch (error) {
         console.error(
@@ -586,11 +559,6 @@ function useHomeLiveData(profile) {
           void loadPlatformStats();
           void loadHomeDiscovery();
         }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "places" },
-        () => void loadHomeDiscovery()
       )
       .subscribe();
 
@@ -650,7 +618,8 @@ function useHomeLiveData(profile) {
           supabase
             .from("events")
             .select("id", { count: "exact", head: true })
-            .eq("host_id", userId),
+            .eq("host_id", userId)
+            .eq("is_active", true),
           supabase
             .from("host_accommodations")
             .select("id", { count: "exact", head: true })
@@ -902,7 +871,7 @@ function EventCards({ events = [] }) {
 
   return (
     <div className="eventGrid homeSwipeRow">
-      {events.slice(0, 3).map((event) => {
+      {events.map((event) => {
         const eventLocation =
           [event.location, event.country]
             .filter(Boolean)
@@ -965,7 +934,6 @@ function EventCards({ events = [] }) {
 function HomeDiscoveryShowcase({ discovery }) {
   const hosts = discovery?.hosts || [];
   const stays = discovery?.stays || [];
-  const places = discovery?.places || [];
 
   return (
     <section className="homeDiscovery pageContainer">
@@ -1128,65 +1096,6 @@ function HomeDiscoveryShowcase({ discovery }) {
         )}
       </div>
 
-      <div className="homeDiscoveryBlock placesBlock">
-        <SectionHeader
-          kicker="Novo na mapi"
-          title="Mesta koja zajednica upravo otkriva."
-          description="Najnovije odobrene i aktivne outdoor lokacije na MeetOutdoors mapi."
-          linkTo="/explore"
-          linkLabel="Otvori mapu"
-        />
-
-        {places.length > 0 ? (
-          <div className="homePlaceGrid homeSwipeRow">
-            {places.slice(0, 6).map((place) => {
-              const placeLocation =
-                [place.locality, place.region, place.country_name]
-                  .filter(Boolean)
-                  .join(" · ") || "Srbija";
-
-              return (
-                <Link
-                  key={place.id}
-                  to={`/explore/${place.id}`}
-                  className="homePlaceCard"
-                >
-                  <img
-                    src={place.cover_url || HOME_FALLBACK_COVER}
-                    alt={place.name || "Outdoor lokacija"}
-                  />
-
-                  <div className="homePlaceShade" />
-
-                  <div className="homePlaceCopy">
-                    <small>
-                      <Icon name="mapPin" size={13} />
-                      {placeLocation}
-                    </small>
-
-                    <strong>{place.name}</strong>
-
-                    <span>
-                      {place.checkins_count || 0} check-inova ·{" "}
-                      {place.photos_count || 0} fotografija
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="liveHomeEmpty">
-            <span>
-              <Icon name="mapPin" size={23} />
-            </span>
-            <div>
-              <strong>Još nema novih lokacija za prikaz.</strong>
-              <p>Odobrene lokacije će se automatski pojaviti ovde.</p>
-            </div>
-          </div>
-        )}
-      </div>
     </section>
   );
 }

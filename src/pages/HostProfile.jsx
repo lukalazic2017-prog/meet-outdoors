@@ -473,6 +473,7 @@ function EventCard({
   event,
   completed = false,
   isOwner = false,
+  onEdit,
   onDelete,
 }) {
   const location =
@@ -540,15 +541,147 @@ function EventCard({
       </Link>
 
       {isOwner && (
-        <button
-          type="button"
-          className="ownerDeleteButton adventureDeleteButton"
-          onClick={() => onDelete?.(event)}
-        >
-          <Icon name="trash" size={14} />
-          Obriši avanturu
-        </button>
+        <div className="adventureOwnerActions">
+          <button
+            type="button"
+            className="ownerEditButton adventureEditButton"
+            onClick={() => onEdit?.(event)}
+          >
+            <Icon name="edit" size={14} />
+            Uredi
+          </button>
+          <button
+            type="button"
+            className="ownerDeleteButton adventureDeleteButton"
+            onClick={() => onDelete?.(event)}
+          >
+            <Icon name="trash" size={14} />
+            Obriši
+          </button>
+        </div>
       )}
+    </article>
+  );
+}
+
+
+function SingleAdventureFeature({
+  event,
+  isOwner = false,
+  onEdit,
+  onDelete,
+  onContact,
+}) {
+  const location =
+    [event.location, event.country].filter(Boolean).join(", ") ||
+    "Lokacija nije navedena";
+
+  return (
+    <article className="singleFeature singleAdventureFeature">
+      <div className="singleFeatureVisual">
+        <img
+          className="singleFeatureMainImage"
+          src={event.cover_url || FALLBACK_COVER}
+          alt={event.title || "Avantura"}
+        />
+        <div className="singleFeatureShade" />
+
+        <span className="singleFeatureBadge">
+          <Icon name="route" size={13} />
+          Avantura
+        </span>
+
+        <span className="singleAdventureDate">
+          <Icon name="calendar" size={12} />
+          {formatDate(event.start_date)}
+        </span>
+
+        {isOwner && (
+          <div className="offerOwnerActions singleFeatureOwnerActions">
+            <button
+              type="button"
+              onClick={() => onEdit?.(event)}
+              aria-label="Uredi avanturu"
+            >
+              <Icon name="edit" size={14} />
+              <span>Uredi</span>
+            </button>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => onDelete?.(event)}
+              aria-label="Obriši avanturu"
+            >
+              <Icon name="trash" size={14} />
+              <span>Obriši</span>
+            </button>
+          </div>
+        )}
+
+        <div className="singleFeatureImageCopy">
+          <span>
+            <Icon name="mapPin" size={13} />
+            {location}
+          </span>
+          <h3>{event.title || "Outdoor avantura"}</h3>
+        </div>
+      </div>
+
+      <div className="singleFeatureContent">
+        <div className="singleFeatureTopline">
+          <span className="singleFeatureEyebrow">ISTAKNUTA AVANTURA</span>
+          <strong>{formatPrice(event.price)}</strong>
+        </div>
+
+        {event.description && <p>{event.description}</p>}
+
+        <div className="singleFeatureFacts">
+          <span>
+            <Icon name="users" size={15} />
+            <b>{Number(event.capacity || 0) > 0 ? `${event.capacity} mesta` : "Otvorena grupa"}</b>
+          </span>
+          <span>
+            <Icon name="calendar" size={15} />
+            <b>{formatDate(event.start_date)}</b>
+          </span>
+          <span>
+            <Icon name="mapPin" size={15} />
+            <b>{location}</b>
+          </span>
+        </div>
+
+        <Link
+          to={`/event/${event.id}`}
+          className="singleFeatureDetailsLink adventureExploreLink"
+        >
+          <span className="adventureExploreIcon">
+            <Icon name="compass" size={17} />
+          </span>
+          <span className="adventureExploreCopy">
+            <small>OTKRIJ SVE DETALJE</small>
+            <strong>Istraži avanturu</strong>
+          </span>
+          <span className="adventureExploreArrow">
+            <Icon name="arrowRight" size={17} />
+          </span>
+        </Link>
+
+        {!isOwner ? (
+          <button
+            type="button"
+            className="singleFeatureCta"
+            onClick={() => onContact?.()}
+          >
+            Kontaktiraj domaćina
+            <Icon name="arrowRight" size={15} />
+          </button>
+        ) : (
+          <div className="singleFeatureOwnerNote">
+            <Icon name="check" size={14} />
+            Ova avantura je javno prikazana na profilu.
+          </div>
+        )}
+      </div>
     </article>
   );
 }
@@ -3171,19 +3304,28 @@ export default function HostProfile() {
                 )}
               </div>
 
-              {activeEvents.length > 0 ? (
-                <div className="adventureRailShell">
-                  <div className="adventureSwipeRail" aria-label="Aktuelne avanture">
+              {activeEvents.length === 1 ? (
+                <SingleAdventureFeature
+                  event={activeEvents[0]}
+                  isOwner={isOwnProfile}
+                  onEdit={(event) => navigate(`/event/${event.id}/edit`)}
+                  onDelete={deleteEvent}
+                  onContact={() => setContactModalOpen(true)}
+                />
+              ) : activeEvents.length > 1 ? (
+                <div className={`adventureRailShell ${activeEvents.length === 2 ? "twoListingShell" : "multiListingShell"}`}>
+                  <div className={`adventureSwipeRail ${activeEvents.length === 2 ? "twoListingRail" : ""}`} aria-label="Aktuelne avanture">
                     {activeEvents.map((event) => (
                       <EventCard
                         key={event.id}
                         event={event}
                         isOwner={isOwnProfile}
+                        onEdit={(item) => navigate(`/event/${item.id}/edit`)}
                         onDelete={deleteEvent}
                       />
                     ))}
                   </div>
-                  {activeEvents.length > 1 && (
+                  {activeEvents.length > 2 && (
                     <div className="adventureSwipeHint">
                       <span>Prevuci za još</span>
                       <Icon name="arrowRight" size={14} />
@@ -3270,8 +3412,8 @@ export default function HostProfile() {
                     onContact={() => setContactModalOpen(true)}
                   />
                 ) : accommodations.length > 1 ? (
-                  <div className="stayRailShell">
-                    <div className="staySwipeRail" aria-label="Smeštaj domaćina">
+                  <div className={`stayRailShell ${accommodations.length === 2 ? "twoListingShell" : "multiListingShell"}`}>
+                    <div className={`staySwipeRail ${accommodations.length === 2 ? "twoListingRail" : ""}`} aria-label="Smeštaj domaćina">
                       {accommodations.map((item) => (
                         <AccommodationCard
                           key={item.id}
@@ -3284,10 +3426,10 @@ export default function HostProfile() {
                       ))}
                     </div>
 
-                    <div className="adventureSwipeHint">
+                    {accommodations.length > 2 && <div className="adventureSwipeHint">
                       <span>Prevuci za još smeštaja</span>
                       <Icon name="arrowRight" size={14} />
-                    </div>
+                    </div>}
                   </div>
                 ) : (
                   isOwnProfile && isAccommodationHost ? (
@@ -3342,8 +3484,8 @@ export default function HostProfile() {
                     onContact={() => setContactModalOpen(true)}
                   />
                 ) : serviceOffers.length > 1 ? (
-                  <div className="offerRailShell">
-                    <div className="offerSwipeRail" aria-label="Usluge domaćina">
+                  <div className={`offerRailShell ${serviceOffers.length === 2 ? "twoListingShell" : "multiListingShell"}`}>
+                    <div className={`offerSwipeRail ${serviceOffers.length === 2 ? "twoListingRail" : ""}`} aria-label="Usluge domaćina">
                       {serviceOffers.map((item) => (
                         <OfferCard
                           key={item.id}
@@ -3410,8 +3552,8 @@ export default function HostProfile() {
                     onContact={() => setContactModalOpen(true)}
                   />
                 ) : rentalOffers.length > 1 ? (
-                  <div className="offerRailShell">
-                    <div className="offerSwipeRail" aria-label="Iznajmljivanje domaćina">
+                  <div className={`offerRailShell ${rentalOffers.length === 2 ? "twoListingShell" : "multiListingShell"}`}>
+                    <div className={`offerSwipeRail ${rentalOffers.length === 2 ? "twoListingRail" : ""}`} aria-label="Iznajmljivanje domaćina">
                       {rentalOffers.map((item) => (
                         <OfferCard
                           key={item.id}
@@ -4282,6 +4424,238 @@ function HostProfileStyles() {
         .hostStoryStats{grid-template-columns:1fr}
       }
 
+
+
+
+      .adventureExploreLink{
+        display:grid !important;
+        grid-template-columns:42px 1fr 34px !important;
+        align-items:center !important;
+        gap:11px !important;
+        min-height:62px !important;
+        padding:9px 10px !important;
+        border:1px solid rgba(35,83,55,.12) !important;
+        border-radius:17px !important;
+        background:linear-gradient(135deg,#f5f9f3 0%,#edf5ea 100%) !important;
+        color:#173c28 !important;
+        text-decoration:none !important;
+        box-shadow:0 10px 28px rgba(28,67,44,.07) !important;
+        transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease !important;
+      }
+
+      .adventureExploreLink:hover{
+        transform:translateY(-2px) !important;
+        border-color:rgba(35,83,55,.22) !important;
+        box-shadow:0 15px 34px rgba(28,67,44,.11) !important;
+      }
+
+      .adventureExploreIcon{
+        width:42px !important;
+        height:42px !important;
+        display:grid !important;
+        place-items:center !important;
+        border-radius:13px !important;
+        background:#214d34 !important;
+        color:#fff !important;
+        box-shadow:0 7px 18px rgba(33,77,52,.18) !important;
+      }
+
+      .adventureExploreCopy{
+        display:flex !important;
+        flex-direction:column !important;
+        align-items:flex-start !important;
+        gap:2px !important;
+        min-width:0 !important;
+      }
+
+      .adventureExploreCopy small{
+        color:#789080 !important;
+        font-size:7px !important;
+        line-height:1 !important;
+        font-weight:900 !important;
+        letter-spacing:.13em !important;
+      }
+
+      .adventureExploreCopy strong{
+        color:#173c28 !important;
+        font-size:12px !important;
+        line-height:1.15 !important;
+        font-weight:900 !important;
+      }
+
+      .adventureExploreArrow{
+        width:34px !important;
+        height:34px !important;
+        display:grid !important;
+        place-items:center !important;
+        border-radius:50% !important;
+        background:#fff !important;
+        color:#214d34 !important;
+        box-shadow:0 5px 14px rgba(28,67,44,.08) !important;
+      }
+
+      /* =========================================================
+         ADAPTIVE OFFER FOCUS — 1 HERO / 2 LARGE / 3+ SWIPE
+         ========================================================= */
+
+      .singleAdventureDate{
+        position:absolute;
+        top:14px;
+        right:14px;
+        z-index:2;
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        min-height:29px;
+        padding:0 10px;
+        border:1px solid rgba(255,255,255,.22);
+        border-radius:999px;
+        background:rgba(16,34,22,.52);
+        color:#fff;
+        font-size:8px;
+        font-weight:850;
+        backdrop-filter:blur(10px);
+      }
+
+      .adventureOwnerActions{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:7px;
+        padding:8px;
+        border-top:1px solid #edf1eb;
+        background:#fff;
+      }
+
+      .ownerEditButton,
+      .ownerDeleteButton{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:6px;
+        min-height:38px;
+        padding:0 10px;
+        border:1px solid #e1e8df;
+        border-radius:11px;
+        background:#f8faf7;
+        color:#36513f;
+        font-size:8px;
+        font-weight:850;
+        cursor:pointer;
+      }
+
+      .ownerDeleteButton{
+        border-color:#f0d8d5;
+        background:#fff8f7;
+        color:#a3483e;
+      }
+
+      .twoListingRail{
+        display:grid !important;
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+        gap:16px !important;
+        overflow:visible !important;
+        padding:2px 0 8px !important;
+        scroll-snap-type:none !important;
+      }
+
+      .twoListingRail > .adventureSwipeCard,
+      .twoListingRail > .stayCard,
+      .twoListingRail > .offerCard{
+        width:100% !important;
+        max-width:none !important;
+        flex:none !important;
+      }
+
+      .twoListingRail .hostListingImage,
+      .twoListingRail .stayCardMedia,
+      .twoListingRail .offerCardMedia{
+        height:310px !important;
+      }
+
+      .singleFeature{
+        min-height:430px !important;
+        grid-template-columns:minmax(0,1.45fr) minmax(330px,.55fr) !important;
+      }
+
+      .singleFeatureVisual{min-height:430px !important}
+      .singleFeatureContent{padding:30px !important}
+      .singleFeatureImageCopy h3{font-size:clamp(31px,4vw,48px) !important}
+      .singleFeatureContent>p{font-size:12px !important;line-height:1.7 !important}
+      .singleFeatureFacts>span{min-height:44px !important}
+      .singleFeatureDetailsLink,.singleFeatureCta{min-height:46px !important}
+
+      @media(max-width:820px){
+        .twoListingRail{
+          grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+          gap:10px !important;
+        }
+
+        .twoListingRail .hostListingImage,
+        .twoListingRail .stayCardMedia,
+        .twoListingRail .offerCardMedia{
+          height:230px !important;
+        }
+
+        .singleFeature{
+          grid-template-columns:1fr !important;
+          min-height:0 !important;
+          border-radius:24px !important;
+        }
+
+        .singleFeatureVisual{
+          min-height:360px !important;
+        }
+
+        .singleFeatureContent{
+          padding:20px !important;
+        }
+
+        .singleFeatureImageCopy h3{
+          font-size:clamp(28px,8vw,38px) !important;
+        }
+      }
+
+      @media(max-width:620px){
+        .twoListingRail{
+          display:flex !important;
+          gap:11px !important;
+          overflow-x:auto !important;
+          padding:2px 2px 12px !important;
+          scroll-snap-type:x mandatory !important;
+          scrollbar-width:none !important;
+        }
+
+        .twoListingRail::-webkit-scrollbar{display:none !important}
+
+        .twoListingRail > .adventureSwipeCard,
+        .twoListingRail > .stayCard,
+        .twoListingRail > .offerCard{
+          flex:0 0 84vw !important;
+          width:84vw !important;
+          scroll-snap-align:center !important;
+        }
+
+        .singleFeatureVisual{
+          min-height:390px !important;
+        }
+
+        .singleFeatureContent{
+          padding:18px !important;
+        }
+
+        .singleFeatureContent>p{
+          -webkit-line-clamp:5 !important;
+        }
+
+        .singleFeatureFacts{
+          grid-template-columns:1fr !important;
+        }
+
+        .adventureOwnerActions{
+          position:relative;
+          z-index:3;
+        }
+      }
 
       /* =========================================================
          HOST PROFILE — ULTRA COMPACT

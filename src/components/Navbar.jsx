@@ -273,7 +273,14 @@ export default function Navbar() {
         </button>
 
         <Link to="/" className="moBrand" aria-label="MeetOutdoors početna">
-          MeetOutdoors
+          <span className="moBrandMark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M3.5 18.5 9.2 8.7l3.1 5.1 2.1-3.4 6.1 8.1" />
+              <path d="M5.2 18.5h13.6" />
+              <path d="M16.9 5.2v3.2M15.3 6.8h3.2" />
+            </svg>
+          </span>
+          <span className="moBrandWord">MeetOutdoors</span>
         </Link>
 
         <nav className="moDesktopLinks" aria-label="Glavna navigacija">
@@ -1496,8 +1503,489 @@ function NavbarStyles() {
         }
       }
 
+
+      /* =========================================================
+         MOBILE NAVBAR — SIGNATURE PREMIUM BAR
+         Visual only. Desktop + behavior untouched.
+         ========================================================= */
+      @media (max-width: 980px) {
+        .moNav {
+          min-height: calc(64px + env(safe-area-inset-top,0px));
+          padding:
+            env(safe-area-inset-top,0px)
+            12px
+            0;
+          overflow: visible;
+          border-bottom: 1px solid rgba(218,255,202,.10);
+          background:
+            radial-gradient(75% 120% at 50% -35%, rgba(198,255,173,.13) 0%, rgba(198,255,173,.035) 42%, transparent 72%),
+            linear-gradient(180deg, rgba(5,17,10,.995) 0%, rgba(5,15,9,.985) 100%);
+          box-shadow:
+            0 12px 30px rgba(0,0,0,.22),
+            0 2px 8px rgba(0,0,0,.14),
+            inset 0 1px 0 rgba(255,255,255,.045);
+          backdrop-filter: blur(28px) saturate(145%);
+          -webkit-backdrop-filter: blur(28px) saturate(145%);
+        }
+
+        .moNav::before {
+          inset: auto 12% -1px 12%;
+          height: 1px;
+          z-index: 1;
+          background: linear-gradient(90deg, transparent, rgba(190,255,164,.25), transparent);
+          opacity: .7;
+        }
+
+        .moNav::after {
+          left: 31%;
+          right: 31%;
+          top: calc(env(safe-area-inset-top,0px) + 1px);
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+          opacity: .42;
+        }
+
+        .moMobileMenu {
+          position: relative;
+          width: 42px;
+          height: 42px;
+          border: 1px solid rgba(255,255,255,.075);
+          border-radius: 14px;
+          background:
+            linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.022));
+          color: rgba(248,255,245,.92);
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.035),
+            0 8px 20px rgba(0,0,0,.12);
+        }
+
+        .moMobileMenu:active {
+          transform: scale(.94);
+          background: rgba(255,255,255,.075);
+        }
+
+        .moBrand {
+          position: relative;
+          font-size: 18px;
+          font-weight: 900;
+          letter-spacing: -.067em;
+          color: #fbfff9 !important;
+          text-shadow:
+            0 1px 0 rgba(255,255,255,.04),
+            0 8px 24px rgba(0,0,0,.32);
+        }
+
+        .moBrand::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          bottom: -8px;
+          width: 22px;
+          height: 2px;
+          border-radius: 99px;
+          background: linear-gradient(90deg, transparent, #c9ffb1, transparent);
+          transform: translateX(-50%);
+          opacity: .65;
+          box-shadow: 0 0 10px rgba(201,255,177,.18);
+        }
+
+        .moActions {
+          gap: 6px;
+        }
+
+        .moBell,
+        .moAvatar {
+          width: 38px;
+          height: 38px;
+          border-radius: 13px;
+        }
+
+        .moBell {
+          border: 1px solid rgba(255,255,255,.07);
+          background:
+            linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.018));
+          color: rgba(249,255,246,.84) !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.03),
+            0 7px 18px rgba(0,0,0,.11);
+        }
+
+        .moBell:active {
+          transform: scale(.94);
+          background: rgba(255,255,255,.07);
+        }
+
+        .moAvatar {
+          border: 1px solid rgba(211,255,192,.24);
+          background: rgba(255,255,255,.045);
+          box-shadow:
+            0 0 0 2px rgba(201,255,177,.035),
+            0 8px 20px rgba(0,0,0,.20),
+            inset 0 0 0 1px rgba(255,255,255,.045);
+        }
+
+        .moAvatar img {
+          border-radius: 12px;
+        }
+
+        .moBell > span {
+          top: -4px;
+          right: -5px;
+          min-width: 18px;
+          height: 18px;
+          border: 2px solid #06110a;
+          background: linear-gradient(180deg,#e0ffd2,#baf29f);
+          box-shadow:
+            0 5px 14px rgba(0,0,0,.30),
+            0 0 0 1px rgba(201,255,177,.10);
+        }
+
+        .moLogin {
+          min-height: 38px;
+          display: inline-flex;
+          align-items: center;
+          padding: 0 14px;
+          border-radius: 12px;
+          font-size: 9px;
+          font-weight: 900;
+          letter-spacing: -.015em;
+          box-shadow: 0 8px 20px rgba(0,0,0,.16);
+        }
+
+        .moMenuPanel {
+          top: calc(64px + env(safe-area-inset-top,0px));
+        }
+
+        .moMenuPanel::before {
+          top: calc(64px + env(safe-area-inset-top,0px));
+        }
+      }
+
+
+      /* =========================================================
+         MOBILE NAVBAR — SIGNATURE V2
+         Final visual override only. No behavior/desktop changes.
+         ========================================================= */
+      @media (max-width: 980px) {
+        .moNav {
+          min-height: calc(68px + env(safe-area-inset-top,0px));
+          padding:
+            env(safe-area-inset-top,0px)
+            10px
+            0;
+          border-bottom: 1px solid rgba(202,255,178,.12);
+          background:
+            radial-gradient(52% 125% at 50% -45%, rgba(199,255,174,.16) 0%, rgba(199,255,174,.045) 42%, transparent 72%),
+            radial-gradient(32% 90% at 0% 50%, rgba(255,255,255,.025), transparent 76%),
+            radial-gradient(32% 90% at 100% 50%, rgba(255,255,255,.025), transparent 76%),
+            linear-gradient(180deg, #07180f 0%, #06130c 54%, #051009 100%);
+          box-shadow:
+            0 15px 34px rgba(0,0,0,.25),
+            0 3px 9px rgba(0,0,0,.12),
+            inset 0 1px 0 rgba(255,255,255,.055),
+            inset 0 -1px 0 rgba(255,255,255,.018);
+          backdrop-filter: blur(32px) saturate(155%);
+          -webkit-backdrop-filter: blur(32px) saturate(155%);
+        }
+
+        .moNav::before {
+          left: 8%;
+          right: 8%;
+          bottom: -1px;
+          top: auto;
+          height: 1px;
+          background:
+            linear-gradient(
+              90deg,
+              transparent 0%,
+              rgba(200,255,176,.05) 15%,
+              rgba(200,255,176,.38) 50%,
+              rgba(200,255,176,.05) 85%,
+              transparent 100%
+            );
+          opacity: .8;
+          filter: drop-shadow(0 0 5px rgba(200,255,176,.12));
+        }
+
+        .moNav::after {
+          top: calc(env(safe-area-inset-top,0px) + 1px);
+          left: 34%;
+          right: 34%;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent);
+          opacity: .46;
+        }
+
+        .moMobileMenu {
+          width: 44px;
+          height: 44px;
+          border: 1px solid rgba(255,255,255,.09);
+          border-radius: 15px;
+          background:
+            radial-gradient(circle at 35% 20%, rgba(255,255,255,.08), transparent 55%),
+            linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+          color: #f6fff2;
+          box-shadow:
+            0 9px 22px rgba(0,0,0,.15),
+            inset 0 1px 0 rgba(255,255,255,.045);
+        }
+
+        .moMobileMenu svg {
+          width: 22px;
+          height: 22px;
+          stroke-width: 1.8;
+        }
+
+        .moMobileMenu:active {
+          transform: scale(.94);
+          border-color: rgba(200,255,176,.16);
+          background: rgba(200,255,176,.055);
+        }
+
+        .moBrand {
+          top: -1px;
+          font-size: 18.7px;
+          font-weight: 920;
+          letter-spacing: -.071em;
+          color: #fbfff9 !important;
+          text-shadow:
+            0 1px 0 rgba(255,255,255,.055),
+            0 9px 25px rgba(0,0,0,.34);
+        }
+
+        .moBrand::before {
+          content: "";
+          position: absolute;
+          left: -9px;
+          top: 50%;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: #caffb4;
+          transform: translateY(-45%);
+          box-shadow: 0 0 9px rgba(202,255,180,.48);
+          opacity: .88;
+        }
+
+        .moBrand::after {
+          left: 50%;
+          bottom: -10px;
+          width: 34px;
+          height: 2px;
+          border-radius: 99px;
+          background:
+            linear-gradient(
+              90deg,
+              transparent,
+              rgba(202,255,180,.24) 20%,
+              #caffb4 50%,
+              rgba(202,255,180,.24) 80%,
+              transparent
+            );
+          transform: translateX(-50%);
+          opacity: .72;
+          box-shadow: 0 0 11px rgba(202,255,180,.18);
+        }
+
+        .moActions {
+          gap: 5px;
+        }
+
+        .moBell,
+        .moAvatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 14px;
+        }
+
+        .moBell {
+          border: 1px solid rgba(255,255,255,.085);
+          background:
+            radial-gradient(circle at 35% 20%, rgba(255,255,255,.075), transparent 55%),
+            linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.016));
+          color: rgba(250,255,247,.88) !important;
+          box-shadow:
+            0 8px 20px rgba(0,0,0,.13),
+            inset 0 1px 0 rgba(255,255,255,.04);
+        }
+
+        .moBell svg {
+          width: 19px;
+          height: 19px;
+          stroke-width: 1.8;
+        }
+
+        .moBell:active {
+          transform: scale(.94);
+          border-color: rgba(202,255,180,.16);
+        }
+
+        .moAvatar {
+          padding: 2px;
+          overflow: hidden;
+          border: 1px solid rgba(202,255,180,.34);
+          background:
+            linear-gradient(145deg, rgba(218,255,202,.18), rgba(255,255,255,.035));
+          box-shadow:
+            0 0 0 2px rgba(202,255,180,.025),
+            0 9px 22px rgba(0,0,0,.22),
+            inset 0 1px 0 rgba(255,255,255,.10);
+        }
+
+        .moAvatar img,
+        .moAvatar > span {
+          border-radius: 11px;
+        }
+
+        .moAvatar > span {
+          background:
+            linear-gradient(145deg, #d9ffca 0%, #baf29f 100%);
+          color: #112217;
+        }
+
+        .moBell > span {
+          top: -3px;
+          right: -4px;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 4px;
+          border: 2px solid #06130c;
+          background: linear-gradient(180deg,#e8ffde,#baf29f);
+          color: #102015;
+          font-size: 6.5px;
+          font-weight: 950;
+          box-shadow:
+            0 6px 15px rgba(0,0,0,.32),
+            0 0 10px rgba(202,255,180,.10);
+        }
+
+        .moLogin {
+          min-height: 40px;
+          padding: 0 15px;
+          border: 1px solid rgba(255,255,255,.5);
+          border-radius: 14px;
+          background: linear-gradient(180deg,#ffffff 0%,#edf6e9 100%);
+          font-size: 9px;
+          font-weight: 900;
+          box-shadow:
+            0 9px 22px rgba(0,0,0,.17),
+            inset 0 1px 0 rgba(255,255,255,.95);
+        }
+
+        .moMenuPanel {
+          top: calc(68px + env(safe-area-inset-top, 0px));
+        }
+
+        .moMenuPanel::before {
+          top: calc(68px + env(safe-area-inset-top, 0px));
+        }
+      }
+
+
+      /* MeetOutdoors mobile signature mark — visual only */
+      .moBrandMark {
+        display: none;
+      }
+
+      @media (max-width: 980px) {
+        .moBrand {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          white-space: nowrap;
+        }
+
+        /* Supersedes the old decorative dot; the mark is now the identity. */
+        .moBrand::before {
+          display: none;
+        }
+
+        .moBrandMark {
+          position: relative;
+          display: grid;
+          place-items: center;
+          width: 25px;
+          height: 25px;
+          flex: 0 0 25px;
+          border: 1px solid rgba(204,255,183,.22);
+          border-radius: 9px;
+          background:
+            radial-gradient(circle at 35% 20%, rgba(255,255,255,.12), transparent 48%),
+            linear-gradient(145deg, rgba(201,255,177,.13), rgba(201,255,177,.035));
+          color: #d8ffca;
+          box-shadow:
+            0 7px 18px rgba(0,0,0,.17),
+            0 0 0 1px rgba(201,255,177,.018),
+            inset 0 1px 0 rgba(255,255,255,.07);
+          overflow: hidden;
+          transform: translateZ(0);
+          animation: moMarkBreathe 4.8s ease-in-out infinite;
+        }
+
+        .moBrandMark::after {
+          content: "";
+          position: absolute;
+          width: 32px;
+          height: 8px;
+          left: -34px;
+          top: -2px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent);
+          transform: rotate(-45deg);
+          animation: moMarkShine 6.5s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        .moBrandMark svg {
+          position: relative;
+          z-index: 1;
+          width: 16px;
+          height: 16px;
+          fill: none;
+          stroke: currentColor;
+          stroke-width: 1.7;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+        }
+
+        .moBrandWord {
+          display: inline-block;
+          transform: translateY(-.3px);
+        }
+
+        @keyframes moMarkBreathe {
+          0%, 72%, 100% {
+            border-color: rgba(204,255,183,.20);
+            box-shadow:
+              0 7px 18px rgba(0,0,0,.17),
+              0 0 0 1px rgba(201,255,177,.018),
+              inset 0 1px 0 rgba(255,255,255,.07);
+          }
+          82% {
+            border-color: rgba(204,255,183,.38);
+            box-shadow:
+              0 7px 18px rgba(0,0,0,.17),
+              0 0 15px rgba(201,255,177,.10),
+              inset 0 1px 0 rgba(255,255,255,.09);
+          }
+        }
+
+        @keyframes moMarkShine {
+          0%, 72% { left: -34px; opacity: 0; }
+          76% { opacity: .85; }
+          88% { left: 30px; opacity: 0; }
+          100% { left: 30px; opacity: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .moBrandMark,
+          .moBrandMark::after {
+            animation: none;
+          }
+        }
+      }
+
       @media (max-width: 390px) {
         .moBrand {
+          gap: 5px;
           font-size: 16.4px;
         }
 
