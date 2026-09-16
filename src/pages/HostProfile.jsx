@@ -596,28 +596,6 @@ function SingleAdventureFeature({
           {formatDate(event.start_date)}
         </span>
 
-        {isOwner && (
-          <div className="offerOwnerActions singleFeatureOwnerActions">
-            <button
-              type="button"
-              onClick={() => onEdit?.(event)}
-              aria-label="Uredi avanturu"
-            >
-              <Icon name="edit" size={14} />
-              <span>Uredi</span>
-            </button>
-            <button
-              type="button"
-              className="danger"
-              onClick={() => onDelete?.(event)}
-              aria-label="Obriši avanturu"
-            >
-              <Icon name="trash" size={14} />
-              <span>Obriši</span>
-            </button>
-          </div>
-        )}
-
         <div className="singleFeatureImageCopy">
           <span>
             <Icon name="mapPin" size={13} />
@@ -676,10 +654,32 @@ function SingleAdventureFeature({
             <Icon name="arrowRight" size={15} />
           </button>
         ) : (
-          <div className="singleFeatureOwnerNote">
-            <Icon name="check" size={14} />
-            Ova avantura je javno prikazana na profilu.
-          </div>
+          <>
+            <div className="singleFeatureOwnerNote">
+              <Icon name="check" size={14} />
+              Ova avantura je javno prikazana na profilu.
+            </div>
+
+            <div className="singleAdventureBottomActions">
+              <button
+                type="button"
+                className="singleAdventureBottomEdit"
+                onClick={() => onEdit?.(event)}
+              >
+                <Icon name="edit" size={16} />
+                <span>Uredi avanturu</span>
+              </button>
+
+              <button
+                type="button"
+                className="singleAdventureBottomDelete"
+                onClick={() => onDelete?.(event)}
+              >
+                <Icon name="trash" size={15} />
+                <span>Obriši</span>
+              </button>
+            </div>
+          </>
         )}
       </div>
     </article>
@@ -8823,7 +8823,86 @@ function HostProfileStyles() {
         }
       }
 
+      /* Premium owner controls — single adventure */
+      .singleAdventureBottomActions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        margin-top: 12px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(19, 63, 43, 0.10);
+      }
+
+      .singleAdventureBottomActions button {
+        min-height: 48px;
+        border-radius: 16px;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        transition:
+          transform 160ms ease,
+          box-shadow 160ms ease,
+          background 160ms ease,
+          border-color 160ms ease;
+      }
+
+      .singleAdventureBottomEdit {
+        color: #ffffff;
+        border: 1px solid rgba(15, 76, 50, 0.18);
+        background: linear-gradient(135deg, #0f4c32 0%, #163f2e 100%);
+        box-shadow: 0 10px 24px rgba(15, 76, 50, 0.16);
+      }
+
+      .singleAdventureBottomDelete {
+        min-width: 112px;
+        padding: 0 18px;
+        color: #9c3f36;
+        border: 1px solid rgba(156, 63, 54, 0.18);
+        background: rgba(156, 63, 54, 0.055);
+        box-shadow: none;
+      }
+
+      .singleAdventureBottomActions button:hover {
+        transform: translateY(-1px);
+      }
+
+      .singleAdventureBottomEdit:hover {
+        box-shadow: 0 13px 28px rgba(15, 76, 50, 0.21);
+      }
+
+      .singleAdventureBottomDelete:hover {
+        background: rgba(156, 63, 54, 0.09);
+        border-color: rgba(156, 63, 54, 0.28);
+      }
+
+      @media (max-width: 640px) {
+        .singleAdventureBottomActions {
+          grid-template-columns: minmax(0, 1fr) 104px;
+          gap: 8px;
+          margin-top: 10px;
+          padding-top: 12px;
+        }
+
+        .singleAdventureBottomActions button {
+          min-height: 46px;
+          border-radius: 14px;
+          font-size: 13px;
+        }
+
+        .singleAdventureBottomDelete {
+          min-width: 0;
+          padding: 0 12px;
+        }
+      }
+
+
     `}
+
+
 </style>
   );
 }

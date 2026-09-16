@@ -241,33 +241,27 @@ function HostCard({ host }) {
 
         <p className="hostBio">{description}</p>
 
-        <div className="hostActivities">
-          {activities.length > 0 ? (
-            <>
-              {activities.slice(0, 3).map((activity) => (
-                <span key={activity}>{activity}</span>
-              ))}
-              {activities.length > 3 && (
-                <span className="moreActivities">
-                  +{activities.length - 3}
-                </span>
-              )}
-            </>
-          ) : (
-            <span>Aktivnosti nisu dodate</span>
+        <div className="hostTagsRow">
+          {activities.length > 0 && (
+            <span className="hostTag activityTag">{activities[0]}</span>
+          )}
+
+          {getHostOfferTypes(host).slice(0, 1).map((type) => (
+            <span key={type} className={`hostTag offerTag ${type}`}>
+              {offerLabel(type)}
+            </span>
+          ))}
+
+          {(activities.length > 1 || getHostOfferTypes(host).length > 1) && (
+            <span className="hostTag moreTag">
+              +{Math.max(0, activities.length - 1) + Math.max(0, getHostOfferTypes(host).length - 1)}
+            </span>
+          )}
+
+          {activities.length === 0 && getHostOfferTypes(host).length === 0 && (
+            <span className="hostTag mutedTag">Profil domaćina</span>
           )}
         </div>
-
-
-        {getHostOfferTypes(host).length > 0 && (
-          <div className="hostOfferTypes">
-            {getHostOfferTypes(host).map((type) => (
-              <span key={type} className={`hostOfferType ${type}`}>
-                {offerLabel(type)}
-              </span>
-            ))}
-          </div>
-        )}
 
         <div className="hostCardFooter">
           <div className="hostTrust">
@@ -976,7 +970,7 @@ function HostsStyles() {
         z-index: -3;
         content: "";
         background:
-          url("https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1900&q=90")
+          url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2200&q=92")
           center / cover;
         transition: transform 0.8s ease;
       }
@@ -4445,6 +4439,141 @@ function HostsStyles() {
         }
       }
 
-    `}</style>
+    \n\n      /* =========================================================\n         HOST CARDS — FINAL PREMIUM CONSISTENCY PASS\n         Equal card rhythm, clean desktop identity, one-line mobile activities.\n         ========================================================= */\n\n      @media (min-width: 761px) {\n        .hostsGrid {\n          align-items: stretch !important;\n        }\n\n        .hostCard {\n          display: flex !important;\n          flex-direction: column !important;\n          height: 100% !important;\n        }\n\n        .hostMedia {\n          flex: 0 0 228px !important;\n          height: 228px !important;\n          min-height: 228px !important;\n        }\n\n        .hostCardBody {\n          display: flex !important;\n          flex: 1 !important;\n          flex-direction: column !important;\n          min-width: 0 !important;\n          padding: 0 20px 19px !important;\n        }\n\n        .hostIdentity {\n          position: relative !important;\n          display: grid !important;\n          grid-template-columns: 72px minmax(0, 1fr) !important;\n          align-items: start !important;\n          gap: 13px !important;\n          min-height: 82px !important;\n        }\n\n        .hostAvatarWrap {\n          position: relative !important;\n          z-index: 2 !important;\n          width: 72px !important;\n          height: 72px !important;\n          min-width: 72px !important;\n          margin: -27px 0 0 !important;\n          border: 4px solid #fff !important;\n          border-radius: 21px !important;\n          overflow: hidden !important;\n        }\n\n        .hostAvatar {\n          width: 100% !important;\n          height: 100% !important;\n          margin: 0 !important;\n          border: 0 !important;\n          border-radius: 17px !important;\n          box-shadow: none !important;\n        }\n\n        .hostIdentityText {\n          min-width: 0 !important;\n          padding: 12px 0 0 !important;\n        }\n\n        .hostNameRow {\n          min-width: 0 !important;\n        }\n\n        .hostIdentityText h2 {\n          display: block !important;\n          max-width: 100% !important;\n          overflow: hidden !important;\n          font-size: 20px !important;\n          line-height: 1.08 !important;\n          text-overflow: ellipsis !important;\n          white-space: nowrap !important;\n        }\n\n        .hostBio {\n          min-height: 51px !important;\n          max-height: 51px !important;\n          margin-top: 11px !important;\n          -webkit-line-clamp: 3 !important;\n        }\n\n        .hostActivities {\n          display: flex !important;\n          flex-wrap: nowrap !important;\n          align-items: center !important;\n          min-height: 30px !important;\n          max-height: 30px !important;\n          overflow: hidden !important;\n          margin-top: 12px !important;\n        }\n\n        .hostActivities > span {\n          min-width: 0 !important;\n          max-width: 42% !important;\n          overflow: hidden !important;\n          text-overflow: ellipsis !important;\n          white-space: nowrap !important;\n        }\n\n        .hostActivities .moreActivities {\n          flex: 0 0 auto !important;\n          max-width: none !important;\n        }\n\n        .hostOfferTypes {\n          min-height: 27px !important;\n          max-height: 27px !important;\n          overflow: hidden !important;\n        }\n\n        .hostCardFooter {\n          margin-top: auto !important;\n        }\n      }\n\n      @media (max-width: 760px) {\n        .hostsGrid {\n          align-items: stretch !important;\n        }\n\n        .hostCard {\n          display: flex !important;\n          flex-direction: column !important;\n          height: 100% !important;\n          min-height: 0 !important;\n        }\n\n        .hostMedia {\n          flex: 0 0 104px !important;\n          height: 104px !important;\n          min-height: 104px !important;\n        }\n\n        .hostCardBody {\n          display: flex !important;\n          flex: 1 !important;\n          flex-direction: column !important;\n          min-width: 0 !important;\n        }\n\n        .hostIdentity {\n          min-height: 69px !important;\n        }\n\n        .hostIdentityText h2 {\n          min-height: 14px !important;\n          max-width: 100% !important;\n        }\n\n        .hostActivities {\n          display: flex !important;\n          flex-wrap: nowrap !important;\n          justify-content: center !important;\n          align-items: center !important;\n          width: 100% !important;\n          min-height: 23px !important;\n          max-height: 23px !important;\n          gap: 3px !important;\n          overflow: hidden !important;\n          margin-top: 6px !important;\n        }\n\n        .hostActivities > span {\n          display: inline-flex !important;\n          flex: 0 1 auto !important;\n          min-width: 0 !important;\n          max-width: calc(100% - 30px) !important;\n          min-height: 22px !important;\n          padding: 0 6px !important;\n          overflow: hidden !important;\n          font-size: 5.8px !important;\n          line-height: 1 !important;\n          text-overflow: ellipsis !important;\n          white-space: nowrap !important;\n        }\n\n        .hostActivities > span:nth-child(2):not(.moreActivities) {\n          display: none !important;\n        }\n\n        .hostActivities .moreActivities {\n          display: inline-flex !important;\n          flex: 0 0 auto !important;\n          max-width: none !important;\n          padding-inline: 6px !important;\n        }\n\n        .hostOfferTypes {\n          min-height: 19px !important;\n          max-height: 19px !important;\n          overflow: hidden !important;\n        }\n\n        .hostCardFooter {\n          margin-top: auto !important;\n        }\n      }\n
+      
+
+      /* =========================================================
+         HOSTS — PREMIUM MOBILE/DESKTOP FINAL
+         Uniform cards. Avatar never covers the name.
+         ========================================================= */
+
+      @media (min-width: 761px) {
+        .hostsGrid { align-items: stretch !important; }
+        .hostCard { display:flex !important; flex-direction:column !important; height:100% !important; }
+        .hostMedia { height:230px !important; min-height:230px !important; }
+        .hostCardBody { display:flex !important; flex:1 !important; flex-direction:column !important; padding:0 20px 20px !important; }
+        .hostIdentity { display:grid !important; grid-template-columns:76px minmax(0,1fr) !important; align-items:start !important; gap:14px !important; min-height:86px !important; }
+        .hostAvatarWrap { position:relative !important; z-index:2 !important; width:76px !important; height:76px !important; margin:-29px 0 0 !important; overflow:hidden !important; border:4px solid #fff !important; border-radius:22px !important; box-shadow:0 12px 28px rgba(18,43,29,.16) !important; }
+        .hostAvatar { width:100% !important; height:100% !important; margin:0 !important; border:0 !important; border-radius:18px !important; box-shadow:none !important; }
+        .hostIdentityText { min-width:0 !important; padding-top:13px !important; }
+        .hostIdentityText h2 { display:-webkit-box !important; overflow:hidden !important; font-size:20px !important; line-height:1.08 !important; white-space:normal !important; text-overflow:clip !important; -webkit-line-clamp:2 !important; -webkit-box-orient:vertical !important; }
+        .hostBio { min-height:51px !important; max-height:51px !important; -webkit-line-clamp:3 !important; }
+        .hostActivities { display:flex !important; flex-wrap:nowrap !important; align-items:center !important; min-height:31px !important; max-height:31px !important; gap:6px !important; overflow:hidden !important; }
+        .hostActivities .primaryActivity { min-width:0 !important; max-width:calc(100% - 45px) !important; overflow:hidden !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+        .hostActivities .moreActivities { flex:0 0 auto !important; }
+        .hostOfferTypes { min-height:28px !important; max-height:28px !important; overflow:hidden !important; }
+        .hostCardFooter { margin-top:auto !important; }
+      }
+
+      @media (max-width: 760px) {
+        .hostsPage { padding:64px 10px 42px !important; overflow-x:hidden !important; }
+        .hostsHero { min-height:390px !important; padding:18px !important; border-radius:24px !important; background:#08170e !important; box-shadow:0 22px 52px rgba(13,40,24,.20) !important; }
+        .hostsHero::before { background-position:center 42% !important; transform:scale(1.01); }
+        .hostsHeroOverlay { background:linear-gradient(180deg,rgba(3,12,7,.10),rgba(3,12,7,.24) 38%,rgba(3,12,7,.88) 78%,rgba(3,12,7,.98)) !important; }
+        .hostsHeroContent { align-items:flex-start !important; margin-top:auto !important; padding:145px 2px 15px !important; text-align:left !important; }
+        .heroKicker { margin:0 !important; }
+        .hostsHeroContent h1 { margin:13px 0 0 !important; max-width:300px !important; font-size:43px !important; line-height:.91 !important; text-align:left !important; letter-spacing:-.065em !important; }
+        .hostsHeroContent p { margin:12px 0 0 !important; max-width:315px !important; color:rgba(255,255,255,.72) !important; font-size:10.5px !important; line-height:1.5 !important; text-align:left !important; }
+        .heroStats { grid-template-columns:repeat(2,1fr) !important; max-width:none !important; padding-top:13px !important; text-align:left !important; }
+
+        .hostsGrid { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; align-items:stretch !important; gap:10px !important; }
+        .hostCard { display:flex !important; flex-direction:column !important; height:286px !important; min-height:286px !important; max-height:286px !important; overflow:hidden !important; border-radius:18px !important; background:#fff !important; box-shadow:0 9px 24px rgba(26,50,35,.08) !important; }
+        .hostMedia { flex:0 0 104px !important; height:104px !important; min-height:104px !important; }
+        .hostMediaTop { inset:7px 7px auto 7px !important; }
+        .hostStatus { min-height:22px !important; padding:0 6px !important; font-size:5.3px !important; }
+        .hostStatus svg { width:9px !important; height:9px !important; }
+        .hostMediaArrow { display:none !important; }
+        .hostCardBody { position:relative !important; display:flex !important; flex:1 !important; flex-direction:column !important; min-width:0 !important; padding:0 9px 9px !important; text-align:left !important; }
+        .hostIdentity { display:block !important; min-height:74px !important; text-align:center !important; }
+        .hostAvatarWrap { display:block !important; width:46px !important; height:46px !important; min-width:46px !important; margin:-23px auto 5px !important; overflow:hidden !important; border:3px solid #fff !important; border-radius:14px !important; box-shadow:0 7px 18px rgba(20,44,29,.16) !important; }
+        .hostAvatar { width:100% !important; height:100% !important; margin:0 !important; border:0 !important; border-radius:11px !important; box-shadow:none !important; }
+        .hostIdentityText { min-width:0 !important; padding:0 !important; text-align:center !important; }
+        .hostIdentityText h2 { display:block !important; width:100% !important; min-height:15px !important; margin:0 !important; overflow:hidden !important; font-size:12.5px !important; line-height:1.15 !important; text-align:center !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+        .hostIdentityText > span { margin-top:2px !important; overflow:hidden !important; font-size:6.5px !important; text-align:center !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+        .hostIdentityLocation { justify-content:center !important; min-height:14px !important; margin-top:3px !important; gap:3px !important; overflow:hidden !important; }
+        .hostIdentityLocation svg { width:10px !important; height:10px !important; }
+        .hostIdentityLocation span { overflow:hidden !important; font-size:6.8px !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+        .hostBio { display:none !important; }
+
+        .hostActivities { display:flex !important; flex-wrap:nowrap !important; align-items:center !important; justify-content:center !important; width:100% !important; min-height:24px !important; max-height:24px !important; margin-top:3px !important; gap:4px !important; overflow:hidden !important; }
+        .hostActivities > span { display:inline-flex !important; align-items:center !important; justify-content:center !important; min-width:0 !important; min-height:22px !important; max-height:22px !important; padding:0 6px !important; overflow:hidden !important; border-radius:999px !important; font-size:5.7px !important; line-height:1 !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+        .hostActivities .primaryActivity { flex:0 1 auto !important; max-width:calc(100% - 30px) !important; }
+        .hostActivities .moreActivities { flex:0 0 auto !important; min-width:24px !important; padding:0 5px !important; }
+
+        .hostOfferTypes { display:flex !important; flex-wrap:nowrap !important; justify-content:center !important; min-height:20px !important; max-height:20px !important; margin-top:4px !important; gap:3px !important; overflow:hidden !important; }
+        .hostOfferType { flex:0 1 auto !important; min-width:0 !important; padding:3px 5px !important; overflow:hidden !important; font-size:5.2px !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+        .hostOfferType:nth-child(n+3) { display:none !important; }
+
+        .hostCardFooter { display:flex !important; align-items:center !important; justify-content:center !important; margin-top:auto !important; padding-top:7px !important; border-top:1px solid #e7ebe5 !important; }
+        .hostTrust { display:none !important; }
+        .viewHostButton { width:100% !important; min-height:31px !important; margin:0 !important; padding:0 8px !important; border-radius:9px !important; font-size:7px !important; }
+      }
+
+      @media (max-width: 380px) {
+        .hostsGrid { gap:8px !important; }
+        .hostCard { height:278px !important; min-height:278px !important; max-height:278px !important; }
+        .hostMedia { flex-basis:98px !important; height:98px !important; min-height:98px !important; }
+        .hostIdentityText h2 { font-size:11.5px !important; }
+      }
+
+
+      /* === HOST TAGS: ONE ROW, NEVER STACK === */
+      .hostTagsRow {
+        display:flex !important;
+        flex-wrap:nowrap !important;
+        align-items:center !important;
+        gap:6px !important;
+        width:100% !important;
+        min-width:0 !important;
+        min-height:31px !important;
+        max-height:31px !important;
+        margin-top:12px !important;
+        overflow:hidden !important;
+      }
+      .hostTag {
+        display:inline-flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        flex:0 1 auto !important;
+        min-width:0 !important;
+        min-height:28px !important;
+        padding:0 9px !important;
+        overflow:hidden !important;
+        border:1px solid #d8e0d5 !important;
+        border-radius:999px !important;
+        background:#f5f8f1 !important;
+        color:#596b60 !important;
+        font-size:8px !important;
+        font-weight:850 !important;
+        line-height:1 !important;
+        text-overflow:ellipsis !important;
+        white-space:nowrap !important;
+      }
+      .hostTag.activityTag { max-width:46% !important; }
+      .hostTag.offerTag { max-width:38% !important; background:#edf4e8 !important; color:#466238 !important; border-color:#d6e4cc !important; }
+      .hostTag.moreTag { flex:0 0 auto !important; background:#183a27 !important; color:#fff !important; border-color:#183a27 !important; }
+      .hostTag.mutedTag { color:#8a948d !important; background:#f7f8f5 !important; }
+
+      @media (max-width:760px) {
+        .hostCard { height:270px !important; min-height:270px !important; max-height:270px !important; }
+        .hostTagsRow {
+          justify-content:center !important;
+          min-height:23px !important;
+          max-height:23px !important;
+          margin-top:5px !important;
+          gap:3px !important;
+        }
+        .hostTag {
+          min-height:21px !important;
+          max-height:21px !important;
+          padding:0 5px !important;
+          font-size:5.5px !important;
+        }
+        .hostTag.activityTag { max-width:42% !important; }
+        .hostTag.offerTag { max-width:38% !important; }
+        .hostTag.moreTag { min-width:22px !important; padding-inline:5px !important; }
+        .hostActivities, .hostOfferTypes { display:none !important; }
+      }
+`}</style>
   );
 }

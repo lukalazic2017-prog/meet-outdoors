@@ -2744,6 +2744,378 @@ function EditEventStyles() {
           min-width: 0;
         }
       }
-    `}</style>
+    
+      /* =========================================================
+         MEETOUTDOORS — COMPACT PREMIUM EDITOR PASS
+         Visual-only override. Existing data/save logic is untouched.
+         ========================================================= */
+
+      .editEventPage {
+        padding: 92px 18px 48px;
+        background:
+          radial-gradient(circle at 12% 0%, rgba(186, 224, 145, .16), transparent 24%),
+          radial-gradient(circle at 92% 18%, rgba(32, 83, 52, .08), transparent 25%),
+          #f1f4ed;
+      }
+
+      .editEventHero {
+        width: min(1120px, 100%);
+        min-height: 315px;
+        padding: 28px 30px;
+        border-radius: 28px;
+        box-shadow: 0 22px 58px rgba(19, 48, 31, .15);
+      }
+
+      .editEventHeroCopy {
+        max-width: 690px;
+        padding-top: 24px;
+      }
+
+      .editEventEyebrow {
+        padding: 7px 11px;
+        font-size: 8px;
+      }
+
+      .editEventHeroCopy h1 {
+        margin-top: 18px;
+        font-size: clamp(42px, 5.5vw, 68px);
+        line-height: .94;
+        letter-spacing: -.065em;
+      }
+
+      .editEventHeroCopy p {
+        max-width: 570px;
+        margin-top: 16px;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .editEventHeroStats {
+        right: 30px;
+        bottom: 25px;
+        left: auto;
+        width: min(410px, 42%);
+        gap: 8px;
+      }
+
+      .editEventHeroStats article {
+        padding: 12px 13px;
+        border-radius: 14px;
+      }
+
+      .editEventHeroStats strong { font-size: 14px; }
+      .editEventHeroStats span { margin-top: 4px; font-size: 7px; }
+
+      .editEventContent {
+        width: min(1080px, 100%);
+      }
+
+      .editEventToolbar {
+        align-items: center;
+        margin: 30px 0 14px;
+      }
+
+      .editEventToolbar h2 {
+        margin-top: 5px;
+        font-size: clamp(28px, 4vw, 38px);
+      }
+
+      .editEventToolbar p { margin-top: 7px; }
+
+      .editEventLayout {
+        grid-template-columns: minmax(0, 1.5fr) minmax(270px, .62fr);
+        gap: 14px;
+      }
+
+      .editEventForm { gap: 12px; }
+
+      .editEventPanel {
+        padding: 18px;
+        border-radius: 20px;
+        background: rgba(255,255,255,.88);
+        box-shadow: 0 10px 28px rgba(31, 51, 38, .045);
+      }
+
+      .editEventPanelHeader {
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .editEventPanelIcon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+      }
+
+      .editEventPanelHeader h2 {
+        margin-top: 3px;
+        font-size: 18px;
+      }
+
+      .editEventFields { gap: 10px; }
+      .editEventField { gap: 5px; }
+
+      .editEventField input {
+        min-height: 43px;
+        padding: 0 12px;
+      }
+
+      .editEventField textarea {
+        min-height: 96px;
+        padding: 11px 12px;
+      }
+
+      .editEventField input,
+      .editEventField textarea {
+        border-radius: 12px;
+        background: #fbfcf9;
+      }
+
+      .editEventActivityGrid,
+      .editIncludedPresetGrid {
+        gap: 7px;
+      }
+
+      .editEventActivityGrid button,
+      .editIncludedPresetGrid button {
+        min-height: 36px;
+        padding: 7px 10px;
+        border-radius: 11px;
+      }
+
+      .editIncludedCustomRow { margin-top: 10px; }
+
+      .editEventUpload {
+        padding: 12px;
+        gap: 10px;
+        border-radius: 14px;
+      }
+
+      .editEventUploadIcon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+      }
+
+      .editEventGalleryGrid { gap: 8px; }
+
+      .editEventSubmitBar {
+        padding: 13px 15px;
+        border-radius: 17px;
+        box-shadow: 0 12px 30px rgba(24,58,39,.10);
+      }
+
+      .editEventSubmitBar button {
+        min-height: 43px;
+        border-radius: 12px;
+      }
+
+      .editEventPreview {
+        top: 90px;
+      }
+
+      .editEventPreviewCard {
+        border-radius: 20px;
+        box-shadow: 0 14px 34px rgba(31,51,38,.07);
+      }
+
+      .editEventPreviewImage {
+        aspect-ratio: 1.45 / 1;
+      }
+
+      .editEventPreviewBody { padding: 16px; }
+
+      .editEventPreviewBody h2 {
+        margin-top: 5px;
+        font-size: 22px;
+      }
+
+      .editEventPreviewFacts {
+        gap: 7px;
+        margin-top: 13px;
+      }
+
+      .editEventPreviewFacts article {
+        padding: 10px;
+        border-radius: 12px;
+      }
+
+      .editEventPreviewHint {
+        margin-top: 9px;
+        padding: 11px 12px;
+        border-radius: 13px;
+      }
+
+      @media (max-width: 900px) {
+        .editEventPage {
+          padding: 78px 12px 38px;
+        }
+
+        .editEventHero {
+          min-height: 0;
+          padding: 22px 20px;
+          border-radius: 23px;
+        }
+
+        .editEventHeroCopy {
+          padding-top: 4px;
+        }
+
+        .editEventHeroCopy h1 {
+          font-size: clamp(38px, 10vw, 54px);
+        }
+
+        .editEventHeroCopy p {
+          margin-top: 13px;
+        }
+
+        .editEventHeroStats {
+          position: static;
+          width: 100%;
+          margin-top: 22px;
+        }
+
+        .editEventLayout {
+          grid-template-columns: 1fr;
+        }
+
+        .editEventPreview {
+          position: static;
+          order: -1;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .editEventPage {
+          padding: 72px 8px 28px;
+        }
+
+        .editEventHero {
+          padding: 18px 16px;
+          border-radius: 20px;
+        }
+
+        .editEventEyebrow {
+          padding: 6px 9px;
+        }
+
+        .editEventHeroCopy h1 {
+          margin-top: 14px;
+          font-size: 38px;
+          line-height: .96;
+        }
+
+        .editEventHeroCopy p {
+          font-size: 11px;
+          line-height: 1.55;
+        }
+
+        .editEventHeroStats {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          margin-top: 16px;
+        }
+
+        .editEventHeroStats article {
+          padding: 10px 8px;
+        }
+
+        .editEventHeroStats strong { font-size: 12px; }
+
+        .editEventToolbar {
+          align-items: flex-start;
+          gap: 10px;
+          margin: 20px 4px 11px;
+        }
+
+        .editEventToolbar h2 {
+          font-size: 27px;
+        }
+
+        .editEventToolbar p {
+          display: none;
+        }
+
+        .editEventToolbar > a {
+          min-height: 38px;
+          padding: 0 11px;
+          white-space: nowrap;
+        }
+
+        .editEventPanel {
+          padding: 14px;
+          border-radius: 17px;
+        }
+
+        .editEventPanelHeader {
+          margin-bottom: 11px;
+        }
+
+        .editEventPanelIcon {
+          width: 34px;
+          height: 34px;
+        }
+
+        .editEventPanelHeader h2 {
+          font-size: 16px;
+        }
+
+        .editEventPanelHeader p {
+          margin-top: 3px;
+          font-size: 8px;
+        }
+
+        .editEventFields {
+          grid-template-columns: 1fr;
+          gap: 9px;
+        }
+
+        .editEventField.full {
+          grid-column: auto;
+        }
+
+        .editEventField input {
+          min-height: 42px;
+        }
+
+        .editEventField textarea {
+          min-height: 88px;
+        }
+
+        .editEventActivityGrid,
+        .editIncludedPresetGrid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editEventActivityGrid button,
+        .editIncludedPresetGrid button {
+          min-height: 34px;
+          padding: 6px 8px;
+          font-size: 8px;
+        }
+
+        .editEventPreviewImage {
+          aspect-ratio: 1.7 / 1;
+        }
+
+        .editEventPreviewFacts {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .editEventSubmitBar {
+          gap: 10px;
+          padding: 11px;
+        }
+
+        .editEventSubmitBar > div {
+          display: none;
+        }
+
+        .editEventSubmitBar button {
+          width: 100%;
+          min-height: 46px;
+        }
+      }
+
+      `}</style>
   );
 }
