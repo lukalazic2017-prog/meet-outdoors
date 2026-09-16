@@ -667,18 +667,18 @@ function SingleAdventureFeature({
         </Link>
 
         {!isOwner ? (
-          <button type="button" className="singleFeatureCta" onClick={() => onContact?.()}>
+          <button
+            type="button"
+            className="singleFeatureCta"
+            onClick={() => onContact?.()}
+          >
             Kontaktiraj domaćina
             <Icon name="arrowRight" size={15} />
           </button>
         ) : (
-          <div className="singleFeatureManageBar">
-            <button type="button" className="manageEdit" onClick={() => onEdit?.(event)}>
-              <Icon name="edit" size={15} /> Uredi avanturu
-            </button>
-            <button type="button" className="manageDelete" onClick={() => onDelete?.(event)}>
-              <Icon name="trash" size={15} /> Obriši
-            </button>
+          <div className="singleFeatureOwnerNote">
+            <Icon name="check" size={14} />
+            Ova avantura je javno prikazana na profilu.
           </div>
         )}
       </div>
@@ -1280,13 +1280,9 @@ function SingleAccommodationFeature({
             <Icon name="arrowRight" size={15} />
           </button>
         ) : (
-          <div className="singleFeatureManageBar">
-            <button type="button" className="manageEdit" onClick={() => onEdit?.(item)}>
-              <Icon name="edit" size={15} /> Uredi smeštaj
-            </button>
-            <button type="button" className="manageDelete" onClick={() => onDelete?.(item)}>
-              <Icon name="trash" size={15} /> Obriši
-            </button>
+          <div className="singleFeatureOwnerNote">
+            <Icon name="check" size={14} />
+            Ovaj smeštaj je javno prikazan na profilu.
           </div>
         )}
       </div>
@@ -1405,13 +1401,9 @@ function SingleOfferFeature({
             <Icon name="arrowRight" size={15} />
           </button>
         ) : (
-          <div className="singleFeatureManageBar">
-            <button type="button" className="manageEdit" onClick={() => onEdit?.(item)}>
-              <Icon name="edit" size={15} /> Uredi {type === "rental" ? "iznajmljivanje" : "ponudu"}
-            </button>
-            <button type="button" className="manageDelete" onClick={() => onDelete?.(item)}>
-              <Icon name="trash" size={15} /> Obriši
-            </button>
+          <div className="singleFeatureOwnerNote">
+            <Icon name="check" size={14} />
+            Ova ponuda je javno prikazana na profilu.
           </div>
         )}
       </div>
@@ -2117,26 +2109,6 @@ export default function HostProfile() {
       supabase.removeChannel(channel);
     };
   }, [loadProfile, username]);
-
-  // Keep owner controls synced with the actual Supabase session on every device.
-  useEffect(() => {
-    let mounted = true;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setCurrentUserId(data?.session?.user?.id || null);
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (mounted) setCurrentUserId(session?.user?.id || null);
-      }
-    );
-
-    return () => {
-      mounted = false;
-      authListener?.subscription?.unsubscribe?.();
-    };
-  }, []);
 
 
   const revokeOfferBlobUrls = (items = []) => {
@@ -3336,7 +3308,7 @@ export default function HostProfile() {
                 <SingleAdventureFeature
                   event={activeEvents[0]}
                   isOwner={isOwnProfile}
-                  onEdit={(event) => navigate(`/event/${event.id}/edit`)}
+                  onEdit={(event) => navigate(`/edit-event/${event.id}`)}
                   onDelete={deleteEvent}
                   onContact={() => setContactModalOpen(true)}
                 />
@@ -3492,17 +3464,14 @@ export default function HostProfile() {
                   </div>
 
                   {isOwnProfile && isServiceHost && (
-                    serviceOffers.length === 1 ? (
-                      <button type="button" className="sectionAction" onClick={() => openEditOffer(serviceOffers[0])}>
-                        <Icon name="edit" size={16} />
-                        Uredi ponudu
-                      </button>
-                    ) : (
-                      <button type="button" className="sectionAction offerAddButton" onClick={() => openCreateOffer("service")}>
-                        <Icon name="plus" size={16} />
-                        Dodaj uslugu
-                      </button>
-                    )
+                    <button
+                      type="button"
+                      className="sectionAction offerAddButton"
+                      onClick={() => openCreateOffer("service")}
+                    >
+                      <Icon name="plus" size={16} />
+                      Dodaj uslugu
+                    </button>
                   )}
                 </div>
 
@@ -3563,17 +3532,14 @@ export default function HostProfile() {
                   </div>
 
                   {isOwnProfile && isRentalHost && (
-                    rentalOffers.length === 1 ? (
-                      <button type="button" className="sectionAction" onClick={() => openEditOffer(rentalOffers[0])}>
-                        <Icon name="edit" size={16} />
-                        Uredi ponudu
-                      </button>
-                    ) : (
-                      <button type="button" className="sectionAction offerAddButton" onClick={() => openCreateOffer("rental")}>
-                        <Icon name="plus" size={16} />
-                        Dodaj iznajmljivanje
-                      </button>
-                    )
+                    <button
+                      type="button"
+                      className="sectionAction offerAddButton"
+                      onClick={() => openCreateOffer("rental")}
+                    >
+                      <Icon name="plus" size={16} />
+                      Dodaj iznajmljivanje
+                    </button>
                   )}
                 </div>
 
@@ -8849,35 +8815,6 @@ function HostProfileStyles() {
         display: inline;
         font-size: 7px;
         font-weight: 900;
-      }
-      .singleFeatureManageBar{
-        display:grid;
-        grid-template-columns:minmax(0,1fr) auto;
-        gap:8px;
-        margin-top:10px;
-      }
-      .singleFeatureManageBar button{
-        min-height:42px;
-        padding:0 14px;
-        border-radius:12px;
-        font:inherit;
-        font-size:10px;
-        font-weight:900;
-        cursor:pointer;
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        gap:7px;
-      }
-      .singleFeatureManageBar .manageEdit{
-        border:1px solid #b9d7ad;
-        background:#eef8e9;
-        color:#173d27;
-      }
-      .singleFeatureManageBar .manageDelete{
-        border:1px solid #efd2ce;
-        background:#fff5f3;
-        color:#8b3028;
       }
 
       @media (max-width: 760px) {
