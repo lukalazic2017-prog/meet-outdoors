@@ -1,155 +1,64 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-const sections = [
-  {
-    title: "1. Uloga domaćina",
-    body: [
-      "Domaćin je korisnik MeetOutdoors platforme koji kreira, objavljuje ili organizuje događaje, ture, pakete ili druge outdoor aktivnosti.",
-      "Domaćin samostalno odgovara za sadržaj svoje ponude, organizaciju aktivnosti, komunikaciju sa učesnicima i izvršenje usluge koju nudi.",
-    ],
-  },
-  {
-    title: "2. Tačnost podataka i ponude",
-    body: [
-      "Domaćin mora da objavljuje tačne, potpune i ažurne informacije o aktivnosti, uključujući lokaciju, datum, vreme, cenu, kapacitet, nivo težine, uslove učešća i sve druge bitne okolnosti.",
-      "Nije dozvoljeno objavljivanje obmanjujućih informacija, lažnih referenci, netačnih cena ili sadržaja koji može dovesti korisnika u zabludu.",
-    ],
-  },
-  {
-    title: "3. Dozvole, osposobljenost i zakonske obaveze",
-    body: [
-      "Domaćin je odgovoran da proveri i ispuni sve zakonske, profesionalne, poreske, bezbednosne i administrativne obaveze koje se odnose na aktivnost koju organizuje.",
-      "Ako su za određenu aktivnost potrebne licence, dozvole, stručna osposobljenost, registracija, osiguranje ili druga odobrenja, domaćin je dužan da ih poseduje i održava važećim.",
-      "MeetOutdoors ne potvrđuje automatski da domaćin ispunjava sve posebne zakonske uslove za konkretnu aktivnost.",
-    ],
-  },
-  {
-    title: "4. Bezbednost učesnika",
-    body: [
-      "Domaćin je dužan da razumno proceni rizike aktivnosti i pre početka jasno obavesti učesnike o važnim rizicima, potrebnoj opremi, fizičkim zahtevima, vremenskim uslovima i pravilima ponašanja.",
-      "Domaćin treba da preduzme razumne mere bezbednosti u skladu sa vrstom aktivnosti, lokacijom, vremenskim uslovima, iskustvom učesnika i drugim relevantnim okolnostima.",
-      "Ako proceni da uslovi nisu bezbedni, domaćin treba da odloži, izmeni ili otkaže aktivnost.",
-    ],
-  },
-  {
-    title: "5. Učesnici i komunikacija",
-    body: [
-      "Domaćin treba da odgovara na zahteve i pitanja učesnika jasno i blagovremeno i da ne zloupotrebljava njihove kontakt podatke.",
-      "Kontakt podaci do kojih domaćin dođe preko MeetOutdoors-a smeju se koristiti samo za komunikaciju povezanu sa konkretnom rezervacijom, događajem ili legitimnim odnosom sa korisnikom.",
-    ],
-  },
-  {
-    title: "6. Cena i naplata",
-    body: [
-      "Domaćin je odgovoran za tačnost prikazane cene i za jasno navođenje šta je u cenu uključeno, a šta nije.",
-      "Ako MeetOutdoors u budućnosti uvede sopstveni sistem naplate, provizije ili druge naknade, posebna pravila plaćanja i naknada biće objavljena i primenjiva od trenutka njihovog stupanja na snagu.",
-    ],
-  },
-  {
-    title: "7. Otkazivanje i izmene",
-    body: [
-      "Ako domaćin mora da promeni ili otkaže aktivnost, treba što pre da obavesti prijavljene učesnike.",
-      "Domaćin ne treba da zadržava ili obećava povraćaj sredstava suprotno važećim propisima ili pravilima koja su jasno navedena u konkretnoj ponudi.",
-    ],
-  },
-  {
-    title: "8. Zabranjeno ponašanje",
-    body: [
-      "Nije dozvoljeno organizovanje nezakonitih aktivnosti, ugrožavanje učesnika, diskriminacija, uznemiravanje, obmana, zloupotreba podataka, lažno predstavljanje ili korišćenje platforme za aktivnosti koje mogu ozbiljno ugroziti druge.",
-      "MeetOutdoors može ograničiti, suspendovati ili ukloniti nalog ili sadržaj kada postoje razumni razlozi da su prekršena pravila platforme ili ugrožena bezbednost korisnika.",
-    ],
-  },
-  {
-    title: "9. Sadržaj domaćina",
-    body: [
-      "Domaćin ostaje odgovoran za fotografije, video zapise, opise, logotipe i druge materijale koje objavljuje.",
-      "Objavljivanjem sadržaja domaćin potvrđuje da ima pravo da ga koristi i da sadržaj ne krši prava trećih lica.",
-    ],
-  },
-  {
-    title: "10. Odnos sa MeetOutdoors platformom",
-    body: [
-      "MeetOutdoors je platforma koja povezuje korisnike i domaćine i olakšava otkrivanje, komunikaciju, prijave i organizaciju aktivnosti.",
-      "Osim kada je izričito drugačije navedeno, MeetOutdoors nije organizator konkretne aktivnosti koju kreira nezavisni domaćin.",
-      "Ništa u ovim Uslovima ne isključuje prava ili odgovornosti koje se po važećem pravu ne mogu isključiti ili ograničiti.",
-    ],
-  },
-  {
-    title: "11. Izmene uslova",
-    body: [
-      "Ovi Uslovi mogu biti izmenjeni kada se promene funkcije platforme, način poslovanja ili pravni zahtevi.",
-      "Za značajne izmene korisnici mogu biti obavešteni putem platforme ili drugog odgovarajućeg kanala.",
-    ],
-  },
-];
-
 export default function HostTerms() {
   return (
-    <main className="legalPage">
-      <div className="legalShell">
-        <Link to="/" className="legalBack">← Nazad na početnu</Link>
-
-        <header className="legalHero">
-          <span className="legalKicker">MeetOutdoors</span>
-          <h1>Uslovi za domaćine</h1>
-          <p>
-            Pravila za domaćine koji kreiraju i organizuju aktivnosti preko
-            MeetOutdoors platforme.
-          </p>
-          <small>Poslednje ažuriranje: 5. septembar 2026.</small>
-        </header>
-
-        <div className="legalNotice">
-          <strong>Važno</strong>
-          <p>
-            Ovi uslovi dopunjuju Uslove korišćenja. Domaćin je odgovoran da
-            proveri konkretne pravne i bezbednosne obaveze za aktivnost koju
-            organizuje.
-          </p>
+    <>
+      <LegalStyles />
+      <main className="legalPage">
+        <div className="legalShell">
+          <Link to="/" className="legalBack">← Nazad na početnu</Link>
+          <header className="legalHero"><span>MeetOutdoors</span><h1>Uslovi za domaćine</h1><p>Pravila za domaćine koji preko MeetOutdoors-a objavljuju avanture, smeštaj, usluge ili iznajmljivanje.</p><small>Poslednje ažuriranje: 16. septembar 2026.</small></header>
+          <div className="legalNotice"><strong>Važno</strong><p>Ovi Uslovi dopunjuju opšte Uslove korišćenja. Domaćin samostalno odgovara za svoju ponudu i zakonske i bezbednosne obaveze povezane sa njom.</p></div>
+          <article className="legalContent">
+            <section><h2>1. Uloga domaćina</h2><p>Domaćin je korisnik koji objavljuje avanture ili događaje, smeštaj, usluge ili iznajmljivanje. Domaćin odgovara za sadržaj ponude, komunikaciju sa zainteresovanim korisnicima i izvršenje usluge koju nudi.</p></section>
+            <section><h2>2. Tačnost ponude</h2><p>Domaćin mora objavljivati tačne, potpune i ažurne informacije koje su bitne za konkretnu ponudu, kao što su lokacija, termin kada je primenljiv, cena, kapacitet, nivo zahtevnosti, uslovi korišćenja i šta je uključeno u ponudu.</p></section>
+            <section><h2>3. Dozvole i zakonske obaveze</h2><p>Domaćin je odgovoran za sve licence, dozvole, registracije, osiguranje, poreske, profesionalne i druge obaveze koje se primenjuju na njegovu aktivnost. MeetOutdoors ne potvrđuje automatski da svaki domaćin ispunjava posebne zakonske uslove.</p></section>
+            <section><h2>4. Bezbednost</h2><p>Domaćin treba razumno da proceni rizike i korisniku pruži relevantne informacije o opremi, fizičkim zahtevima, vremenskim uslovima, terenu i drugim značajnim okolnostima. Ako uslovi nisu bezbedni, domaćin treba da odloži, izmeni ili otkaže aktivnost kada je to potrebno.</p></section>
+            <section><h2>5. Direktna komunikacija</h2><p>Domaćin može na profilu učiniti dostupnim telefon, Instagram, web stranicu i druge podržane kontakt podatke. Kontakt podatke korisnika do kojih zakonito dođe ne sme koristiti za spam, neovlašćeni marketing ili druge svrhe koje nisu opravdane odnosom sa korisnikom.</p></section>
+            <section><h2>6. Cena i naplata</h2><p>Domaćin odgovara za tačnost prikazane cene i jasno navođenje šta je uključeno. MeetOutdoors trenutno ne obrađuje plaćanja između korisnika i domaćina. Eventualni dogovor i naplata odvijaju se direktno između njih, u skladu sa primenljivim propisima.</p></section>
+            <section><h2>7. Izmene i otkazivanje</h2><p>Ako domaćin promeni ili otkaže dogovorenu aktivnost ili uslugu, treba blagovremeno da obavesti osobe sa kojima je već uspostavio dogovor. Domaćin je odgovoran za poštovanje primenljivih pravila u vezi sa naplatom i eventualnim povraćajem sredstava.</p></section>
+            <section><h2>8. Smeštaj, usluge i iznajmljivanje</h2><p>Domaćin koji nudi smeštaj, uslugu ili iznajmljivanje mora jasno opisati šta korisnik dobija, relevantna ograničenja, cenu i bitne uslove. Za bezbednost, zakonitost i ispravnost konkretne usluge ili predmeta odgovara domaćin u meri propisanoj zakonom.</p></section>
+            <section><h2>9. Adventure Agent i zahtevi korisnika</h2><p>MeetOutdoors može koristiti Adventure Agent da pronađe domaćine čije deklarisane mogućnosti odgovaraju zahtevu korisnika. Relevantan zahtev može biti prosleđen domaćinu tek kroz predviđeni tok platforme. Domaćin sam odlučuje da li može da odgovori na zahtev i može kreirati odgovarajući događaj ili drugu postojeću vrstu ponude na platformi.</p></section>
+            <section><h2>10. Sadržaj domaćina</h2><p>Domaćin odgovara za fotografije, video, tekstove, logotipe i druge materijale koje objavljuje i potvrđuje da ima pravo da ih koristi.</p></section>
+            <section><h2>11. Zabranjeno ponašanje</h2><p>Zabranjene su nezakonite ili obmanjujuće ponude, ugrožavanje korisnika, diskriminacija, uznemiravanje, prevara, zloupotreba podataka, lažno predstavljanje i pokušaji zaobilaženja bezbednosnih pravila platforme.</p></section>
+            <section><h2>12. Moderacija</h2><p>MeetOutdoors može ukloniti ponudu ili ograničiti, suspendovati ili ukinuti nalog kada postoje razumni razlozi da su prekršena pravila platforme, ugrožena bezbednost korisnika ili prekršen zakon.</p></section>
+            <section><h2>13. Odnos sa MeetOutdoors-om</h2><p>MeetOutdoors povezuje korisnike i domaćine i omogućava otkrivanje ponuda i direktan kontakt. Osim kada je izričito drugačije navedeno, MeetOutdoors nije organizator ili pružalac konkretne usluge nezavisnog domaćina.</p></section>
+            <section><h2>14. Povezana pravila</h2><p>Korišćenjem naloga domaćina prihvataš <Link to="/terms">Uslove korišćenja</Link>, <Link to="/privacy">Politiku privatnosti</Link> i <Link to="/safety">Bezbednosna pravila</Link>.</p></section>
+            <section><h2>15. Kontakt</h2><p>Za pitanja: <a href="mailto:infomeetoutdoors@gmail.com">infomeetoutdoors@gmail.com</a>.</p></section>
+          </article>
+          <footer className="legalFooter"><strong>MeetOutdoors</strong><span>Prave avanture. Pravi ljudi.</span></footer>
         </div>
-
-        <article className="legalContent">
-          {sections.map((section) => (
-            <section key={section.title}>
-              <h2>{section.title}</h2>
-              {section.body.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </section>
-          ))}
-
-          <section>
-            <h2>12. Povezana pravila</h2>
-            <p>
-              Korišćenjem naloga domaćina prihvataš i{" "}
-              <Link to="/terms">Uslove korišćenja</Link>,{" "}
-              <Link to="/privacy">Politiku privatnosti</Link> i{" "}
-              <Link to="/safety">Bezbednosna pravila</Link>.
-            </p>
-          </section>
-        </article>
-      </div>
-
-      <style>{`
-        .legalPage{min-height:100vh;padding:64px 24px 90px;background:#f4f5ef;color:#1b2a21;font-family:Inter,system-ui,sans-serif}
-        .legalShell{width:min(900px,100%);margin:0 auto}
-        .legalBack{display:inline-block;margin-bottom:34px;color:#607067;font-size:12px;font-weight:800;text-decoration:none}
-        .legalHero{padding:34px;border:1px solid #dce2da;border-radius:28px;background:white;box-shadow:0 18px 45px rgba(31,50,39,.06)}
-        .legalKicker{color:#6d8d50;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
-        .legalHero h1{margin:12px 0 0;font-size:clamp(42px,7vw,68px);line-height:1;letter-spacing:-.06em}
-        .legalHero p{max-width:650px;margin:18px 0 0;color:#718078;font-size:15px;line-height:1.7}
-        .legalHero small{display:block;margin-top:18px;color:#98a098;font-size:10px}
-        .legalNotice{margin-top:18px;padding:20px 22px;border:1px solid #d6e4c9;border-radius:20px;background:#f5faef}
-        .legalNotice strong{font-size:12px}
-        .legalNotice p{margin:6px 0 0;color:#667469;font-size:12px;line-height:1.65}
-        .legalContent{margin-top:18px;padding:34px;border:1px solid #dce2da;border-radius:28px;background:white}
-        .legalContent section+section{margin-top:34px;padding-top:34px;border-top:1px solid #edf0eb}
-        .legalContent h2{margin:0;color:#213127;font-size:19px;letter-spacing:-.025em}
-        .legalContent p{margin:12px 0 0;color:#66736b;font-size:13px;line-height:1.8}
-        .legalContent a{color:#315e3f;font-weight:800}
-        @media(max-width:640px){.legalPage{padding:32px 15px 65px}.legalHero,.legalContent{padding:23px;border-radius:22px}.legalHero h1{font-size:42px}}
-      `}</style>
-    </main>
+      </main>
+    </>
   );
 }
+
+function LegalStyles() {
+  return (
+    <style>{`
+      .legalPage{min-height:100vh;padding:80px 20px 110px;background:#f5f6f1;color:#1b2c22;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .legalShell{width:min(920px,100%);margin:0 auto}
+      .legalBack{color:#68776e;font-size:11px;font-weight:850;text-decoration:none}
+      .legalHero{padding:55px 0 36px;border-bottom:1px solid #dfe5dc}
+      .legalHero>span{display:block;margin-bottom:12px;color:#739454;font-size:10px;font-weight:950;letter-spacing:.13em;text-transform:uppercase}
+      .legalHero h1{margin:0;font-size:clamp(48px,8vw,82px);line-height:.96;letter-spacing:-.07em}
+      .legalHero p{max-width:720px;margin:16px 0 0;color:#66746b;font-size:13px;line-height:1.75}
+      .legalHero small{display:block;margin-top:14px;color:#859088;font-size:10px}
+      .legalNotice{margin-top:26px;padding:18px 20px;border:1px solid #d8e2d2;border-radius:17px;background:#eef4e9}
+      .legalNotice strong{font-size:11px}
+      .legalNotice p{margin:6px 0 0;color:#63715f;font-size:11px;line-height:1.6}
+      .legalContent section{padding:30px 0;border-bottom:1px solid #e1e6df}
+      .legalContent h2{margin:0;font-size:20px;letter-spacing:-.03em}
+      .legalContent p{max-width:850px;margin:12px 0 0;color:#66746b;font-size:13px;line-height:1.75}
+      .legalContent ul{margin:15px 0 0;padding-left:22px;color:#66746b;font-size:13px;line-height:1.8}
+      .legalContent a,.legalLinks a{color:#315e3f;font-weight:800}
+      .legalLinks{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
+      .legalLinks a{padding:10px 13px;border:1px solid #d4ddd1;border-radius:11px;background:white;font-size:10px;text-decoration:none}
+      .legalFooter{display:flex;justify-content:space-between;gap:20px;padding-top:32px;color:#7b887f;font-size:10px}
+      .legalFooter strong{color:#294132}
+      @media(max-width:600px){.legalPage{padding:55px 16px 85px}.legalHero{padding-top:42px}.legalHero h1{font-size:42px}.legalFooter{flex-direction:column;gap:5px}}
+    `}</style>
+  );
+}
+
