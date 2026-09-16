@@ -3004,6 +3004,7 @@ function EditProfileStyles() {
 
       .dangerZone {
         display:flex;align-items:center;justify-content:space-between;gap:18px;
+        margin-bottom: 96px;
         padding:19px;border:1px solid rgba(170,67,58,.18);
         border-radius:20px;background:#fff9f8;
       }
@@ -3078,7 +3079,7 @@ function EditProfileStyles() {
       }
 
       @media(max-width:760px){
-        .dangerZone{align-items:stretch;flex-direction:column;padding:17px}
+        .dangerZone{align-items:stretch;flex-direction:column;padding:17px;margin-bottom:118px}
         .deleteAccountButton{width:100%}
         .deleteAccountModal{padding:24px 19px 19px;border-radius:23px}
         .deleteAccountModal h2{font-size:23px}
