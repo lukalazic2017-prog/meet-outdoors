@@ -51,6 +51,9 @@ import HostTerms from "./pages/HostTerms";
 import Safety from "./pages/Safety";
 import Stays from "./pages/Stays";
 import DeleteAccount from "./pages/DeleteAccount";
+import Marketplace from "./pages/Marketplace";
+import MyOffers from "./pages/MyOffers";
+import MyRequests from "./pages/MyRequests";
 
 // NOVO
 import AccommodationDetails from "./pages/AccommodationDetails";
@@ -62,6 +65,8 @@ function AppRoutes() {
     loading,
     isBanned,
     isSuspended,
+    needsHostProfileCompletion,
+    isAdmin,
   } = useAuth();
 
   const location = useLocation();
@@ -76,243 +81,85 @@ function AppRoutes() {
     location.pathname !== "/blocked" &&
     !isAdminLogin
   ) {
-    return (
-      <Navigate
-        to="/blocked"
-        replace
-      />
-    );
+    return <Navigate to="/blocked" replace />;
+  }
+
+  // Jedina nova zaštita: nepotpuni host mora prvo da završi profil.
+  // Ne preusmerava dok se autentifikacija učitava, niti sa same stranice
+  // za uređivanje. Postojeći admin tok ostaje dostupan administratorima.
+  const hostCompletionExempt =
+    location.pathname === "/edit-profile" ||
+    location.pathname === "/blocked" ||
+    location.pathname === "/delete-account" ||
+    location.pathname === "/reset-password" ||
+    isAdminLogin ||
+    (isAdmin && isAdminArea);
+
+  if (
+    !loading &&
+    !isBanned &&
+    !isSuspended &&
+    needsHostProfileCompletion &&
+    !hostCompletionExempt
+  ) {
+    return <Navigate to="/edit-profile" replace />;
   }
 
   return (
     <>
       {!hideNavbar && <Navbar />}
-
       <Routes>
-        <Route
-          path="/"
-          element={<Home />}
-        />
-
-        <Route
-          path="/signup"
-          element={<Signup />}
-        />
-
-        <Route
-          path="/register"
-          element={
-            <Navigate
-              to="/signup"
-              replace
-            />
-          }
-        />
-
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
-        <Route
-          path="/admin-login"
-          element={<AdminLogin />}
-        />
-
+        <Route path="/" element={<Home />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/register" element={<Navigate to="/signup" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/delete-account" element={<DeleteAccount />} />
-
-        <Route
-          path="/admin"
-          element={
-            <Navigate
-              to="/admin/explore"
-              replace
-            />
-          }
-        />
-
+        <Route path="/admin" element={<Navigate to="/admin/explore" replace />} />
         <Route path="/cookies" element={<CookiePolicy />} />
-
-        <Route
-          path="/blocked"
-          element={<BlockedAccount />}
-        />
-
-        <Route
-          path="/u/:username"
-          element={<UserProfile />}
-        />
-
-        <Route
-          path="/h/:username"
-          element={<HostProfile />}
-        />
-
-        <Route
-          path="/edit-profile"
-          element={<EditProfile />}
-        />
-
-        <Route
-          path="/hosts"
-          element={<Hosts />}
-        />
-
-        <Route
-          path="/activities"
-          element={<Activities />}
-        />
-
+        <Route path="/blocked" element={<BlockedAccount />} />
+        <Route path="/u/:username" element={<UserProfile />} />
+        <Route path="/h/:username" element={<HostProfile />} />
+        <Route path="/my-offers" element={<MyOffers />} />
+        <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/my-requests" element={<MyRequests />} />
+        <Route path="/hosts" element={<Hosts />} />
+        <Route path="/activities" element={<Activities />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
-
         <Route path="/host-terms" element={<HostTerms />} />
-
         <Route path="/safety" element={<Safety />} />
-
-        <Route
-          path="/create-event"
-          element={<CreateEvent />}
-        />
-
+        <Route path="/create-event" element={<CreateEvent />} />
         <Route path="/terms" element={<TermsOfUse />} />
-
-        <Route
-          path="/events"
-          element={<Events />}
-        />
-
-        <Route
-          path="/forgot-password"
-          element={<ForgotPassword />}
-        />
-
-        <Route
-          path="/reset-password"
-          element={<ResetPassword />}
-        />
-
-        <Route
-          path="/event/:id"
-          element={<EventDetails />}
-        />
-
+        <Route path="/events" element={<Events />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/event/:id" element={<EventDetails />} />
         {/* NOVO - SMEŠTAJ */}
-        <Route
-          path="/accommodation/:id"
-          element={<AccommodationDetails />}
-        />
-
+        <Route path="/accommodation/:id" element={<AccommodationDetails />} />
         {/* NOVO - USLUGE */}
-        <Route
-          path="/service/:id"
-          element={<ServiceDetails />}
-        />
-
+        <Route path="/service/:id" element={<ServiceDetails />} />
         {/* NOVO - IZNAJMLJIVANJE */}
-        <Route
-          path="/rental/:id"
-          element={<RentalDetails />}
-        />
-
-        <Route
-          path="/dashboard"
-          element={<HostDashboard />}
-        />
-
-        <Route
-          path="/edit-event/:id"
-          element={<EditEvent />}
-        />
-
-        <Route
-          path="/event/:id/interested"
-          element={<InterestedUsers />}
-        />
-
-        <Route
-          path="/my-events"
-          element={<MyInterestedEvents />}
-        />
-
-        <Route
-          path="/stays"
-          element={<Stays />}
-        />
-
-        <Route
-          path="/notifications"
-          element={<Notifications />}
-        />
-
-        <Route
-          path="/host/demand/:id"
-          element={<HostDemandDetails />}
-        />
-
-        <Route
-          path="/agent/request/:id"
-          element={<AdventureRequestDetails />}
-        />
-
-        <Route
-          path="/booking-requests"
-          element={<BookingRequests />}
-        />
-
-        <Route
-          path="/my-bookings"
-          element={<MyBookings />}
-        />
-
-        <Route
-          path="/edit-package/:id/gallery"
-          element={<EditPackageGallery />}
-        />
-
-        <Route
-          path="/host-bookings"
-          element={<HostBookings />}
-        />
-
-        <Route
-          path="/explore"
-          element={<ExploreMap />}
-        />
-
-        <Route
-          path="/agent"
-          element={<Agent />}
-        />
-
-        <Route
-          path="/explore/add"
-          element={<AddPlace />}
-        />
-
-        <Route
-          path="/mesta/:slug"
-          element={<PlaceDetails />}
-        />
-
-        <Route
-          path="/explore/:id"
-          element={<PlaceDetails />}
-        />
-
-        <Route
-          path="/admin/explore"
-          element={<AdminExplore />}
-        />
-
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/"
-              replace
-            />
-          }
-        />
+        <Route path="/rental/:id" element={<RentalDetails />} />
+        <Route path="/dashboard" element={<HostDashboard />} />
+        <Route path="/edit-event/:id" element={<EditEvent />} />
+        <Route path="/event/:id/interested" element={<InterestedUsers />} />
+        <Route path="/my-events" element={<MyInterestedEvents />} />
+        <Route path="/stays" element={<Stays />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/host/demand/:id" element={<HostDemandDetails />} />
+        <Route path="/agent/request/:id" element={<AdventureRequestDetails />} />
+        <Route path="/booking-requests" element={<BookingRequests />} />
+        <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/edit-package/:id/gallery" element={<EditPackageGallery />} />
+        <Route path="/host-bookings" element={<HostBookings />} />
+        <Route path="/explore" element={<ExploreMap />} />
+        <Route path="/agent" element={<Agent />} />
+        <Route path="/explore/add" element={<AddPlace />} />
+        <Route path="/mesta/:slug" element={<PlaceDetails />} />
+        <Route path="/explore/:id" element={<PlaceDetails />} />
+        <Route path="/admin/explore" element={<AdminExplore />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );

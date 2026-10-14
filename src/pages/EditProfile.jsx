@@ -605,6 +605,20 @@ export default function EditProfile() {
     }
   }
 
+  function validateHostProfile() {
+    if (form.role !== "host") return null;
+    if (!form.full_name.trim()) return "Unesi naziv organizatora ili ime hosta.";
+    if (form.bio.trim().length < 80) return "Opis hosta mora imati najmanje 80 karaktera.";
+    if (!form.city.trim() || !form.country.trim()) return "Grad i država su obavezni.";
+    if (!form.public_location.trim()) return "Unesi javnu lokaciju na mapi.";
+    if (!avatarFile && !form.avatar_url.trim()) return "Dodaj profilnu fotografiju ili logo.";
+    if (!coverFile && !form.cover_url.trim()) return "Dodaj naslovnu fotografiju.";
+    if (!Array.isArray(form.host_purposes) || form.host_purposes.length === 0) return "Izaberi najmanje jednu vrstu usluge.";
+    if (form.host_purposes.includes("adventures") && (!Array.isArray(form.activities) || form.activities.length === 0)) return "Izaberi najmanje jednu aktivnost za avanture.";
+    if (!form.phone.trim()) return "Kontakt telefon je obavezan.";
+    return null;
+  }
+
   async function saveProfile(event) {
     event.preventDefault();
 
@@ -614,6 +628,9 @@ export default function EditProfile() {
     setError("");
 
     try {
+      const hostValidationError = validateHostProfile();
+      if (hostValidationError) throw new Error(hostValidationError);
+
       const cleanUsername = form.username
         .trim()
         .toLowerCase()
@@ -687,6 +704,7 @@ export default function EditProfile() {
         const locationChanged =
           cleanPublicLocation !==
             String(profile?.public_location || "").trim() ||
+          form.country.trim() !== String(profile?.country || "").trim() ||
           profile?.latitude == null ||
           profile?.longitude == null;
 
@@ -1047,6 +1065,14 @@ export default function EditProfile() {
               </span>
             </div>
 
+            {isHost && (
+              <p role="note" style={{ marginBottom: 20, color: "#46624a", fontWeight: 650, fontSize: 13, lineHeight: 1.6 }}>
+                Za aktivan host profil obavezni su naziv, opis od najmanje 80 karaktera,
+                avatar, naslovna fotografija, grad, država, javna lokacija na mapi,
+                kontakt telefon i vrsta usluge. Aktivnosti su obavezne ako nudiš avanture.
+              </p>
+            )}
+
             <form
               onSubmit={saveProfile}
               className="editProfileForm"
@@ -1097,6 +1123,7 @@ export default function EditProfile() {
                         : "user"
                     }
                     autoComplete="name"
+                    required={isHost}
                   />
 
                   <FormField
@@ -1119,6 +1146,7 @@ export default function EditProfile() {
                     placeholder="Na primer: Beograd"
                     icon="mapPin"
                     autoComplete="address-level2"
+                    required={isHost}
                   />
 
                   <FormField
@@ -1129,6 +1157,7 @@ export default function EditProfile() {
                     placeholder="Na primer: Srbija"
                     icon="globe"
                     autoComplete="country-name"
+                    required={isHost}
                   />
                 </div>
 
@@ -1148,6 +1177,8 @@ export default function EditProfile() {
                     <textarea
                       rows={6}
                       maxLength={1000}
+                      minLength={isHost ? 80 : undefined}
+                      required={isHost}
                       value={form.bio}
                       onChange={(event) =>
                         updateField(
@@ -1164,7 +1195,7 @@ export default function EditProfile() {
                   </span>
 
                   <span className="characterCount">
-                    {form.bio.length}/1000
+                    {form.bio.length}/1000{isHost ? " (minimum 80)" : ""}
                   </span>
                 </label>
               </section>
@@ -1321,7 +1352,8 @@ export default function EditProfile() {
                         placeholder="npr. Prokuplje ili Jug Bogdanova 15, Prokuplje"
                         icon="mapPin"
                         autoComplete="street-address"
-                        hint="Opciono. Unesite lokaciju ako želite da se vaš profil pojavi na MeetOutdoors mapi. Što preciznije unesete lokaciju, preciznije će biti prikazan marker. Lokacija koju unesete biće javno vidljiva."
+                        required
+                        hint="Obavezno za hostove. Unesi grad ili poslovnu adresu za prikaz na MeetOutdoors mapi. Lokacija je javno vidljiva."
                       />
                     </div>
                   </div>
@@ -1336,6 +1368,7 @@ export default function EditProfile() {
                       icon="phone"
                       type="tel"
                       autoComplete="tel"
+                      required
                     />
 
                     <FormField
