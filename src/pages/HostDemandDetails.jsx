@@ -387,6 +387,7 @@ export default function HostDemandDetails() {
   const { user, loading: authLoading } = useAuth();
 
   const [demand, setDemand] = useState(null);
+  const [requesterProfile,setRequesterProfile] = useState(null);
 
   const [existingOffer, setExistingOffer] = useState(null);
 
@@ -485,6 +486,13 @@ export default function HostDemandDetails() {
       if (eventsResult.error) throw eventsResult.error;
 
       setDemand(demandResult.data || null);
+      const requesterId = demandResult.data?.user_id || demandResult.data?.requester_id;
+      if (requesterId) {
+        const {data: requester} = await supabase.from("profiles")
+          .select("id,full_name,username,avatar_url,city,is_verified")
+          .eq("id",requesterId).maybeSingle();
+        setRequesterProfile(requester || null);
+      } else setRequesterProfile(null);
 
       setExistingOffer(offerResult.data || null);
 
@@ -838,6 +846,8 @@ export default function HostDemandDetails() {
 
             <>
 
+              <style>{`.premiumRequester{max-width:1100px;margin:8px auto 12px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid #e1e9e0;border-radius:14px;padding:10px 14px}.premiumRequesterIdentity{display:flex;align-items:center;gap:10px;min-width:0}.premiumRequesterIdentity img,.premiumRequesterFallback{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#e1eee0;display:grid;place-items:center;font-weight:800;color:#20513a}.premiumRequesterIdentity strong{display:block;font-size:13px;color:#1e3828}.premiumRequesterIdentity small{display:block;font-size:11px;color:#718274;margin-top:2px}.premiumRequesterLink{font-size:12px;font-weight:800;color:#28563b;text-decoration:none;white-space:nowrap}@media(max-width:500px){.premiumRequester{margin:7px 9px;padding:9px 11px}.premiumRequesterLink{font-size:10px}}`}</style>
+              {requesterProfile && <div className="premiumRequester"><div className="premiumRequesterIdentity">{requesterProfile.avatar_url ? <img src={requesterProfile.avatar_url} alt=""/> : <span className="premiumRequesterFallback">{(requesterProfile.full_name||"K").charAt(0)}</span>}<div><strong>{requesterProfile.full_name||requesterProfile.username||"Korisnik"}</strong><small>{requesterProfile.city||"MeetOutdoors korisnik"}{requesterProfile.is_verified?" · Verifikovan":""}</small></div></div>{requesterProfile.username && <Link to={`/u/${requesterProfile.username}`} className="premiumRequesterLink">Pogledaj profil →</Link>}</div>}
               <section className="hero">
 
                 <div className="heroTop">
@@ -3760,6 +3770,43 @@ function Styles() {
     
       /* Final UI: clear request details and offer composition */
       .offerSticky,.panel{box-shadow:0 15px 48px rgba(17,52,32,.065)!important;border-color:#e1eade!important}.offerSticky{background:linear-gradient(180deg,#fff,#f8fbf6)!important}.submitButton{min-height:49px!important;box-shadow:0 8px 22px rgba(20,66,37,.16)!important}.detailItem{background:#f7faf5!important}.detailItem small{letter-spacing:.035em}.offerSummary{border-left:4px solid #79a96d!important}.formGroup textarea:focus,.formGroup input:focus,.formGroup select:focus{outline:3px solid #b5d9a5;outline-offset:2px}@media(max-width:700px){.offerSticky{position:static!important}.panel,.offerSticky{border-radius:18px!important}}
+
+      /* Compact details: host / desktop and mobile */
+      .demandPage .pageShell { max-width: 1080px; }
+      .demandPage .hero { min-height: 0; padding: 19px 23px 20px; border-radius: 18px; box-shadow: 0 8px 24px rgba(15,47,31,.10); }
+      .demandPage .heroTop { margin-bottom: 8px; gap: 8px; }
+      .demandPage .heroGrid { margin-top: 10px; gap: 15px; grid-template-columns: minmax(0,1fr) minmax(180px,235px); align-items: center; }
+      .demandPage .hero h1 { font-size: clamp(24px,2.8vw,35px); line-height: 1.13; margin: 6px 0; }
+      .demandPage .heroCopy p { margin-top: 6px; line-height: 1.45; font-size: 11px; }
+      .demandPage .opportunityCard { padding: 12px 14px; border-radius: 13px; }
+      .demandPage .opportunityCard > strong { font-size: 22px; }
+      .demandPage .mainGrid { gap: 12px; margin-top: 12px; }
+      .demandPage .leftColumn { gap: 12px; }
+      .demandPage .panel, .demandPage .offerSticky { padding: 17px 19px; border-radius: 15px; }
+      .demandPage .detailsGrid { gap: 8px; }
+      .demandPage .detailItem { padding: 10px; border-radius: 10px; }
+      @media (max-width: 980px) {
+        .demandPage .heroGrid { grid-template-columns: minmax(0,1fr) minmax(150px,200px); }
+      }
+      @media (max-width: 720px) {
+        .demandPage { padding-top: 76px; }
+        .demandPage .hero { margin: 0 10px; padding: 14px 15px; border-radius: 16px; }
+        .demandPage .heroTop { flex-direction: row; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+        .demandPage .heroGrid { grid-template-columns: minmax(0,1fr); gap: 9px; margin-top: 7px; }
+        .demandPage .hero h1 { font-size: clamp(22px,6vw,29px); margin: 5px 0; }
+        .demandPage .heroCopy p { margin-top: 4px; font-size: 11px; line-height: 1.4; }
+        .demandPage .opportunityCard { max-width: none; padding: 10px 12px; }
+        .demandPage .opportunityCard > strong { font-size: 20px; }
+        .demandPage .mainGrid { padding: 0 10px; gap: 10px; margin-top: 10px; }
+        .demandPage .leftColumn { gap: 10px; }
+        .demandPage .panel, .demandPage .offerSticky { padding: 13px 14px; border-radius: 13px; }
+        .demandPage .detailsGrid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+      }
+      @media (max-width: 380px) {
+        .demandPage .hero { margin: 0 8px; padding: 12px; }
+        .demandPage .mainGrid { padding: 0 8px; }
+        .demandPage .hero h1 { font-size: 22px; }
+      }
 `}</style>
 
   );

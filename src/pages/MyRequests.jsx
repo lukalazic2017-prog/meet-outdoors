@@ -2,6 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import adventureArt from "../assets/adventure.svg";
+import accommodationArt from "../assets/accommodation.svg";
+import serviceArt from "../assets/service.svg";
+import rentalArt from "../assets/rental.svg";
+import mixedArt from "../assets/mixed.svg";
+const scene = {adventure:adventureArt, accommodation:accommodationArt, service:serviceArt, rental:rentalArt, mixed:mixedArt};
 
 const fmtDate = (s) => {
   if (!s) return "Fleksibilno";
@@ -29,6 +35,7 @@ export default function MyRequests() {
   const {user,loading:authLoading}=useAuth();
   const [requests,setRequests]=useState([]);
   const [counts,setCounts]=useState({});
+  const [hostAvatars,setHostAvatars]=useState({});
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [query,setQuery]=useState("");
@@ -45,7 +52,7 @@ export default function MyRequests() {
       setRequests(list);
       if(list.length){
         const {data:responses,error:responseError}=await supabase.from("adventure_intent_responses")
-          .select("intent_id,status").in("intent_id",list.map(x=>x.id));
+          .select("intent_id,status,host_id").in("intent_id",list.map(x=>x.id));
         if(responseError)throw responseError;
         const grouped={};
         for(const item of responses||[]){
@@ -55,8 +62,18 @@ export default function MyRequests() {
             grouped[item.intent_id][item.status]++;
           }
         }
+        const hostIds=[...new Set((responses||[]).filter(x=>x.status==="pending"||x.status==="accepted").map(x=>x.host_id).filter(Boolean))];
+        if(hostIds.length){
+          const {data:hosts}=await supabase.from("profiles").select("id,full_name,avatar_url").in("id",hostIds);
+          if(hosts) setHostAvatars(Object.fromEntries(hosts.map(x=>[x.id,x])));
+        }
+        for(const item of responses||[]){
+          if(item.host_id && (item.status==="pending"||item.status==="accepted")){
+            (grouped[item.intent_id].hostIds ||= []).push(item.host_id);
+          }
+        }
         setCounts(grouped);
-      }else setCounts({});
+      }else {setCounts({});setHostAvatars({});}
     }catch(e){setError(e.message||"Nije moguće učitati potražnje.");}
     finally{setLoading(false);}
   },[user?.id]);
@@ -101,6 +118,12 @@ export default function MyRequests() {
     @media(max-width:760px){.mrPage{padding:88px 12px 45px}.mrHero{padding:25px 22px;display:block;border-radius:22px}.mrHeroLink{margin-top:20px}.mrStats{gap:8px}.mrStat{padding:14px}.mrStat strong{font-size:23px}.mrGrid{grid-template-columns:1fr}.mrBar{align-items:start}.mrCardBody{padding:18px}.mrBottom{padding:15px 18px}}
     @media(max-width:380px){.mrStats{grid-template-columns:1fr 1fr}.mrStats .mrStat:last-child{grid-column:span 2}.mrBottom{align-items:start;flex-direction:column}.mrAction{width:100%;justify-content:center}}
 
+    .mrPremiumMain{display:flex;align-items:stretch;gap:12px;min-width:0}.mrPremiumText{flex:1;min-width:0}
+    .mrScene{width:108px;min-height:112px;max-height:155px;object-fit:cover;border-radius:11px;flex:none}
+    .mrHostStack{display:flex;align-items:center;gap:8px;margin-top:7px}.mrHostStack small{color:#66776c;font-size:10px;font-weight:650}
+    .mrAvatarPile{display:flex;padding-left:4px}.mrAvatarPile img,.mrAvatarPile span{width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid white;margin-left:-5px;background:#dcebd9;color:#1e4832;display:grid;place-items:center;font-size:10px;font-weight:800}
+    @media(max-width:760px){.mrScene{width:92px;min-height:105px}.mrPremiumMain{gap:10px}.mrCard .mrMeta span{padding:4px 5px}.mrCard .mrTypeIcon{display:none}.mrCard .mrType{font-size:9px}.mrHostStack small{display:none}}
+    @media(max-width:360px){.mrScene{width:76px}.mrCard .mrMeta{gap:3px}.mrCard .mrMeta span{font-size:10px}}
     /* Compact application layout */
     .mrPage{padding:86px 18px 48px}
     .mrWrap{max-width:1040px}
@@ -162,6 +185,6 @@ export default function MyRequests() {
     <div className="mrBar"><h2>Moje potražnje</h2><div className="mrFilters">{[["all","Sve"],["open","Otvorene"],["matched","Dogovorene"],["closed","Zatvorene"]].map(([v,label])=><button key={v} type="button" className={filter===v?"active":""} onClick={()=>setFilter(v)}>{label}</button>)}<button type="button" onClick={load} title="Osveži" aria-label="Osveži"><Icon name="refresh" size={16}/></button></div></div>
     <label className="mrSearch"><Icon name="search"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Pretraži po aktivnosti ili lokaciji..." aria-label="Pretraži potražnje"/></label>
     {error&&<div className="mrError">{error} <button className="mrRefresh" onClick={load} type="button">Pokušaj ponovo</button></div>}
-    {authLoading||loading?<div className="mrState">Učitavanje potražnji...</div>:!user?<div className="mrState"><strong>Prijavi se da vidiš svoje zahteve.</strong><Link to="/login">Prijavi se →</Link></div>:filtered.length===0?<div className="mrState"><Icon name="inbox" size={28}/><strong>{requests.length?"Nema rezultata za izabrani filter.":"Još nemaš potražnji."}</strong><p>Opiši šta tražiš i hostovi će moći da ti pošalju ponude.</p><Link className="mrAction" to="/create-request">Kreiraj potražnju <Icon name="arrow" size={16}/></Link></div>:<div className="mrGrid">{filtered.map(r=><article className="mrCard" key={r.id}><div className="mrCardBody"><div className="mrTop"><span className="mrType"><span className="mrTypeIcon">{typeIcons[r.intent_type] || "⛰"}</span>{types[r.intent_type]||"Avantura"}</span><span className={`mrStatus ${r.status||"open"}`}>{statuses[r.status]||r.status}</span></div><h3>{r.activity|| (r.intent_type==="accommodation"?"Potraga za smeštajem":"Moja potražnja")}</h3><div className="mrLocation"><Icon name="pin" size={15}/>{r.location_text||"Lokacija po dogovoru"}</div><div className="mrMeta"><span><Icon name="calendar" size={15}/>{fmtDate(r.start_date)}{r.end_date&&r.end_date!==r.start_date?` – ${fmtDate(r.end_date)}`:""}</span><span><Icon name="users" size={15}/>{r.people_count||1} osoba</span></div>{(counts[r.id]?.pending||0)>0&&<span className="mrOfferNotice"><Icon name="sparkle" size={14}/>{counts[r.id].pending} {counts[r.id].pending===1?"ponuda čeka":"ponude čekaju"} tvoju odluku</span>}</div><div className="mrBottom"><div className="mrBudget"><small>Planirani budžet po osobi</small><strong>{money(r.budget_per_person,r.currency)}</strong></div><Link className="mrAction" to={`/agent/request/${r.id}`}>Detalji i ponude <Icon name="arrow" size={16}/></Link></div></article>)}</div>}
+    {authLoading||loading?<div className="mrState">Učitavanje potražnji...</div>:!user?<div className="mrState"><strong>Prijavi se da vidiš svoje zahteve.</strong><Link to="/login">Prijavi se →</Link></div>:filtered.length===0?<div className="mrState"><Icon name="inbox" size={28}/><strong>{requests.length?"Nema rezultata za izabrani filter.":"Još nemaš potražnji."}</strong><p>Opiši šta tražiš i hostovi će moći da ti pošalju ponude.</p><Link className="mrAction" to="/create-request">Kreiraj potražnju <Icon name="arrow" size={16}/></Link></div>:<div className="mrGrid">{filtered.map(r=><article className="mrCard" key={r.id}><div className="mrCardBody"><div className="mrPremiumMain"><img className="mrScene" src={scene[r.intent_type]||adventureArt} alt="" loading="lazy"/><div className="mrPremiumText"><div className="mrTop"><span className="mrType"><span className="mrTypeIcon">{typeIcons[r.intent_type] || "⛰"}</span>{types[r.intent_type]||"Avantura"}</span><span className={`mrStatus ${r.status||"open"}`}>{statuses[r.status]||r.status}</span></div><h3>{r.activity|| (r.intent_type==="accommodation"?"Potraga za smeštajem":"Moja potražnja")}</h3><div className="mrLocation"><Icon name="pin" size={15}/>{r.location_text||"Lokacija po dogovoru"}</div><div className="mrMeta"><span><Icon name="calendar" size={15}/>{fmtDate(r.start_date)}{r.end_date&&r.end_date!==r.start_date?` – ${fmtDate(r.end_date)}`:""}</span><span><Icon name="users" size={15}/>{r.people_count||1} osoba</span></div>{(counts[r.id]?.pending||0)>0&&<span className="mrOfferNotice"><Icon name="sparkle" size={14}/>{counts[r.id].pending} {counts[r.id].pending===1?"ponuda čeka":"ponude čekaju"} tvoju odluku</span>}{(counts[r.id]?.hostIds||[]).length>0&&<div className="mrHostStack"><div className="mrAvatarPile">{[...new Set(counts[r.id].hostIds)].slice(0,3).map(hid=>hostAvatars[hid]?.avatar_url?<img key={hid} src={hostAvatars[hid].avatar_url} alt={hostAvatars[hid].full_name||"Host"} loading="lazy"/>:<span key={hid}>{(hostAvatars[hid]?.full_name||"H").charAt(0)}</span>)}</div><small>Hostovi su poslali ponude</small></div>}</div></div></div><div className="mrBottom"><div className="mrBudget"><small>Planirani budžet po osobi</small><strong>{money(r.budget_per_person,r.currency)}</strong></div><Link className="mrAction" to={`/agent/request/${r.id}`}>Detalji i ponude <Icon name="arrow" size={16}/></Link></div></article>)}</div>}
   </div></main>;
 }

@@ -3,6 +3,12 @@ import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
+import adventureArt from "../assets/adventure.svg";
+import accommodationArt from "../assets/accommodation.svg";
+import serviceArt from "../assets/service.svg";
+import rentalArt from "../assets/rental.svg";
+import mixedArt from "../assets/mixed.svg";
+const SCENE = {adventure:adventureArt, accommodation:accommodationArt, service:serviceArt, rental:rentalArt, mixed:mixedArt};
 const PAGE_SIZE = 18;
 const CATEGORY_VISUALS = {
   adventure: { symbol: "⛰", caption: "AVANTURA", tone: "adventure" },
@@ -47,6 +53,7 @@ const Icon = ({ name, size = 18 }) => {
 export default function Marketplace() {
   const { user, isHost, loading: authLoading } = useAuth();
   const [items, setItems] = useState([]);
+  const [requesters, setRequesters] = useState({});
   const [dismissed, setDismissed] = useState([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -70,6 +77,15 @@ export default function Marketplace() {
       if (market.error) throw market.error;
       if (hidden.error) throw hidden.error;
       const rows = market.data || [];
+      // Public requester identity only. Missing RLS access must never block marketplace.
+      const ids = [...new Set(rows.map(r => r.user_id || r.requester_id).filter(Boolean))];
+      if (ids.length) {
+        const { data: people } = await supabase.from("profiles")
+          .select("id,full_name,username,avatar_url,city,is_verified")
+          .in("id", ids);
+        if (people) setRequesters(old => ({ ...old, ...Object.fromEntries(people.map(x => [x.id, x])) }));
+      }
+
       setItems((old) => append ? [...old, ...rows.filter((r) => !old.some((x) => x.id === r.id))] : rows);
       setDismissed((hidden.data || []).map((x) => x.intent_id));
       setHasMore(rows.length === PAGE_SIZE);
@@ -139,7 +155,12 @@ export default function Marketplace() {
           {view === "active" ? <>
             <div className="mo-results-meta"><span>{loading && !items.length ? "Učitavamo..." : `${filtered.length} prikazanih potražnji`}</span><span>Budžet je prikazan po osobi, kada je naveden</span></div>
             <div className="mo-cards">{filtered.map((r) => <article className="mo-card" key={r.id}>
-              <div className={`mo-category-art mo-category-art-${CATEGORY_VISUALS[r.intent_type]?.tone || "adventure"}`} aria-hidden="true"><span>{CATEGORY_VISUALS[r.intent_type]?.symbol || "⛰"}</span><small>{CATEGORY_VISUALS[r.intent_type]?.caption || "AVANTURA"}</small></div>
+              {(() => { const owner = requesters[r.user_id || r.requester_id]; return <div className="mo-person-row">
+                {owner?.avatar_url ? <img className="mo-person-avatar" src={owner.avatar_url} alt="" loading="lazy"/> : <span className="mo-person-avatar mo-person-fallback">{(owner?.full_name || "K").charAt(0).toUpperCase()}</span>}
+                <div className="mo-person-name"><strong>{owner?.full_name || owner?.username || "Korisnik MeetOutdoors"}</strong><small>{owner?.city || "Objavljena potražnja"}{owner?.is_verified ? " · Verifikovan" : ""}</small></div>
+                <span className="mo-person-status">{r.already_responded ? "Poslata ponuda" : "Otvorena"}</span>
+              </div>; })()}
+              <div className={`mo-category-art mo-category-art-${CATEGORY_VISUALS[r.intent_type]?.tone || "adventure"}`} aria-hidden="true" style={{backgroundImage:`linear-gradient(0deg,rgba(9,36,27,.3),transparent 65%),url("${SCENE[r.intent_type] || adventureArt}")`}}><span>{CATEGORY_VISUALS[r.intent_type]?.symbol || "⛰"}</span><small>{CATEGORY_VISUALS[r.intent_type]?.caption || "AVANTURA"}</small></div>
               <div className="mo-card-top"><span className={`mo-type mo-type-${r.intent_type || "adventure"}`}><Icon name={r.intent_type === "accommodation" ? "house" : r.intent_type === "mixed" ? "spark" : "mountain"} size={14}/>{TYPE_LABELS[r.intent_type] || "Avantura"}</span>{r.already_responded ? <span className="mo-replied"><Icon name="check" size={13}/> Ponuda poslata</span> : <span className="mo-open"><i/> Otvoreno</span>}</div>
               <div className="mo-card-rule"/><h3>{r.activity || (r.intent_type === "accommodation" ? "Traži smeštaj" : "Outdoor doživljaj")}</h3><div className="mo-location"><Icon name="pin" size={15}/>{r.location_text || "Lokacija po dogovoru"}</div>
               <div className="mo-details"><div><Icon name="calendar" size={16}/><span>{period(r.start_date, r.end_date)}</span></div><div><Icon name="users" size={16}/><span>{r.people_count || 1} {Number(r.people_count) === 1 ? "osoba" : "osoba"}</span></div></div>
@@ -157,6 +178,34 @@ export default function Marketplace() {
 }
 
 const styles = `
+/* Premium compact marketplace - user identity + scenic category visuals */
+.mo-marketplace .mo-shell{max-width:1160px}
+.mo-marketplace .mo-hero{min-height:0!important;padding:22px 28px!important;border-radius:18px!important}
+.mo-marketplace .mo-hero h1{font-size:clamp(26px,3vw,36px)!important;margin:6px 0!important;letter-spacing:-.04em!important}
+.mo-marketplace .mo-hero p{font-size:12px!important;line-height:1.45!important}
+.mo-marketplace .mo-hero-art{display:none!important}
+.mo-marketplace .mo-hero-actions{margin-top:12px!important}
+.mo-marketplace .mo-toolbar{margin-top:18px!important}
+.mo-marketplace .mo-cards{gap:13px!important}
+.mo-marketplace .mo-card{border-radius:15px!important;overflow:hidden!important;box-shadow:0 4px 17px #173d2910!important}
+.mo-marketplace .mo-person-row{display:flex;align-items:center;gap:9px;margin-bottom:12px;min-width:0}
+.mo-marketplace .mo-person-avatar{width:37px;height:37px;object-fit:cover;border-radius:50%;flex:none;background:#e7eee6}
+.mo-marketplace .mo-person-fallback{display:grid;place-items:center;font-weight:800;color:#2b5c3c}
+.mo-marketplace .mo-person-name{min-width:0;display:grid;gap:2px;flex:1}
+.mo-marketplace .mo-person-name strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mo-marketplace .mo-person-name small{font-size:10px;color:#79857a}
+.mo-marketplace .mo-person-status{flex:none;background:#e9f4e8;color:#2d6c43;border-radius:30px;padding:5px 8px;font-size:10px;font-weight:800}
+.mo-marketplace .mo-category-art{height:125px!important;background-image:url('/src/assets/adventure.svg');background-size:cover;background-position:center;border-radius:10px!important;margin:0 0 12px!important}
+.mo-marketplace .mo-category-art-adventure{background-image:url('/src/assets/adventure.svg')}
+.mo-marketplace .mo-category-art-accommodation{background-image:url('/src/assets/accommodation.svg')}
+.mo-marketplace .mo-category-art-service{background-image:url('/src/assets/service.svg')}
+.mo-marketplace .mo-category-art-rental{background-image:url('/src/assets/rental.svg')}
+.mo-marketplace .mo-category-art-mixed{background-image:url('/src/assets/mixed.svg')}
+.mo-marketplace .mo-category-art:before{background:linear-gradient(0deg,#0e2b26a0,transparent 58%)!important}
+.mo-marketplace .mo-category-art>span{display:none!important}
+.mo-marketplace .mo-category-art small{position:absolute;bottom:9px;left:10px;color:white;font-size:10px;font-weight:850;letter-spacing:.08em}
+@media(max-width:680px){.mo-marketplace{padding:12px 10px 45px!important}.mo-marketplace .mo-hero{padding:14px!important}.mo-marketplace .mo-hero h1{font-size:25px!important}.mo-marketplace .mo-hero p,.mo-marketplace .mo-eyebrow,.mo-marketplace .mo-hero-actions{display:none!important}.mo-marketplace .mo-overview{margin:10px 0!important}.mo-marketplace .mo-category-art{height:112px!important}.mo-marketplace .mo-person-row{margin-bottom:9px}}
+
 .mo-category-art{height:118px;margin:-21px -21px 18px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#123e30,#4f8467);color:#e8f6d5}.mo-category-art:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 75% 20%,#ffffff28,transparent 40%),repeating-linear-gradient(135deg,transparent 0 22px,#ffffff09 23px 24px)}.mo-category-art>span{font-size:58px;line-height:1;position:relative;text-shadow:0 6px 22px #0002}.mo-category-art small{position:absolute;left:17px;bottom:12px;letter-spacing:2px;font-size:9px;font-weight:900;color:#fff}.mo-category-art-accommodation{background:linear-gradient(135deg,#345d73,#8eb9bc)}.mo-category-art-service{background:linear-gradient(135deg,#3f4b78,#959cc8)}.mo-category-art-rental{background:linear-gradient(135deg,#78613b,#c8a16d)}.mo-category-art-mixed{background:linear-gradient(135deg,#4b476f,#9b8ac1)}.mo-type-service{background:#eef0fc;color:#555f9a}.mo-type-rental{background:#f8f0e3;color:#8a6639}@media(max-width:690px){.mo-category-art{height:105px;margin:-19px -19px 16px}}
 
 .mo-marketplace{--bg:#f5f7f3;--forest:#102b24;--green:#184c3b;--lime:#d4ed9a;--muted:#77877f;--line:#e6ebe5;background:var(--bg);color:#1b3028;min-height:100vh;padding:30px 22px 90px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}

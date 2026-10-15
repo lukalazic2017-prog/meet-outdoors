@@ -496,28 +496,49 @@ export default function AdventureRequestDetails() {
 
       }
 
-      const { error: rpcError } = await supabase.rpc(
-
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
         "respond_to_adventure_offer",
-
         params
-
       );
-
       if (rpcError) throw rpcError;
 
-        setAcceptingOffer(null);
+      // PostgREST may return a business-level failure without an HTTP error.
+      const result = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
+      if (result === false || (result && typeof result === "object" &&
+          (result.success === false || result.ok === false || result.error))) {
+        throw new Error(
+          (result && (result.message || result.error || result.reason)) ||
+          "Baza nije potvrdila ovu akciju. Proveri da li je ponuda još aktivna."
+        );
+      }
 
-        setContactPhone("");
+      // Confirm the actual persisted status, not just that the RPC returned HTTP 200.
+      const { data: verifiedOffer, error: verifyError } = await supabase
+        .from("adventure_intent_responses")
+        .select("id,status")
+        .eq("id", responseId)
+        .single();
+      if (verifyError) throw new Error(
+        "Nije moguće proveriti rezultat u bazi: " + verifyError.message
+      );
+      const expectedStatus = isAccept ? "accepted" : "rejected";
+      if (verifiedOffer?.status !== expectedStatus) {
+        console.error("Offer RPC returned without status change", {
+          responseId, action, rpcResult, verifiedOffer
+        });
+        throw new Error(
+          `Ponuda nije promenila status (trenutno: ${verifiedOffer?.status || "nepoznat"}). ` +
+          "Supabase funkcija je završila poziv, ali nije izvršila prihvatanje. " +
+          "Proveri funkciju respond_to_adventure_offer u bazi."
+        );
+      }
 
-        setContactConsent(false);
-
+      setAcceptingOffer(null);
+      setContactPhone("");
+      setContactConsent(false);
       await loadData();
-
       setNotice(isAccept
-
         ? "Ponuda je prihvaćena. Kontakt je prosleđen izabranom domaćinu."
-
         : "Ponuda je odbijena.");
 
     } catch (e) {
@@ -1626,6 +1647,65 @@ function Styles() {
   
     /* Final UI: richer host presentation and offer preview */
     .moHostInsights{margin:14px 0;padding:13px 15px;border:1px solid #e4ece2;background:#f8fbf6;border-radius:14px}.moHostBio{font-size:12px!important;line-height:1.7!important;color:#53685a!important;margin:0 0 10px!important}.moHostFacts{display:flex;flex-wrap:wrap;gap:7px}.moHostFacts span,.moHostFacts a{display:inline-flex;padding:7px 9px;border-radius:8px;background:#edf4e9;color:#3f6a49;font-size:11px;font-weight:750;text-decoration:none}.moOfferPreviewBtn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #bcd4b9;background:#e9f3e6;color:#234f31;padding:10px 15px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;margin:5px 0 13px}.moOfferPreviewBtn:hover{background:#dbeed6}.moPreviewBackdrop{position:fixed;inset:0;z-index:9999;background:rgba(8,28,19,.68);backdrop-filter:blur(8px);display:grid;place-items:center;padding:18px}.moPreviewDialog{position:relative;width:min(100%,600px);max-height:min(90vh,850px);overflow:auto;border-radius:25px;padding:30px;background:#fff;box-shadow:0 30px 90px #0004}.moPreviewClose{position:absolute;right:18px;top:16px;border:0;border-radius:50%;background:#eef3ec;color:#34513c;width:38px;height:38px;font-size:25px;cursor:pointer}.moPreviewKicker{color:#668668;font-size:10px;letter-spacing:2px;font-weight:900}.moPreviewHost{display:flex;align-items:center;gap:15px;margin:22px 0 14px}.moPreviewHost h2{font-size:25px;letter-spacing:-1px;margin:0 0 5px}.moPreviewHost p,.moPreviewBio{font-size:13px;line-height:1.7;color:#65786a;margin:0}.moPreviewBio{padding:13px;background:#f6f9f3;border-radius:12px}.moPreviewPrice{display:flex;flex-direction:column;gap:6px;background:#163c2a;color:white;border-radius:17px;padding:22px;margin:18px 0}.moPreviewPrice small{font-size:10px;letter-spacing:1.5px;color:#c8dfa8}.moPreviewPrice strong{font-size:31px}.moPreviewPrice span{font-size:11px;color:#d5e3d7}.moPreviewDialog h3{font-size:15px;margin:18px 0 9px}.moPreviewMessage{white-space:pre-wrap;font-size:13px;line-height:1.85;color:#405847}.moPreviewActions{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}.moPreviewActions a,.moPreviewActions button{flex:1;text-align:center;padding:13px 16px;border-radius:11px;border:1px solid #cfdfcd;background:#eef5e9;color:#244f34;font-size:12px;font-weight:850;text-decoration:none;cursor:pointer}.moPreviewActions button{border:0;background:#183f2c;color:white}@media(max-width:600px){.moPreviewBackdrop{padding:0;align-items:end}.moPreviewDialog{max-height:94vh;border-radius:24px 24px 0 0;padding:25px 18px 30px}.moPreviewActions{flex-direction:column}}
+
+    /* Compact responsive details: prioritize offers above decoration */
+    .requestPage{padding:86px 16px 48px}
+    .shell{width:min(1080px,100%)}
+    .hero{padding:20px 24px;border-radius:20px;box-shadow:0 10px 30px rgba(27,57,39,.10)}
+    .hero:after{display:none}
+    .heroContent{margin-top:17px;gap:16px;align-items:center}
+    .hero h1{font-size:clamp(26px,3vw,39px);line-height:1.12;letter-spacing:-.045em;margin:5px 0 0}
+    .hero p{margin-top:7px;line-height:1.45;font-size:11px;max-width:510px}
+    .offerCount{min-width:100px;padding:12px 15px}
+    .summaryPanel{margin-top:10px;padding:7px;gap:6px;border-radius:14px}
+    .contentGrid{margin-top:15px;gap:12px;grid-template-columns:minmax(0,1fr) 270px}
+    .sectionHead h2{font-size:clamp(22px,2.6vw,30px);margin-top:4px}
+    .offerCard{padding:15px;border-radius:16px;box-shadow:0 6px 20px rgba(31,52,38,.04)}
+    .moHostInsights{margin:9px 0;padding:10px 12px}
+    .moHostBio{line-height:1.45!important}
+    .moOfferPreviewBtn{margin:3px 0 8px;padding:8px 12px}
+    .moPreviewDialog{padding:22px;border-radius:18px;max-height:86dvh}
+    .moPreviewHost{margin:12px 0;gap:10px}
+    .moPreviewHost h2{font-size:21px}
+    .moPreviewPrice{padding:15px;margin:12px 0}
+    .moPreviewPrice strong{font-size:25px}
+    .moPreviewActions{margin-top:12px}
+    @media(max-width:980px){.contentGrid{grid-template-columns:1fr}}
+    @media(max-width:700px){
+      .requestPage{padding:72px 0 34px}
+      .backBtn{margin-left:12px}
+      .hero{padding:15px 14px;border-radius:0 0 16px 16px}
+      .heroTop{flex-direction:row;align-items:center;flex-wrap:wrap;gap:7px}
+      .heroContent{margin-top:11px;flex-direction:row;align-items:center;gap:10px}
+      .hero h1{font-size:clamp(22px,6vw,30px);line-height:1.13;margin-top:4px}
+      .hero p{display:none}
+      .offerCount{width:auto;min-width:75px;flex:0 0 auto;padding:8px 10px;border-radius:12px}
+      .offerCount small{display:none}
+      .summaryPanel{margin:8px 10px 0;display:flex;overflow-x:auto;gap:6px;padding:6px;scrollbar-width:thin;scroll-snap-type:x proximity}
+      .summaryPanel>*{flex:0 0 auto;min-width:110px;scroll-snap-align:start}
+      .contentGrid{margin-top:12px;padding:0 10px;gap:10px}
+      .sectionHead{gap:6px}
+      .sectionHead h2{font-size:23px}
+      .offerCard{padding:12px;border-radius:13px}
+      .offerHeader{flex-direction:row;align-items:center;flex-wrap:wrap}
+      .offerActions{gap:6px}
+      .offerActions a,.offerActions button{padding:9px 10px}
+      .moHostInsights{padding:9px;margin:8px 0}
+      .moPreviewBackdrop{padding:0;align-items:end}
+      .moPreviewDialog{max-height:88dvh;padding:17px 15px 22px;border-radius:18px 18px 0 0}
+      .moPreviewHost h2{font-size:20px}
+      .moPreviewPrice{padding:12px}
+      .moPreviewPrice strong{font-size:23px}
+      .moPreviewActions{flex-direction:row}
+    }
+    @media(max-width:450px){
+      .hero h1{font-size:23px}
+      .offerCount{min-width:65px}
+      .summaryPanel{grid-template-columns:none}
+      .offerHeader{flex-direction:row}
+      .offerActions{grid-template-columns:1fr 1fr}
+      .moPreviewActions{flex-direction:column}
+    }
 `}</style>;
 
 }
