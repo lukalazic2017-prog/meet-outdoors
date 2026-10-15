@@ -77,13 +77,20 @@ export default function Marketplace() {
       if (market.error) throw market.error;
       if (hidden.error) throw hidden.error;
       const rows = market.data || [];
-      // Public requester identity only. Missing RLS access must never block marketplace.
-      const ids = [...new Set(rows.map(r => r.user_id || r.requester_id).filter(Boolean))];
-      if (ids.length) {
-        const { data: people } = await supabase.from("profiles")
-          .select("id,full_name,username,avatar_url,city,is_verified")
-          .in("id", ids);
-        if (people) setRequesters(old => ({ ...old, ...Object.fromEntries(people.map(x => [x.id, x])) }));
+      // The marketplace RPC intentionally does not expose user_id.
+      // Resolve public requester profiles through a restricted, host-only RPC.
+      const demandIds = rows.map(r => r.id).filter(Boolean);
+      if (demandIds.length) {
+        const { data: people, error: peopleError } = await supabase.rpc(
+          "get_marketplace_requester_profiles", { p_demand_ids: demandIds }
+        );
+        if (peopleError) {
+          console.warn("Requester profiles unavailable:", peopleError.message);
+        } else {
+          setRequesters(old => ({ ...old, ...Object.fromEntries(
+            (people || []).map(x => [x.demand_id, x])
+          ) }));
+        }
       }
 
       setItems((old) => append ? [...old, ...rows.filter((r) => !old.some((x) => x.id === r.id))] : rows);
@@ -155,7 +162,7 @@ export default function Marketplace() {
           {view === "active" ? <>
             <div className="mo-results-meta"><span>{loading && !items.length ? "Učitavamo..." : `${filtered.length} prikazanih potražnji`}</span><span>Budžet je prikazan po osobi, kada je naveden</span></div>
             <div className="mo-cards">{filtered.map((r) => <article className="mo-card" key={r.id}>
-              {(() => { const owner = requesters[r.user_id || r.requester_id]; return <div className="mo-person-row">
+              {(() => { const owner = requesters[r.id]; return <div className="mo-person-row">
                 {owner?.avatar_url ? <img className="mo-person-avatar" src={owner.avatar_url} alt="" loading="lazy"/> : <span className="mo-person-avatar mo-person-fallback">{(owner?.full_name || "K").charAt(0).toUpperCase()}</span>}
                 <div className="mo-person-name"><strong>{owner?.full_name || owner?.username || "Korisnik MeetOutdoors"}</strong><small>{owner?.city || "Objavljena potražnja"}{owner?.is_verified ? " · Verifikovan" : ""}</small></div>
                 <span className="mo-person-status">{r.already_responded ? "Poslata ponuda" : "Otvorena"}</span>
