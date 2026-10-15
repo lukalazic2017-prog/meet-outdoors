@@ -54,6 +54,7 @@ import DeleteAccount from "./pages/DeleteAccount";
 import Marketplace from "./pages/Marketplace";
 import MyOffers from "./pages/MyOffers";
 import MyRequests from "./pages/MyRequests";
+import CreateRequest from "./pages/CreateRequest";
 
 // NOVO
 import AccommodationDetails from "./pages/AccommodationDetails";
@@ -151,6 +152,10 @@ function AppRoutes() {
         <Route path="/agent/request/:id" element={<AdventureRequestDetails />} />
         <Route path="/booking-requests" element={<BookingRequests />} />
         <Route path="/my-bookings" element={<MyBookings />} />
+        <Route
+  path="/create-request"
+  element={<CreateRequest />}
+/>
         <Route path="/edit-package/:id/gallery" element={<EditPackageGallery />} />
         <Route path="/host-bookings" element={<HostBookings />} />
         <Route path="/explore" element={<ExploreMap />} />
