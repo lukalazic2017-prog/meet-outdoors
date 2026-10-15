@@ -275,6 +275,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   const [unreadCount, setUnreadCount] = useState(0);
+  const [incomingNotice, setIncomingNotice] = useState(null);
 
 
 
@@ -350,8 +351,6 @@ export default function Navbar() {
 
     loadUnreadCount();
 
-
-
     const channel = supabase
 
       .channel(`navbar-notifications-${profile.id}`)
@@ -372,7 +371,13 @@ export default function Navbar() {
 
         },
 
-        loadUnreadCount
+        (payload) => {
+          loadUnreadCount();
+          if (payload.eventType === "INSERT" && payload.new?.user_id === profile.id) {
+            const notification = payload.new;
+            setIncomingNotice({ id: notification.id, title: notification.title || "Novo obaveštenje", message: notification.message || "Imaš novo obaveštenje.", intentId: notification.adventure_intent_id });
+          }
+        }
 
       )
 
@@ -449,6 +454,7 @@ export default function Navbar() {
     { to: "/", label: "Istraži", icon: "compass" },
 
     { to: "/agent", label: "Agent", icon: "sparkle" },
+    ...(profile?.role === "host" ? [{ to: "/marketplace", label: "Potražnje", icon: "calendar" }] : []),
     ...(profile?.role === "user" ? [{ to: "/my-requests", label: "Moje potražnje", icon: "calendar" }] : []),
 
     { to: "/explore", label: "Mapa", icon: "map" },
@@ -522,6 +528,11 @@ export default function Navbar() {
     <>
 
       <NavbarStyles />
+      {incomingNotice && <div className="moLiveToast" role="status" aria-live="polite">
+        <div className="moLiveToastTop"><span className="moLiveToastIcon"><Icon name="bell" size={19}/></span><div><strong>{incomingNotice.title}</strong><small>Upravo stiglo · MeetOutdoors</small></div><button type="button" aria-label="Zatvori obaveštenje" onClick={() => setIncomingNotice(null)}>×</button></div>
+        <p>{incomingNotice.message}</p>
+        <Link onClick={() => setIncomingNotice(null)} to={incomingNotice.intentId && profile?.role === "user" ? `/agent/request/${incomingNotice.intentId}` : "/notifications"}>Pogledaj obaveštenje →</Link>
+      </div>}
 
 
 
@@ -831,6 +842,9 @@ function NavbarStyles() {
   return (
 
     <style>{`
+      .moLiveToast{position:fixed;z-index:99999;right:22px;top:86px;width:min(390px,calc(100vw - 28px));padding:18px;border-radius:18px;background:#fff;color:#193b2b;box-shadow:0 18px 65px #112a2240;border:1px solid #dce8da;animation:moToastIn .25s ease-out}
+      .moLiveToastTop{display:flex;align-items:center;gap:11px}.moLiveToastIcon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#e9f5df;color:#265a3b}.moLiveToastTop>div{flex:1;min-width:0}.moLiveToastTop strong{display:block;font-size:14px}.moLiveToastTop small{display:block;color:#839184;font-size:11px;margin-top:3px}.moLiveToastTop button{background:none;border:0;font-size:24px;color:#6f8174;cursor:pointer}.moLiveToast p{font-size:13px;line-height:1.55;margin:12px 0;color:#5c7161}.moLiveToast>a{display:block;text-align:center;background:#173f2d;color:white!important;border-radius:10px;padding:11px;font-size:12px;font-weight:800;text-decoration:none}@keyframes moToastIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}@media(max-width:700px){.moLiveToast{top:72px;right:14px}}
+
 
       * {
 

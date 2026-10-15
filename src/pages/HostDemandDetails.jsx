@@ -3757,7 +3757,10 @@ function Styles() {
 
       }
 
-    `}</style>
+    
+      /* Final UI: clear request details and offer composition */
+      .offerSticky,.panel{box-shadow:0 15px 48px rgba(17,52,32,.065)!important;border-color:#e1eade!important}.offerSticky{background:linear-gradient(180deg,#fff,#f8fbf6)!important}.submitButton{min-height:49px!important;box-shadow:0 8px 22px rgba(20,66,37,.16)!important}.detailItem{background:#f7faf5!important}.detailItem small{letter-spacing:.035em}.offerSummary{border-left:4px solid #79a96d!important}.formGroup textarea:focus,.formGroup input:focus,.formGroup select:focus{outline:3px solid #b5d9a5;outline-offset:2px}@media(max-width:700px){.offerSticky{position:static!important}.panel,.offerSticky{border-radius:18px!important}}
+`}</style>
 
   );
 

@@ -179,6 +179,7 @@ export default function AdventureRequestDetails() {
   const [selectedForCompare, setSelectedForCompare] = useState([]);
 
   const [compareOpen, setCompareOpen] = useState(false);
+  const [previewOfferId, setPreviewOfferId] = useState(null);
 
   const loadData = useCallback(async () => {
 
@@ -954,6 +955,16 @@ export default function AdventureRequestDetails() {
 
                         </div>
 
+                        <div className="moHostInsights">
+                          {host.bio && <p className="moHostBio">{host.bio.length > 220 ? `${host.bio.slice(0, 220)}…` : host.bio}</p>}
+                          <div className="moHostFacts">
+                            {host.is_verified && <span>✓ Verifikovan domaćin</span>}
+                            {host.city && <span>⌖ {host.city}{host.country ? `, ${host.country}` : ""}</span>}
+                            {host.website_url && <a href={host.website_url} target="_blank" rel="noopener noreferrer">Veb-sajt ↗</a>}
+                            {host.instagram_url && <a href={host.instagram_url} target="_blank" rel="noopener noreferrer">Instagram ↗</a>}
+                          </div>
+                        </div>
+                        <button className="moOfferPreviewBtn" type="button" onClick={() => setPreviewOfferId(offer.id)}>Pregled cele ponude ↗</button>
                         <div className="priceBlock">
 
                           <small>Ponuda</small>
@@ -1202,7 +1213,24 @@ export default function AdventureRequestDetails() {
 
         )}
 
-        {acceptingOffer && (
+        {previewOfferId && (() => {
+        const offer = offers.find((item) => item.id === previewOfferId);
+        if (!offer) return null;
+        const host = hosts[offer.host_id] || {};
+        const hostName = host.full_name || host.username || "Outdoor domaćin";
+        return <div className="moPreviewBackdrop" role="presentation" onMouseDown={() => setPreviewOfferId(null)}>
+          <section className="moPreviewDialog" role="dialog" aria-modal="true" aria-labelledby="mo-preview-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button type="button" className="moPreviewClose" onClick={() => setPreviewOfferId(null)} aria-label="Zatvori pregled">×</button>
+            <span className="moPreviewKicker">MEETOUTDOORS · PONUDA DOMAĆINA</span>
+            <div className="moPreviewHost"><Avatar host={host}/><div><h2 id="mo-preview-title">{hostName}</h2><p>{[host.city,host.country].filter(Boolean).join(", ") || "Outdoor domaćin"}{host.is_verified ? " · Verifikovan" : ""}</p></div></div>
+            {host.bio && <p className="moPreviewBio">{host.bio}</p>}
+            <div className="moPreviewPrice"><small>PONUĐENA CENA</small><strong>{money(offer.proposed_price,offer.currency)}</strong><span>Proveri u opisu da li je cena po osobi ili ukupno.</span></div>
+            <h3>Šta ponuda obuhvata</h3><p className="moPreviewMessage">{offer.message || "Domaćin nije uneo opis."}</p>
+            <div className="moPreviewActions">{host.username && <Link to={`/h/${host.username}`} onClick={() => setPreviewOfferId(null)}>Profil domaćina ↗</Link>}{isCurrentPending(offer,request) && <button type="button" onClick={() => {setPreviewOfferId(null);openAcceptModal(offer);}}>Prihvati ponudu →</button>}</div>
+          </section>
+        </div>;
+      })()}
+      {acceptingOffer && (
 
         <div className="acceptModalBackdrop" onMouseDown={closeAcceptModal}>
 
@@ -1588,6 +1616,9 @@ function Styles() {
 
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 
-  `}</style>;
+  
+    /* Final UI: richer host presentation and offer preview */
+    .moHostInsights{margin:14px 0;padding:13px 15px;border:1px solid #e4ece2;background:#f8fbf6;border-radius:14px}.moHostBio{font-size:12px!important;line-height:1.7!important;color:#53685a!important;margin:0 0 10px!important}.moHostFacts{display:flex;flex-wrap:wrap;gap:7px}.moHostFacts span,.moHostFacts a{display:inline-flex;padding:7px 9px;border-radius:8px;background:#edf4e9;color:#3f6a49;font-size:11px;font-weight:750;text-decoration:none}.moOfferPreviewBtn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #bcd4b9;background:#e9f3e6;color:#234f31;padding:10px 15px;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer;margin:5px 0 13px}.moOfferPreviewBtn:hover{background:#dbeed6}.moPreviewBackdrop{position:fixed;inset:0;z-index:9999;background:rgba(8,28,19,.68);backdrop-filter:blur(8px);display:grid;place-items:center;padding:18px}.moPreviewDialog{position:relative;width:min(100%,600px);max-height:min(90vh,850px);overflow:auto;border-radius:25px;padding:30px;background:#fff;box-shadow:0 30px 90px #0004}.moPreviewClose{position:absolute;right:18px;top:16px;border:0;border-radius:50%;background:#eef3ec;color:#34513c;width:38px;height:38px;font-size:25px;cursor:pointer}.moPreviewKicker{color:#668668;font-size:10px;letter-spacing:2px;font-weight:900}.moPreviewHost{display:flex;align-items:center;gap:15px;margin:22px 0 14px}.moPreviewHost h2{font-size:25px;letter-spacing:-1px;margin:0 0 5px}.moPreviewHost p,.moPreviewBio{font-size:13px;line-height:1.7;color:#65786a;margin:0}.moPreviewBio{padding:13px;background:#f6f9f3;border-radius:12px}.moPreviewPrice{display:flex;flex-direction:column;gap:6px;background:#163c2a;color:white;border-radius:17px;padding:22px;margin:18px 0}.moPreviewPrice small{font-size:10px;letter-spacing:1.5px;color:#c8dfa8}.moPreviewPrice strong{font-size:31px}.moPreviewPrice span{font-size:11px;color:#d5e3d7}.moPreviewDialog h3{font-size:15px;margin:18px 0 9px}.moPreviewMessage{white-space:pre-wrap;font-size:13px;line-height:1.85;color:#405847}.moPreviewActions{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}.moPreviewActions a,.moPreviewActions button{flex:1;text-align:center;padding:13px 16px;border-radius:11px;border:1px solid #cfdfcd;background:#eef5e9;color:#244f34;font-size:12px;font-weight:850;text-decoration:none;cursor:pointer}.moPreviewActions button{border:0;background:#183f2c;color:white}@media(max-width:600px){.moPreviewBackdrop{padding:0;align-items:end}.moPreviewDialog{max-height:94vh;border-radius:24px 24px 0 0;padding:25px 18px 30px}.moPreviewActions{flex-direction:column}}
+`}</style>;
 
 }
