@@ -1378,11 +1378,10 @@ export default function AdventureRequestDetails() {
 
                 checked={contactConsent}
 
-                onChange={(event) =>
-
-                  (setContactConsent(event.target.checked), setAcceptError(""))
-
-                }
+                onChange={(event) => {
+                  setContactConsent(event.target.checked);
+                  setAcceptError("");
+                }}
 
               />
 
