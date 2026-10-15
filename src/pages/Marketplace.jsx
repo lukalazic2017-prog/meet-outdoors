@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
-import adventureArt from "../assets/adventure.svg";
-import accommodationArt from "../assets/accommodation.svg";
-import serviceArt from "../assets/service.svg";
-import rentalArt from "../assets/rental.svg";
-import mixedArt from "../assets/mixed.svg";
+const adventureArt = "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1100&q=82";
+const accommodationArt = "https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=1100&q=82";
+const serviceArt = "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1100&q=82";
+const rentalArt = "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1100&q=82";
+const mixedArt = "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1100&q=82";
 const SCENE = {adventure:adventureArt, accommodation:accommodationArt, service:serviceArt, rental:rentalArt, mixed:mixedArt};
 const PAGE_SIZE = 18;
 const CATEGORY_VISUALS = {
@@ -195,12 +195,12 @@ const styles = `
 .mo-marketplace .mo-person-name strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mo-marketplace .mo-person-name small{font-size:10px;color:#79857a}
 .mo-marketplace .mo-person-status{flex:none;background:#e9f4e8;color:#2d6c43;border-radius:30px;padding:5px 8px;font-size:10px;font-weight:800}
-.mo-marketplace .mo-category-art{height:125px!important;background-image:url('/src/assets/adventure.svg');background-size:cover;background-position:center;border-radius:10px!important;margin:0 0 12px!important}
-.mo-marketplace .mo-category-art-adventure{background-image:url('/src/assets/adventure.svg')}
-.mo-marketplace .mo-category-art-accommodation{background-image:url('/src/assets/accommodation.svg')}
-.mo-marketplace .mo-category-art-service{background-image:url('/src/assets/service.svg')}
-.mo-marketplace .mo-category-art-rental{background-image:url('/src/assets/rental.svg')}
-.mo-marketplace .mo-category-art-mixed{background-image:url('/src/assets/mixed.svg')}
+.mo-marketplace .mo-category-art{height:125px!important;background-image:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1100&q=82');background-size:cover;background-position:center;border-radius:10px!important;margin:0 0 12px!important}
+.mo-marketplace .mo-category-art-adventure{background-image:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1100&q=82')}
+.mo-marketplace .mo-category-art-accommodation{background-image:url('https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=1100&q=82')}
+.mo-marketplace .mo-category-art-service{background-image:url('https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1100&q=82')}
+.mo-marketplace .mo-category-art-rental{background-image:url('https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1100&q=82')}
+.mo-marketplace .mo-category-art-mixed{background-image:url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1100&q=82')}
 .mo-marketplace .mo-category-art:before{background:linear-gradient(0deg,#0e2b26a0,transparent 58%)!important}
 .mo-marketplace .mo-category-art>span{display:none!important}
 .mo-marketplace .mo-category-art small{position:absolute;bottom:9px;left:10px;color:white;font-size:10px;font-weight:850;letter-spacing:.08em}

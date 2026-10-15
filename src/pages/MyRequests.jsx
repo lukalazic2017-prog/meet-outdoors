@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
-import adventureArt from "../assets/adventure.svg";
-import accommodationArt from "../assets/accommodation.svg";
-import serviceArt from "../assets/service.svg";
-import rentalArt from "../assets/rental.svg";
-import mixedArt from "../assets/mixed.svg";
+const adventureArt = "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1100&q=82";
+const accommodationArt = "https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=1100&q=82";
+const serviceArt = "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1100&q=82";
+const rentalArt = "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1100&q=82";
+const mixedArt = "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1100&q=82";
 const scene = {adventure:adventureArt, accommodation:accommodationArt, service:serviceArt, rental:rentalArt, mixed:mixedArt};
 
 const fmtDate = (s) => {
