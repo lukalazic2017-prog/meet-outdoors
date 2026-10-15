@@ -100,8 +100,64 @@ export default function MyRequests() {
     .mrError{padding:14px 16px;margin-bottom:15px;border-radius:12px;background:#fff0ed;color:#a24739;font-size:13px}.mrRefresh{border:0;background:transparent;color:#4a7351;font:inherit;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
     @media(max-width:760px){.mrPage{padding:88px 12px 45px}.mrHero{padding:25px 22px;display:block;border-radius:22px}.mrHeroLink{margin-top:20px}.mrStats{gap:8px}.mrStat{padding:14px}.mrStat strong{font-size:23px}.mrGrid{grid-template-columns:1fr}.mrBar{align-items:start}.mrCardBody{padding:18px}.mrBottom{padding:15px 18px}}
     @media(max-width:380px){.mrStats{grid-template-columns:1fr 1fr}.mrStats .mrStat:last-child{grid-column:span 2}.mrBottom{align-items:start;flex-direction:column}.mrAction{width:100%;justify-content:center}}
+
+    /* Compact application layout */
+    .mrPage{padding:86px 18px 48px}
+    .mrWrap{max-width:1040px}
+    .mrHero{padding:20px 24px;border-radius:17px;gap:16px;align-items:center}
+    .mrHero:after{width:200px;height:200px;top:-115px;right:-30px;border-width:30px}
+    .mrEyebrow{font-size:9px;letter-spacing:.1em}
+    .mrHero h1{font-size:clamp(24px,3vw,32px);line-height:1.15;letter-spacing:-.035em;margin:6px 0 3px}
+    .mrHero p{font-size:12px;line-height:1.4}
+    .mrHeroLink{padding:10px 13px;border-radius:9px;font-size:12px}
+    .mrStats{gap:8px;margin:10px 0 17px}
+    .mrStat{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;border-radius:11px}
+    .mrStat span{font-size:11px}.mrStat strong{margin:0;font-size:20px}
+    .mrBar{margin-bottom:10px}.mrBar h2{font-size:18px}
+    .mrFilters{gap:5px}.mrFilters button{padding:7px 10px;border-radius:8px}
+    .mrSearch{height:38px;border-radius:9px;margin-bottom:11px}
+    .mrGrid{gap:10px}.mrCard{border-radius:13px;box-shadow:none}
+    .mrCardBody{padding:13px 15px 10px}
+    .mrTypeIcon{width:22px;height:22px;font-size:15px;border-radius:6px;margin-right:5px}
+    .mrCard h3{font-size:17px;margin:9px 0 5px;line-height:1.25}
+    .mrMeta{gap:6px;margin:10px 0 5px}.mrMeta span{padding:5px 7px;font-size:11px;border-radius:7px}
+    .mrStatus{padding:4px 7px}.mrBottom{padding:10px 15px}
+    .mrBudget strong{font-size:14px}.mrBudget small{font-size:9px}
+    .mrAction{padding:9px 11px;border-radius:8px;font-size:11px}
+    .mrOfferNotice{font-size:11px;padding:5px 8px}
+    @media(max-width:760px){
+      .mrPage{padding:76px 10px 28px}
+      .mrHero{padding:13px 14px;border-radius:12px;display:flex;align-items:center;gap:10px}
+      .mrEyebrow,.mrHero p{display:none}
+      .mrHero h1{font-size:21px;margin:0}
+      .mrHeroLink{margin:0;padding:9px 10px;font-size:11px;white-space:nowrap}
+      .mrStats{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:8px 0 12px}
+      .mrStat{display:block;padding:8px 7px;text-align:center;border-radius:9px}
+      .mrStat span{font-size:9px;line-height:1.2;min-height:22px}
+      .mrStat strong{font-size:19px;margin-top:2px}
+      .mrBar{display:block;margin-bottom:8px}
+      .mrBar h2{display:none}
+      .mrFilters{display:flex;flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+      .mrFilters::-webkit-scrollbar{display:none}
+      .mrFilters button{flex-shrink:0;font-size:11px;padding:7px 10px}
+      .mrSearch{height:35px;margin-bottom:9px}
+      .mrGrid{grid-template-columns:1fr;gap:8px}
+      .mrCardBody{padding:11px 12px 7px}
+      .mrCard h3{font-size:16px;margin:7px 0 4px}
+      .mrMeta{margin:7px 0 4px}
+      .mrBottom{padding:9px 12px;flex-direction:row;align-items:center}
+      .mrAction{width:auto;padding:8px 9px;font-size:10px}
+      .mrBudget small{font-size:8px}.mrBudget strong{font-size:13px}
+    }
+    @media(max-width:380px){
+      .mrStats{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .mrStats .mrStat:last-child{grid-column:auto}
+      .mrHero h1{font-size:19px}
+      .mrBottom{flex-direction:row;align-items:center}
+      .mrAction{width:auto;justify-content:center}
+    }
   `}</style><div className="mrWrap">
-    <header className="mrHero"><div><div className="mrEyebrow"><Icon name="sparkle" size={16}/> MeetOutdoors · Moji zahtevi</div><h1>Tvoje avanture.<br/>Tvoji izbori.</h1><p>Prati svoje potražnje, pregledaj ponude hostova i odaberi iskustvo koje ti najviše odgovara.</p></div><Link to="/create-request" className="mrHeroLink">Nova potražnja <Icon name="arrow" size={17}/></Link></header>
+    <header className="mrHero"><div><div className="mrEyebrow"><Icon name="sparkle" size={16}/> MEETOUTDOORS</div><h1>Moje potražnje</h1><p>Pregled zahteva i ponuda na jednom mestu.</p></div><Link to="/create-request" className="mrHeroLink">Nova potražnja <Icon name="arrow" size={17}/></Link></header>
     <section className="mrStats"><div className="mrStat"><span>Ukupno zahteva</span><strong>{requests.length}</strong></div><div className="mrStat"><span>Otvorene potražnje</span><strong>{openCount}</strong></div><div className="mrStat"><span>Čekaju tvoju odluku</span><strong>{waiting}</strong></div></section>
     <div className="mrBar"><h2>Moje potražnje</h2><div className="mrFilters">{[["all","Sve"],["open","Otvorene"],["matched","Dogovorene"],["closed","Zatvorene"]].map(([v,label])=><button key={v} type="button" className={filter===v?"active":""} onClick={()=>setFilter(v)}>{label}</button>)}<button type="button" onClick={load} title="Osveži" aria-label="Osveži"><Icon name="refresh" size={16}/></button></div></div>
     <label className="mrSearch"><Icon name="search"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Pretraži po aktivnosti ili lokaciji..." aria-label="Pretraži potražnje"/></label>
