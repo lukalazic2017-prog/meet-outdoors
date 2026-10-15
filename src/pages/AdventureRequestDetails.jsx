@@ -167,6 +167,7 @@ export default function AdventureRequestDetails() {
   const [contactPhone, setContactPhone] = useState("");
 
   const [contactConsent, setContactConsent] = useState(false);
+  const [acceptError, setAcceptError] = useState("");
 
   const [editMode, setEditMode] = useState(false);
 
@@ -404,6 +405,7 @@ export default function AdventureRequestDetails() {
   const compareOffers = selectedForCompare.map((offerId) => offers.find((offer) => offer.id === offerId)).filter(Boolean);
 
   function openAcceptModal(offer) {
+    setAcceptError("");
 
     if (!offer || actingId || !isCurrentPending(offer, request)) return;
 
@@ -420,6 +422,7 @@ export default function AdventureRequestDetails() {
   }
 
   function closeAcceptModal() {
+    setAcceptError("");
 
     if (actingId) return;
 
@@ -440,6 +443,7 @@ export default function AdventureRequestDetails() {
     if (!isCurrentPending(selectedOffer, request)) {
 
       setError("Ova ponuda više nije aktivna za trenutnu verziju zahteva. Osveži stranicu.");
+      if (action === "accept") setAcceptError("Ponuda više nije aktivna. Osveži stranicu.");
 
       return;
 
@@ -453,7 +457,7 @@ export default function AdventureRequestDetails() {
 
       if (cleanPhone.length < 6 || cleanPhone.length > 30) {
 
-        setError("Unesi ispravan broj telefona.");
+        setAcceptError("Unesi broj telefona od 6 do 30 karaktera.");
 
         return;
 
@@ -461,7 +465,7 @@ export default function AdventureRequestDetails() {
 
       if (!contactConsent) {
 
-        setError("Potvrdi da želiš da podeliš broj telefona sa domaćinom.");
+        setAcceptError("Označi saglasnost za deljenje broja telefona.");
 
         return;
 
@@ -470,6 +474,7 @@ export default function AdventureRequestDetails() {
     }
 
     setActingId(responseId);
+    setAcceptError("");
 
     setError("");
 
@@ -518,6 +523,7 @@ export default function AdventureRequestDetails() {
     } catch (e) {
 
       console.error("Adventure offer decision error:", e);
+      if (isAccept) setAcceptError(e.message || "Prihvatanje nije uspelo. Pokušaj ponovo.");
 
       setError(
 
@@ -1350,7 +1356,7 @@ export default function AdventureRequestDetails() {
 
                   autoFocus
 
-                  onChange={(event) => setContactPhone(event.target.value)}
+                  onChange={(event) => { setContactPhone(event.target.value); setAcceptError(""); }}
 
                 />
 
@@ -1374,7 +1380,7 @@ export default function AdventureRequestDetails() {
 
                 onChange={(event) =>
 
-                  setContactConsent(event.target.checked)
+                  (setContactConsent(event.target.checked), setAcceptError(""))
 
                 }
 
@@ -1410,6 +1416,7 @@ export default function AdventureRequestDetails() {
 
             </div>
 
+            {acceptError && <div role="alert" className="moAcceptError">{acceptError}</div>}
             <div className="modalActions">
 
               <button
@@ -1598,6 +1605,7 @@ function Styles() {
 
     .modalPrivacy{display:flex;gap:9px;margin-top:10px;padding:11px 12px;border-radius:13px;background:#edf4e8;color:#5c7656}.modalPrivacy svg{flex:0 0 auto}.modalPrivacy p{margin:0;font-size:7px;line-height:1.55}
 
+    .moAcceptError{margin-top:14px;padding:12px 14px;border:1px solid #f1c5ba;background:#fff1ed;color:#a13220;border-radius:12px;font-size:13px;line-height:1.5;font-weight:700}
     .modalActions{display:grid;grid-template-columns:.8fr 1.2fr;gap:8px;margin-top:20px}.modalActions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:0 14px;border-radius:13px;font-size:9px;font-weight:900;cursor:pointer}.modalCancel{border:1px solid #d9e1d6;background:#fff;color:#67756c}.modalConfirm{border:0;background:linear-gradient(135deg,#123a26,#326b49);color:#fff;box-shadow:0 11px 24px rgba(32,79,50,.17)}.modalActions button:disabled{opacity:.48;cursor:not-allowed}
 
     .moStaleOffer{margin-top:12px;padding:12px;border:1px solid #e8d9ba;border-radius:12px;background:#fff9ed;color:#8a6a36;font-size:11px;line-height:1.5}
