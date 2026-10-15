@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
@@ -38,8 +38,7 @@ const Icon = ({ name, size = 18 }) => {
 };
 
 export default function Marketplace() {
-  const { user, profile, isHost, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const { user, isHost, loading: authLoading } = useAuth();
   const [items, setItems] = useState([]);
   const [dismissed, setDismissed] = useState([]);
   const [page, setPage] = useState(0);
