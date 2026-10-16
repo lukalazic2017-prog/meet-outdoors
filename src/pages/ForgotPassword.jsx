@@ -61,24 +61,6 @@ function Icon({ name, size = 20, strokeWidth = 2 }) {
   );
 }
 
-function translateResetError(message) {
-  const normalized = String(message || "").toLowerCase();
-
-  if (normalized.includes("rate limit") || normalized.includes("too many")) {
-    return "Poslato je previše zahteva. Sačekaj malo pa pokušaj ponovo.";
-  }
-
-  if (normalized.includes("network") || normalized.includes("fetch")) {
-    return "Nije moguće povezivanje sa serverom. Proveri internet vezu.";
-  }
-
-  if (normalized.includes("email")) {
-    return "Proveri da li je email adresa ispravno uneta.";
-  }
-
-  return "Trenutno nije moguće poslati link za promenu lozinke. Pokušaj ponovo.";
-}
-
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -110,9 +92,9 @@ export default function ForgotPassword() {
 
       setSent(true);
     } catch (err) {
-  console.error("SUPABASE RESET ERROR:", err);
-  setError(err?.message || "Greška prilikom slanja linka.");
-} finally {
+      console.error("SUPABASE RESET ERROR:", err);
+      setError(err?.message || "Greška prilikom slanja linka.");
+    } finally {
       setLoading(false);
     }
   }
