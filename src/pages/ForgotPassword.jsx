@@ -110,8 +110,9 @@ export default function ForgotPassword() {
 
       setSent(true);
     } catch (err) {
-      setError(translateResetError(err?.message));
-    } finally {
+  console.error("SUPABASE RESET ERROR:", err);
+  setError(err?.message || "Greška prilikom slanja linka.");
+} finally {
       setLoading(false);
     }
   }
