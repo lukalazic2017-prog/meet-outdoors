@@ -98,32 +98,60 @@ export default function ResetPassword() {
 
   useEffect(() => {
     let mounted = true;
+    let recoveryEventReceived = false;
+
+    // Ordinary signed-in sessions must never authorize this recovery screen.
+    const query = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const recoveryLink =
+      query.has("code") ||
+      query.get("type") === "recovery" ||
+      hash.get("type") === "recovery";
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event) => {
+        if (!mounted) return;
+        if (event === "PASSWORD_RECOVERY") {
+          recoveryEventReceived = true;
+          setValidRecovery(true);
+          setCheckingSession(false);
+        }
+      }
+    );
 
     async function checkRecoverySession() {
-      const { data } = await supabase.auth.getSession();
+      try {
+        // Supabase normally consumes the recovery URL automatically when
+        // detectSessionInUrl is enabled on the shared client.
+        let { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
 
-      if (!mounted) return;
+        // Fallback for PKCE projects where the code has not yet been exchanged.
+        if (!data?.session && query.has("code")) {
+          const result = await supabase.auth.exchangeCodeForSession(query.get("code"));
+          if (result.error) throw result.error;
+          data = result.data;
+        }
 
-      if (data?.session?.user) {
-        setValidRecovery(true);
+        if (!mounted) return;
+        if ((recoveryLink || recoveryEventReceived) && data?.session?.user) {
+          setValidRecovery(true);
+          // Remove one-time tokens from the address bar after verification.
+          window.history.replaceState({}, "", window.location.pathname);
+        } else if (!recoveryEventReceived) {
+          setValidRecovery(false);
+        }
+      } catch (err) {
+        if (mounted && !recoveryEventReceived) {
+          console.error("Recovery session verification:", err);
+          setValidRecovery(false);
+        }
+      } finally {
+        if (mounted) setCheckingSession(false);
       }
-
-      setCheckingSession(false);
     }
 
     checkRecoverySession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-
-      if (event === "PASSWORD_RECOVERY" || session?.user) {
-        setValidRecovery(true);
-        setCheckingSession(false);
-      }
-    });
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
