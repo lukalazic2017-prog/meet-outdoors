@@ -3807,6 +3807,9 @@ function Styles() {
         .demandPage .mainGrid { padding: 0 8px; }
         .demandPage .hero h1 { font-size: 22px; }
       }
+
+/* Premium mobile */
+@media(max-width:700px){body{overflow-x:hidden} .signalSteps{display:none!important} .detailItem{min-width:0!important} .detailItem strong{overflow-wrap:anywhere} textarea{max-width:100%}}
 `}</style>
 
   );

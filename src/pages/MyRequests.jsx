@@ -2,6 +2,35 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+// Deterministicki izbor ilustrativne fotografije: bez API poziva i bez promene pri osvezavanju.
+// Slike su tematske ilustracije, ne fotografije konkretne ponude ili smestaja.
+const PHOTO = {
+  hikingGroup: ["photo-1551632811-561732d1e306","photo-1464822759023-fed622ff2c3b","photo-1472396961693-142e6e269027","photo-1500534623283-312aade485b7","photo-1470770841072-f978cf4d019e"],
+  hikingSolo: ["photo-1464822759023-fed622ff2c3b","photo-1454496522488-7a8e488e860e","photo-1470770841072-f978cf4d019e","photo-1500530855697-b586d89ba3ee"],
+  ski: ["photo-1517299321609-52687d1bc55a","photo-1485546784815-e380f3297414","photo-1455156218388-5e61b526818b","photo-1519681393784-d120267933ba"],
+  kayak: ["photo-1501785888041-af3ef285b470","photo-1470770841072-f978cf4d019e","photo-1500534623283-312aade485b7"],
+  cycling: ["photo-1485965120184-e220f721d03e","photo-1552674605-db6ffd4facb5","photo-1507035895480-2b3156c31fc8"],
+  camp: ["photo-1478131143081-80f7f84ca84d","photo-1500530855697-b586d89ba3ee","photo-1464822759023-fed622ff2c3b"],
+  accommodation: ["photo-1449158743715-0a90ebb6d2d8","photo-1510798831971-661eb04b3739","photo-1449844908441-8829872d2607","photo-1484154218962-a197022b5858","photo-1470770841072-f978cf4d019e"],
+  service: ["photo-1500534623283-312aade485b7","photo-1472396961693-142e6e269027","photo-1551632811-561732d1e306"],
+  rental: ["photo-1485965120184-e220f721d03e","photo-1478131143081-80f7f84ca84d","photo-1501785888041-af3ef285b470"],
+  mixed: ["photo-1500530855697-b586d89ba3ee","photo-1470770841072-f978cf4d019e","photo-1464822759023-fed622ff2c3b"]
+};
+const hashPhoto = (value) => {let h=2166136261;for(const c of String(value||'')){h=Math.imul(h^c.charCodeAt(0),16777619)}return h>>>0;};
+const chooseDemandPhoto = (r) => {
+  const t=String([r.activity,r.description,r.title].filter(Boolean).join(' ')).toLocaleLowerCase('sr');
+  const category=String(r.intent_type||'').toLowerCase();
+  let key=category==='accommodation'?'accommodation':category==='rental'?'rental':category==='service'?'service':category==='mixed'?'mixed':'hikingSolo';
+  if(/skij|ski |snowboard|bordov|instruktor sk/.test(t))key='ski';
+  else if(/kajak|kanu|rafting|splavar/.test(t))key='kayak';
+  else if(/bicikl|bike|mtb|cycling/.test(t))key='cycling';
+  else if(/kamp|šator|sator/.test(t))key='camp';
+  else if(/planinar|pešač|pesac|uspon|vodič|vodic|trek|hiking/.test(t))key=Number(r.people_count||1)>1?'hikingGroup':'hikingSolo';
+  const list=PHOTO[key]||PHOTO.mixed;
+  const id=list[hashPhoto(r.id||t)%list.length];
+  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=880&q=78`;
+};
+
 const adventureArt = "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1100&q=82";
 const accommodationArt = "https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=1100&q=82";
 const serviceArt = "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1100&q=82";
@@ -179,12 +208,17 @@ export default function MyRequests() {
       .mrBottom{flex-direction:row;align-items:center}
       .mrAction{width:auto;justify-content:center}
     }
-  `}</style><div className="mrWrap">
+  
+    .mrScene{object-fit:cover!important;filter:saturate(.9);border-radius:12px!important}
+    .mrCard{box-shadow:none!important;border:1px solid #e4ebe2!important;border-radius:17px!important}
+    .mrPage{background:#f7f8f5!important}
+    @media(max-width:760px){.mrPage{padding:85px 12px 38px!important}.mrCard{border-radius:16px!important}.mrScene{width:90px!important;min-height:100px!important}.mrCardBody{padding:14px!important}.mrCard h3{font-size:17px!important}.mrMeta{gap:7px!important}.mrMeta span{background:transparent!important;padding:0!important}.mrBottom{padding:12px 14px!important}}
+    `}</style><div className="mrWrap">
     <header className="mrHero"><div><div className="mrEyebrow"><Icon name="sparkle" size={16}/> MEETOUTDOORS</div><h1>Moje potražnje</h1><p>Pregled zahteva i ponuda na jednom mestu.</p></div><Link to="/create-request" className="mrHeroLink">Nova potražnja <Icon name="arrow" size={17}/></Link></header>
     <section className="mrStats"><div className="mrStat"><span>Ukupno zahteva</span><strong>{requests.length}</strong></div><div className="mrStat"><span>Otvorene potražnje</span><strong>{openCount}</strong></div><div className="mrStat"><span>Čekaju tvoju odluku</span><strong>{waiting}</strong></div></section>
     <div className="mrBar"><h2>Moje potražnje</h2><div className="mrFilters">{[["all","Sve"],["open","Otvorene"],["matched","Dogovorene"],["closed","Zatvorene"]].map(([v,label])=><button key={v} type="button" className={filter===v?"active":""} onClick={()=>setFilter(v)}>{label}</button>)}<button type="button" onClick={load} title="Osveži" aria-label="Osveži"><Icon name="refresh" size={16}/></button></div></div>
     <label className="mrSearch"><Icon name="search"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Pretraži po aktivnosti ili lokaciji..." aria-label="Pretraži potražnje"/></label>
     {error&&<div className="mrError">{error} <button className="mrRefresh" onClick={load} type="button">Pokušaj ponovo</button></div>}
-    {authLoading||loading?<div className="mrState">Učitavanje potražnji...</div>:!user?<div className="mrState"><strong>Prijavi se da vidiš svoje zahteve.</strong><Link to="/login">Prijavi se →</Link></div>:filtered.length===0?<div className="mrState"><Icon name="inbox" size={28}/><strong>{requests.length?"Nema rezultata za izabrani filter.":"Još nemaš potražnji."}</strong><p>Opiši šta tražiš i hostovi će moći da ti pošalju ponude.</p><Link className="mrAction" to="/create-request">Kreiraj potražnju <Icon name="arrow" size={16}/></Link></div>:<div className="mrGrid">{filtered.map(r=><article className="mrCard" key={r.id}><div className="mrCardBody"><div className="mrPremiumMain"><img className="mrScene" src={scene[r.intent_type]||adventureArt} alt="" loading="lazy"/><div className="mrPremiumText"><div className="mrTop"><span className="mrType"><span className="mrTypeIcon">{typeIcons[r.intent_type] || "⛰"}</span>{types[r.intent_type]||"Avantura"}</span><span className={`mrStatus ${r.status||"open"}`}>{statuses[r.status]||r.status}</span></div><h3>{r.activity|| (r.intent_type==="accommodation"?"Potraga za smeštajem":"Moja potražnja")}</h3><div className="mrLocation"><Icon name="pin" size={15}/>{r.location_text||"Lokacija po dogovoru"}</div><div className="mrMeta"><span><Icon name="calendar" size={15}/>{fmtDate(r.start_date)}{r.end_date&&r.end_date!==r.start_date?` – ${fmtDate(r.end_date)}`:""}</span><span><Icon name="users" size={15}/>{r.people_count||1} osoba</span></div>{(counts[r.id]?.pending||0)>0&&<span className="mrOfferNotice"><Icon name="sparkle" size={14}/>{counts[r.id].pending} {counts[r.id].pending===1?"ponuda čeka":"ponude čekaju"} tvoju odluku</span>}{(counts[r.id]?.hostIds||[]).length>0&&<div className="mrHostStack"><div className="mrAvatarPile">{[...new Set(counts[r.id].hostIds)].slice(0,3).map(hid=>hostAvatars[hid]?.avatar_url?<img key={hid} src={hostAvatars[hid].avatar_url} alt={hostAvatars[hid].full_name||"Host"} loading="lazy"/>:<span key={hid}>{(hostAvatars[hid]?.full_name||"H").charAt(0)}</span>)}</div><small>Hostovi su poslali ponude</small></div>}</div></div></div><div className="mrBottom"><div className="mrBudget"><small>Planirani budžet po osobi</small><strong>{money(r.budget_per_person,r.currency)}</strong></div><Link className="mrAction" to={`/agent/request/${r.id}`}>Detalji i ponude <Icon name="arrow" size={16}/></Link></div></article>)}</div>}
+    {authLoading||loading?<div className="mrState">Učitavanje potražnji...</div>:!user?<div className="mrState"><strong>Prijavi se da vidiš svoje zahteve.</strong><Link to="/login">Prijavi se →</Link></div>:filtered.length===0?<div className="mrState"><Icon name="inbox" size={28}/><strong>{requests.length?"Nema rezultata za izabrani filter.":"Još nemaš potražnji."}</strong><p>Opiši šta tražiš i hostovi će moći da ti pošalju ponude.</p><Link className="mrAction" to="/create-request">Kreiraj potražnju <Icon name="arrow" size={16}/></Link></div>:<div className="mrGrid">{filtered.map(r=><article className="mrCard" key={r.id}><div className="mrCardBody"><div className="mrPremiumMain"><img className="mrScene" src={chooseDemandPhoto(r)} alt="" loading="lazy"/><div className="mrPremiumText"><div className="mrTop"><span className="mrType"><span className="mrTypeIcon">{typeIcons[r.intent_type] || "⛰"}</span>{types[r.intent_type]||"Avantura"}</span><span className={`mrStatus ${r.status||"open"}`}>{statuses[r.status]||r.status}</span></div><h3>{r.activity|| (r.intent_type==="accommodation"?"Potraga za smeštajem":"Moja potražnja")}</h3><div className="mrLocation"><Icon name="pin" size={15}/>{r.location_text||"Lokacija po dogovoru"}</div><div className="mrMeta"><span><Icon name="calendar" size={15}/>{fmtDate(r.start_date)}{r.end_date&&r.end_date!==r.start_date?` – ${fmtDate(r.end_date)}`:""}</span><span><Icon name="users" size={15}/>{r.people_count||1} osoba</span></div>{(counts[r.id]?.pending||0)>0&&<span className="mrOfferNotice"><Icon name="sparkle" size={14}/>{counts[r.id].pending} {counts[r.id].pending===1?"ponuda čeka":"ponude čekaju"} tvoju odluku</span>}{(counts[r.id]?.hostIds||[]).length>0&&<div className="mrHostStack"><div className="mrAvatarPile">{[...new Set(counts[r.id].hostIds)].slice(0,3).map(hid=>hostAvatars[hid]?.avatar_url?<img key={hid} src={hostAvatars[hid].avatar_url} alt={hostAvatars[hid].full_name||"Host"} loading="lazy"/>:<span key={hid}>{(hostAvatars[hid]?.full_name||"H").charAt(0)}</span>)}</div><small>Hostovi su poslali ponude</small></div>}</div></div></div><div className="mrBottom"><div className="mrBudget"><small>Planirani budžet po osobi</small><strong>{money(r.budget_per_person,r.currency)}</strong></div><Link className="mrAction" to={`/agent/request/${r.id}`}>Detalji i ponude <Icon name="arrow" size={16}/></Link></div></article>)}</div>}
   </div></main>;
 }

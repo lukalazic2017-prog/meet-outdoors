@@ -927,274 +927,29 @@ export default function Notifications() {
   return (
     <>
       <NotificationsStyles />
-
-      <main className="notificationsPage">
-        <section className="hero">
-          <div className="heroContent">
-            <span className="kicker">
-              <span />
-              Centar aktivnosti
-            </span>
-
-            <h1>Obaveštenja.</h1>
-
-            <p>
-              Prijave, grupne poruke, odgovori domaćina, Agent i važne aktivnosti —
-              sve na jednom mestu.
-            </p>
-          </div>
-
-          <div className="stats">
-            <article>
-              <strong>
-                {notifications.length}
-              </strong>
-              <span>ukupno</span>
-            </article>
-
-            <article>
-              <strong>{unreadCount}</strong>
-              <span>nepročitanih</span>
-            </article>
-
-            <article>
-              <strong>
-                {notifications.length
-                  ? relativeTime(
-                      notifications[0].created_at
-                    )
-                  : "—"}
-              </strong>
-              <span>poslednja aktivnost</span>
-            </article>
-          </div>
-        </section>
-
-        <section className="content">
-          <header className="toolbar">
-            <div>
-              <span className="sectionKicker">
-                Aktivnost naloga
-              </span>
-
-              <h2>Aktivnosti koje su važne</h2>
-
-              <p>
-                Statusi i stvari koje traže tvoju akciju su odmah prepoznatljivi.
-              </p>
-            </div>
-
-            <div className="toolbarActions">
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  className="markAllButton"
-                  onClick={markAllAsRead}
-                  disabled={markingAll}
-                >
-                  <Icon
-                    name="check"
-                    size={16}
-                  />
-                  {markingAll
-                    ? "Označavanje..."
-                    : "Označi sve kao pročitano"}
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={loadNotifications}
-              >
-                <Icon
-                  name="refresh"
-                  size={16}
-                />
-                Osveži
-              </button>
-            </div>
+      <main className="notificationsPage ntFinal">
+        <div className="ntShell">
+          <header className="ntHeader">
+            <div><span className="ntEyebrow">MEETOUTDOORS</span><h1>Obaveštenja</h1><p>Važne novosti i odgovori na jednom mestu.</p></div>
+            <button type="button" className="ntRefresh" onClick={loadNotifications} aria-label="Osveži obaveštenja"><Icon name="refresh" size={19}/></button>
           </header>
-
-          {notifications.length > 0 && (
-            <div className="filterBar" role="tablist" aria-label="Filtriranje obaveštenja">
-              <button
-                type="button"
-                className={filter === "all" ? "active" : ""}
-                onClick={() => setFilter("all")}
-              >
-                Sve
-                <span>{notifications.length}</span>
-              </button>
-
-              <button
-                type="button"
-                className={filter === "personal" ? "active" : ""}
-                onClick={() => setFilter("personal")}
-              >
-                Za mene
-                <span>{categoryCounts.personal}</span>
-              </button>
-
-              <button
-                type="button"
-                className={filter === "applications" ? "active" : ""}
-                onClick={() => setFilter("applications")}
-              >
-                Prijave
-                <span>{categoryCounts.applications}</span>
-              </button>
-
-              <button
-                type="button"
-                className={filter === "messages" ? "active" : ""}
-                onClick={() => setFilter("messages")}
-              >
-                Poruke
-                <span>{categoryCounts.messages}</span>
-              </button>
-
-              <button
-                type="button"
-                className={filter === "agent" ? "active" : ""}
-                onClick={() => setFilter("agent")}
-              >
-                Agent
-                <span>{categoryCounts.agent}</span>
-              </button>
-
-              <button
-                type="button"
-                className={filter === "interactions" ? "active" : ""}
-                onClick={() => setFilter("interactions")}
-              >
-                Interakcije
-                <span>{categoryCounts.interactions}</span>
-              </button>
-            </div>
-          )}
-
-          {error && (
-            <div
-              className="errorBox"
-              role="alert"
-            >
-              <span>
-                <Icon
-                  name="alert"
-                  size={18}
-                />
-              </span>
-
-              <p>{error}</p>
-
-              <button
-                type="button"
-                onClick={loadNotifications}
-              >
-                Pokušaj ponovo
-              </button>
-            </div>
-          )}
-
-          {!profile?.id ? (
-            <div className="emptyState">
-              <span>
-                <Icon
-                  name="user"
-                  size={30}
-                />
-              </span>
-
-              <h3>
-                Prijavi se da vidiš obaveštenja.
-              </h3>
-
-              <p>
-                Obaveštenja su dostupna samo
-                prijavljenim korisnicima.
-              </p>
-
-              <Link to="/login">
-                Prijavi se
-                <Icon
-                  name="arrowRight"
-                  size={16}
-                />
-              </Link>
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="emptyState">
-              <span>
-                <Icon
-                  name="inbox"
-                  size={30}
-                />
-              </span>
-
-              <h3>
-                Trenutno nema obaveštenja.
-              </h3>
-
-              <p>
-                Kada stigne rezervacija, komentar,
-                nova outdoor potražnja ili ponuda,
-                pojaviće se ovde.
-              </p>
-
-              <Link to="/events">
-                Istraži avanture
-                <Icon
-                  name="arrowRight"
-                  size={16}
-                />
-              </Link>
-            </div>
-          ) : filteredNotifications.length === 0 ? (
-            <div className="emptyState compactEmpty">
-              <span>
-                <Icon name="inbox" size={28} />
-              </span>
-              <h3>Nema obaveštenja u ovom prikazu.</h3>
-              <p>Promeni filter da vidiš ostatak aktivnosti.</p>
-              <button type="button" className="resetFilterButton" onClick={() => setFilter("all")}>
-                Prikaži sva obaveštenja
-              </button>
-            </div>
-          ) : (
-            <div className="notificationViewport">
-              <div className="notificationGrid">
-                {visibleNotifications.map((notification) => (
-                  <NotificationCard
-                    key={notification.id}
-                    notification={notification}
-                    onOpen={markAsRead}
-                  />
-                ))}
-              </div>
-
-              {hasMore && (
-                <div className="loadMoreBar">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setVisibleCount((current) => current + 8)
-                    }
-                  >
-                    Učitaj još
-                    <span>
-                      {Math.min(
-                        8,
-                        filteredNotifications.length - visibleCount
-                      )}{" "}
-                      novih
-                    </span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-        </section>
+          <div className="ntOverview">
+            <div><strong>{unreadCount}</strong><span>Nepročitano</span></div>
+            <div><strong>{notifications.length}</strong><span>Ukupno</span></div>
+            {unreadCount > 0 && <button type="button" onClick={markAllAsRead} disabled={markingAll}><Icon name="check" size={16}/> {markingAll ? "Označavanje..." : "Označi sve"}</button>}
+          </div>
+          {notifications.length > 0 && <div className="ntTabs" role="tablist" aria-label="Vrsta obaveštenja">
+            {[["all","Sve",notifications.length],["personal","Za mene",categoryCounts.personal],["agent","Potražnje",categoryCounts.agent],["applications","Prijave",categoryCounts.applications],["messages","Poruke",categoryCounts.messages],["interactions","Ostalo",categoryCounts.interactions]].map(([key,label,count])=><button key={key} type="button" className={filter===key?"active":""} onClick={()=>setFilter(key)} aria-selected={filter===key}>{label}<span>{count}</span></button>)}
+          </div>}
+          {error && <div className="ntError" role="alert"><Icon name="alert" size={17}/><span>Nije moguće učitati obaveštenja.</span><button onClick={loadNotifications} type="button">Pokušaj ponovo</button></div>}
+          {!profile?.id ? <div className="ntEmpty"><Icon name="user" size={27}/><h2>Prijavi se</h2><p>Prijavi se da vidiš svoja obaveštenja.</p><Link to="/login">Prijavi se <Icon name="arrowRight" size={16}/></Link></div>
+          : notifications.length===0 ? <div className="ntEmpty"><Icon name="inbox" size={28}/><h2>Nema obaveštenja</h2><p>Kada stigne nova aktivnost, videćeš je ovde.</p></div>
+          : filteredNotifications.length===0 ? <div className="ntEmpty"><Icon name="inbox" size={28}/><h2>Nema rezultata</h2><button onClick={()=>setFilter("all")} type="button">Prikaži sve</button></div>
+          : <section className="ntList" aria-label="Lista obaveštenja">
+            {visibleNotifications.map(notification=><NotificationCard key={notification.id} notification={notification} onOpen={markAsRead}/>)}
+            {hasMore && <button className="ntMore" type="button" onClick={()=>setVisibleCount(n=>n+8)}>Prikaži još <Icon name="arrowRight" size={16}/></button>}
+          </section>}
+        </div>
       </main>
     </>
   );
@@ -3322,6 +3077,34 @@ function NotificationsStyles() {
         }
       }
 
-    `}</style>
+    
+/* Premium mobile */
+@media(max-width:700px){.notificationCard{border-radius:15px!important;box-shadow:none!important}.notificationBody{min-width:0!important}.notificationBody p{overflow-wrap:anywhere}.notificationMeta,.notificationBottom{flex-wrap:wrap!important;gap:7px!important}}
+
+      /* MeetOutdoors final compact notification UI: fully scoped */
+      .notificationsPage.ntFinal{background:#f7f8f5!important;min-height:100vh;padding:96px 16px 64px!important;color:#1e3b2d;font-family:Inter,system-ui,-apple-system,sans-serif}
+      .ntFinal *{box-sizing:border-box}.ntFinal .ntShell{width:100%;max-width:850px;margin:0 auto}
+      .ntFinal .ntHeader{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:19px}
+      .ntFinal .ntEyebrow{font-size:10px;letter-spacing:.17em;font-weight:800;color:#7c9980}
+      .ntFinal .ntHeader h1{font-size:clamp(28px,4vw,37px);line-height:1.13;letter-spacing:-.05em;margin:7px 0;font-weight:800;color:#1e3b2d}
+      .ntFinal .ntHeader p{font-size:13px;color:#748176;margin:0}
+      .ntFinal .ntRefresh{border:1px solid #e2e9e0;background:white;color:#2b503b;width:43px;height:43px;border-radius:13px;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
+      .ntFinal .ntOverview{display:flex;gap:9px;align-items:stretch;margin-bottom:17px}
+      .ntFinal .ntOverview>div{background:#fff;border:1px solid #e5ebe3;border-radius:14px;padding:13px 17px;min-width:110px;display:flex;flex-direction:column;gap:3px}
+      .ntFinal .ntOverview strong{font-size:23px;letter-spacing:-.05em;line-height:1.1}.ntFinal .ntOverview span{font-size:11px;color:#718175}
+      .ntFinal .ntOverview>button{margin-left:auto;align-self:center;background:#e8f0e8;border:0;border-radius:11px;padding:11px 13px;color:#2a5b3c;font-weight:750;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer}
+      .ntFinal .ntTabs{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:0 0 14px;margin:0 0 4px}.ntFinal .ntTabs::-webkit-scrollbar{display:none}
+      .ntFinal .ntTabs button{border:1px solid #e4eae1;background:#fff;border-radius:100px;padding:9px 12px;color:#617165;font-size:12px;font-weight:750;white-space:nowrap;display:flex;align-items:center;gap:7px;cursor:pointer}
+      .ntFinal .ntTabs button.active{background:#173f2d;color:#fff;border-color:#173f2d}.ntFinal .ntTabs button span{font-size:10px;opacity:.75}
+      .ntFinal .ntList{display:flex;flex-direction:column;gap:9px}
+      .ntFinal .notificationCard{width:100%;max-width:100%;border:1px solid #e5ebe3!important;background:#fff!important;border-radius:16px!important;box-shadow:none!important;margin:0!important;overflow:hidden}
+      .ntFinal .notificationBody{min-width:0!important}.ntFinal .notificationBody p{overflow-wrap:anywhere}
+      .ntFinal .notificationGrid{display:block!important}.ntFinal .notificationMeta,.ntFinal .notificationBottom{flex-wrap:wrap!important;gap:7px!important}
+      .ntFinal .ntMore{margin:8px auto 0;display:flex;align-items:center;gap:8px;border:1px solid #e4eae1;background:#fff;color:#1e3b2d;border-radius:12px;padding:12px 18px;font-size:12px;font-weight:750;cursor:pointer}
+      .ntFinal .ntEmpty{background:#fff;border:1px solid #e5ebe3;border-radius:18px;padding:45px 18px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;color:#6d8071}
+      .ntFinal .ntEmpty h2{font-size:19px;color:#1e3b2d;margin:0}.ntFinal .ntEmpty p{font-size:13px;margin:0}.ntFinal .ntEmpty a,.ntFinal .ntEmpty button{margin-top:8px;border:0;background:#173f2d;color:#fff;text-decoration:none;border-radius:11px;padding:11px 16px;display:flex;gap:7px;align-items:center;font-weight:700;font-size:12px}
+      .ntFinal .ntError{display:flex;align-items:center;gap:8px;padding:12px;border-radius:12px;background:#fff2ed;color:#984638;font-size:12px;margin-bottom:12px}.ntFinal .ntError button{margin-left:auto;border:0;background:transparent;color:inherit;font-weight:750;cursor:pointer}
+      @media(max-width:680px){.notificationsPage.ntFinal{padding:82px 12px 42px!important}.ntFinal .ntHeader h1{font-size:29px}.ntFinal .ntHeader p{font-size:12px}.ntFinal .ntOverview>div{padding:11px 12px;min-width:90px}.ntFinal .ntOverview strong{font-size:22px}.ntFinal .ntOverview>button{padding:9px;font-size:11px}.ntFinal .notificationCard{padding:13px!important}.ntFinal .notificationBody h3{font-size:14px!important}.ntFinal .notificationBody p{font-size:12px!important}.ntFinal .ntTabs{margin-right:-12px;padding-right:12px}}
+`}</style>
   );
 }
