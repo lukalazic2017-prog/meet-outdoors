@@ -31,13 +31,6 @@ const chooseDemandPhoto = (r) => {
   return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=880&q=78`;
 };
 
-const adventureArt = "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1100&q=82";
-const accommodationArt = "https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=1100&q=82";
-const serviceArt = "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1100&q=82";
-const rentalArt = "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1100&q=82";
-const mixedArt = "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1100&q=82";
-const scene = {adventure:adventureArt, accommodation:accommodationArt, service:serviceArt, rental:rentalArt, mixed:mixedArt};
-
 const fmtDate = (s) => {
   if (!s) return "Fleksibilno";
   const d = new Date(`${s}T12:00:00`);

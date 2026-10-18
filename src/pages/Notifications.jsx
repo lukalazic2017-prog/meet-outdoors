@@ -938,8 +938,8 @@ export default function Notifications() {
             <div><strong>{notifications.length}</strong><span>Ukupno</span></div>
             {unreadCount > 0 && <button type="button" onClick={markAllAsRead} disabled={markingAll}><Icon name="check" size={16}/> {markingAll ? "Označavanje..." : "Označi sve"}</button>}
           </div>
-          {notifications.length > 0 && <div className="ntTabs" role="tablist" aria-label="Vrsta obaveštenja">
-            {[["all","Sve",notifications.length],["personal","Za mene",categoryCounts.personal],["agent","Potražnje",categoryCounts.agent],["applications","Prijave",categoryCounts.applications],["messages","Poruke",categoryCounts.messages],["interactions","Ostalo",categoryCounts.interactions]].map(([key,label,count])=><button key={key} type="button" className={filter===key?"active":""} onClick={()=>setFilter(key)} aria-selected={filter===key}>{label}<span>{count}</span></button>)}
+          {notifications.length > 0 && <div className="ntTabs" role="group" aria-label="Vrsta obaveštenja">
+            {[["all","Sve",notifications.length],["personal","Za mene",categoryCounts.personal],["agent","Potražnje",categoryCounts.agent],["applications","Prijave",categoryCounts.applications],["messages","Poruke",categoryCounts.messages],["interactions","Ostalo",categoryCounts.interactions]].map(([key,label,count])=><button key={key} type="button" className={filter===key?"active":""} onClick={()=>setFilter(key)} aria-pressed={filter===key}>{label}<span>{count}</span></button>)}
           </div>}
           {error && <div className="ntError" role="alert"><Icon name="alert" size={17}/><span>Nije moguće učitati obaveštenja.</span><button onClick={loadNotifications} type="button">Pokušaj ponovo</button></div>}
           {!profile?.id ? <div className="ntEmpty"><Icon name="user" size={27}/><h2>Prijavi se</h2><p>Prijavi se da vidiš svoja obaveštenja.</p><Link to="/login">Prijavi se <Icon name="arrowRight" size={16}/></Link></div>
