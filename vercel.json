@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "api/seo.mjs": { "includeFiles": "build/index.html" }
+  },
   "routes": [
     {
       "src": "/events/destinacije/([^/]+)/?",

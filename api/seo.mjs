@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 const SITE_URL = "https://www.meetoutdoors.app";
 const SUPABASE_URL = "https://gvdhpruhnwzsnrjeekmd.supabase.co";
 
@@ -544,18 +546,8 @@ function injectSeo(indexHtml, seo) {
   return html;
 }
 
-async function getIndexHtml(request) {
-  const url = new URL(request.url);
-  const origin = `${url.protocol}//${url.host}`;
-  const response = await fetch(`${origin}/index.html`, {
-    headers: { Accept: "text/html" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`index.html: ${response.status}`);
-  }
-
-  return response.text();
+function getIndexHtml() {
+  return readFile(new URL("../build/index.html", import.meta.url), "utf8");
 }
 
 export async function GET(request) {
@@ -568,7 +560,7 @@ export async function GET(request) {
 
   try {
     const [indexHtml, seo] = await Promise.all([
-      getIndexHtml(request),
+      getIndexHtml(),
       loadSeoData(type, value),
     ]);
 
@@ -598,7 +590,7 @@ export async function GET(request) {
     console.error("MeetOutdoors SEO renderer:", error);
 
     try {
-      const indexHtml = await getIndexHtml(request);
+      const indexHtml = await getIndexHtml();
       return new Response(indexHtml, {
         status: 200,
         headers: {
