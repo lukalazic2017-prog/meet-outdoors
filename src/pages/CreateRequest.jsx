@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 
@@ -15,7 +15,9 @@ const initial = { type: "adventure", activity: "", location: "", start: "", end:
 export default function CreateRequest() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState(initial);
+  const [params] = useSearchParams();
+  const location = (params.get("location") || "").trim().slice(0, 200);
+  const [form, setForm] = useState(() => ({ ...initial, location }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
@@ -24,7 +26,7 @@ export default function CreateRequest() {
     event.preventDefault();
     if (saving) return;
     setError("");
-    if (!user) { navigate("/login", { state: { from: "/create-request" } }); return; }
+    if (!user) { navigate("/login", { state: { requestLocation: location } }); return; }
     if (needsActivity && !form.activity.trim()) { setError("Unesi šta tražiš."); return; }
     if (form.end && form.start && form.end < form.start) { setError("Datum završetka ne može biti pre početka."); return; }
     const people = Number(form.people);

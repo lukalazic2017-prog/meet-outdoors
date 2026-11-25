@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 const FALLBACK_IMAGE =
@@ -348,6 +348,7 @@ function AdventureCard({ item }) {
 }
 
 export default function Events() {
+  const { destination } = useParams();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -405,6 +406,12 @@ export default function Events() {
   const adventures = useMemo(
     () =>
       events
+        .filter((event) => !destination || (
+          event.is_active === true &&
+          event.location?.trim() === destination &&
+          (!(event.end_date || event.start_date) ||
+            Date.parse(event.end_date || event.start_date) >= Date.parse(new Date().toISOString().slice(0, 10)))
+        ))
         .map((item) => ({
           ...item,
           source_key: `event-${item.id}`,
@@ -414,7 +421,7 @@ export default function Events() {
           const bTime = new Date(b.created_at || b.start_date || 0).getTime();
           return bTime - aTime;
         }),
-    [events]
+    [events, destination]
   );
 
   const locations = useMemo(() => {
@@ -579,15 +586,16 @@ export default function Events() {
               Avanture na otvorenom
             </span>
 
-            <h1>
-              Pronađi svoju
-              <br />
-              sledeću avanturu.
-            </h1>
+            {destination ? (
+              <h1>{destination} — ture, vodiči i domaćini</h1>
+            ) : (
+              <h1>Pronađi svoju<br />sledeću avanturu.</h1>
+            )}
 
             <p>
-              Otkrij ture, događaje i višednevna iskustva lokalnih domaćina
-              — sve na jednom mestu, kao prave MeetOutdoors avanture.
+              {destination
+                ? "Pogledaj lokalne ture, pronađi domaćina ili objavi potražnju za svoj termin."
+                : "Otkrij ture, događaje i višednevna iskustva lokalnih domaćina na MeetOutdoorsu."}
             </p>
           </div>
 
@@ -610,6 +618,17 @@ export default function Events() {
         </section>
 
         <section className="eventsContent">
+          <nav className="destinationLinks" aria-label="Destinacije i planiranje ture">
+            {destination ? (
+              <>
+                <Link to="/events">Sve avanture</Link>
+                <Link to={`/hosts?destination=${encodeURIComponent(destination)}`}>Pronađi domaćina</Link>
+                <Link to={`/create-request?location=${encodeURIComponent(destination)}`}>Objavi potražnju</Link>
+              </>
+            ) : (
+              <a href="/destinacije">Pregledaj destinacije</a>
+            )}
+          </nav>
           <div className={`filterPanel ${mobileFiltersOpen ? "mobileOpen" : ""}`}>
             <div className="searchField">
               <Icon name="search" size={19} />
@@ -1079,6 +1098,24 @@ function EventsStyles() {
         letter-spacing: 0.07em;
       }
 
+      .destinationLinks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 0 0 20px;
+      }
+      .destinationLinks a {
+        padding: 9px 14px;
+        border: 1px solid #cbdad0;
+        border-radius: 8px;
+        background: #fff;
+        color: #234736;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .destinationLinks a:focus-visible, .destinationLinks a:hover {
+        background: #e7f0e9;
+      }
       .eventsContent {
         width: min(1240px, 100%);
         margin: 0 auto;

@@ -132,6 +132,7 @@ function AppRoutes() {
         <Route path="/create-event" element={<CreateEvent />} />
         <Route path="/terms" element={<TermsOfUse />} />
         <Route path="/events" element={<Events />} />
+        <Route path="/events/destinacije/:destination" element={<Events />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/marketplace" element={<Marketplace />} />

@@ -361,7 +361,126 @@ async function loadHost(username) {
   };
 }
 
+async function loadDestination(destination) {
+  if (!destination.trim() || destination.length > 200) return null;
+  const encoded = encodeURIComponent(destination);
+  const canonical = `${SITE_URL}/events/destinacije/${encoded}`;
+  const heading = `${destination} — ture, vodiči i domaćini`;
+  const description = "Pogledaj lokalne ture, pronađi domaćina koji tamo organizuje aktivnosti ili objavi potražnju za svoj termin.";
+  const today = new Date().toISOString().slice(0, 10);
+
+  let tours = [];
+  let hosts = [];
+  let toursAvailable = true;
+  let hostsAvailable = true;
+
+  try {
+    tours = await supabaseRows("events", {
+      select: "id,title,location,start_date,host_id",
+      location: `eq.${destination}`,
+      is_active: "eq.true",
+      or: `(end_date.gte.${today},and(end_date.is.null,or(start_date.is.null,start_date.gte.${today})))`,
+      order: "start_date.asc.nullslast,id.asc",
+      limit: "12",
+    });
+  } catch {
+    toursAvailable = false;
+  }
+
+  try {
+    const quotedDestination = JSON.stringify(destination);
+    const organizerIds = [...new Set(tours.map((tour) => tour.host_id).filter(Boolean))];
+    hosts = await supabaseRows("profiles", {
+      select: "username,full_name",
+      role: "eq.host",
+      username: "not.is.null",
+      ...(organizerIds.length
+        ? { or: `(city.eq.${quotedDestination},id.in.(${organizerIds.join(",")}))` }
+        : { city: `eq.${destination}` }),
+      order: "username.asc",
+      limit: "12",
+    });
+  } catch {
+    hostsAvailable = false;
+  }
+
+  if (toursAvailable && hostsAvailable && !tours.length && !hosts.length) return null;
+
+  return {
+    title: `${heading} | MeetOutdoors`,
+    description,
+    canonical,
+    image: `${SITE_URL}/og-banner.png`,
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: heading,
+      description,
+      url: canonical,
+    },
+    body: `<main>
+      <h1>${esc(heading)}</h1>
+      <p>${description}</p>
+      <h2>Lokalne ture</h2>
+      ${tours.length
+        ? `<ul>${tours.map((tour) => `<li><a href="/event/${encodeURIComponent(tour.id)}">${esc(tour.title)}</a> · ${esc(tour.location)} · ${esc(tour.start_date || "Termin po dogovoru")}</li>`).join("")}</ul>`
+        : `<p>${toursAvailable ? "Trenutno nema objavljenih tura za ovu lokaciju." : "Ture trenutno nisu dostupne za prikaz."}</p>`}
+      <h2>Domaćini</h2>
+      ${hosts.length
+        ? `<ul>${hosts.map((host) => `<li><a href="${profileUrl(host.username)}">${esc(host.full_name || host.username)}</a></li>`).join("")}</ul>`
+        : `<p>${hostsAvailable && toursAvailable ? "Trenutno nema prikazanih domaćina za ovu lokaciju." : "Lista domaćina trenutno nije dostupna u celosti."}</p>`}
+      <p><a href="/hosts?destination=${encoded}">Pronađi domaćina</a></p>
+      <h2>Tražiš drugi termin ili turu za svoju grupu?</h2>
+      <p>Navedi termin, broj ljudi i šta želite da radite. Domaćini mogu da ti pošalju ponudu.</p>
+      <p><a href="/create-request?location=${encoded}">Objavi potražnju</a></p>
+      <p><a href="/events">Sve avanture</a></p>
+    </main>`,
+  };
+}
+
+async function loadDestinations() {
+  const today = new Date().toISOString().slice(0, 10);
+  const sources = [
+    ["events", "location", {
+      is_active: "eq.true",
+      or: `(end_date.gte.${today},and(end_date.is.null,or(start_date.is.null,start_date.gte.${today})))`,
+    }],
+    ["profiles", "city", { role: "eq.host", username: "not.is.null" }],
+  ];
+  const lists = await Promise.all(sources.map(async ([table, field, filters]) => {
+    const values = [];
+    const pageSize = 500;
+    for (let offset = 0; ; offset += pageSize) {
+      const rows = await supabaseRows(table, {
+        ...filters,
+        select: field,
+        [field]: "not.is.null",
+        order: `${field}.asc,id.asc`,
+        limit: String(pageSize),
+        offset: String(offset),
+      });
+      values.push(...rows.map((row) => row[field]).filter((name) => name && name === name.trim()));
+      if (rows.length < pageSize) return values;
+    }
+  }));
+  const names = [...new Set(lists.flat())].sort((a, b) => a.localeCompare(b, "sr"));
+  const canonical = `${SITE_URL}/destinacije`;
+  const description = "Pronađi avanture, vodiče i domaćine po destinacijama na MeetOutdoorsu.";
+  return {
+    title: "Destinacije | MeetOutdoors",
+    canonical,
+    description,
+    image: `${SITE_URL}/og-banner.png`,
+    structuredData: { "@context": "https://schema.org", "@type": "CollectionPage", url: canonical },
+    body: `<main><h1>Destinacije</h1><p>${description}</p>
+      <ul>${names.map((name) => `<li><a href="/events/destinacije/${encodeURIComponent(name)}">${esc(name)}</a></li>`).join("")}</ul>
+      <p><a href="/events">Sve avanture</a></p></main>`,
+  };
+}
+
 async function loadSeoData(type, value) {
+  if (type === "destination" && value) return loadDestination(value);
+  if (type === "destinations") return loadDestinations();
   if (type === "place") return loadPlace(value);
   if (type === "package") return loadPackage(value);
   if (type === "event") return loadEvent(value);
@@ -370,8 +489,8 @@ async function loadSeoData(type, value) {
 }
 
 function replaceOrInsert(html, regex, replacement) {
-  if (regex.test(html)) return html.replace(regex, replacement);
-  return html.replace("</head>", `${replacement}\n</head>`);
+  if (regex.test(html)) return html.replace(regex, () => replacement);
+  return html.replace("</head>", () => `${replacement}\n</head>`);
 }
 
 function injectSeo(indexHtml, seo) {
@@ -408,7 +527,7 @@ function injectSeo(indexHtml, seo) {
     <meta name="twitter:image" content="${esc(seo.image)}">
     <script id="meetoutdoors-server-structured-data" type="application/ld+json">${jsonLd(seo.structuredData)}</script>`;
 
-  html = html.replace("</head>", `${head}\n</head>`);
+  html = html.replace("</head>", () => `${head}\n</head>`);
 
   const ssr = `
     <div id="meetoutdoors-seo-prerender" style="max-width:1100px;margin:0 auto;padding:120px 24px 48px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#203229">
@@ -418,7 +537,7 @@ function injectSeo(indexHtml, seo) {
   if (/<div\s+id=["']root["']\s*>\s*<\/div>/i.test(html)) {
     html = html.replace(
       /<div\s+id=["']root["']\s*>\s*<\/div>/i,
-      `<div id="root">${ssr}</div>`
+      () => `<div id="root">${ssr}</div>`
     );
   }
 
@@ -450,7 +569,7 @@ export async function GET(request) {
   try {
     const [indexHtml, seo] = await Promise.all([
       getIndexHtml(request),
-      value ? loadSeoData(type, value) : Promise.resolve(null),
+      loadSeoData(type, value),
     ]);
 
     if (!seo) {
@@ -463,7 +582,11 @@ export async function GET(request) {
       });
     }
 
-    return new Response(injectSeo(indexHtml, seo), {
+    const renderedHtml = injectSeo(indexHtml, seo);
+    const responseHtml = type === "destinations"
+      ? renderedHtml.replace(/<script[^>]*src=[^>]+><\/script>/gi, "")
+      : renderedHtml;
+    return new Response(responseHtml, {
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 function Icon({
@@ -115,6 +115,7 @@ function Icon({
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -193,6 +194,11 @@ export default function Login() {
 
       if (!profile.username) {
         navigate("/profile");
+        return;
+      }
+
+      if (typeof location.state?.requestLocation === "string" && location.state.requestLocation) {
+        navigate(`/create-request?location=${encodeURIComponent(location.state.requestLocation)}`, { replace: true });
         return;
       }
 
