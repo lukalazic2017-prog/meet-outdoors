@@ -440,7 +440,7 @@ async function loadDestination(destination) {
   };
 }
 
-async function loadDestinations() {
+async function listDestinationNames() {
   const today = new Date().toISOString().slice(0, 10);
   const sources = [
     ["events", "location", {
@@ -465,7 +465,11 @@ async function loadDestinations() {
       if (rows.length < pageSize) return values;
     }
   }));
-  const names = [...new Set(lists.flat())].sort((a, b) => a.localeCompare(b, "sr"));
+  return [...new Set(lists.flat())].sort((a, b) => a.localeCompare(b, "sr"));
+}
+
+async function loadDestinations() {
+  const names = await listDestinationNames();
   const canonical = `${SITE_URL}/destinacije`;
   const description = "Pronađi avanture, vodiče i domaćine po destinacijama na MeetOutdoorsu.";
   return {
@@ -553,6 +557,27 @@ function getIndexHtml() {
 export async function GET(request) {
   const url = new URL(request.url);
   const type = url.searchParams.get("type");
+
+  if (type === "destination-sitemap") {
+    try {
+      const names = await listDestinationNames();
+      const entries = names.map((name) =>
+        `<url><loc>${esc(`${SITE_URL}/events/destinacije/${encodeURIComponent(name)}`)}</loc></url>`
+      );
+      return new Response(
+        `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries.join("")}</urlset>`,
+        { headers: {
+          "Content-Type": "application/xml; charset=utf-8",
+          "Cache-Control": "public, max-age=0, s-maxage=300",
+        } }
+      );
+    } catch {
+      return new Response("Sitemap temporarily unavailable", {
+        status: 503,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+  }
   const value =
     url.searchParams.get("slug") ||
     url.searchParams.get("id") ||
