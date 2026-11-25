@@ -287,6 +287,7 @@ function HostCard({ host }) {
 
 export default function Hosts() {
   const location = useLocation();
+  const destination = new URLSearchParams(location.search).get("destination");
   const [hosts, setHosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -353,7 +354,7 @@ export default function Hosts() {
 
         supabase
           .from("events")
-          .select("id, host_id, is_active")
+          .select("id, host_id, is_active, location")
           .eq("is_active", true),
 
         supabase
@@ -392,6 +393,7 @@ export default function Hosts() {
 
         return {
           ...host,
+          destinationLocations: hostEvents.map((event) => event.location),
           adventures_count: hostEvents.length,
           accommodations_count: hostAccommodations.length,
           services_count: services.length,
@@ -477,6 +479,13 @@ export default function Hosts() {
         ? host.activities
         : [];
 
+      const matchesDestination =
+        !destination ||
+        host.city?.trim() === destination ||
+        host.destinationLocations?.some((name) =>
+          name?.trim() === destination
+        );
+
       const matchesSearch =
         !normalizedSearch ||
         displayName.includes(normalizedSearch) ||
@@ -499,6 +508,7 @@ export default function Hosts() {
         getHostOfferTypes(host).includes(offerFilter);
 
       return (
+        matchesDestination &&
         matchesSearch &&
         matchesLocation &&
         matchesActivity &&
@@ -509,13 +519,14 @@ export default function Hosts() {
     hosts,
     search,
     locationFilter,
+    destination,
     activityFilter,
     offerFilter,
   ]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, locationFilter, activityFilter, offerFilter]);
+  }, [search, locationFilter, activityFilter, offerFilter, destination]);
 
   const pageCount = useMemo(
     () => Math.max(1, Math.ceil(filteredHosts.length / pageSize)),
@@ -576,11 +587,11 @@ export default function Hosts() {
               MeetOutdoors domaćini
             </span>
 
-            <h1>
-              Upoznaj ljude
-              <br />
-              iza avanture.
-            </h1>
+            {destination ? (
+              <h1>{destination} — domaćini</h1>
+            ) : (
+              <h1>Upoznaj ljude<br />iza avanture.</h1>
+            )}
 
             <p>
               Pronađi domaćine, pogledaj njihove avanture, smeštaj i usluge — pa ih kontaktiraj direktno.

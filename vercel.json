@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/seo.mjs": { "includeFiles": "build/index.html" }
+  },
+  "routes": [
+    {
+      "src": "/events/destinacije/([^/]+)/?",
+      "dest": "/api/seo?type=destination&slug=$1"
+    },
+    { "src": "/destinacije/?", "dest": "/api/seo?type=destinations" },
+    { "handle": "filesystem" },
+    { "src": "/(?!api/).*", "dest": "/index.html" }
+  ]
+}
