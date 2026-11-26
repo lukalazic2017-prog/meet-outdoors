@@ -1126,13 +1126,13 @@ function GuestHome({ platformStats, discovery }) {
             </span>
 
             <h1>
-              Vikend je prekratak
-              <em>za dosadne planove.</em>
+              Organizovane ture, lokalni vodiči
+              <em>i avanture u Srbiji</em>
             </h1>
 
             <p>
-              Avanture, smeštaj i mesta u prirodi — ili samo reci Adventure Agentu
-              kakav vikend želiš.
+              Na MeetOutdoorsu možeš da pronađeš turu, pogledaš ko je organizuje
+              ili objaviš potražnju za svoj termin.
             </p>
 
             <div className="guestActions">
